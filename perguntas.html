@@ -64,6 +64,7 @@
       <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
       <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
       <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate</a>
       <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
       <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
 
@@ -79,9 +80,11 @@
       <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
       <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
       <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+      <a href="processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>EMR on EKS</a>
 
       <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -102,6 +105,7 @@
       <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
       <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
       <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
+      <a href="governance-security.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality Avançado</a>
     </div>
   </div>
 </nav>
@@ -1468,6 +1472,89 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
             <li><strong>A Desvantagem de Sessão Limite de 1 Hora:</strong> Quando uma role assume outra role em sequência via código (Role Chaining), a validade máxima das credenciais do STS geradas é fixada no limite de <strong>1 hora</strong>, mesmo se a role de destino estiver configurada para suportar até 12 horas. Em grandes pipelines Spark analíticos de conciliação que demoram 2 ou mais horas de processamento, as conexões de S3 começarão a falhar por credenciais expiradas no meio do job.</li>
             <li><strong>Perda de Rastreabilidade (Audit Trail):</strong> O encadeamento de roles mascara o ARN do usuário principal no CloudTrail, exibindo apenas o nome da role intermediária, dificultando auditorias de acesso e conformidade.</li>
             <li><strong>Boas Práticas de Engenharia:</strong> Evite o encadeamento manual de roles. Configure o Lake Formation cross-account para realizar o compartilhamento federado de dados, permitindo que a Role A leia as tabelas da outra conta de forma direta via STS temporário gerenciado pelo Lake Formation (que atualiza as chaves transparentemente sem limites de 1 hora).</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Case 39: EMR Architecture Decision -->
+      <div class="card" id="q39" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 39 · Arquitetura EMR</div>
+        <h4>Comparativo Avançado: Quais são os trade-offs arquiteturais entre EMR on EC2, EMR Serverless e EMR on EKS no que tange a FinOps, inicialização de Jobs e isolamento multi-tenant?</h4>
+        <p><strong>Cenário de Entrevista:</strong> A empresa planeja consolidar 50 pipelines diários. Cada um utiliza dependências Python conflituosas (Pandas 1.0 vs Pandas 2.0). A prioridade é otimização severa de custos ociosos sem sacrificar estabilidade.</p>
+        <div class="callout callout-info">
+          <strong>Resposta Técnica:</strong>
+          <ul>
+            <li><strong>EMR on EC2:</strong> Inadequado para o requisito. Obriga a clusterização isolada por pipeline, o que gera alto custo em períodos ociosos. Alternativamente, criar um mega-cluster EC2 compartilhado falharia em lidar com o isolamento de ambientes Python, gerando choques de bibliotecas e dificultando upgrades (Vendor Lock-in no EMR release).</li>
+            <li><strong>EMR on EKS:</strong> Excelente para alta densidade. O isolamento é perfeitamente solucionado submetendo jobs com <em>Custom Docker Images</em> via Kubernetes. Se acoplado com o autoscaler Karpenter rodando Instâncias Spot, o cluster escala e contrai em segundos por custo de infraestrutura mínimo. Ideal se o time de plataforma for proficiente no ecossistema de K8s.</li>
+            <li><strong>EMR Serverless:</strong> Solução mais fácil (low-ops) com ótimo FinOps. Possui pre-initialized capacity que inicia jobs quase imediatamente. O ambiente de execução para cada Job Run é isolado em micro-VMs próprias, podendo carregar Custom Docker Images ou bibliotecas empacotadas via Virtualenv local do S3. Resolve os problemas sem a complexidade de gerenciar um Control Plane de Kubernetes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 40: EMR Spot Interruption -->
+      <div class="card" id="q40" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 40 · EMR & Resiliência Spot</div>
+        <h4>Como arquitetar resiliência no EMR on EC2 ou EMR on EKS para mitigar perdas catastróficas de dados via FetchFailedException quando instâncias Spot são desligadas pelo provedor AWS?</h4>
+        <p><strong>Problema Crítico de Shuffle e Instâncias Spot:</strong> O Spot AWS pode remover um nó com um aviso prévio curto (2 minutos). Se um Executor Spark operando no nó Spot estava retendo os blocos de dados intermediários de um pesado <code>GROUP BY</code> (dados de shuffle), o desligamento repentino apagará esses dados de disco local. As tarefas downstream (Reduce) falharão por <code>FetchFailedException</code>, forçando a DAG do Spark a retroceder os estágios (stages) e recalcular toda a base, podendo causar atrasos de horas.</p>
+        <div class="callout callout-warn">
+          <strong>Técnicas de Mitigação: Graceful Decommissioning & Shuffle Tracking:</strong>
+          <ul>
+            <li>No <strong>EMR on EC2</strong>: Projete o cluster utilizando Spot Instances estritamente para Task Nodes (puramente computacionais sem réplicas HDFS de storage). Ative a flag do YARN de <strong>Graceful Node Decommissioning</strong>. Quando a AWS envia o sinal de interrupção, o YARN marca o nó como "DECOMMISSIONING" e copia ativamente os dados locais cruciais do NodeManager para as máquinas Core (On-Demand) remanescentes nos 2 minutos disponíveis de tolerância, resguardando o progresso da query.</li>
+            <li>No <strong>EMR on EKS (Spark 3.2+)</strong>: Habilite a propriedade <code>spark.dynamicAllocation.shuffleTracking.enabled=true</code> e ative o <strong>Executor Decommissioning</strong> nativo do K8s (<code>spark.decommission.enabled=true</code> e <code>spark.storage.decommission.shuffleBlocks.enabled=true</code>). Com isso configurado, ao receber o <em>SIGTERM</em> de finalização, o pod executor inicia uma migração paralela forçada transferindo (push-based) seus dados Shuffle e RDD/Cache via rede P2P para um pod sobrevivente.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 41: Athena Workload Isolation & Performance -->
+      <div class="card" id="q41" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 41 · Athena & Lake Formation Performance</div>
+        <h4>O que motiva a lentidão catastrófica no Query Planning Time do Amazon Athena em tabelas do Datalake protegidas com Lake Formation (Cell-Level Security), e como a evolução do stack arquitetural contorna essa debilidade?</h4>
+        <p><strong>Causa Raiz de Lentidão em Segurança Granular:</strong> Quando as proteções de linhas e colunas (Cell-Level Security) do Lake Formation estão habilitadas, o Athena não pode mais injetar credenciais e fazer o plano de consulta direto. O Lake Formation assume o fluxo, atuando como um "filtro" avaliador. Para cada query, o LF precisa listar os arquivos de dados brutos e calcular intersecções complexas de ACL na camada de planejamento. Em tabelas particionadas no formato Glue/Hive, onde existem dezenas de milhares de micro-pastas (s3://.../ano=2024/mes=01/), o motor satura a API do Glue e o planejamento (que deveria levar 0,5s) chega a estourar 30s a 120s antes que um único byte seja lido do S3.</p>
+        <div class="callout callout-tip">
+          <strong>Ação Corretiva em Alta Escala:</strong>
+          <ul>
+            <li><strong>Conversão para Formatos Transacionais Abertos (Apache Iceberg):</strong> O Apache Iceberg elimina completamente as lentas varreduras hierárquicas da API do AWS Glue Catalog (que causa o estrangulamento do Lake Formation). O Iceberg concentra os apontamentos físicos das partições ativas dentro do S3 na forma de <strong>arquivos de manifestos compactos</strong>. Assim que a tabela transiciona para Iceberg, o Lake Formation e o Athena extraem os metadados diretamente do manifesto no S3. Isso resulta em um Query Planning de latência estável quase ignorável, permitindo aplicação massiva de segurança por coluna sem destruir a performance interativa.</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Case 42: Fargate vs Lambda Cold Starts -->
+      <div class="card" id="q42" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 42 · ECS Fargate vs Lambda</div>
+        <h4>Comparativo Avançado: Como o ciclo de vida (Cold Start) impacta a escolha entre AWS Lambda e ECS Fargate na Ingestão de Telemetria IoT e quais estratégias de autoscaling o Fargate exige para não gerar perdas (Dropped Connections)?</h4>
+        <p><strong>Cenário de Entrevista:</strong> O cliente precisa ingerir sinais contínuos de sensores de frota 24/7. Ocasionalmente o tráfego dobra instantaneamente. Decida o compute.</p>
+        <div class="callout callout-info">
+          <strong>Resposta Técnica:</strong>
+          <ul>
+            <li><strong>O Problema do Cold Start em APIs:</strong> AWS Lambda sofre de Cold Starts quando a concorrência explode subitamente, pois a AWS aloca instâncias isoladas (microVMs Firecracker). Se a inicialização do ambiente de execução (especialmente Java/C# ou Python com muitas bibliotecas) demorar 5 segundos, as requisições HTTPS do cliente durante o pico sofrerão latência gigantesca e possíveis Timeouts pelo API Gateway.</li>
+            <li><strong>A Vantagem do ECS Fargate "Always-On":</strong> O ECS opera com instâncias containerizadas persistentes. Tarefas já ativas suportam concorrência interna alta assíncrona (ex: um servidor FastAPI no Fargate processando 2000 req/s por contêiner simultaneamente através de async/await e connection pooling), não precisando invocar novas VMs linha a linha.</li>
+            <li><strong>Auto-scaling Tuning no ECS:</strong> O ECS demora muito mais para subir uma nova tarefa Fargate (<em>Task Provisioning Latency</em>, ~30 a 60 segundos por pull de imagem Docker pesada) em comparação com milissegundos do Lambda. Portanto, no ECS, devemos escalar antes da crise: usar o <strong>Target Tracking Scaling Policy</strong> fixado em, digamos, 50% de uso de CPU (e não 90%), ou criar regras proativas preditivas baseadas no horário de pico, de forma que os novos contêineres estejam com status <em>RUNNING</em> antes que os servidores ativos enfileirem e percam as conexões (Dropped Connections).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 43: Fargate Disk & EBS -->
+      <div class="card" id="q43" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 43 · Armazenamento ECS Fargate</div>
+        <h4>Como gerenciar gargalos de armazenamento efêmero ao baixar e processar blocos massivos de dados estruturados (>50GB) dentro do ECS Fargate, dada a limitação de disco containerizada?</h4>
+        <p><strong>Desafio Técnico em ETL Serverless:</strong> Tarefas tradicionais do Fargate sobem com um disco de armazenamento efêmero restrito (20GB). Tentativas de baixar um dump do Salesforce de 100GB via API dentro da Task irão encher o disco local, derrubando silenciosamente o container via "No Space Left on Device".</p>
+        <div class="callout callout-warn">
+          <strong>Solução Arquitetural de Storage:</strong>
+          <ul>
+            <li><strong>Expansão de Disco Efêmero (Ephemeral Storage):</strong> Ajustar a configuração da <em>Task Definition</em> no parâmetro <code>ephemeralStorage</code> para solicitar um montante até o limite máximo de 200GB (que acarretará em custos proporcionais atrelados ao tempo de vida da task).</li>
+            <li><strong>EFS (Elastic Block Store) Mount Ponto Ouro:</strong> Para arquivos gigantescos ou processamentos de caches massivos de ML no modelo de processamento batch via ECS, a Amazon agora suporta acoplar volumes do <strong>Amazon EFS (Elastic File System)</strong> nas Fargate Tasks. O container monta o EFS via NFS no diretório de extração local, podendo manipular Terabytes de informações elásticas sob demanda persistente com concorrência para múltiplos containers paralelos lerem do mesmo storage se necessário.</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Case 44: Incremental Data Quality -->
+      <div class="card" id="q44" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 44 · Data Quality & Custos FinOps</div>
+        <h4>Como otimizar os custos computacionais proibitivos de execução de regras de Data Quality (DQDL ou Great Expectations) que analisam a unicidade ou a completude em tabelas gigantescas (Petabytes) do Data Lake?</h4>
+        <p><strong>Cenário de Entrevista:</strong> Executar <code>IsUnique "id_cliente"</code> em uma tabela de 5 Petabytes todos os dias leva horas e consome recursos massivos de Spark Shuffle para calcular o agrupamento completo.</p>
+        <div class="callout callout-info">
+          <strong>Resposta Técnica (Técnicas de Escala):</strong>
+          <ul>
+            <li><strong>Isolamento Incremental (Push-down):</strong> Nunca execute testes de Data Quality na tabela integral a cada execução de batch. Restrinja o DataFrame lido passando predicados de tempo no <em>pushdown</em>, avaliando apenas a partição ingerida no dia (ex: <code>df.filter("data_ingestao = current_date")</code>). Teste a integridade apenas sobre os incrementos da jornada (Delta).</li>
+            <li><strong>Aproximação Probabilística:</strong> Se o teste de unicidade (IsUnique) e contagem exata não for estritamente financeiro e sim comportamental, troque contagens exatas onerosas (como <code>COUNT(DISTINCT id)</code>) por algoritmos probabilísticos leves embutidos na engine (como o <strong>HyperLogLog</strong> no Spark/Presto). O algoritmo fornece ~98% de precisão gastando uma fração minúscula de RAM e processamento.</li>
+            <li><strong>DQ Integrado via Iceberg/Delta:</strong> Bancos e formatos modernos (Apache Iceberg) mantêm metadados com contagens de colunas, mínimos, máximos e nulos pré-computados (File-Level Stats) sem a necessidade de varrer os dados fisicamente. Queries otimizadas podem extrair métricas de completude lendo apenas as tabelas de manifesto de forma gratuita e imediata.</li>
           </ul>
         </div>
       </div>

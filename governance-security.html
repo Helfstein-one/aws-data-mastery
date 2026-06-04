@@ -64,6 +64,7 @@
       <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
       <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
       <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate</a>
       <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
       <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
 
@@ -79,9 +80,11 @@
       <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
       <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
       <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+      <a href="processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>EMR on EKS</a>
 
       <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -102,6 +105,7 @@
       <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
       <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
       <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
+      <a href="governance-security.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality Avançado</a>
     </div>
   </div>
 </nav>
@@ -784,6 +788,41 @@ if regras_falhas.count() > 0:
           <div class="card-lbl">3. Alerta &amp; Re-processamento</div>
           <h4>Notificação e Correção</h4>
           <p>Um alerta EventBridge envia notificações via Slack ou Datadog para que os engenheiros corrijam a origem ou ajustem as regras. Uma vez resolvido o problema na origem, os dados da quarentena podem ser re-ingeridos sem perda histórica.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="data-quality-avancado">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--muted)">09.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--muted)"></div>
+          <h2>Data Quality: Regras e Boas Práticas Avançadas</h2>
+          <p>Otimização de validações, Data Contracts e mitigação de falsos positivos na malha de dados</p>
+        </div>
+      </div>
+
+      <p>Garantir a integridade através do Data Quality não é apenas criar regras DQDL, mas arquitetar onde e como os dados são barrados. Implementar testes demais eleva custos e reduz a performance do pipeline de ETL. Implementar testes de menos destrói a confiança nos painéis executivos.</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Boas Práticas de Validação (Left-Shifting)</h4>
+          <ul>
+            <li><strong>Shift-Left Testing:</strong> Faça os testes o mais "à esquerda" possível no pipeline. Validações de esquema e tipos de dados devem ocorrer no produtor (microsserviço) via <em>Data Contracts</em> (ex: JSON Schema ou Protobuf validados contra o Glue Schema Registry antes de ir pro Kafka). Validações de negócios (ex: valor da venda não pode ser negativo) devem ocorrer na camada <em>Silver</em>.</li>
+            <li><strong>Amostragem (Sampling):</strong> Executar regras estatísticas (ex: desvio padrão de preços) em Terabytes de dados diários causa lentidão catastrófica no Glue. Otimize aplicando o Glue Data Quality apenas sobre as partições recém-ingeridas (Incremental DQ) ou utilizando amostragem estatística segura (ex: avaliando apenas 5% dos registros de logs não-críticos).</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Mitigação de Falsos Positivos</h4>
+          <ul>
+            <li><strong>Limites Dinâmicos (Dynamic Thresholds):</strong> Evite regras hardcoded como <code>RowCount > 10000</code>. Em finais de semana o volume cai e a regra quebraria o pipeline sem motivo. Use limites dinâmicos com análise de ML ou baseados em métricas passadas (ex: volume >= 80% da média móvel dos últimos 7 dias).</li>
+            <li><strong>Categorização de Criticidade:</strong> Nem todo erro deve parar o pipeline. Separe as regras em duas severidades:
+              <ul>
+                <li><em>Warning (Aviso):</em> Gera alertas no Datadog/Slack, mas não quebra a ingestão.</li>
+                <li><em>Error/Halt (Crítico):</em> Quebra a DAG ou desvia os dados para a Quarentena imediatamente.</li>
+              </ul>
+            </li>
+          </ul>
         </div>
       </div>
     </section>

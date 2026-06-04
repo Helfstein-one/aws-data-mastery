@@ -64,6 +64,7 @@
       <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
       <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
       <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate</a>
       <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
       <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
 
@@ -79,9 +80,11 @@
       <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
       <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
       <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+      <a href="processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>EMR on EKS</a>
 
       <a href="serving.html" class="nav-a active"><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -102,6 +105,7 @@
       <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
       <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
       <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
+      <a href="governance-security.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality Avançado</a>
     </div>
   </div>
 </nav>
@@ -181,6 +185,37 @@
           <div class="callout callout-tip">
             <strong>✓ Pro Tip:</strong> Combine Partition Projection com <strong>S3 Inventory</strong> para auditar a consistência entre o template configurado e os arquivos físicos no bucket.
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="athena-avancado">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">01.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>Amazon Athena: Federated Query & Workgroups</h2>
+          <p>Consultas federadas nativas, gerenciamento de concorrência massiva e isolamento de carga de trabalho</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Federated Query (Consultas Federadas)</h4>
+          <p>O <strong>Athena Federated Query</strong> permite aos engenheiros consultarem dados diretamente em fontes externas (como Amazon RDS, DynamoDB, Redshift, Snowflake, etc.) fazendo JOINs em tempo real com o Data Lake no S3 sem precisar desenvolver complexos pipelines de ETL (CDC).</p>
+          <ul>
+            <li><strong>Arquitetura Serverless:</strong> Utiliza funções <strong>AWS Lambda</strong> com conectores pré-construídos que agem como interfaces de comunicação, convertendo respostas dos bancos operacionais para o formato colunar <strong>Apache Arrow</strong>.</li>
+            <li><strong>Predicate Pushdown:</strong> O motor do Athena empurra inteligentemente os filtros (<code>WHERE</code>) para a fonte original através da Lambda, garantindo que o RDS ou DynamoDB trafegue pela rede apenas os dados estritamente necessários, minimizando latências e OOM.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Workgroups & Capacity Reservations (FinOps e Isolamento)</h4>
+          <p>Para evitar que consultas analíticas pesadas (ETLs) impactem dashboards executivos de tempo real no QuickSight, o Athena provê mecanismos robustos de segregação:</p>
+          <ul>
+            <li><strong>Athena Workgroups:</strong> Permitem separar usuários, times ou aplicações. Cada Workgroup pode ter limites de bytes escaneados e métricas CloudWatch dedicadas, bloqueando automaticamente queries que estouram o orçamento configurado.</li>
+            <li><strong>Provisioned Capacity:</strong> Para SLAs rígidos sem concorrência compartilhada, clientes alocam blocos de DPUs (Data Processing Units) dedicados. Isso blinda as queries críticas contra o enfileiramento padrão "noisy neighbor" nas regiões superlotadas da AWS.</li>
+            <li><strong>Result Reuse:</strong> Para concorrência extrema (centenas de visualizações do mesmo dashboard na mesma hora), o recurso Result Reuse retorna o cache computado anteriormente da query do S3, reduzindo o tempo de resposta e zerando o custo repetido de scan analítico.</li>
+          </ul>
         </div>
       </div>
     </section>
