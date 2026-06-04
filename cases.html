@@ -106,6 +106,12 @@
       <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
       <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
       <a href="governance-security.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality Avançado</a>
+
+      <a href="finops.html" class="nav-a "><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
+      <a href="finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>FinOps Fundamentos</a>
+      <a href="finops.html#finops-boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas</a>
+      <a href="finops.html#finops-analise" class="nav-sub"><span class="nav-sdot"></span>Análise de Custos</a>
+      <a href="finops.html#finops-terraform" class="nav-sub"><span class="nav-sdot"></span>Terraform &amp; Cost Explorer</a>
     </div>
   </div>
 </nav>
@@ -2152,6 +2158,56 @@
           </ul>
         </li>
       </ol>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 13: ARQUITETURA FINOPS E OTIMIZAÇÃO DE CUSTOS -->
+    <section class="section" id="case-finops">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--ok)">13</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--ok)"></div>
+          <h2>Case 13: Otimização de Custos sob Abordagem FinOps (S3, Glue, EMR &amp; Rede)</h2>
+          <p>Redução drástica do faturamento mensal de $15.000 para $1.200 por meio de reengenharia de storage, VPC Gateway Endpoints, compactação e instâncias transientes</p>
+        </div>
+      </div>
+
+      <p>Uma grande fintech processava diariamente logs de transações financeiras gerando uma fatura astronômica e insustentável de <strong>$15.000 por mês</strong>. O time de Engenharia de Dados foi desafiado a aplicar práticas de FinOps para otimizar os custos sem comprometer os SLAs de entrega de relatórios às squads de compliance.</p>
+
+      <h3>O Diagnóstico do Ralo Financeiro (CUR Audit)</h3>
+      <p>Utilizando queries SQL no Athena sobre o **AWS Cost and Usage Report (CUR)**, a equipe identificou quatro grandes focos de desperdício:</p>
+      <ul>
+        <li><strong>NAT Gateway Processing Charges (42% do custo):</strong> Os executores do Spark (AWS Glue) rodando em subredes privadas varriam dados do S3 trafegando através de rotas do NAT Gateway da VPC, gerando cobranças lineares pesadas por Gigabyte trafegado.</li>
+        <li><strong>SSE-KMS API Calls (28% do custo):</strong> Para cada micro-arquivo Parquet lido do S3, o AWS KMS cobrava centavos por chamadas de decodificação `kms:Decrypt`, gerando milhões de requisições inúteis por dia devido à falta de chaves em nível de bucket.</li>
+        <li><strong>Standard Storage Lock-in (18% do custo):</strong> Terabytes de logs antigos das camadas Bronze e Silver permaneciam infinitamente em *S3 Standard Tier* mesmo sem serem lidos há mais de 180 dias.</li>
+        <li><strong>Glue DPU Overprovisioning (12% do custo):</strong> Os jobs do Glue estavam configurados estaticamente com 80 DPUs G.2X fixas, operando com picos de ociosidade de hardware de 85% devido ao processamento sequencial mal distribuído.</li>
+      </ul>
+
+      <h3>A Reengenharia Arquitetural Aplicada</h3>
+      <ol>
+        <li><strong>Redução de Custo de Rede a Zero (NAT Gateway Bypass):</strong>
+          A equipe criou um **VPC Gateway Endpoint** para o S3 na tabela de roteamento privada do cluster. Com isso, todo o tráfego de leitura e escrita Spark-S3 passou a rodar diretamente por rotas internas da infraestrutura da AWS. O custo de transferência de dados no NAT Gateway para o S3 caiu de **$6.300/mês para $0/mês**.
+        </li>
+        <li><strong>Implementação de S3 Bucket Keys &amp; Parquet Compactação:</strong>
+          A propriedade **S3 Bucket Key** foi habilitada no bucket. Com a nova chave de bucket cacheada localmente no S3, o número de chamadas de API de criptografia direcionadas ao KMS despencou em **99,2%**, reduzindo o faturamento de KMS de **$4.200/mês para menos de $50/mês**. Adicionalmente, um job leve de compactação periódica juntou milhões de micro-arquivos Parquet em arquivos grandes e consolidados de 256MB, acelerando queries em 5x.
+        </li>
+        <li><strong>Políticas Automatizadas de S3 Lifecycle:</strong>
+          Foi desenhado um ciclo de vida de dados declarativo no S3:
+          <ul>
+            <li><strong>Bronze (Raw JSON):</strong> Transição para *Glacier Instant Retrieval* após 14 dias (economia imediata de 68% em armazenamento para recuperação rápida caso ocorram falhas de schema) e expiração definitiva após 60 dias.</li>
+            <li><strong>Silver (Iceberg):</strong> Transição para *Standard-Infrequent Access (Standard-IA)* após 30 dias de inatividade de escrita, reduzindo o custo fixo de armazenamento de $0.023/GB para $0.0125/GB.</li>
+          </ul>
+        </li>
+        <li><strong>Tuning de Glue DPUs e Auto Scaling:</strong>
+          A configuração dos jobs PySpark foi alterada: habilitou-se o **Auto Scaling** nativo do Glue e reduziu-se o limite máximo para 20 DPUs usando instâncias **G.1X** (que são muito mais eficientes que G.2X para transformações normais de dados que não exigem heavy memory joins). O Glue passou a alocar e pagar por recursos apenas nos minutos de processamento de pico de shuffle, diminuindo o custo de computação Spark em 72%.
+        </li>
+      </ol>
+
+      <div class="callout callout-tip">
+        <strong>Resultado de Negócio Consolidado:</strong>
+        <p>A fatura mensal da infraestrutura de dados caiu de <strong>$15.000 para $1.200</strong> nas primeiras 48 horas após a implantação das alterações via Terraform. O tempo médio de processamento dos relatórios caiu em 35% devido à consolidação de arquivos Parquet e redução de latências de rede VPC interna.</p>
+      </div>
     </section>
   </main>
 </div>

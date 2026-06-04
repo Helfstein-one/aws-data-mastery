@@ -106,6 +106,12 @@
       <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
       <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
       <a href="governance-security.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality Avançado</a>
+
+      <a href="finops.html" class="nav-a "><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
+      <a href="finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>FinOps Fundamentos</a>
+      <a href="finops.html#finops-boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas</a>
+      <a href="finops.html#finops-analise" class="nav-sub"><span class="nav-sdot"></span>Análise de Custos</a>
+      <a href="finops.html#finops-terraform" class="nav-sub"><span class="nav-sdot"></span>Terraform &amp; Cost Explorer</a>
     </div>
   </div>
 </nav>
@@ -1556,6 +1562,49 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
             <li><strong>Aproximação Probabilística:</strong> Se o teste de unicidade (IsUnique) e contagem exata não for estritamente financeiro e sim comportamental, troque contagens exatas onerosas (como <code>COUNT(DISTINCT id)</code>) por algoritmos probabilísticos leves embutidos na engine (como o <strong>HyperLogLog</strong> no Spark/Presto). O algoritmo fornece ~98% de precisão gastando uma fração minúscula de RAM e processamento.</li>
             <li><strong>DQ Integrado via Iceberg/Delta:</strong> Bancos e formatos modernos (Apache Iceberg) mantêm metadados com contagens de colunas, mínimos, máximos e nulos pré-computados (File-Level Stats) sem a necessidade de varrer os dados fisicamente. Queries otimizadas podem extrair métricas de completude lendo apenas as tabelas de manifesto de forma gratuita e imediata.</li>
           </ul>
+        </div>
+      </div>
+
+      <!-- Case 45: S3 KMS Costs -->
+      <div class="card" id="q45" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 45 · FinOps &amp; Segurança (KMS)</div>
+        <h4>Como as chaves do AWS KMS podem inflar de forma silenciosa e catastrófica o faturamento de consultas no Athena/EMR em tabelas com criptografia SSE-KMS, e qual a estratégia para mitigar custos de chamadas de API KMS?</h4>
+        <p><strong>O Ralo de Dinheiro Oculto:</strong> Por padrão, a criptografia SSE-KMS no S3 exige que, para cada bloco ou arquivo lido/escrito no bucket, seja executada uma chamada de API `kms:Decrypt` ou `kms:GenerateDataKey`. Quando consultas analíticas no Athena ou EMR varrem dezenas de milhões de pequenos arquivos em buckets S3 protegidos, a conta AWS é tarifada em centavos por requisição KMS. Esse custo de chamadas de API KMS pode superar com folga o custo de armazenamento e computação combinados.</p>
+        <div class="callout callout-warn">
+          <strong>A Solução Otimizada: S3 Bucket Keys</strong>
+          <p>Habilite a propriedade <strong>S3 Bucket Key</strong> nas configurações do bucket. Quando ativada, a AWS gera uma chave de bucket de curto prazo no nível do S3 e a utiliza para criptografar/descriptografar dados locais. Isso reduz o volume de chamadas de API do KMS para o S3 em até <strong>99%</strong>, derrubando o custo operacional de segurança de forma imediata.</p>
+        </div>
+      </div>
+
+      <!-- Case 46: Glue DPU Cost Allocation -->
+      <div class="card" id="q46" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 46 · FinOps &amp; AWS Glue Tuning</div>
+        <h4>Como a escolha errada de tipo de Worker do AWS Glue (Standard vs G.1X vs G.2X) combinada com desbalanceamento de dados (Data Skew) gera desperdício orçamentário drástico e como mitigar isso em produção?</h4>
+        <p><strong>tradeoffs e Custos de DPU:</strong> Workers do Glue cobram por DPU-hora ativada.
+          <ul>
+            <li><strong>Worker Standard (1 DPU):</strong> Possui 16GB de RAM e 4 vCPUs. Executa até 2 tarefas concorrentes. Não recomendado para workloads pesados.</li>
+            <li><strong>Worker G.1X (1 DPU):</strong> Possui 16GB de RAM e 4 vCPUs, mas roda apenas uma tarefa concorrente do Spark. Muito mais seguro para evitar OOM.</li>
+            <li><strong>Worker G.2X (2 DPUs):</strong> Possui 32GB de RAM e 8 vCPUs. Indicado para transformações pesadas, ML e joins complexos.</li>
+          </ul>
+          Se o dataset possui <strong>Data Skew</strong>, um único executor do Spark processará 90% da partição de dados pesada enquanto os outros 99 executores (comprados e ativos a 2 DPUs cada) ficam ociosos aguardando o gargalo terminar. O custo continuará cobrando pelas 200 DPUs inteiras.
+        </p>
+        <div class="callout callout-tip">
+          <strong>Ações Corretivas de FinOps:</strong>
+          <ul>
+            <li><strong>Glue Auto Scaling:</strong> Habilite o Auto Scaling nativo do Glue. O gerenciador dinâmico de recursos desliga executores ociosos assim que o gargalo de shuffle ou processamento paralelo inicial é concluído, pagando apenas pelo tempo real de computação ativa.</li>
+            <li><strong>Ajuste de Worker:</strong> Utilize G.1X para transformações normais e reserve G.2X apenas para jobs que de fato exigem grande quantidade de memória temporária ou disco local para operações de Sort e Spill.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 47: VPC Endpoints Networking Costs -->
+      <div class="card" id="q47" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 47 · FinOps &amp; Networking</div>
+        <h4>Como auditar custos ocultos de Data Transfer e NAT Gateway gerados por tarefas analíticas no EMR/Glue que processam dados do S3 em subredes privadas, e qual a solução arquitetural ideal de custo zero?</h4>
+        <p><strong>A Pegadinha das Redes na AWS:</strong> Quando executores do EMR ou Glue rodam em subredes privadas de uma VPC, por padrão, qualquer chamada à internet ou serviços AWS (incluindo o S3) é roteada através do **NAT Gateway** da subrede. A AWS cobra uma tarifa por gigabyte processado (Data Processing charge) no NAT Gateway. Varrer 10 TB de dados no S3 geraria cerca de $450 apenas em tarifas de transferência de rede no NAT Gateway.</p>
+        <div class="callout callout-info">
+          <strong>A Solução Suprema: Gateway VPC Endpoint para S3</strong>
+          <p>Crie um **VPC Endpoint do tipo Gateway** para o S3 na tabela de roteamento da sua VPC privada. Essa configuração cria uma rota interna privada direta e gratuita entre os recursos da subrede privada e o S3, desviando do NAT Gateway e reduzindo o custo de transferência de dados desse tráfego para **zero**.</p>
         </div>
       </div>
     </section>
