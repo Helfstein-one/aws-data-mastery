@@ -64,6 +64,7 @@
       <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
       <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
       <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate</a>
       <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
       <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
 
@@ -296,6 +297,37 @@ schema = StructType([
 df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_payload"</span>) \
     .select(F.from_json(<span class="s">"json_payload"</span>, schema).alias(<span class="s">"data"</span>)) \
     .select(<span class="s">"data.*"</span>)</pre>
+    </section>
+
+    <section class="section" id="ecs-fargate">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">03.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Amazon ECS Fargate: Ingestão Computacional Escalável</h2>
+          <p>Orquestração de contêineres Serverless para ingestão pesada de APIs e Webhooks de alto tráfego</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Como Funciona</h4>
+          <p>O <strong>Amazon ECS (Elastic Container Service)</strong> com o tipo de lançamento <strong>AWS Fargate</strong> é uma engine de computação serverless para contêineres. Diferente do AWS Lambda que possui limites rígidos de tempo (15 minutos) e memória efêmera, o ECS Fargate permite que aplicativos em Python, Go ou Node.js (empacotados via Docker) executem continuamente como serviços 24/7 sem a necessidade de provisionar instâncias EC2.</p>
+          <p>Em Engenharia de Dados, o ECS Fargate é a principal escolha para construir <em>APIs de Ingestão de Borda</em> (Edge APIs). Ele recebe o tráfego da internet (Webhooks, apps de celular) balanceado pelo <strong>ALB (Application Load Balancer)</strong>, executa lógicas de validação sintática complexas (com bibliotecas pesadas incompatíveis com Lambda) e despeja as mensagens em buffers como o Amazon MSK ou Kinesis.</p>
+        </div>
+        <div>
+          <h4>Vantagens e FinOps</h4>
+          <ul>
+            <li><strong>Sem Timeouts:</strong> Executa o download, extração e parseamento de arquivos ZIP/CSV pesados (ex: > 5 GB) recebidos de SFTP ou APIs externas sem sofrer com o timeout de 15 minutos do Lambda.</li>
+            <li><strong>Isolamento Multi-AZ:</strong> Provisiona tarefas de forma redundante e resiliente contra quedas de Availability Zones sem que você gerencie o Control Plane do Kubernetes.</li>
+            <li><strong>FinOps (Spot Fargate):</strong> O ECS suporta o <em>Fargate Spot Provider</em>, utilizando capacidade ociosa de computação na nuvem da AWS, oferecendo descontos de até 70% sobre tarefas <em>On-Demand</em> normais (ideal para pipelines de conversão assíncrona não emergenciais).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <strong>💡 Desacoplamento Arquitetural:</strong> Nunca permita que as tarefas do ECS Fargate escrevam diretamente no Redshift ou em bancos relacionais durante a ingestão. Use o Fargate para capturar, validar o payload no <em>Glue Schema Registry</em> e escrever em buffers altamente escaláveis (Kinesis/MSK). Delegue o roteamento downstream para outros processos.
+      </div>
     </section>
 
     <section class="section" id="dms">

@@ -64,6 +64,7 @@
       <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
       <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
       <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate</a>
       <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
       <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
 
@@ -1511,6 +1512,34 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           <strong>Ação Corretiva em Alta Escala:</strong>
           <ul>
             <li><strong>Conversão para Formatos Transacionais Abertos (Apache Iceberg):</strong> O Apache Iceberg elimina completamente as lentas varreduras hierárquicas da API do AWS Glue Catalog (que causa o estrangulamento do Lake Formation). O Iceberg concentra os apontamentos físicos das partições ativas dentro do S3 na forma de <strong>arquivos de manifestos compactos</strong>. Assim que a tabela transiciona para Iceberg, o Lake Formation e o Athena extraem os metadados diretamente do manifesto no S3. Isso resulta em um Query Planning de latência estável quase ignorável, permitindo aplicação massiva de segurança por coluna sem destruir a performance interativa.</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Case 42: Fargate vs Lambda Cold Starts -->
+      <div class="card" id="q42" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 42 · ECS Fargate vs Lambda</div>
+        <h4>Comparativo Avançado: Como o ciclo de vida (Cold Start) impacta a escolha entre AWS Lambda e ECS Fargate na Ingestão de Telemetria IoT e quais estratégias de autoscaling o Fargate exige para não gerar perdas (Dropped Connections)?</h4>
+        <p><strong>Cenário de Entrevista:</strong> O cliente precisa ingerir sinais contínuos de sensores de frota 24/7. Ocasionalmente o tráfego dobra instantaneamente. Decida o compute.</p>
+        <div class="callout callout-info">
+          <strong>Resposta Técnica:</strong>
+          <ul>
+            <li><strong>O Problema do Cold Start em APIs:</strong> AWS Lambda sofre de Cold Starts quando a concorrência explode subitamente, pois a AWS aloca instâncias isoladas (microVMs Firecracker). Se a inicialização do ambiente de execução (especialmente Java/C# ou Python com muitas bibliotecas) demorar 5 segundos, as requisições HTTPS do cliente durante o pico sofrerão latência gigantesca e possíveis Timeouts pelo API Gateway.</li>
+            <li><strong>A Vantagem do ECS Fargate "Always-On":</strong> O ECS opera com instâncias containerizadas persistentes. Tarefas já ativas suportam concorrência interna alta assíncrona (ex: um servidor FastAPI no Fargate processando 2000 req/s por contêiner simultaneamente através de async/await e connection pooling), não precisando invocar novas VMs linha a linha.</li>
+            <li><strong>Auto-scaling Tuning no ECS:</strong> O ECS demora muito mais para subir uma nova tarefa Fargate (<em>Task Provisioning Latency</em>, ~30 a 60 segundos por pull de imagem Docker pesada) em comparação com milissegundos do Lambda. Portanto, no ECS, devemos escalar antes da crise: usar o <strong>Target Tracking Scaling Policy</strong> fixado em, digamos, 50% de uso de CPU (e não 90%), ou criar regras proativas preditivas baseadas no horário de pico, de forma que os novos contêineres estejam com status <em>RUNNING</em> antes que os servidores ativos enfileirem e percam as conexões (Dropped Connections).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 43: Fargate Disk & EBS -->
+      <div class="card" id="q43" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 43 · Armazenamento ECS Fargate</div>
+        <h4>Como gerenciar gargalos de armazenamento efêmero ao baixar e processar blocos massivos de dados estruturados (>50GB) dentro do ECS Fargate, dada a limitação de disco containerizada?</h4>
+        <p><strong>Desafio Técnico em ETL Serverless:</strong> Tarefas tradicionais do Fargate sobem com um disco de armazenamento efêmero restrito (20GB). Tentativas de baixar um dump do Salesforce de 100GB via API dentro da Task irão encher o disco local, derrubando silenciosamente o container via "No Space Left on Device".</p>
+        <div class="callout callout-warn">
+          <strong>Solução Arquitetural de Storage:</strong>
+          <ul>
+            <li><strong>Expansão de Disco Efêmero (Ephemeral Storage):</strong> Ajustar a configuração da <em>Task Definition</em> no parâmetro <code>ephemeralStorage</code> para solicitar um montante até o limite máximo de 200GB (que acarretará em custos proporcionais atrelados ao tempo de vida da task).</li>
+            <li><strong>EFS (Elastic Block Store) Mount Ponto Ouro:</strong> Para arquivos gigantescos ou processamentos de caches massivos de ML no modelo de processamento batch via ECS, a Amazon agora suporta acoplar volumes do <strong>Amazon EFS (Elastic File System)</strong> nas Fargate Tasks. O container monta o EFS via NFS no diretório de extração local, podendo manipular Terabytes de informações elásticas sob demanda persistente com concorrência para múltiplos containers paralelos lerem do mesmo storage se necessário.</li>
           </ul>
         </div>
       </div>

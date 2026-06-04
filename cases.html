@@ -64,6 +64,7 @@
       <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
       <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
       <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate</a>
       <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
       <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
 
@@ -1973,6 +1974,86 @@
       </div>
     </section>
 
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 10.5: ECS FARGATE STREAMING API -->
+    <section class="section" id="case-ecs-fargate">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">10.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Case 10.5: API de Ingestão de Alta Volumetria com Amazon ECS Fargate</h2>
+          <p>Construção de uma API HTTP Serverless resiliente e auto-escalável para ingestão de eventos mobile, protegida por ALB e bufferizada no Kinesis</p>
+        </div>
+      </div>
+
+      <p>Um aplicativo móvel de entregas com milhões de usuários precisa enviar coordenadas geográficas e status de corridas a cada 5 segundos para a nuvem. Ligar os dispositivos diretamente ao AWS API Gateway geraria custos inviáveis devido ao billing por requisição. A arquitetura propõe um <strong>Application Load Balancer (ALB)</strong> na frente de um cluster <strong>Amazon ECS Fargate</strong> rodando uma API leve e assíncrona que joga os dados diretamente em um <strong>Amazon Kinesis Data Stream</strong>.</p>
+
+      <div class="dw" style="text-align: center; margin: 24px 0;">
+        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="380" fill="#0f172a" rx="14"/>
+          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA DE INGESTÃO MASSIVA COM ECS FARGATE</text>
+
+          <!-- Mobile Clients -->
+          <rect x="20" y="70" width="100" height="60" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="70" y="95" text-anchor="middle" fill="#3b82f6" font-size="8.5" font-weight="700">App Entregas</text>
+          <text x="70" y="112" text-anchor="middle" fill="#cbd5e1" font-size="7">Sinais de GPS (5s)</text>
+
+          <path d="M 120 100 L 160 100" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+
+          <!-- ALB -->
+          <rect x="170" y="60" width="120" height="80" rx="8" fill="#1e293b" stroke="#0f766e" stroke-width="2"/>
+          <text x="230" y="85" text-anchor="middle" fill="#0f766e" font-size="9" font-weight="700">Application</text>
+          <text x="230" y="100" text-anchor="middle" fill="#0f766e" font-size="9" font-weight="700">Load Balancer</text>
+          <text x="230" y="120" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Terminação SSL/TLS</text>
+
+          <!-- Arrows to Fargate -->
+          <path d="M 290 90 L 340 75" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+          <path d="M 290 110 L 340 135" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+
+          <!-- ECS Fargate Cluster -->
+          <rect x="350" y="40" width="180" height="130" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+          <text x="440" y="60" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700">ECS Fargate Cluster</text>
+
+          <rect x="365" y="75" width="150" height="30" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
+          <text x="440" y="93" text-anchor="middle" fill="#e2e8f0" font-size="8">API Container (FastAPI/Go)</text>
+
+          <rect x="365" y="115" width="150" height="30" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
+          <text x="440" y="133" text-anchor="middle" fill="#e2e8f0" font-size="8">API Container (FastAPI/Go)</text>
+
+          <!-- Direct Line to Kinesis -->
+          <path d="M 530 105 L 580 105" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+
+          <!-- Kinesis Data Streams -->
+          <rect x="590" y="60" width="140" height="80" rx="8" fill="#1e293b" stroke="#ea580c" stroke-width="2"/>
+          <text x="660" y="85" text-anchor="middle" fill="#ea580c" font-size="9" font-weight="700">Kinesis Stream</text>
+          <text x="660" y="105" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Buffer Altamente Escalável</text>
+          <text x="660" y="120" text-anchor="middle" fill="#cbd5e1" font-size="7">Retenção de 24h a 7 dias</text>
+
+          <!-- Auto-scaling policy -->
+          <rect x="350" y="190" width="180" height="50" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="440" y="212" text-anchor="middle" fill="#f59e0b" font-size="8" font-weight="700">Auto Scaling Policy</text>
+          <text x="440" y="225" text-anchor="middle" fill="#cbd5e1" font-size="7">Target Tracking (CPU 50%)</text>
+          <path d="M 440 190 L 440 170" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2" marker-end="url(#arrow)" fill="none"/>
+
+          <!-- Definitions for arrows -->
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <h3>Detalhamento do Fluxo Operacional</h3>
+      <ol>
+        <li><strong>Ingress e Load Balancing:</strong> O tráfego entra através do <strong>ALB (Application Load Balancer)</strong>, que assume o trabalho custoso da terminação TLS/SSL. O ALB enxerga as tarefas ativas do Fargate através do mecanismo de roteamento e balanceia as requisições HTTP REST mantendo conexões <em>keep-alive</em> (para não reabrir a porta TCP toda hora).</li>
+        <li><strong>API Asynchronous Processing no Fargate:</strong> Os contêineres rodam micro-frameworks assíncronos que possuem suporte a concorrência enorme em uma única vCPU (como Python AsyncIO ou Goroutines). O container recebe o JSON, valida os tipos de dados e faz um <code>PutRecords</code> batch para o Amazon Kinesis Data Streams usando o Boto3/AWS SDK, respondendo rapidamente ao cliente <code>202 Accepted</code> para economizar bateria do celular e banda.</li>
+        <li><strong>Buffering e Tolerância a Picos:</strong> O container do Fargate não insere os dados diretamente num banco de dados, protegendo o Lakehouse. A carga recai toda sobre o <strong>Kinesis</strong>, que escala em <em>Shards</em> independentes da web.</li>
+        <li><strong>Target Tracking Auto Scaling Predictivo:</strong> Uma política de <strong>Target Tracking</strong> atrelada ao <em>ECS Service</em> monitora a métrica `ALBRequestCountPerTarget` (requisições por contêiner). Antes do contêiner ficar lento, o ECS provisiona automaticamente mais Tasks Fargate (Cold Start em ~40s) para manter a performance instântanea intacta.</li>
+      </ol>
+    </section>
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
 
