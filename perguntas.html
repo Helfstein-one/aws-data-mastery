@@ -105,6 +105,7 @@
       <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
       <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
       <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
+      <a href="governance-security.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality Avançado</a>
     </div>
   </div>
 </nav>
@@ -1540,6 +1541,20 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           <ul>
             <li><strong>Expansão de Disco Efêmero (Ephemeral Storage):</strong> Ajustar a configuração da <em>Task Definition</em> no parâmetro <code>ephemeralStorage</code> para solicitar um montante até o limite máximo de 200GB (que acarretará em custos proporcionais atrelados ao tempo de vida da task).</li>
             <li><strong>EFS (Elastic Block Store) Mount Ponto Ouro:</strong> Para arquivos gigantescos ou processamentos de caches massivos de ML no modelo de processamento batch via ECS, a Amazon agora suporta acoplar volumes do <strong>Amazon EFS (Elastic File System)</strong> nas Fargate Tasks. O container monta o EFS via NFS no diretório de extração local, podendo manipular Terabytes de informações elásticas sob demanda persistente com concorrência para múltiplos containers paralelos lerem do mesmo storage se necessário.</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Case 44: Incremental Data Quality -->
+      <div class="card" id="q44" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 44 · Data Quality & Custos FinOps</div>
+        <h4>Como otimizar os custos computacionais proibitivos de execução de regras de Data Quality (DQDL ou Great Expectations) que analisam a unicidade ou a completude em tabelas gigantescas (Petabytes) do Data Lake?</h4>
+        <p><strong>Cenário de Entrevista:</strong> Executar <code>IsUnique "id_cliente"</code> em uma tabela de 5 Petabytes todos os dias leva horas e consome recursos massivos de Spark Shuffle para calcular o agrupamento completo.</p>
+        <div class="callout callout-info">
+          <strong>Resposta Técnica (Técnicas de Escala):</strong>
+          <ul>
+            <li><strong>Isolamento Incremental (Push-down):</strong> Nunca execute testes de Data Quality na tabela integral a cada execução de batch. Restrinja o DataFrame lido passando predicados de tempo no <em>pushdown</em>, avaliando apenas a partição ingerida no dia (ex: <code>df.filter("data_ingestao = current_date")</code>). Teste a integridade apenas sobre os incrementos da jornada (Delta).</li>
+            <li><strong>Aproximação Probabilística:</strong> Se o teste de unicidade (IsUnique) e contagem exata não for estritamente financeiro e sim comportamental, troque contagens exatas onerosas (como <code>COUNT(DISTINCT id)</code>) por algoritmos probabilísticos leves embutidos na engine (como o <strong>HyperLogLog</strong> no Spark/Presto). O algoritmo fornece ~98% de precisão gastando uma fração minúscula de RAM e processamento.</li>
+            <li><strong>DQ Integrado via Iceberg/Delta:</strong> Bancos e formatos modernos (Apache Iceberg) mantêm metadados com contagens de colunas, mínimos, máximos e nulos pré-computados (File-Level Stats) sem a necessidade de varrer os dados fisicamente. Queries otimizadas podem extrair métricas de completude lendo apenas as tabelas de manifesto de forma gratuita e imediata.</li>
           </ul>
         </div>
       </div>

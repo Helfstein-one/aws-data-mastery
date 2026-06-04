@@ -105,6 +105,7 @@
       <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
       <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
       <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
+      <a href="governance-security.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality Avançado</a>
     </div>
   </div>
 </nav>
@@ -2086,6 +2087,42 @@
           <li><strong>Pod Startup Latency e Cold Starts Lentos (Image Pull):</strong> Executar imagens Docker gordinhas recheadas de lib de PySpark + LLMs + Scikit (frequentemente de 3 GB a 5 GB) faz com que o tempo de subida inicial do Pod seja totalmente dominado pela demora do download físico da imagem do ECR (Image Pull) nos nós limpos que o Karpenter acabou de ligar. A solução extrema em Big Data envolve o uso do <strong>Amazon EBS Snapshot do EKS</strong> ou criar e utilizar AMIs pré-baking personalizadas do EKS que já contenham as camadas pesadas do Docker cacheadas em disco (baked-in), resultando em tempos de boot saltando de minutos para menos de 30 segundos.</li>
         </ul>
       </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 11.5: DATA QUALITY CIRCUIT BREAKER -->
+    <section class="section" id="case-data-quality">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--muted)">11.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--muted)"></div>
+          <h2>Case 11.5: Circuit Breaker de Qualidade de Dados (AWS Glue DQDL)</h2>
+          <p>Automação de isolamento de lotes corrompidos (Bad Records) em tempo de execução para blindagem do Data Warehouse</p>
+        </div>
+      </div>
+
+      <p>Uma empresa de telecomunicações sofria frequentemente com sistemas legados externos que enviavam arquivos de faturamento diários (CSV) no S3 com colunas numéricas preenchidas com strings (ex: valor "N/A" em vez de nulo) ou arquivos truncados. Quando o pipeline noturno copiava esses dados direto pro Amazon Redshift, relatórios fiscais amanheciam quebrados. A arquitetura de <strong>Data Quality Circuit Breaker</strong> automatizou a blindagem analítica usando o AWS Glue Data Quality na transição entre Bronze e Silver.</p>
+
+      <h3>Arquitetura do Circuit Breaker</h3>
+      <ol>
+        <li><strong>Definição de Contratos Analíticos:</strong> O engenheiro de dados define o contrato de qualidade em <em>DQDL (Data Quality Definition Language)</em>, acoplado ao job do Glue:
+          <pre>Rules = [
+    IsComplete "id_fatura",
+    IsUnique "id_fatura",
+    ColumnDataType "valor_fatura" = "DOUBLE",
+    ColumnValues "status" in ["PAGA", "ATRASADA", "CANCELADA"]
+]</pre>
+        </li>
+        <li><strong>Fase de Avaliação Intermediária (Spark Evaluation):</strong> O script PySpark no AWS Glue não escreve nada no disco imediatamente. Ele lê a partição diária do S3 (Bronze), converte em um DynamicFrame e submete à API <code>EvaluateDataQuality</code>.</li>
+        <li><strong>Roteamento por Desvio (Quarantine):</strong> A função de avaliação gera um relatório detalhado marcando as linhas específicas que falharam. O Glue particiona os dados ativamente em dois DataFrames lógicos:
+          <ul>
+            <li><code>df_aprovado</code>: Contém apenas registros que passaram nos testes. São salvos na camada <strong>Silver (Iceberg)</strong> e habilitados para consumo downstream.</li>
+            <li><code>df_rejeitado</code>: Contém a sujeira. Eles são serializados e desviados para um <strong>S3 Quarantine Bucket</strong> isolado. Essa gravação não interrompe o job inteiro.</li>
+          </ul>
+        </li>
+        <li><strong>Notificação Proativa e Observabilidade:</strong> Para evitar que a quarentena se torne um "buraco negro" esquecido, um alarme é engatilhado. A métrica de falha é empurrada para o CloudWatch. Uma regra do Amazon EventBridge captura o erro e despacha via <strong>Amazon SNS</strong> um payload formatado em JSON para um Lambda, que alerta a equipe de Data Ops no canal do Slack: <em>"Atenção: 4.500 faturas desviadas para a Quarentena S3. Arquivo de origem: faturas_05_06_2026.csv. Motivo: IsComplete id_fatura = Failed."</em></li>
+      </ol>
     </section>
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
