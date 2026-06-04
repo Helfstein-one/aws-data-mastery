@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Ingestão de Dados e Streaming em tempo real com AWS Kinesis, MSK (Kafka) e DMS.">
+  <title>Ingestão & Streaming - AWS Data Specialist</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar">
+  <div class="nav-logo">
+    <div class="t">AWS Data<br>Engineering</div>
+    <div class="s">Portal de Estudos</div>
+    <div class="auth" style="font-family: 'DM Mono', monospace; font-size: 8px; color: #38bdf8; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase;">Autor: Mauricio Helfstein</div>
+  </div>
+  <div style="padding:0 12px">
+    <div class="nav-lbl">Visão Geral</div>
+    <a href="index.html" class="nav-a "><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
+    
+    <div class="nav-lbl collapsible " onclick="toggleCategory('arch-cat', this)">
+      <span>Arquitetura &amp; Padrões</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="arch-cat" class="nav-cat-content ">
+      <a href="architecture.html" class="nav-a "><span class="nav-dot" style="background:var(--arch)"></span>📐 Arquitetura de Dados</a>
+      <a href="architecture.html#pilares" class="nav-sub"><span class="nav-sdot"></span>7 Pilares</a>
+      <a href="architecture.html#mensageria" class="nav-sub"><span class="nav-sdot"></span>Mensageria</a>
+      <a href="architecture.html#kafka" class="nav-sub"><span class="nav-sdot"></span>Kafka/MSK</a>
+      <a href="architecture.html#triggers" class="nav-sub"><span class="nav-sdot"></span>Triggers</a>
+      <a href="architecture.html#workflows" class="nav-sub"><span class="nav-sdot"></span>Workflows</a>
+      <a href="architecture.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="architecture.html#lambda" class="nav-sub"><span class="nav-sdot"></span>Lambda</a>
+      <a href="architecture.html#kappa" class="nav-sub"><span class="nav-sdot"></span>Kappa</a>
+      <a href="architecture.html#lakehouse" class="nav-sub"><span class="nav-sdot"></span>Lakehouse</a>
+      <a href="architecture.html#datamesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+
+      <a href="perguntas.html" class="nav-a "><span class="nav-dot" style="background:var(--spark)"></span>❓ Perguntas de Entrevista</a>
+      <a href="perguntas.html#q1" class="nav-sub"><span class="nav-sdot"></span>Spark & Kafka</a>
+      <a href="perguntas.html#q5" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="perguntas.html#q7" class="nav-sub"><span class="nav-sdot"></span>Memory & OOM</a>
+      <a href="perguntas.html#q14" class="nav-sub"><span class="nav-sdot"></span>Spark Tuning</a>
+      <a href="perguntas.html#q24" class="nav-sub"><span class="nav-sdot"></span>RAG & GenAI</a>
+
+      <a href="cases.html" class="nav-a "><span class="nav-dot" style="background:var(--ext)"></span>💼 Cases de Plataformas</a>
+      <a href="cases.html#case-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming</a>
+      <a href="cases.html#case-mesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+      <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
+      <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
+      <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
+    </div>
+    
+    <div class="nav-lbl collapsible active" onclick="toggleCategory('pipeline-cat', this)">
+      <span>Pipeline de Engenharia</span>
+      <span class="arrow">▼</span>
+    </div>
+    <div id="pipeline-cat" class="nav-cat-content open">
+      <a href="ingestion.html" class="nav-a active"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Ingestão & Streaming</a>
+      <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
+      <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
+      <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
+      <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
+
+      <a href="storage-lakehouse.html" class="nav-a "><span class="nav-dot" style="background:var(--arch)"></span>💾 Lakehouse & Storage</a>
+      <a href="storage-lakehouse.html#s3-camadas" class="nav-sub"><span class="nav-sdot"></span>Camadas S3</a>
+      <a href="storage-lakehouse.html#s3-tiers" class="nav-sub"><span class="nav-sdot"></span>S3 Tiers & FinOps</a>
+      <a href="storage-lakehouse.html#formatos" class="nav-sub"><span class="nav-sdot"></span>Formatos</a>
+      <a href="storage-lakehouse.html#iceberg" class="nav-sub"><span class="nav-sdot"></span>Iceberg</a>
+      <a href="storage-lakehouse.html#iceberg-vs-delta" class="nav-sub"><span class="nav-sdot"></span>Iceberg vs Delta</a>
+
+      <a href="processing.html" class="nav-a "><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Processamento Spark</a>
+      <a href="processing.html#spark-arch" class="nav-sub"><span class="nav-sdot"></span>Spark Arch</a>
+      <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
+      <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
+      <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+
+      <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
+      <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
+      <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
+    </div>
+    
+    <div class="nav-lbl collapsible " onclick="toggleCategory('service-cat', this)">
+      <span>Serviço, Segurança &amp; IA</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="service-cat" class="nav-cat-content ">
+      <a href="genai.html" class="nav-a "><span class="nav-dot" style="background:#a78bfa"></span>🤖 GenAI & Dados</a>
+      <a href="genai.html#genai-pilares" class="nav-sub"><span class="nav-sdot"></span>Pilares GenAI</a>
+      <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG</a>
+      <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>Vector DB</a>
+
+      <a href="governance-security.html" class="nav-a "><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança & IaC</a>
+      <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="governance-security.html#iam-kms" class="nav-sub"><span class="nav-sdot"></span>IAM & KMS</a>
+      <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
+      <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
+      <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
+    </div>
+  </div>
+</nav>
+
+<div id="main">
+  <div class="hero">
+    <div class="hero-ey">Ingestão &amp; Streaming</div>
+    <h1>Coleta e Ingestão de Dados na AWS</h1>
+    <p class="hero-d">Guia definitivo para arquiteturas de streaming tolerantes a falhas, pipelines híbridos (Kappa/Lambda) e carregamento otimizado de bancos transacionais operacionais.</p>
+  </div>
+
+  <main class="main-content">
+    <section class="section" id="kinesis">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Amazon Kinesis Data Streams Deep Dive</h2>
+          <p>Sharding, contrapressão, limites de leitura e produtores resilientes com controle de concorrência</p>
+        </div>
+      </div>
+
+      <p>O <strong>Amazon Kinesis Data Streams</strong> é o motor gerenciado de streaming na nuvem AWS. Ele permite a ingestão contínua de milhões de registros por segundo por meio de shards. Cada <strong>Shard</strong> provê:</p>
+      <ul>
+        <li><strong>Escrita (Ingress):</strong> Até 1 MB/s de taxa de transferência ou 1.000 registros de gravação por segundo.</li>
+        <li><strong>Leitura (Egress):</strong> Até 2 MB/s por padrão. Esse limite pode ser contornado usando <strong>Enhanced Fan-Out (EFO)</strong>, que aloca conexões HTTP/2 dedicadas de 2 MB/s por consumidor, reduzindo a latência para menos de 70 milissegundos.</li>
+      </ul>
+
+      <div class="callout callout-warn">
+        <strong>⚠️ Ameaça de Throttling (ProvisionedThroughputExceededException):</strong>
+        Se a sua aplicação produtora enviar registros que hash para o mesmo Shard ultrapassando o limite físico, o Kinesis rejeita os dados. É obrigatório que o produtor controle a volumetria e aplique tratamento de erro por meio de <em>Exponential Backoff com Jitter</em>.
+      </div>
+
+      <h3>Implementação de Produtor Python Resiliente com Boto3</h3>
+      <p>O script a seguir implementa envio em lote com o método <code>put_records</code> e gerencia erros parciais nas mensagens enviadas (onde algumas foram aceitas e outras sofreram throttling):</p>
+
+      <pre><span class="k">import</span> boto3
+<span class="k">import</span> time
+<span class="k">import</span> random
+<span class="k">import</span> json
+<span class="k">from</span> botocore.exceptions <span class="k">import</span> ClientError
+
+<span class="k">class</span> <span class="nc">ResilientKinesisProducer</span>:
+    <span class="k">def</span> <span class="nf">__init__</span>(self, stream_name, region_name=<span class="s">"us-east-1"</span>):
+        self.client = boto3.client(<span class="s">'kinesis'</span>, region_name=region_name)
+        self.stream_name = stream_name
+
+    <span class="k">def</span> <span class="nf">send_batch_with_retry</span>(self, records, max_retries=5):
+        <span class="s">"""Envia registros usando put_records com tratamento detalhado de falhas parciais."""</span>
+        formatted_records = [
+            {
+                <span class="s">'Data'</span>: json.dumps(r[<span class="s">'data'</span>]).encode(<span class="s">'utf-8'</span>),
+                <span class="s">'PartitionKey'</span>: r[<span class="s">'partition_key'</span>]
+            } <span class="k">for</span> r <span class="k">in</span> records
+        ]
+        
+        attempt = 0
+        base_delay = 0.1
+        records_to_send = formatted_records
+        
+        <span class="k">while</span> records_to_send <span class="k">and</span> attempt &lt; max_retries:
+            <span class="k">try</span>:
+                response = self.client.put_records(
+                    Records=records_to_send,
+                    StreamName=self.stream_name
+                )
+                
+                failed_count = response.get(<span class="s">'FailedRecordCount'</span>, 0)
+                <span class="k">if</span> failed_count == 0:
+                    <span class="k">return</span> <span class="k">True</span>
+                
+                <span class="c"># Filtra apenas os registros que falharam por throttling para reenvio</span>
+                failed_indices = []
+                <span class="k">for</span> i, res_rec <span class="k">in</span> enumerate(response[<span class="s">'Records'</span>]):
+                    <span class="k">if</span> <span class="s">'ErrorCode'</span> <span class="k">in</span> res_rec:
+                        failed_indices.append(i)
+                
+                records_to_send = [records_to_send[idx] <span class="k">for</span> idx <span class="k">in</span> failed_indices]
+                
+                <span class="c"># Jittered Exponential Backoff</span>
+                delay = (base_delay * (2 ** attempt)) + random.uniform(0, 0.1)
+                time.sleep(delay)
+                attempt += 1
+                
+            <span class="k">except</span> ClientError <span class="k">as</span> e:
+                <span class="k">if</span> e.response[<span class="s">'Error'</span>][<span class="s">'Code'</span>] == <span class="s">'ProvisionedThroughputExceededException'</span>:
+                    time.sleep(base_delay * (2 ** attempt) + random.uniform(0, 0.05))
+                    attempt += 1
+                <span class="k">else</span>:
+                    <span class="k">raise</span> e
+                    
+        <span class="k">if</span> records_to_send:
+            <span class="k">raise</span> RuntimeError(f<span class="s">"Falha ao processar {len(records_to_send)} registros após {max_retries} tentativas."</span>)</pre>
+
+      <h3>Diagrama Arquitetural: Sharding &amp; Backpressure</h3>
+      <div class="dw">
+        <svg width="600" height="260" viewBox="0 0 600 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="600" height="260" rx="8" fill="#0f172a" />
+          <rect x="20" y="50" width="120" height="160" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="80" y="80" fill="#f8fafc" font-family="DM Sans" font-size="12" font-weight="bold" text-anchor="middle">Produtores</text>
+          <text x="80" y="110" fill="#64748b" font-family="DM Sans" font-size="10" text-anchor="middle">IoT, Logs, Apps</text>
+          
+          <rect x="240" y="30" width="160" height="200" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="320" y="55" fill="#f8fafc" font-family="DM Sans" font-size="12" font-weight="bold" text-anchor="middle">Kinesis Stream</text>
+          
+          <rect x="260" y="80" width="120" height="30" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="320" y="98" fill="#15803d" font-family="DM Mono" font-size="10" text-anchor="middle">Shard 1 (Ativo)</text>
+          
+          <rect x="260" y="125" width="120" height="30" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="320" y="143" fill="#15803d" font-family="DM Mono" font-size="10" text-anchor="middle">Shard 2 (Ativo)</text>
+
+          <rect x="260" y="170" width="120" height="30" rx="4" fill="#0f172a" stroke="#b91c1c"/>
+          <text x="320" y="188" fill="#b91c1c" font-family="DM Mono" font-size="10" text-anchor="middle">Shard 3 (Overloaded)</text>
+          
+          <rect x="460" y="50" width="120" height="160" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="520" y="80" fill="#f8fafc" font-family="DM Sans" font-size="12" font-weight="bold" text-anchor="middle">Consumidores</text>
+          <text x="520" y="110" fill="#64748b" font-family="DM Sans" font-size="10" text-anchor="middle">Glue Streaming</text>
+          <text x="520" y="130" fill="#64748b" font-family="DM Sans" font-size="10" text-anchor="middle">Lambda</text>
+          
+          <path d="M140 100 L240 100" stroke="#15803d" stroke-width="1.5" />
+          <text x="190" y="90" fill="#15803d" font-family="DM Sans" font-size="9" text-anchor="middle">Normal</text>
+          
+          <path d="M140 160 L240 180" stroke="#b91c1c" stroke-width="1.5" stroke-dasharray="4" />
+          <text x="190" y="175" fill="#b91c1c" font-family="DM Sans" font-size="9" text-anchor="middle">Backpressure</text>
+          
+          <path d="M400 130 L460 130" stroke="#2563eb" stroke-width="1.5" />
+        </svg>
+      </div>
+    </section>
+
+    <section class="section" id="firehose">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Kinesis Data Firehose Dynamic Partitioning</h2>
+          <p>Persistência otimizada no S3 sem UDFs de transformação</p>
+        </div>
+      </div>
+
+      <p>O <strong>Kinesis Data Firehose</strong> é um serviço de entrega *near-real-time* que agrupa dados por tempo (buffer) ou volume e os salva no S3. O maior problema histórico do Firehose era gravar arquivos com o prefixo fixo `YYYY/MM/DD/HH`. Atualmente, com a funcionalidade de <strong>Dynamic Partitioning</strong>, ele pode inspecionar o JSON da mensagem usando expressões JQ e criar subdiretórios baseando-se em colunas dinâmicas em runtime.</p>
+
+      <h3>Exemplo de Configuração de Dynamic Partitioning</h3>
+      <p>Imagine que as mensagens contenham os campos <code>{"org_id": "empresa_a", "event_type": "click"}</code>. Configuramos o prefixo de destino no S3 da seguinte forma:</p>
+      <pre># Expressão de extração JQ (Metadata Extraction)
+org = .org_id
+tipo = .event_type
+
+# Template do prefixo S3 no Firehose
+s3-bucket/trusted/org=!{partitionKeyFromQuery:org}/tipo=!{partitionKeyFromQuery:tipo}/ano=!{timestamp:yyyy}/mes=!{timestamp:MM}/</pre>
+
+      <div class="callout callout-tip">
+        <strong>✓ Redução de Custos com Athena:</strong>
+        O particionamento dinâmico baseado em colunas do negócio (como ID da empresa/cliente) no Firehose evita que consultas no Athena analisem dados de outras entidades, reduzindo em até 95% os bytes escaneados no S3.
+      </div>
+    </section>
+
+    <section class="section" id="msk">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">03</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Amazon MSK (Managed Streaming for Apache Kafka)</h2>
+          <p>Gerenciamento de tópicos, partições, retenção e integração com Spark Structured Streaming</p>
+        </div>
+      </div>
+
+      <p>O <strong>Amazon MSK</strong> entrega clusters Apache Kafka totalmente gerenciados. Em comparação com o Kinesis, o MSK não tem limitação de tamanho de registro de 1 MB (comum em arquivos de log extensos) e permite customizar o particionamento utilizando chaves de negócio avançadas.</p>
+
+      <h3>Leitura e Consumo de Tópicos MSK com PySpark (Glue / EMR):</h3>
+      <p>Snippet real de leitura de streaming no Spark apontando para brokers MSK autenticados de forma segura:</p>
+      <pre><span class="c"># Leitura direta do MSK no PySpark</span>
+df_msk = spark.readStream \
+    .format(<span class="s">"kafka"</span>) \
+    .option(<span class="s">"kafka.bootstrap.servers"</span>, <span class="s">"b-1.mskcluster.amazonaws.com:9094,b-2.mskcluster.amazonaws.com:9094"</span>) \
+    .option(<span class="s">"subscribe"</span>, <span class="s">"transacoes_financeiras"</span>) \
+    .option(<span class="s">"kafka.ssl.truststore.location"</span>, <span class="s">"/tmp/kafka.client.truststore.jks"</span>) \
+    .option(<span class="s">"kafka.security.protocol"</span>, <span class="s">"SSL"</span>) \
+    .option(<span class="s">"startingOffsets"</span>, <span class="s">"latest"</span>) \
+    .load()
+
+<span class="c"># Conversão do payload binário do Kafka em JSON estruturado</span>
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType
+schema = StructType([
+    StructField(<span class="s">"id_transacao"</span>, StringType(), <span class="k">True</span>),
+    StructField(<span class="s">"valor"</span>, DoubleType(), <span class="k">True</span>),
+    StructField(<span class="s">"timestamp"</span>, StringType(), <span class="k">True</span>)
+])
+
+df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_payload"</span>) \
+    .select(F.from_json(<span class="s">"json_payload"</span>, schema).alias(<span class="s">"data"</span>)) \
+    .select(<span class="s">"data.*"</span>)</pre>
+    </section>
+
+    <section class="section" id="dms">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>AWS DMS Mapping Rules &amp; CDC Tuning</h2>
+          <p>Parametrização avançada de regras de inclusão, manuseio de LOBs e afinação de performance em tarefas de replicação lógica</p>
+        </div>
+      </div>
+
+      <p>O <strong>AWS Database Migration Service (DMS)</strong> executa replicação lógica baseando-se em arquivos de regras JSON. Estas regras determinam quais tabelas replicar, o que renomear ou ocultar, e como injetar metadados de controle de auditoria (como tipo de operação DML, timestamp da alteração).</p>
+
+      <h3>JSON de Regra de Mapeamento do DMS (DMS Task Mapping Rules)</h3>
+      <p>Abaixo está um exemplo de configuração de mapeamento de tabela adicionando colunas de auditoria da alteração na origem (CDC):</p>
+      <pre>{
+    <span class="s">"rules"</span>: [
+        {
+            <span class="s">"rule-type"</span>: <span class="s">"selection"</span>,
+            <span class="s">"rule-id"</span>: <span class="s">"1"</span>,
+            <span class="s">"rule-name"</span>: <span class="s">"incluir_tabelas_vendas"</span>,
+            <span class="s">"object-locator"</span>: {
+                <span class="s">"schema-name"</span>: <span class="s">"public"</span>,
+                <span class="s">"table-name"</span>: <span class="s">"vendas_%"</span>
+            },
+            <span class="s">"rule-action"</span>: <span class="s">"include"</span>
+        },
+        {
+            <span class="s">"rule-type"</span>: <span class="s">"transformation"</span>,
+            <span class="s">"rule-id"</span>: <span class="s">"2"</span>,
+            <span class="s">"rule-name"</span>: <span class="s">"add_cdc_metadata"</span>,
+            <span class="s">"rule-action"</span>: <span class="s">"add-column"</span>,
+            <span class="s">"rule-target"</span>: <span class="s">"column"</span>,
+            <span class="s">"object-locator"</span>: {
+                <span class="s">"schema-name"</span>: <span class="s">"public"</span>,
+                <span class="s">"table-name"</span>: <span class="s">"vendas_%"</span>
+            },
+            <span class="s">"value"</span>: <span class="s">"op_type"</span>,
+            <span class="s">"expression"</span>: <span class="s">"${AR_H_OPERATION}"</span>,
+            <span class="s">"data-type"</span>: {
+                <span class="s">"type"</span>: <span class="s">"string"</span>,
+                <span class="s">"length"</span>: 10
+            }
+        }
+    ]
+}</pre>
+
+      <h3>Tradeoffs de Performance: Modos de Manuseio de LOB (Large Objects)</h3>
+      <p>Um dos maiores gargalos em migrações via DMS é o manuseio de colunas que contêm tipos de dados grandes (como BLOB, CLOB, JSON, TEXT). O DMS possui três estratégias de replicação de LOBs:</p>
+      
+      <ul>
+        <li><strong>1. Full LOB Mode:</strong> 
+          O DMS migra todos os dados de LOB independentemente do tamanho. 
+          <br><em>Como funciona:</em> O DMS lê os dados da tabela em lotes, mas exclui as colunas LOB do lote inicial. Em seguida, para cada linha no lote, ele executa uma consulta individual (GET) na tabela de origem para buscar os dados do LOB. 
+          <br><em>Impacto:</em> A performance despenca de forma drástica devido ao excesso de viagens de rede (network round-trips) e queries unitárias na origem.
+        </li>
+        <li><strong>2. Limited LOB Mode:</strong> 
+          O engenheiro de dados especifica um tamanho máximo em KB (ex: 32 KB) para o processamento de LOBs. 
+          <br><em>Como funciona:</em> O DMS lê as colunas LOB inline diretamente no lote inicial junto com os outros dados normais. 
+          <br><em>Impacto:</em> Velocidade extremamente alta. Porém, se um registro contiver um dado LOB maior que o tamanho definido, o DMS **truncará** o dado silenciosamente, gerando perda ou corrupção de dados.
+        </li>
+        <li><strong>3. Inline LOB Mode:</strong> 
+          Uma abordagem híbrida que combina o melhor dos dois mundos.
+          <br><em>Como funciona:</em> O engenheiro define um limite pequeno (ex: 8 KB) para LOBs inline. O DMS busca LOBs menores que esse limite na primeira query em lote. Se o LOB for maior, o DMS executa o fluxo do Full LOB apenas para esses registros específicos excedentes.
+          <br><em>Recomendação:</em> É a melhor prática de design para manter alta vazão sem risco de truncamento de dados.
+        </li>
+      </ul>
+
+      <h3>Tuning Fino das Configurações de Tarefa (Task Settings)</h3>
+      <p>Para otimizar o throughput do DMS CDC e Full Load, os seguintes parâmetros JSON devem ser ajustados no arquivo de configurações da Task:</p>
+      
+      <ul>
+        <li><strong>CommitRate:</strong> Controla o número máximo de registros que podem ser aplicados em uma única transação no target. O valor padrão é 10000. Para targets analíticos (como S3 Parquet ou Aurora PostgreSQL), aumentar o <code>CommitRate</code> otimiza a gravação física ao criar arquivos/lotes de commits maiores.</li>
+        <li><strong>MaxFullLoadSubTasks:</strong> Define o número máximo de tabelas carregadas simultaneamente durante a fase de Full Load. O valor padrão é 8. Em instâncias de replicação grandes (ex: <code>c5.2xlarge</code> ou maior), aumentar para 15 a 20 reduz significativamente o tempo de carga histórica inicial.</li>
+        <li><strong>ParallelLoadThreads:</strong> Permite paralelizar a carga de tabelas gigantescas de forma segmentada, dividindo-as por chaves numéricas primárias ou índices. Isso evita que uma única tabela monopolize uma única thread.</li>
+        <li><strong>StreamBufferSettings:</strong> Configura o tamanho da memória alocada na instância de replicação para armazenar alterações do CDC em buffer antes de enviá-las ao destino. Evita lag de replicação quando a vazão da origem é muito rápida e o destino está lento.</li>
+      </ul>
+
+      <h3>Tratamento de Schema Evolution (DDL Drift)</h3>
+      <p>Modificações de tabelas na origem (como comandos <code>ALTER TABLE ADD COLUMN</code> ou <code>DROP COLUMN</code>) podem causar a falha catastrófica da tarefa do DMS se não configuradas corretamente:</p>
+      <ul>
+        <li>No arquivo JSON de Task Settings, configure o parâmetro <code>TargetTablePrepMode</code> e o objeto <code>SchemaBehavior</code>.</li>
+        <li>A melhor prática para manter a estabilidade do pipeline downstream (como no S3 Data Lake) é configurar o comportamento de DDL para **Ignorar (Do Nothing)** ou **Propagar (Cascade)** no target, garantindo que o Glue Data Catalog consiga mapear as novas colunas sem parar a tarefa.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="dynamodb">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>DynamoDB Ingestion</h2>
+          <p>Exportações consistentes PITR e streams em tempo real</p>
+        </div>
+      </div>
+
+      <p>A ingestão do DynamoDB para o Data Lake S3 deve ser separada entre histórico frio e incremental quente:</p>
+      <ul>
+        <li><strong>PITR Export to S3 (Histórico):</strong> Exporta dados em formato AWS Ion ou JSON nativo. Não consome recursos de computação ou RCU operacionais da tabela, eliminando o risco de queda do sistema de produção.</li>
+        <li><strong>DynamoDB Streams (Real-Time):</strong> Dispara eventos contínuos a cada modificação na tabela, que podem ser capturados por funções AWS Lambda e persistidos de forma consolidada no S3.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="rds">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>RDS / Aurora Ingestion</h2>
+          <p>Snapshot Exports e conectores de alto desempenho no Glue</p>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">AWS Aurora JDBC Parallel Ingest</div>
+        <div class="abox-body">
+          <p>A ingestão via JDBC padrão no Spark ocorre por thread única. Para paralelizar, deve-se dividir o range da chave primária:</p>
+          <pre><span class="c"># Ingestão paralela dividida por partições numéricas</span>
+df_rds = spark.read.format(<span class="s">"jdbc"</span>) \
+    .option(<span class="s">"url"</span>, <span class="s">"jdbc:postgresql://aurora-cluster.cluster-xyz.us-east-1.rds.amazonaws.com:5432/vendas_db"</span>) \
+    .option(<span class="s">"dbtable"</span>, <span class="s">"fct_vendas"</span>) \
+    .option(<span class="s">"user"</span>, <span class="s">"db_admin"</span>) \
+    .option(<span class="s">"password"</span>, <span class="s">"SenhaSeguraKMS"</span>) \
+    .option(<span class="s">"partitionColumn"</span>, <span class="s">"id_venda"</span>) \
+    .option(<span class="s">"lowerBound"</span>, <span class="s">"0"</span>) \
+    .option(<span class="s">"upperBound"</span>, <span class="s">"10000000"</span>) \
+    .option(<span class="s">"numPartitions"</span>, <span class="s">"40"</span>) \
+    .load()</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="comparativo">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">07</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Batch vs Streaming vs Lambda vs Kappa</h2>
+          <p>Comparativo aprofundado dos padrões de design e latência</p>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Padrão</th>
+              <th>Latência Típica</th>
+              <th>Complexidade e Custos</th>
+              <th>Prós e Contras</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Batch (Lotes)</strong></td>
+              <td>D+1 / Diário</td>
+              <td>Baixa. Custos computacionais previsíveis.</td>
+              <td><strong>Prós:</strong> Fácil de testar, sem estado ativo. <strong>Contras:</strong> Latência alta de negócio.</td>
+            </tr>
+            <tr>
+              <td><strong>Micro-batch</strong></td>
+              <td>10s – 5min</td>
+              <td>Média. Custos contínuos.</td>
+              <td><strong>Prós:</strong> Bom tradeoff latência vs custo S3. <strong>Contras:</strong> Risco de "small files problem".</td>
+            </tr>
+            <tr>
+              <td><strong>Real-Time Streaming</strong></td>
+              <td>&lt; 1s</td>
+              <td>Alta. Custos permanentes e monitoramento complexo.</td>
+              <td><strong>Prós:</strong> Latência próxima de zero. <strong>Contras:</strong> Exige tratamento complexo de janelas de tempo.</td>
+            </tr>
+            <tr>
+              <td><strong>Lambda Architecture</strong></td>
+              <td>Híbrida</td>
+              <td>Muito Alta. Mantém código duplicado.</td>
+              <td><strong>Prós:</strong> Dados rápidos instantâneos e consistência batch. <strong>Contras:</strong> Difícil manutenção do código.</td>
+            </tr>
+            <tr>
+              <td><strong>Kappa Architecture</strong></td>
+              <td>Variável</td>
+              <td>Média-Alta. Depende do histórico no log.</td>
+              <td><strong>Prós:</strong> Um único pipeline para manter. <strong>Contras:</strong> Exige retenção longa nos tópicos Kafka/MSK.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="tabela-aws">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">08</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Mapeamento de Ingestão de Serviços AWS</h2>
+          <p>Conexões físicas da fonte ao destino final no Data Lake</p>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fonte</th>
+              <th>Serviço AWS</th>
+              <th>Autenticação</th>
+              <th>Destino no S3</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Bancos SQL (PG/MySQL)</td>
+              <td>AWS DMS</td>
+              <td>IAM + Credentials (Secrets Mgr)</td>
+              <td>s3://datalake-bronze/schema/tabela/ (Parquet)</td>
+            </tr>
+            <tr>
+              <td>Logs de Servidores</td>
+              <td>Kinesis Agent / Firehose</td>
+              <td>IAM Instance Profile</td>
+              <td>s3://datalake-raw/logs/ano/mes/dia/</td>
+            </tr>
+            <tr>
+              <td>Bancos NoSQL (DynamoDB)</td>
+              <td>PITR S3 Export</td>
+              <td>IAM Policy Direct</td>
+              <td>s3://datalake-bronze/dynamodb-export/</td>
+            </tr>
+            <tr>
+              <td>Sistemas Legados On-Premises</td>
+              <td>AWS DataSync</td>
+              <td>SSL Agent / IAM Keys</td>
+              <td>s3://datalake-raw/files/</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="erros">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">09</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Erros Comuns de Ingestão &amp; Troubleshooting</h2>
+          <p>Gargalos produtivos em operações de streaming e replicação</p>
+        </div>
+      </div>
+
+      <div class="errors-grid">
+        <div class="err-card">
+          <div class="err-tag">Kinesis · Throttling</div>
+          <div class="err-title">ProvisionedThroughputExceededException</div>
+          <div class="err-body"><strong>Causa:</strong> Chave de partição estática (ex: string vazia ou constante) concentrando dados no mesmo shard.<br><br><strong>Fix:</strong> Adicione hashes aleatórios (salts) ou UUIDs nas chaves de partição para distribuir uniformemente o tráfego nos shards.</div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag">DMS · CDC</div>
+          <div class="err-title">Replication Task em estado FAILED no restart</div>
+          <div class="err-body"><strong>Causa:</strong> Log de transação (WAL/Binlog) foi rotacionado e deletado na origem antes do DMS realizar a leitura.<br><br><strong>Fix:</strong> Aumente o tempo de retenção física de logs na origem (ex: 24 horas no RDS Postgres) para evitar perda de tracking do DMS.</div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag">Firehose · S3</div>
+          <div class="err-title">Throttling de escrita de arquivos pequenos no S3</div>
+          <div class="err-body"><strong>Causa:</strong> Configuração de buffer do Firehose muito curta (ex: 60s) forçando uploads contínuos que esgotam o limite de requests PUT no bucket.<br><br><strong>Fix:</strong> Eleve o buffer do Firehose para 15 minutos (900s) ou 128 MB de volume mínimo de arquivo.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <title>Processamento Distribuído - AWS Data Specialist</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar">
+  <div class="nav-logo">
+    <div class="t">AWS Data<br>Engineering</div>
+    <div class="s">Portal de Estudos</div>
+    <div class="auth" style="font-family: 'DM Mono', monospace; font-size: 8px; color: #38bdf8; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase;">Autor: Mauricio Helfstein</div>
+  </div>
+  <div style="padding:0 12px">
+    <div class="nav-lbl">Visão Geral</div>
+    <a href="index.html" class="nav-a "><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
+    
+    <div class="nav-lbl collapsible " onclick="toggleCategory('arch-cat', this)">
+      <span>Arquitetura &amp; Padrões</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="arch-cat" class="nav-cat-content ">
+      <a href="architecture.html" class="nav-a "><span class="nav-dot" style="background:var(--arch)"></span>📐 Arquitetura de Dados</a>
+      <a href="architecture.html#pilares" class="nav-sub"><span class="nav-sdot"></span>7 Pilares</a>
+      <a href="architecture.html#mensageria" class="nav-sub"><span class="nav-sdot"></span>Mensageria</a>
+      <a href="architecture.html#kafka" class="nav-sub"><span class="nav-sdot"></span>Kafka/MSK</a>
+      <a href="architecture.html#triggers" class="nav-sub"><span class="nav-sdot"></span>Triggers</a>
+      <a href="architecture.html#workflows" class="nav-sub"><span class="nav-sdot"></span>Workflows</a>
+      <a href="architecture.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="architecture.html#lambda" class="nav-sub"><span class="nav-sdot"></span>Lambda</a>
+      <a href="architecture.html#kappa" class="nav-sub"><span class="nav-sdot"></span>Kappa</a>
+      <a href="architecture.html#lakehouse" class="nav-sub"><span class="nav-sdot"></span>Lakehouse</a>
+      <a href="architecture.html#datamesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+
+      <a href="perguntas.html" class="nav-a "><span class="nav-dot" style="background:var(--spark)"></span>❓ Perguntas de Entrevista</a>
+      <a href="perguntas.html#q1" class="nav-sub"><span class="nav-sdot"></span>Spark & Kafka</a>
+      <a href="perguntas.html#q5" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="perguntas.html#q7" class="nav-sub"><span class="nav-sdot"></span>Memory & OOM</a>
+      <a href="perguntas.html#q14" class="nav-sub"><span class="nav-sdot"></span>Spark Tuning</a>
+      <a href="perguntas.html#q24" class="nav-sub"><span class="nav-sdot"></span>RAG & GenAI</a>
+
+      <a href="cases.html" class="nav-a "><span class="nav-dot" style="background:var(--ext)"></span>💼 Cases de Plataformas</a>
+      <a href="cases.html#case-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming</a>
+      <a href="cases.html#case-mesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+      <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
+      <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
+      <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
+    </div>
+    
+    <div class="nav-lbl collapsible active" onclick="toggleCategory('pipeline-cat', this)">
+      <span>Pipeline de Engenharia</span>
+      <span class="arrow">▼</span>
+    </div>
+    <div id="pipeline-cat" class="nav-cat-content open">
+      <a href="ingestion.html" class="nav-a "><span class="nav-dot" style="background:var(--emr)"></span>⚡ Ingestão & Streaming</a>
+      <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
+      <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
+      <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
+      <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
+
+      <a href="storage-lakehouse.html" class="nav-a "><span class="nav-dot" style="background:var(--arch)"></span>💾 Lakehouse & Storage</a>
+      <a href="storage-lakehouse.html#s3-camadas" class="nav-sub"><span class="nav-sdot"></span>Camadas S3</a>
+      <a href="storage-lakehouse.html#s3-tiers" class="nav-sub"><span class="nav-sdot"></span>S3 Tiers & FinOps</a>
+      <a href="storage-lakehouse.html#formatos" class="nav-sub"><span class="nav-sdot"></span>Formatos</a>
+      <a href="storage-lakehouse.html#iceberg" class="nav-sub"><span class="nav-sdot"></span>Iceberg</a>
+      <a href="storage-lakehouse.html#iceberg-vs-delta" class="nav-sub"><span class="nav-sdot"></span>Iceberg vs Delta</a>
+
+      <a href="processing.html" class="nav-a active"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Processamento Spark</a>
+      <a href="processing.html#spark-arch" class="nav-sub"><span class="nav-sdot"></span>Spark Arch</a>
+      <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
+      <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
+      <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+
+      <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
+      <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
+      <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
+    </div>
+    
+    <div class="nav-lbl collapsible " onclick="toggleCategory('service-cat', this)">
+      <span>Serviço, Segurança &amp; IA</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="service-cat" class="nav-cat-content ">
+      <a href="genai.html" class="nav-a "><span class="nav-dot" style="background:#a78bfa"></span>🤖 GenAI & Dados</a>
+      <a href="genai.html#genai-pilares" class="nav-sub"><span class="nav-sdot"></span>Pilares GenAI</a>
+      <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG</a>
+      <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>Vector DB</a>
+
+      <a href="governance-security.html" class="nav-a "><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança & IaC</a>
+      <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="governance-security.html#iam-kms" class="nav-sub"><span class="nav-sdot"></span>IAM & KMS</a>
+      <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
+      <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
+      <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
+    </div>
+  </div>
+</nav>
+
+<div id="main">
+  <div class="hero">
+    <div class="hero-ey">Processamento Distribuído</div>
+    <h1>Apache Spark &amp; Amazon EMR</h1>
+    <p class="hero-d">Arquitetura profunda de processamento distribuído, otimização física de CPU/memória e guias práticos de tuning e troubleshooting.</p>
+  </div>
+
+  <main class="main-content">
+    
+    <!-- ── APACHE SPARK SECTION ── -->
+    <section class="section" id="spark-conceitos">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Apache Spark: Conceitos Fundamentais</h2>
+          <p>Abstrações de dados e modelo lazy evaluation</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Abstração</div>
+          <div class="cc-title">RDD (Resilient Distributed Dataset)</div>
+          <div class="cc-body">Abstração de baixo nível do Spark. Garante tolerância a falhas armazenando a árvore de lineage necessária para recomputar partições perdidas do cluster em caso de falhas físicas.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Abstração</div>
+          <div class="cc-title">DataFrame &amp; Dataset</div>
+          <div class="cc-body">Abstração de alto nível com schemas estruturados. Permite ao Catalyst Optimizer otimizar a query, colapsando projeções e empurrando predicados para leitura física de arquivos.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Execução</div>
+          <div class="cc-title">Lazy Evaluation &amp; DAG</div>
+          <div class="cc-body">Operações no Spark apenas constroem um grafo acíclico direcionado (DAG) que é otimizado e compilado. A execução real só é acionada após a chamada de uma Action.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="spark-arch">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Arquitetura e Ciclo de Execução Spark</h2>
+          <p>Orquestração distribuída entre Driver, Cluster Manager e Executors</p>
+        </div>
+      </div>
+
+      <div class="dw">
+        <svg viewBox="0 0 820 440" width="820" height="440" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="820" height="440" fill="#0f172a"/>
+          <!-- CLIENT -->
+          <rect x="16" y="170" width="108" height="80" rx="10" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="70" y="204" text-anchor="middle" fill="#38bdf8" font-size="9" letter-spacing="1">CLIENT</text>
+          <text x="70" y="220" text-anchor="middle" fill="#f8fafc" font-size="9" font-weight="500">spark-submit</text>
+          <line x1="124" y1="210" x2="168" y2="210" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <polygon points="168,205 178,210 168,215" fill="#cbd5e1"/>
+
+          <!-- DRIVER -->
+          <rect x="178" y="128" width="158" height="168" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+          <text x="257" y="147" text-anchor="middle" fill="#f8fafc" font-size="9" font-weight="700">DRIVER NODE</text>
+          <rect x="192" y="180" width="130" height="20" rx="5" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="257" y="193" text-anchor="middle" fill="#38bdf8" font-size="8">DAG Scheduler</text>
+          <rect x="192" y="210" width="130" height="20" rx="5" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="257" y="223" text-anchor="middle" fill="#38bdf8" font-size="8">Task Scheduler</text>
+          <line x1="336" y1="210" x2="382" y2="210" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="382,205 392,210 382,215" fill="#cbd5e1"/>
+
+          <!-- CLUSTER MANAGER -->
+          <rect x="392" y="168" width="128" height="84" rx="10" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="456" y="200" text-anchor="middle" fill="#cbd5e1" font-size="9" letter-spacing="1">YARN / K8S</text>
+          <line x1="520" y1="210" x2="566" y2="150" stroke="#2563eb" stroke-width="1.5"/>
+
+          <!-- WORKER -->
+          <rect x="566" y="44" width="240" height="132" rx="10" fill="#1e293b" stroke="#2563eb" stroke-width="1.5"/>
+          <text x="686" y="66" text-anchor="middle" fill="#2563eb" font-size="9" letter-spacing="1">WORKER NODE</text>
+          <rect x="578" y="76" width="100" height="88" rx="8" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="628" y="94" text-anchor="middle" fill="#38bdf8" font-size="8">EXECUTOR</text>
+          <rect x="584" y="100" width="36" height="20" rx="4" fill="#1e293b" stroke="#2563eb"/>
+          <text x="602" y="113" text-anchor="middle" fill="#f8fafc" font-size="7">Core 1</text>
+          <rect x="624" y="100" width="36" height="20" rx="4" fill="#1e293b" stroke="#2563eb"/>
+          <text x="642" y="113" text-anchor="middle" fill="#f8fafc" font-size="7">Core 2</text>
+
+          <!-- HIERARQUIA -->
+          <rect x="16" y="350" width="540" height="72" rx="10" fill="#1e293b" stroke="#cbd5e1"/>
+          <text x="280" y="365" text-anchor="middle" fill="#cbd5e1" font-size="8.5">HIERARQUIA DE EXECUÇÃO</text>
+          <text x="280" y="395" text-anchor="middle" fill="#f8fafc" font-size="9.5">JOBS ➔ STAGES (separados por shuffle) ➔ TASKS (1 por partição)</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="section" id="spark-math">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">03</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Cálculo Exaustivo de Alocação de Memória e Cores</h2>
+          <p>Fórmulas práticas e dimensionamento matemático para servidores r5.4xlarge e c5.9xlarge</p>
+        </div>
+      </div>
+
+      <p>Dimensionar incorretamente as configurações de submissão do Spark gera instabilidade ou desperdício severo de custos de infraestrutura analítica no EMR. Abaixo estão descritas as contas detalhadas para duas famílias de instâncias EC2 de hardware distintos:</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Cenário 1: Instância Memory-Optimized (r5.4xlarge)</h4>
+          <ul>
+            <li><strong>Hardware Físico:</strong> 16 vCPUs (cores) e 128 GB RAM.</li>
+            <li><strong>Reserva do S.O. &amp; YARN:</strong> 1 core e 4 GB RAM. Sobram 15 cores e 124 GB RAM.</li>
+            <li><strong>Cores por Executor:</strong> Fixado em 5 cores (limite ótimo de vazão I/O).</li>
+            <li><strong>Quantidade de Executores por nó:</strong> 15 / 5 = 3 executores por nó.</li>
+            <li><strong>Memória total disponível por executor:</strong> 124 GB / 3 = 41.3 GB.</li>
+            <li><strong>Ajuste do Overhead (10%):</strong>
+              <ul>
+                <li><code>spark.executor.memory = 37g</code></li>
+                <li><code>spark.executor.memoryOverhead = 4g</code> (37g * 0.10 ≈ 3.7g -> arredondado para 4g).</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4>Cenário 2: Instância Compute-Optimized (c5.9xlarge)</h4>
+          <ul>
+            <li><strong>Hardware Físico:</strong> 36 vCPUs (cores) e 72 GB RAM.</li>
+            <li><strong>Reserva do S.O. &amp; YARN:</strong> 1 core e 4 GB RAM. Sobram 35 cores e 68 GB RAM.</li>
+            <li><strong>Cores por Executor:</strong> Fixado em 5 cores.</li>
+            <li><strong>Quantidade de Executores por nó:</strong> 35 / 5 = 7 executores por nó.</li>
+            <li><strong>Memória total disponível por executor:</strong> 68 GB / 7 = 9.7 GB.</li>
+            <li><strong>Ajuste do Overhead (10%):</strong>
+              <ul>
+                <li><code>spark.executor.memory = 8g</code></li>
+                <li><code>spark.executor.memoryOverhead = 1g</code> (excedente necessário para operações de runtime).</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Alocação Estática vs Alocação Dinâmica (Dynamic Allocation)</h3>
+      <p>Em ambientes de produção na AWS, a escolha entre alocação de recursos estática ou dinâmica afeta diretamente o custo e a resiliência dos jobs Spark:</p>
+      
+      <ul>
+        <li><strong>Alocação Estática:</strong> 
+          Define um número fixo de executores que permanecem ativos e reservados durante todo o ciclo de vida da aplicação (ex: <code>spark.executor.instances = 20</code>).
+          <br><em>Uso recomendado:</em> Jobs críticos de ETL em lote recorrentes onde o volume de dados é previsível e o job necessita de recursos estáveis constantes do início ao fim para bater o SLA.
+        </li>
+        <li><strong>Alocação Dinâmica (Dynamic Allocation):</strong>
+          Permite que o Spark aloque executores sob demanda de acordo com a carga de trabalho de cada Task na fila (Stage/Job), devolvendo executores ociosos ao cluster (YARN/K8s/EMR).
+          <br><em>Configuração Recomendada no EMR:</em>
+          <pre><code class="language-properties">spark.dynamicAllocation.enabled = true
+spark.dynamicAllocation.minExecutors = 1
+spark.dynamicAllocation.maxExecutors = 100
+spark.dynamicAllocation.executorIdleTimeout = 60s
+spark.dynamicAllocation.schedulerBacklogTimeout = 1s</code></pre>
+          <br><em>Parâmetros de Tuning:</em>
+          <ul>
+            <li><code>schedulerBacklogTimeout:</code> Tempo que o Spark aguarda (padrão 1s) com tarefas pendentes na fila antes de solicitar novos executores.</li>
+            <li><code>executorIdleTimeout:</code> Tempo de inatividade do executor (padrão 60s) antes que ele seja desligado e devolvido ao pool.</li>
+            <li><strong>External Shuffle Service &amp; Shuffle Tracking:</strong> Para ativar a alocação dinâmica com segurança sem perder resultados intermediários de shuffle de executores desalocados, configure <code>spark.shuffle.service.enabled = true</code>. No Spark 3.x+ rodando em Kubernetes, utilize a opção moderna de **Shuffle Tracking** (<code>spark.dynamicAllocation.shuffleTracking.enabled = true</code>) para reter os dados de shuffle ativamente sem depender do External Shuffle Service.</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+
+    <section class="section" id="tungsten">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Tungsten: Engine de Execução Física</h2>
+          <p>Aceleração física em nível de hardware, alocação de memória direta e Whole-Stage CodeGen</p>
+        </div>
+      </div>
+
+      <div class="dw">
+        <svg viewBox="0 0 760 250" width="760" height="250" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="250" fill="#0f172a"/>
+          <!-- Pilar 1 -->
+          <rect x="20" y="40" width="225" height="180" rx="12" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="132" y="70" text-anchor="middle" fill="white" font-size="10" font-weight="700">1. OFF-HEAP MEMORY</text>
+          <text x="132" y="110" text-anchor="middle" fill="#94a3b8" font-size="8">Dados binários em formato compacto</text>
+          <text x="132" y="125" text-anchor="middle" fill="#94a3b8" font-size="8">fora da Heap clássica Java.</text>
+          <text x="132" y="150" text-anchor="middle" fill="#15803d" font-size="8.5">✓ Sem overhead de Garbage Collector</text>
+
+          <!-- Pilar 2 -->
+          <rect x="268" y="40" width="225" height="180" rx="12" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="380" y="70" text-anchor="middle" fill="white" font-size="10" font-weight="700">2. CACHE-AWARE</text>
+          <text x="380" y="110" text-anchor="middle" fill="#94a3b8" font-size="8">Layout físico alinhado aos caches</text>
+          <text x="380" y="125" text-anchor="middle" fill="#94a3b8" font-size="8">L1/L2/L3 internos da CPU.</text>
+          <text x="380" y="150" text-anchor="middle" fill="#15803d" font-size="8.5">✓ Redução drástica de Cache Misses</text>
+
+          <!-- Pilar 3 -->
+          <rect x="516" y="40" width="224" height="180" rx="12" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="628" y="70" text-anchor="middle" fill="white" font-size="10" font-weight="700">3. WHOLE-STAGE CODEGEN</text>
+          <text x="628" y="110" text-anchor="middle" fill="#94a3b8" font-size="8">Colapsa múltiplos estágios SQL</text>
+          <text x="628" y="125" text-anchor="middle" fill="#94a3b8" font-size="8">em um loop único compilado JIT.</text>
+          <text x="628" y="150" text-anchor="middle" fill="#15803d" font-size="8.5">✓ Elimina chamadas de funções virtuais</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="section" id="spark-gc">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Garbage Collection &amp; Heap Tuning</h2>
+          <p>Otimização de pausas Stop-The-World e JVM Tuning avançado</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Configurações para Garbage Collector G1</h4>
+          <p>O G1GC divide a memória Heap da JVM em pequenas regiões e analisa qual região possui maior volume de dados inúteis para liberar primeiro, evitando a suspensão de threads executores.</p>
+          <pre><span class="k">spark.executor.extraJavaOptions</span> =
+  -XX:+UseG1GC
+  -XX:InitiatingHeapOccupancyPercent=35
+  -XX:G1HeapRegionSize=16m
+  -verbose:gc -XX:+PrintGCDetails</pre>
+        </div>
+        <div>
+          <h4>Identificação de gargalos de GC no Spark UI</h4>
+          <div class="callout callout-info">
+            <strong>Analise a coluna GC Time no Executors Tab:</strong> Se o tempo de GC superar 10% do tempo de processamento total, você deve aumentar a memória dos executores ou reduzir o paralelismo local diminuindo cores.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="spark-skew">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Shuffle, Skew e Salting</h2>
+          <p>Resolução de gargalos causados por desbalanceamento em joins e shuffles</p>
+        </div>
+      </div>
+
+      <p>O <strong>Data Skew</strong> (desvio de dados) ocorre quando uma chave específica acumula mais de 80% do volume físico dos dados (ex: chaves nulas ou registros de auditoria padrão). O executor encarregado por processar essa chave demorará muito mais tempo que os demais, deixando os cores ociosos e estendendo a duração do estágio.</p>
+
+      <h3>Otimização via Salting (Distribuição de Chave no Join)</h3>
+      <pre><span class="k">import</span> pyspark.sql.functions <span class="k">as</span> F
+n_salts = <span class="v">30</span>
+
+<span class="c"># Tabela principal: adiciona salt aleatório</span>
+df_large_salted = df_large.withColumn(
+    <span class="s">"salt"</span>, (F.rand() * n_salts).cast(<span class="s">"int"</span>)
+).withColumn(<span class="s">"salted_key"</span>, F.concat(F.col(<span class="s">"key"</span>), F.lit(<span class="s">"_"</span>), F.col(<span class="s">"salt"</span>)))
+
+<span class="c"># Tabela de lookup: explode criando todas as combinações de salts</span>
+df_small_exploded = df_small.withColumn(
+    <span class="s">"salt"</span>, F.explode(F.array([F.lit(i) <span class="k">for</span> i <span class="k">in</span> range(n_salts)]))
+).withColumn(<span class="s">"salted_key"</span>, F.concat(F.col(<span class="s">"key"</span>), F.lit(<span class="s">"_"</span>), F.col(<span class="s">"salt"</span>)))
+
+df_joined = df_large_salted.join(df_small_exploded, <span class="s">"salted_key"</span>).drop(<span class="s">"salt"</span>, <span class="s">"salted_key"</span>)</pre>
+    </section>
+
+    <section class="section" id="spark-joins">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">07</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Estratégias de Join no Spark</h2>
+          <p>Mapeamento de cruzamentos analíticos em nível de rede e disco</p>
+        </div>
+      </div>
+
+      <div class="join-grid">
+        <div class="jc">
+          <div class="jc-name">Broadcast Hash Join</div>
+          <span class="jtag ns">✓ Sem Shuffle</span>
+          <div class="jc-desc">Copia e envia a tabela pequena inteira para todos os executores na memória. Elimina totalmente a movimentação de rede. Indicado para tabelas de dimensões pequenas.</div>
+        </div>
+        <div class="jc">
+          <div class="jc-name">Sort-Merge Join</div>
+          <span class="jtag sh">Shuffle</span>
+          <div class="jc-desc">Ordena dados de ambas as tabelas após redistribuir partições pela chave. Extremamente robusto e seguro para conjuntos massivos que excedem a RAM do executor.</div>
+        </div>
+        <div class="jc">
+          <div class="jc-name">Shuffle Hash Join</div>
+          <span class="jtag sh">Shuffle</span>
+          <div class="jc-desc">Distribui as chaves em hash maps locais. Consome muita RAM no executor para manter o mapeamento ativo durante a fase de busca.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="spark-cache">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">08</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Níveis de Persistência de Dados</h2>
+          <p>Comparativo físico de cacheamento e reutilização de memória</p>
+        </div>
+      </div>
+
+      <div class="pgrid">
+        <div class="pc">
+          <div class="lv">MEMORY_ONLY</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--spark) 100%, #ccc 0%);"></div>
+          <div class="ppro">Acesso veloz em RAM.</div>
+          <div class="pcon">Recalcula se faltar memória.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">MEMORY_AND_DISK</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--spark) 70%, var(--emr) 30%);"></div>
+          <div class="ppro">Sem perda de dados.</div>
+          <div class="pcon">Escrita lenta em disco.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">MEMORY_ONLY_SER</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--arch) 90%, #ccc 10%);"></div>
+          <div class="ppro">Extremamente compacto.</div>
+          <div class="pcon">Exige processamento de CPU.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="spark-streaming">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">09</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Spark Structured Streaming</h2>
+          <p>Pipelines de dados continuados exactly-once tolerantes a falhas</p>
+        </div>
+      </div>
+
+      <pre><span class="c"># Processamento incremental com escrita Delta idempotente</span>
+df_stream = spark.readStream \
+    .format(<span class="s">"kafka"</span>) \
+    .option(<span class="s">"kafka.bootstrap.servers"</span>, <span class="s">"broker:9092"</span>) \
+    .option(<span class="s">"subscribe"</span>, <span class="s">"telemetria"</span>) \
+    .load()
+
+df_stream.writeStream \
+    .format(<span class="s">"delta"</span>) \
+    .option(<span class="s">"checkpointLocation"</span>, <span class="s">"s3://bucket/checkpoints/"</span>) \
+    .trigger(processingTime=<span class="s">"10 seconds"</span>) \
+    .start(<span class="s">"s3://bucket/tabela_delta/"</span>)</pre>
+    </section>
+
+    <section class="section" id="spark-tuning">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">10</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Tuning do Spark — Guia Completo</h2>
+          <p>Receitas de configurações de performance para otimização em lote</p>
+        </div>
+      </div>
+
+      <div class="tuning-recipe">
+        <div class="tuning-recipe-title">🔧 Receitas de Configurações Base de Alta Performance</div>
+        <div class="recipe-row">
+          <div class="recipe-icon">⚙️</div>
+          <div class="recipe-text"><strong>Adaptive Query Execution:</strong> Ative sempre com <code>spark.sql.adaptive.enabled = true</code>. Permite ao Spark mudar de Sort-Merge para Broadcast dinamicamente em runtime.</div>
+        </div>
+        <div class="recipe-row">
+          <div class="recipe-icon">🗜️</div>
+          <div class="recipe-text"><strong>Compressão colunar:</strong> Use o codec ZSTD no Parquet <code>spark.sql.parquet.compression.codec = zstd</code> para o melhor equilíbrio entre consumo de CPU e compressão física no S3.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="spark-debug">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">11</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Debugging Spark UI &amp; Metodologia</h2>
+          <p>Entendendo as métricas chave e gargalos de execução na interface de diagnóstico</p>
+        </div>
+      </div>
+
+      <div class="spark-ui-map">
+        <div class="sui-tab">
+          <div class="sui-tab-name">Jobs Tab</div>
+          <div class="sui-tab-body">Mapeamento temporal dos Jobs analíticos de ponta a ponta.</div>
+        </div>
+        <div class="sui-tab">
+          <div class="sui-tab-name">Stages Tab</div>
+          <div class="sui-tab-body">Detalhamento dos tempos de GC e volumes físicos de shuffle read/write.</div>
+        </div>
+        <div class="sui-tab">
+          <div class="sui-tab-name">SQL / Execution Tab</div>
+          <div class="sui-tab-body">Plano físico compilado com operadores codificados Tungsten.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="spark-erros">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">12</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Erros Comuns no Apache Spark</h2>
+          <p>Troubleshooting e erros clássicos de JVM</p>
+        </div>
+      </div>
+
+      <div class="errors-grid">
+        <div class="err-card">
+          <div class="err-tag">Out of Memory (OOM)</div>
+          <div class="err-title">Java heap space / GC overhead limit exceeded</div>
+          <div class="err-body"><strong>Causa:</strong> Driver ou executores esgotaram a RAM devido a partições excessivamente volumosas (&gt;2 GB) ou chamadas brutas de `.collect()`. <br><br><strong>Fix:</strong> Aumente o número de partições no shuffle ou aloque mais memória física no Spark Submit.</div>
+        </div>
+        <div class="err-card">
+          <div class="err-tag">Dynamic Allocation</div>
+          <div class="err-title">ExecutorLostFailure (heartbeat timeout)</div>
+          <div class="err-body"><strong>Causa:</strong> Executor ocupado demais com Garbage Collection pesado, paralisando threads e perdendo comunicação com o Driver.<br><br><strong>Fix:</strong> Ajuste as opções do GC para utilizar o G1GC e aumente o timeout de conexões.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── AWS GLUE SECTION ── -->
+    <section class="section" id="glue-jobs">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">13</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>AWS Glue: ETL Serverless e Dynamic Frames</h2>
+          <p>Processamento orientado a eventos e integração nativa com o Data Catalog</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Abstração</div>
+          <div class="cc-title">Dynamic Frames</div>
+          <div class="cc-body">Extensão dos DataFrames do Spark que permite lidar com schemas semi-estruturados e inconsistentes sem necessidade de definir DDLs rígidos previamente.</div>
+        </div>
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Estado</div>
+          <div class="cc-title">Job Bookmarks</div>
+          <div class="cc-body">Persiste o estado do processamento para evitar reprocessamento de dados já ingeridos em execuções anteriores no S3 ou JDBC.</div>
+        </div>
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Governança</div>
+          <div class="cc-title">Glue Data Quality</div>
+          <div class="cc-body">Implementa regras automáticas de qualidade (DQDL) para validar a integridade dos dados durante o pipeline de ETL.</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Como Funciona</h4>
+          <p>O Glue utiliza um ambiente Spark totalmente gerenciado. Ele abstrai a gestão de clusters, permitindo focar no código Python/Scala. O <strong>Data Catalog</strong> atua como um Metastore centralizado para o Lakehouse.</p>
+          <ul>
+            <li><strong>Interactive Sessions:</strong> Permite desenvolvimento rápido via Jupyter Notebooks sem esperar minutos pelo provisionamento de clusters.</li>
+            <li><strong>Glue Flex:</strong> Classe de execução de baixo custo (até 35% de economia) para jobs não críticos, utilizando capacidade excedente da AWS (similar ao Spot).</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Performance & Configurações</h4>
+          <ul>
+            <li><strong>Worker Auto Scaling:</strong> Disponível no Glue 3.0+, escala dinamicamente o número de workers conforme a carga do job, reduzindo custos em shuffles ou processamentos variáveis.</li>
+            <li><strong>Tipos de Workers:</strong>
+              <ul>
+                <li><strong>G.1X:</strong> 4 vCPUs, 16 GB RAM, 64 GB Disk. (1 DPU)</li>
+                <li><strong>G.2X:</strong> 8 vCPUs, 32 GB RAM, 128 GB Disk. (2 DPUs)</li>
+                <li><strong>G.4X/G.8X:</strong> Para jobs de altíssima escala e memória intensiva.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="emr-ec2">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">14</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Amazon EMR on EC2: Clusters Customizados</h2>
+          <p>Máximo controle sobre a infraestrutura e tuning de performance</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Como Funciona & Arquitetura</h4>
+          <p>O EMR on EC2 permite rodar o ecossistema Hadoop completo. A separação física dos nós permite otimização de custos e performance:</p>
+          <ul>
+            <li><strong>Master Node:</strong> Orquestra o cluster. Para alta disponibilidade, use 3 Masters.</li>
+            <li><strong>Core Nodes:</strong> Processamento e Armazenamento (HDFS). Essenciais para jobs que dependem de escrita local persistente.</li>
+            <li><strong>Task Nodes:</strong> Computação pura. Use 100% <strong>Spot Instances</strong> aqui para FinOps agressivo.</li>
+            <li><strong>Managed Scaling:</strong> Redimensiona o cluster automaticamente em segundos com base em métricas do YARN, muito mais eficiente que o Auto Scaling tradicional do EC2.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Performance & Configurações</h4>
+          <ul>
+            <li><strong>Instance Fleets:</strong> Permite misturar até 30 tipos de instâncias EC2, garantindo que o cluster suba mesmo com baixa disponibilidade de certos tipos de Spot.</li>
+            <li><strong>EMR Runtime:</strong> Ativado por padrão nas versões 6.x+, traz otimizações de query e melhor integração com S3 (EMRFS).</li>
+            <li><strong>Configuração via JSON:</strong> Permite tunar o `spark-defaults`, `yarn-site` e `capacity-scheduler` diretamente no provisionamento.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="emr-serverless">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">15</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Amazon EMR Serverless: Agilidade e Escala</h2>
+          <p>Operação sem gerenciamento de servidores com performance de EMR</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Como Funciona</h4>
+          <p>O EMR Serverless desacopla o gerenciamento de instâncias da execução do job. Você cria uma "Application" (Spark ou Hive) e submete "Job Runs".</p>
+          <ul>
+            <li><strong>Pre-initialized Capacity:</strong> Mantém um pool de workers "quentes" prontos para processar. Elimina o tempo de boot de 5-10 min do EC2, iniciando o processamento em segundos.</li>
+            <li><strong>Isolamento:</strong> Cada Job Run roda em um ambiente isolado, evitando conflitos de bibliotecas ou competição de recursos entre diferentes pipelines.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Performance & Configurações</h4>
+          <ul>
+            <li><strong>Configuração de Workers:</strong> Diferente do Glue, você tem controle granular sobre os recursos de cada worker (ex: 2 vCPU e 16 GB RAM) até limites de 16 vCPU / 120 GB por worker.</li>
+            <li><strong>Customização de Disco:</strong> É possível configurar o armazenamento efêmero por worker (de 20GB a 200GB), crucial para shuffles pesados.</li>
+            <li><strong>FinOps:</strong> Você paga apenas pelo que consome (vCPU, RAM, Storage por segundo), ideal para workloads esporádicos ou com picos imprevisíveis.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="emr-comparativo">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">16</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Comparativo: Glue vs EMR EC2 vs EMR Serverless</h2>
+          <p>Guia de decisão para escolha da tecnologia de processamento ideal</p>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Critério</th>
+              <th>AWS Glue</th>
+              <th>EMR on EC2</th>
+              <th>EMR Serverless</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Gerenciamento</strong></td>
+              <td>Serverless (Total)</td>
+              <td>Manual (Clusters)</td>
+              <td>Serverless (App)</td>
+            </tr>
+            <tr>
+              <td><strong>Tempo de Inicialização</strong></td>
+              <td>1-3 min (Cold start)</td>
+              <td>5-10 min</td>
+              <td>Segundos (Pre-init)</td>
+            </tr>
+            <tr>
+              <td><strong>Controle de Versão</strong></td>
+              <td>Limitado (AWS versions)</td>
+              <td>Total (Custom AMIs)</td>
+              <td>Médio (EMR Releases)</td>
+            </tr>
+            <tr>
+              <td><strong>Escalabilidade</strong></td>
+              <td>Automática (DPUs)</td>
+              <td>Manual / Autoscaling</td>
+              <td>Automática Inteligente</td>
+            </tr>
+            <tr>
+              <td><strong>Custo / FinOps</strong></td>
+              <td>Caro para 24/7</td>
+              <td>Mais barato (Spot/RI)</td>
+              <td>Equilibrado (Pay-per-use)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="spark-performance-callout">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">17</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Performance Callout: Dicas de Tuning</h2>
+          <p>Otimizações cruciais para grandes volumes de dados</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>📦 Small Files em Spark</h4>
+          <p>Ter milhares de arquivos pequenos no S3 causa overhead massivo de metadados. <strong>Solução:</strong> Use <code>df.repartition(n)</code> ou <code>df.coalesce(n)</code> visando arquivos de ~128MB.</p>
+        </div>
+        <div class="card">
+          <h4>🚀 Speculative Execution</h4>
+          <p>Evita que "stragglers" (tasks lentas) atrasem o job inteiro ao lançar cópias em outros nós. Configure <code>spark.speculation=true</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="emr-bootstrap">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">18</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>EMR Bootstrap Action Script</h2>
+          <p>Exemplo real de script Shell para provisionar bibliotecas e pacotes nos nós do cluster no startup</p>
+        </div>
+      </div>
+
+      <p>O script de bootstrap roda como root em cada máquina do cluster (Master, Core e Task) antes dos serviços Hadoop/Spark serem iniciados. Deve ser armazenado no S3:</p>
+
+      <pre><span class="c">#!/bin/bash</span>
+<span class="c"># EmrBootstrap.sh - Provisionamento de dependências</span>
+<span class="k">set</span> -e
+
+<span class="c"># Instalação de bibliotecas Python globais</span>
+sudo pip3 install \
+  pandas \
+  pyarrow \
+  cryptography \
+  great-expectations
+
+<span class="c"># Download de JARs adicionais para conectores no diretório do Spark</span>
+sudo wget -P /usr/lib/spark/jars/ \
+  https://repo1.maven.org/maven2/org/postgresql/postgresql/42.6.0/postgresql-42.6.0.jar
+
+<span class="k">echo</span> <span class="s">"Bootstrap finalizado com sucesso."</span></pre>
+    </section>
+
+    <section class="section" id="emr-instancias">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">19</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Dimensionamento de Instâncias EC2 no EMR</h2>
+          <p>Tipos de nós físicos e recomendações de alocação</p>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Família EC2</th>
+              <th>Propósito e Tipo</th>
+              <th>RAM / vCPU</th>
+              <th>Recomendação Técnica</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>m5 / m6i</strong></td>
+              <td>Master Nodes (On-Demand)</td>
+              <td>1 : 4</td>
+              <td>Uso equilibrado. Nunca utilize instâncias t3 devido a throttling de créditos de CPU.</td>
+            </tr>
+            <tr>
+              <td><strong>r5 / r6i</strong></td>
+              <td>Core Nodes (On-Demand / HDFS)</td>
+              <td>1 : 8</td>
+              <td>Ideais para joins pesados e caches volumosos em memória.</td>
+            </tr>
+            <tr>
+              <td><strong>c5 / c6i</strong></td>
+              <td>Task Nodes (Spot / Compute)</td>
+              <td>1 : 2</td>
+              <td>Foco em processamento pesado e puramente matemático de CPUs sem gravação local de HDFS.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="emr-configs">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">20</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Configurações do EMR &amp; S3 Optimization</h2>
+          <p>Parâmetros do arquivo emrfs-site e conexões</p>
+        </div>
+      </div>
+
+      <pre><span class="c"># Configurações de performance para leitura/escrita no S3</span>
+<span class="k">fs.s3.maxConnections</span> = <span class="v">500</span>
+<span class="k">fs.s3.maxRetries</span> = <span class="v">20</span>
+
+<span class="c"># Ativação do Committer otimizado para gravação no S3</span>
+<span class="k">spark.sql.parquet.output.committer.class</span> = com.amazon.emr.committer.EMRSOptimizedSparkSqlParquetCommitter</pre>
+    </section>
+
+    <section class="section" id="emr-arch">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">21</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Arquitetura do Cluster EMR</h2>
+          <p>Topologia física dos nós e do armazenamento distribuído</p>
+        </div>
+      </div>
+
+      <div class="dw">
+        <svg viewBox="0 0 760 280" width="760" height="280" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="280" fill="#0f172a"/>
+          <!-- Master -->
+          <rect x="50" y="50" width="180" height="180" rx="10" fill="#1e293b" stroke="#2563eb"/>
+          <text x="140" y="80" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700">MASTER NODE</text>
+          <text x="140" y="120" text-anchor="middle" fill="#64748b" font-size="9">YARN ResourceManager</text>
+          <text x="140" y="140" text-anchor="middle" fill="#64748b" font-size="9">Spark Driver</text>
+
+          <!-- Core -->
+          <rect x="290" y="50" width="180" height="180" rx="10" fill="#1e293b" stroke="#15803d"/>
+          <text x="380" y="80" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700">CORE NODES</text>
+          <text x="380" y="120" text-anchor="middle" fill="#64748b" font-size="9">HDFS / EMRFS</text>
+          <text x="380" y="140" text-anchor="middle" fill="#64748b" font-size="9">YARN NodeManager</text>
+
+          <!-- Task -->
+          <rect x="530" y="50" width="180" height="180" rx="10" fill="#1e293b" stroke="#a21caf"/>
+          <text x="620" y="80" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700">TASK NODES (Spot)</text>
+          <text x="620" y="120" text-anchor="middle" fill="#64748b" font-size="9">Apenas Computação</text>
+          <text x="620" y="140" text-anchor="middle" fill="#64748b" font-size="9">Sem armazenamento</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="section" id="emr-erros">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">22</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Erros Comuns no AWS EMR</h2>
+          <p>Casos práticos e troubleshooting em nível de cluster</p>
+        </div>
+      </div>
+
+      <div class="errors-grid">
+        <div class="err-card">
+          <div class="err-tag">EC2 · Inicialização</div>
+          <div class="err-title">Bootstrap Action failed</div>
+          <div class="err-body"><strong>Causa:</strong> Script de bootstrap na inicialização do EC2 travou ou retornou código de erro diferente de zero.<br><br><strong>Fix:</strong> Valide caminhos de arquivos no S3 e execute scripts localmente de forma prévia.</div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag">Spot · Interrupção</div>
+          <div class="err-title">FetchFailed devido a desligamento de nós Spot</div>
+          <div class="err-body"><strong>Causa:</strong> Instância Spot contendo dados parciais de shuffle foi desligada abruptamente pelo provedor cloud.<br><br><strong>Fix:</strong> Ative a propriedade <code>spark.shuffle.service.enabled=true</code> para persistir shuffles em nós estáveis (Core).</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+</body>
+</html>
