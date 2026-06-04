@@ -79,9 +79,11 @@
       <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
       <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
       <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+      <a href="processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>EMR on EKS</a>
 
       <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -607,6 +609,8 @@ df_stream.writeStream \
             <li><strong>Instance Fleets:</strong> Permite misturar até 30 tipos de instâncias EC2, garantindo que o cluster suba mesmo com baixa disponibilidade de certos tipos de Spot.</li>
             <li><strong>EMR Runtime:</strong> Ativado por padrão nas versões 6.x+, traz otimizações de query e melhor integração com S3 (EMRFS).</li>
             <li><strong>Configuração via JSON:</strong> Permite tunar o `spark-defaults`, `yarn-site` e `capacity-scheduler` diretamente no provisionamento.</li>
+            <li><strong>Graceful Decommissioning:</strong> Vital para clusters que utilizam Spot nos Task Nodes. O YARN gerencia o desligamento da instância transferindo dados locais de shuffle antes do nó ser removido, mitigando erros de <code>FetchFailedException</code>.</li>
+            <li><strong>Ajuste de YARN Queues:</strong> Utilizando o <code>CapacityScheduler</code>, você pode criar filas lógicas que particionam os recursos do cluster EC2 entre múltiplos pipelines concorrentes.</li>
           </ul>
         </div>
       </div>
@@ -637,6 +641,38 @@ df_stream.writeStream \
             <li><strong>Configuração de Workers:</strong> Diferente do Glue, você tem controle granular sobre os recursos de cada worker (ex: 2 vCPU e 16 GB RAM) até limites de 16 vCPU / 120 GB por worker.</li>
             <li><strong>Customização de Disco:</strong> É possível configurar o armazenamento efêmero por worker (de 20GB a 200GB), crucial para shuffles pesados.</li>
             <li><strong>FinOps:</strong> Você paga apenas pelo que consome (vCPU, RAM, Storage por segundo), ideal para workloads esporádicos ou com picos imprevisíveis.</li>
+            <li><strong>Custom Docker Images:</strong> Você pode empacotar bibliotecas Python/C++ complexas no Amazon ECR em uma imagem base customizada, acelerando a inicialização e garantindo isolamento total (multi-tenant).</li>
+            <li><strong>VPC e Redes Privadas:</strong> EMR Serverless provisiona ENIs diretamente nas suas sub-redes VPC, garantindo conectividade privada e segura a bancos como RDS e Redshift.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="emr-eks">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">15.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Amazon EMR on EKS: Processamento Multi-Tenant</h2>
+          <p>Orquestração de jobs Spark como contêineres nativos no Kubernetes com alta densidade</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Como Funciona</h4>
+          <p>O EMR on EKS permite executar aplicativos Apache Spark diretamente em clusters do Amazon Elastic Kubernetes Service (EKS). Diferente do YARN tradicional, o EKS agenda <em>pods</em> (Driver e Executors) no cluster K8s, permitindo rodar workloads analíticos ao lado de microsserviços.</p>
+          <ul>
+            <li><strong>Isolamento Multi-Tenant:</strong> Jobs de equipes diferentes rodam em <em>namespaces</em> separados.</li>
+            <li><strong>IRSA (IAM Roles for Service Accounts):</strong> O EKS injeta permissões granulares via OIDC. Cada job assume uma Role IAM específica, garantindo que o Pod A só acesse o Bucket A, melhorando drasticamente a segurança em relação ao EMR EC2.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Performance & Configurações</h4>
+          <ul>
+            <li><strong>Autoscaling com Karpenter:</strong> O Karpenter provisiona nós EC2 otimizados "just-in-time" para os pods pendentes do Spark, escalando massivamente em segundos e maximizando a taxa de acerto de Spot Instances.</li>
+            <li><strong>Custom Docker Images:</strong> Empacote dependências complexas (ML, drivers nativos) em imagens Docker, acelerando os cold starts e garantindo constância no runtime.</li>
+            <li><strong>Shuffle Tracking:</strong> No EKS, o <em>Spark Shuffle Tracking</em> evita a perda de dados cruciais quando pods em nós Spot são interrompidos pelo Auto Scaler.</li>
           </ul>
         </div>
       </div>
@@ -660,6 +696,7 @@ df_stream.writeStream \
               <th>AWS Glue</th>
               <th>EMR on EC2</th>
               <th>EMR Serverless</th>
+              <th>EMR on EKS</th>
             </tr>
           </thead>
           <tbody>
@@ -668,30 +705,35 @@ df_stream.writeStream \
               <td>Serverless (Total)</td>
               <td>Manual (Clusters)</td>
               <td>Serverless (App)</td>
+              <td>K8s (Containerizado)</td>
             </tr>
             <tr>
               <td><strong>Tempo de Inicialização</strong></td>
               <td>1-3 min (Cold start)</td>
               <td>5-10 min</td>
               <td>Segundos (Pre-init)</td>
+              <td>Médio/Rápido (Karpenter)</td>
             </tr>
             <tr>
               <td><strong>Controle de Versão</strong></td>
               <td>Limitado (AWS versions)</td>
               <td>Total (Custom AMIs)</td>
               <td>Médio (EMR Releases)</td>
+              <td>Total (Docker Images)</td>
             </tr>
             <tr>
               <td><strong>Escalabilidade</strong></td>
               <td>Automática (DPUs)</td>
               <td>Manual / Autoscaling</td>
               <td>Automática Inteligente</td>
+              <td>K8s HPA / Karpenter</td>
             </tr>
             <tr>
               <td><strong>Custo / FinOps</strong></td>
               <td>Caro para 24/7</td>
               <td>Mais barato (Spot/RI)</td>
               <td>Equilibrado (Pay-per-use)</td>
+              <td>Melhor p/ Densidade/Spot</td>
             </tr>
           </tbody>
         </table>

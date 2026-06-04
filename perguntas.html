@@ -79,9 +79,11 @@
       <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
       <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
       <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+      <a href="processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>EMR on EKS</a>
 
       <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -1468,6 +1470,47 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
             <li><strong>A Desvantagem de Sessão Limite de 1 Hora:</strong> Quando uma role assume outra role em sequência via código (Role Chaining), a validade máxima das credenciais do STS geradas é fixada no limite de <strong>1 hora</strong>, mesmo se a role de destino estiver configurada para suportar até 12 horas. Em grandes pipelines Spark analíticos de conciliação que demoram 2 ou mais horas de processamento, as conexões de S3 começarão a falhar por credenciais expiradas no meio do job.</li>
             <li><strong>Perda de Rastreabilidade (Audit Trail):</strong> O encadeamento de roles mascara o ARN do usuário principal no CloudTrail, exibindo apenas o nome da role intermediária, dificultando auditorias de acesso e conformidade.</li>
             <li><strong>Boas Práticas de Engenharia:</strong> Evite o encadeamento manual de roles. Configure o Lake Formation cross-account para realizar o compartilhamento federado de dados, permitindo que a Role A leia as tabelas da outra conta de forma direta via STS temporário gerenciado pelo Lake Formation (que atualiza as chaves transparentemente sem limites de 1 hora).</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Case 39: EMR Architecture Decision -->
+      <div class="card" id="q39" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 39 · Arquitetura EMR</div>
+        <h4>Comparativo Avançado: Quais são os trade-offs arquiteturais entre EMR on EC2, EMR Serverless e EMR on EKS no que tange a FinOps, inicialização de Jobs e isolamento multi-tenant?</h4>
+        <p><strong>Cenário de Entrevista:</strong> A empresa planeja consolidar 50 pipelines diários. Cada um utiliza dependências Python conflituosas (Pandas 1.0 vs Pandas 2.0). A prioridade é otimização severa de custos ociosos sem sacrificar estabilidade.</p>
+        <div class="callout callout-info">
+          <strong>Resposta Técnica:</strong>
+          <ul>
+            <li><strong>EMR on EC2:</strong> Inadequado para o requisito. Obriga a clusterização isolada por pipeline, o que gera alto custo em períodos ociosos. Alternativamente, criar um mega-cluster EC2 compartilhado falharia em lidar com o isolamento de ambientes Python, gerando choques de bibliotecas e dificultando upgrades (Vendor Lock-in no EMR release).</li>
+            <li><strong>EMR on EKS:</strong> Excelente para alta densidade. O isolamento é perfeitamente solucionado submetendo jobs com <em>Custom Docker Images</em> via Kubernetes. Se acoplado com o autoscaler Karpenter rodando Instâncias Spot, o cluster escala e contrai em segundos por custo de infraestrutura mínimo. Ideal se o time de plataforma for proficiente no ecossistema de K8s.</li>
+            <li><strong>EMR Serverless:</strong> Solução mais fácil (low-ops) com ótimo FinOps. Possui pre-initialized capacity que inicia jobs quase imediatamente. O ambiente de execução para cada Job Run é isolado em micro-VMs próprias, podendo carregar Custom Docker Images ou bibliotecas empacotadas via Virtualenv local do S3. Resolve os problemas sem a complexidade de gerenciar um Control Plane de Kubernetes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 40: EMR Spot Interruption -->
+      <div class="card" id="q40" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 40 · EMR & Resiliência Spot</div>
+        <h4>Como arquitetar resiliência no EMR on EC2 ou EMR on EKS para mitigar perdas catastróficas de dados via FetchFailedException quando instâncias Spot são desligadas pelo provedor AWS?</h4>
+        <p><strong>Problema Crítico de Shuffle e Instâncias Spot:</strong> O Spot AWS pode remover um nó com um aviso prévio curto (2 minutos). Se um Executor Spark operando no nó Spot estava retendo os blocos de dados intermediários de um pesado <code>GROUP BY</code> (dados de shuffle), o desligamento repentino apagará esses dados de disco local. As tarefas downstream (Reduce) falharão por <code>FetchFailedException</code>, forçando a DAG do Spark a retroceder os estágios (stages) e recalcular toda a base, podendo causar atrasos de horas.</p>
+        <div class="callout callout-warn">
+          <strong>Técnicas de Mitigação: Graceful Decommissioning & Shuffle Tracking:</strong>
+          <ul>
+            <li>No <strong>EMR on EC2</strong>: Projete o cluster utilizando Spot Instances estritamente para Task Nodes (puramente computacionais sem réplicas HDFS de storage). Ative a flag do YARN de <strong>Graceful Node Decommissioning</strong>. Quando a AWS envia o sinal de interrupção, o YARN marca o nó como "DECOMMISSIONING" e copia ativamente os dados locais cruciais do NodeManager para as máquinas Core (On-Demand) remanescentes nos 2 minutos disponíveis de tolerância, resguardando o progresso da query.</li>
+            <li>No <strong>EMR on EKS (Spark 3.2+)</strong>: Habilite a propriedade <code>spark.dynamicAllocation.shuffleTracking.enabled=true</code> e ative o <strong>Executor Decommissioning</strong> nativo do K8s (<code>spark.decommission.enabled=true</code> e <code>spark.storage.decommission.shuffleBlocks.enabled=true</code>). Com isso configurado, ao receber o <em>SIGTERM</em> de finalização, o pod executor inicia uma migração paralela forçada transferindo (push-based) seus dados Shuffle e RDD/Cache via rede P2P para um pod sobrevivente.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 41: Athena Workload Isolation & Performance -->
+      <div class="card" id="q41" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 41 · Athena & Lake Formation Performance</div>
+        <h4>O que motiva a lentidão catastrófica no Query Planning Time do Amazon Athena em tabelas do Datalake protegidas com Lake Formation (Cell-Level Security), e como a evolução do stack arquitetural contorna essa debilidade?</h4>
+        <p><strong>Causa Raiz de Lentidão em Segurança Granular:</strong> Quando as proteções de linhas e colunas (Cell-Level Security) do Lake Formation estão habilitadas, o Athena não pode mais injetar credenciais e fazer o plano de consulta direto. O Lake Formation assume o fluxo, atuando como um "filtro" avaliador. Para cada query, o LF precisa listar os arquivos de dados brutos e calcular intersecções complexas de ACL na camada de planejamento. Em tabelas particionadas no formato Glue/Hive, onde existem dezenas de milhares de micro-pastas (s3://.../ano=2024/mes=01/), o motor satura a API do Glue e o planejamento (que deveria levar 0,5s) chega a estourar 30s a 120s antes que um único byte seja lido do S3.</p>
+        <div class="callout callout-tip">
+          <strong>Ação Corretiva em Alta Escala:</strong>
+          <ul>
+            <li><strong>Conversão para Formatos Transacionais Abertos (Apache Iceberg):</strong> O Apache Iceberg elimina completamente as lentas varreduras hierárquicas da API do AWS Glue Catalog (que causa o estrangulamento do Lake Formation). O Iceberg concentra os apontamentos físicos das partições ativas dentro do S3 na forma de <strong>arquivos de manifestos compactos</strong>. Assim que a tabela transiciona para Iceberg, o Lake Formation e o Athena extraem os metadados diretamente do manifesto no S3. Isso resulta em um Query Planning de latência estável quase ignorável, permitindo aplicação massiva de segurança por coluna sem destruir a performance interativa.</li>
           </ul>
         </div>
       </div>

@@ -79,9 +79,11 @@
       <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
       <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
       <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+      <a href="processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>EMR on EKS</a>
 
       <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -1972,6 +1974,67 @@
     </section>
 
 
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 11: EMR ON EKS & KARPENTER -->
+    <section class="section" id="case-emr-eks">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">11</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Case 11: Plataforma de Dados Multi-Tenant com EMR on EKS e Karpenter</h2>
+          <p>Orquestração avançada de pipelines de dados em Kubernetes com escalabilidade ultra-rápida, isolamento de namespaces e FinOps agressivo com Spot Instances</p>
+        </div>
+      </div>
+
+      <p>Uma grande instituição financeira migrou sua plataforma de dados herdada baseada em Hadoop on-premises para a AWS. Eles precisavam apoiar 20 equipes de engenharia de dados independentes (Data Mesh produtor) que usam versões diferentes de dependências Python (PySpark) e bibliotecas de Machine Learning. Clusters EMR on EC2 dedicados por equipe eram caros demais, e clusters compartilhados geravam conflito de dependências. A solução adotada foi consolidar todo o processamento analítico em um mega cluster <strong>Amazon EKS</strong> utilizando o <strong>EMR on EKS</strong>.</p>
+
+      <h3>Detalhamento do Fluxo e Arquitetura</h3>
+      <ol>
+        <li><strong>Isolamento Multi-Tenant via Namespaces &amp; Custom Images:</strong> Cada uma das 20 equipes possui um Kubernetes Namespace dedicado no EKS. Eles empacotam seus jobs PySpark, modelos XGBoost e bibliotecas C++ nativas em Imagens Docker customizadas (Custom Docker Images) guardadas no Amazon ECR. O EMR on EKS submete os pods (Driver e Executors) usando essas imagens, garantindo que o "Time A" rode Pandas 2.0 e o "Time B" rode Pandas 1.5 no mesmo cluster sem conflitos.</li>
+        <li><strong>Segurança via IRSA (IAM Roles for Service Accounts):</strong> Para garantir a segurança dos dados do Lakehouse (Amazon S3), cada namespace tem seu Service Account mapeado para uma Role IAM específica via OIDC. Se o Pod do "Time A" tentar ler o bucket S3 do "Time B", o AWS IAM bloqueia a requisição. O EKS injeta automaticamente o token STS em tempo real nos pods do Spark.</li>
+        <li><strong>Autoscaling Extremo com Karpenter (FinOps):</strong> Quando um workflow do Airflow (via EKS Operator ou EMR Virtual Cluster API) submete 500 pods de Spark Executors simultaneamente, o cluster Kubernetes precisa de hardware físico na hora. O <strong>Karpenter</strong> entra em ação: em menos de 45 segundos, ele analisa os requisitos de CPU/RAM dos pods pendentes, consulta o mercado de Spot Instances da AWS para os tipos de instâncias de menor custo e de menor probabilidade de interrupção (ex: mesclando instâncias m5.4xlarge e r6g.8xlarge Graviton) e provisiona os nós exatos necessários. Quando o job acaba, o Karpenter destrói os nós imediatamente, cobrando apenas pelos minutos exatos de processamento da AWS.</li>
+        <li><strong>Graceful Decommissioning &amp; Shuffle Tracking:</strong> Como 80% do cluster usa Spot Instances para processar o Lakehouse, nós recebem frequentemente sinais de desligamento forçados da AWS (Spot Interruption Notice). O Spark é configurado com <code>spark.decommission.enabled=true</code> e <code>spark.dynamicAllocation.shuffleTracking.enabled=true</code>. Antes do nó ser morto, o Kubernetes notifica o pod através de hooks. O Executor que vai ser interrompido migra seus blocos locais de Shuffle via rede de forma proativa para outro Executor ativo sobrevivente (p2p), permitindo que a agregação Spark (DAG) não perca os dados e continue em andamento sem recalcular toda a base.</li>
+      </ol>
+
+      <h3>Desafios e Lições Aprendidas na Produção</h3>
+      <div class="callout callout-warn">
+        <strong>Pontos Críticos em EMR on EKS:</strong>
+        <ul>
+          <li><strong>Overhead do CoreDNS sob Alta Concorrência:</strong> Quando milhares de pods Executors do Spark sobem simultaneamente em instantes e todos tentam abrir conexões HTTP AWS SDK simultâneas para os buckets do Amazon S3 ou se comunicarem com a infra do K8s, ocorre uma tempestade massiva de requisições DNS. Isso derruba silenciosamente o CoreDNS padrão do EKS (com logs explodindo com exceções de `java.net.UnknownHostException`). A solução mandatória em arquiteturas Spark at-scale no K8s é implementar o <strong>NodeLocal DNSCache</strong> do Kubernetes, que mantém um cache DNS distribuído rodando como DaemonSet em cada nó físico, retirando todo o esgotamento TCP de portas do controlador master.</li>
+          <li><strong>Pod Startup Latency e Cold Starts Lentos (Image Pull):</strong> Executar imagens Docker gordinhas recheadas de lib de PySpark + LLMs + Scikit (frequentemente de 3 GB a 5 GB) faz com que o tempo de subida inicial do Pod seja totalmente dominado pela demora do download físico da imagem do ECR (Image Pull) nos nós limpos que o Karpenter acabou de ligar. A solução extrema em Big Data envolve o uso do <strong>Amazon EBS Snapshot do EKS</strong> ou criar e utilizar AMIs pré-baking personalizadas do EKS que já contenham as camadas pesadas do Docker cacheadas em disco (baked-in), resultando em tempos de boot saltando de minutos para menos de 30 segundos.</li>
+        </ul>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 12: ATHENA & FEDERATED QUERY PERFORMANCE -->
+    <section class="section" id="case-athena-federated">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">12</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>Case 12: Analytics em Tempo Real com Athena Federated Query e Otimização de Custos</h2>
+          <p>Orquestração de consultas cruzadas entre o Lakehouse S3 e bancos operacionais RDS/DynamoDB, controlando limites de concorrência e custos com Athena Workgroups e Result Caching</p>
+        </div>
+      </div>
+
+      <p>Uma plataforma global de e-commerce necessitava fornecer dashboards atualizados no QuickSight para gerentes de categoria e de vendas regionais. Os dados históricos de vendas profundos (Petabytes) estão totalmente persistidos no Amazon S3 estruturados no formato Apache Iceberg colunar para otimização de varredura. Todavia, os status precisos dos estoques fracionários e de entregas logísticas dos pedidos em andamento do dia se atualizam e vivem no Amazon Aurora PostgreSQL transacional e no Amazon DynamoDB. Rodar pesados ETLs assíncronos batch a cada hora gerava defasagem de SLA, mas ligar ferramentas de replicação contínua CDC puramente analítica por cima do banco de faturamento gerava riscos absurdos de concorrência.</p>
+
+      <h3>Detalhamento do Fluxo e Arquitetura</h3>
+      <ol>
+        <li><strong>Athena Federated Query Mesh:</strong> O time eliminou o ETL tradicional ponta-a-ponta, optando pelo poder da federação sob demanda. Utilizou o Amazon Athena configurando nativamente <strong>Data Source Connectors</strong> implementados em AWS Lambda. O Athena agora enxerga tanto o Aurora PostgreSQL quanto o DynamoDB como catálogos virtuais do tipo tabela.</li>
+        <li><strong>Cross-Join Transparente de Arquitetura Limpa:</strong> Quando o gestor acessa o painel de "Vendas Históricas Cruzadas com Entregas de Hoje", o Athena recebe o SQL global e executa internamente o quebra-cabeça de dividir as queries e executar JOINs em memória paralela (Presto/Trino clusterizado). O motor do Athena aciona o conector Lambda e o força a enviar lógicas avançadas de filtros SQL limitadores diretamente para a execução do PostgreSQL, processo conhecido como <strong>Predicate Pushdown</strong> (ex: <code>WHERE id_categoria = 'eletronicos' AND entrega = 'pendente'</code>). O Aurora responde e a Lambda traduz eficientemente os blocos de dados transacionais vindos do banco via JDBC direto para arrays estruturados compactos em padrão de memória veloz <strong>Apache Arrow</strong>, injetando de volta na rede para o motor analítico mestre unificar com a leitura bruta que ocorre no S3.</li>
+        <li><strong>Blindagem do Banco de Faturamento (Isolation Layer):</strong> Para evitar que chamadas federadas ad-hoc sobrecarreguem e esgotem o limitador de conexões abertas do banco Aurora sob cargas desproporcionais ou subidas mal otimizadas do Lambda Connector, a chamada JDBC analítica bate de frente no <strong>Amazon RDS Proxy</strong> intermediário. Este retém o pooling constante multiplexado sob demanda e preserva a máquina do DB limpa de choques TCP de latência.</li>
+        <li><strong>Otimização Extrema de Custos FinOps:</strong>
+          <ul>
+            <li><strong>Athena Result Reuse (Reuso de Resultados):</strong> Consultas executivas nos dashboards do QuickSight são frequentemente apertadas em F5 por gerentes repetidamente nas reuniões. Cada refresh enviaria os mesmos terabytes do S3 por hora a $5/TB. Para contornar, a flag global de <em>Query Result Reuse</em> foi ligada ao Workgroup Athena. Com uma carência (TTL) calibrada para 30 minutos, idênticas chamadas SQL encontram a resposta materializada anterior em cache (sem que os dados do Iceberg tenham sofrido writes no meio tempo), retornando resultados instântaneamente para o visor com preço real de zero dólares.</li>
+            <li><strong>Athena Workgroups Limitadores com Capacity Reservations:</strong> Em workflows agressivos de encerramento mensal financeiro (book closings) nos relatórios que não suportam oscilações diárias da fila ruidosa da AWS por estar competindo com outras empresas locais por computação multilocatário do Serverless, as queries são engatadas à um Workgroup Athena VIP comutado sob a funcionalidade de <strong>Athena Provisioned Capacity</strong>. Esse mecanismo retém blocos exclusivos (DPUs) da infraestrutura da nuvem AWS para bater sempre as metas pesadas no SLA do cronograma fiscal.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
   </main>
 </div>
 
