@@ -431,6 +431,78 @@ df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_pay
         <li><strong>PITR Export to S3 (Histórico):</strong> Exporta dados em formato AWS Ion ou JSON nativo. Não consome recursos de computação ou RCU operacionais da tabela, eliminando o risco de queda do sistema de produção.</li>
         <li><strong>DynamoDB Streams (Real-Time):</strong> Dispara eventos contínuos a cada modificação na tabela, que podem ser capturados por funções AWS Lambda e persistidos de forma consolidada no S3.</li>
       </ul>
+
+      <h3>Arquitetura de Leitura e Escrita</h3>
+      <p>O DynamoDB oferece duas modalidades principais para gerenciamento de capacidade:</p>
+      <ul>
+        <li><strong>Provisioned (Provisionado):</strong> Requer que o engenheiro especifique o número de unidades de capacidade de leitura (RCU) e escrita (WCU). Ideal para tráfego previsível, podendo ser acoplado com Auto Scaling. Se a aplicação ultrapassar a capacidade provisionada num determinado segundo, a AWS recusa a requisição (Throttling).</li>
+        <li><strong>On-Demand (Sob Demanda):</strong> Cobra pelo volume exato de requisições processadas. Escala instantaneamente e automaticamente até o limite da conta para lidar com picos massivos de tráfego, sem necessidade de configurar WCU/RCU, o que é ideal para e-commerce em períodos promocionais ou picos de carga inesperados, prevenindo quedas abruptas de serviço por Throttling de Escrita.</li>
+      </ul>
+
+      <h3>Estratégias de Chaves e Índices (Boas Práticas)</h3>
+      <p>Diferente de bancos SQL que permitem buscas eficientes por qualquer coluna, no DynamoDB a performance é estritamente vinculada ao design das chaves de acesso:</p>
+      <ul>
+        <li><strong>Partition Key (PK):</strong> Determina o nó físico (hash) onde o dado será armazenado. A boa prática é usar IDs de alta cardinalidade (como `user_id`, `session_id` ou UUIDs) para evitar Hot Partitions, garantindo balanceamento de I/O por todo o cluster.</li>
+        <li><strong>Sort Key (SK) - Opcional:</strong> Define a ordenação lógica dos itens de mesma PK. Ideal para queries de séries temporais ou relacionamentos hierárquicos, onde se busca o dado mais recente usando a PK combinada à busca com `BETWEEN`, `BEGINS_WITH` ou `>=` na SK (ex: `status_timestamp`).</li>
+        <li><strong>Global Secondary Index (GSI):</strong> Cria uma projeção paralela assíncrona da tabela com chaves de partição e classificação diferentes. Permite realizar consultas alternativas de leitura (ex: buscar um usuário pelo email quando a PK principal da tabela base for seu `id_numerico`), mas há um custo de escrita adicional à medida que as atualizações são propagadas em background da tabela principal.</li>
+        <li><strong>Local Secondary Index (LSI):</strong> Compartilha a mesma PK que a tabela principal, mas possui SK diferente. LSI tem a restrição de que precisa ser definido no momento da criação da tabela e as coleções de itens da PK têm limite de 10 GB. Preferir GSI sobre LSI nas arquiteturas modernas.</li>
+      </ul>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--tf)">Infraestrutura como Código (Terraform) - DynamoDB Table</div>
+        <div class="abox-body">
+          <p>Exemplo de criação de uma tabela DynamoDB em Terraform. <strong>Boas práticas aplicadas em IaC:</strong> modo <code>PAY_PER_REQUEST</code> para flexibilidade na escrita/leitura sem se preocupar com gargalos imediatos (Throttling), proteção contra deleção acidental, encriptação no lado do servidor (SSE) usando KMS Customer Managed Keys para segurança adicional, e PITR habilitado para recuperação de backup contínuo.</p>
+          <pre><code class="language-hcl">resource "aws_dynamodb_table" "tb_sessao_usuario" {
+  name         = "tb_sessao_usuario_prod"
+  billing_mode = "PAY_PER_REQUEST" # Modo On-Demand
+  hash_key     = "user_id"
+  range_key    = "session_timestamp"
+
+  # Habilitando Deleção de Proteção para Tabelas Produtivas
+  deletion_protection_enabled = true
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "session_timestamp"
+    type = "N"
+  }
+
+  attribute {
+    name = "dispositivo"
+    type = "S"
+  }
+
+  # Boas Práticas: Recuperação de Desastres Contínua
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  # Global Secondary Index para buscas alternativas
+  global_secondary_index {
+    name               = "gsi_dispositivo_idx"
+    hash_key           = "dispositivo"
+    range_key          = "session_timestamp"
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["user_id"] # Projeta apenas colunas essenciais
+  }
+
+  # Boas Práticas: Segurança e Criptografia At-Rest
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.dynamo_cmk.arn
+  }
+
+  tags = {
+    Environment = "production"
+    Team        = "data-engineering"
+  }
+}</code></pre>
+        </div>
+      </div>
     </section>
 
     <section class="section" id="rds">
@@ -458,6 +530,72 @@ df_rds = spark.read.format(<span class="s">"jdbc"</span>) \
     .option(<span class="s">"upperBound"</span>, <span class="s">"10000000"</span>) \
     .option(<span class="s">"numPartitions"</span>, <span class="s">"40"</span>) \
     .load()</pre>
+        </div>
+      </div>
+
+      <h3>Arquitetura de Leitura e Escrita Otimizada</h3>
+      <p>A ingestão a partir de bancos relacionais para o Data Lake requer cuidado absoluto para não impactar o tráfego operacional da aplicação (OLTP):</p>
+      <ul>
+        <li><strong>Arquitetura de Leitura (Offloading):</strong> Consultas pesadas de ingestão em batch (via Spark/JDBC) nunca devem apontar para a instância primária (Writer). Em vez disso, provisione <strong>Read Replicas</strong> exclusivas para o processo analítico. Com o <strong>Amazon Aurora Serverless v2</strong>, a instância de réplica pode escalar recursos de CPU/RAM (ACUs) em segundos antes de a tarefa do Glue iniciar e contrair a zero (ou ao mínimo) ao terminar.</li>
+        <li><strong>Arquitetura de Escrita:</strong> O Amazon Aurora possui uma arquitetura com storage desacoplado, replicado em 6 nós em 3 Zonas de Disponibilidade (Multi-AZ). A ingestão lógica que altera tabelas (inserts/updates) grava logs nativos diretamente na camada de armazenamento otimizada da AWS, reduzindo I/O na máquina de computação e aumentando a performance.</li>
+      </ul>
+
+      <h3>Estratégias de Índices e Chaves de Otimização</h3>
+      <p>O desempenho da transferência relacional de dados sofre impactos profundos da modelagem do banco de dados na AWS:</p>
+      <ul>
+        <li><strong>Chaves Primárias Sequenciais:</strong> Chaves usando UUIDs distribuídos aleatoriamente espalham páginas (pages) B-Tree pelo disco, gerando alto índice de fragmentação. Prefira IDs autoincrementais padrão (BIGINT) ou padrões temporais para inserções otimizadas (append-only) que gravam no fim das páginas.</li>
+        <li><strong>Índices B-Tree para Ingestões Incrementais:</strong> Pipelines de ingestão modernos (Incrementais) muitas vezes buscam dados novos usando um campo <code>updated_at</code> (ex: <code>WHERE updated_at > ultima_extracao</code>). Crie um índice específico nesta coluna. Caso não exista um índice suportando a coluna do filtro, o motor fará um Full Table Scan na réplica do RDS e derrubará a performance analítica.</li>
+      </ul>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--tf)">Infraestrutura como Código (Terraform) - Aurora PostgreSQL Serverless v2</div>
+        <div class="abox-body">
+          <p>Exemplo de criação de um cluster e instância Aurora PostgreSQL focando na alta disponibilidade, escalabilidade instantânea de réplicas e segurança nativa do banco de dados.</p>
+          <pre><code class="language-hcl"># Criação do Cluster Aurora Multi-AZ
+resource "aws_rds_cluster" "aurora_vendas" {
+  cluster_identifier      = "aurora-vendas-prod"
+  engine                  = "aurora-postgresql"
+  engine_version          = "15.3"
+  database_name           = "vendas_db"
+  master_username         = "dbadmin"
+  master_password         = "SenhaSegura_123!" # Boas práticas: deve vir de um AWS Secrets Manager
+
+  # Boas Práticas: Retenção e Criptografia At-Rest
+  backup_retention_period = 7
+  preferred_backup_window = "02:00-04:00"
+  storage_encrypted       = true
+
+  # Boas Práticas: Deleção acidental
+  deletion_protection     = true
+
+  serverlessv2_scaling_configuration {
+    max_capacity = 64.0 # ACUs de teto máximo
+    min_capacity = 0.5  # Escala ao mínimo sob inatividade
+  }
+}
+
+# Criação da Instância Primária (Writer) Serverless v2
+resource "aws_rds_cluster_instance" "aurora_vendas_inst_1" {
+  cluster_identifier = aws_rds_cluster.aurora_vendas.id
+  instance_class     = "db.serverless"
+  engine             = aws_rds_cluster.aurora_vendas.engine
+  engine_version     = aws_rds_cluster.aurora_vendas.engine_version
+
+  # Boas Práticas: Performance Insights para debug avançado de gargalos de queries
+  performance_insights_enabled = true
+
+  publicly_accessible = false
+}
+
+# Criação Opcional de Read Replica (Offloading Analítico)
+resource "aws_rds_cluster_instance" "aurora_vendas_replica" {
+  cluster_identifier = aws_rds_cluster.aurora_vendas.id
+  instance_class     = "db.serverless"
+  engine             = aws_rds_cluster.aurora_vendas.engine
+  engine_version     = aws_rds_cluster.aurora_vendas.engine_version
+
+  publicly_accessible = false
+}</code></pre>
         </div>
       </div>
     </section>
