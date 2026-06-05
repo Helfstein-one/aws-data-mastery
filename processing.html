@@ -214,6 +214,15 @@
           <text x="620" y="190" text-anchor="middle" fill="#10b981" font-size="8">spark.memory.offHeap.size</text>
         </svg>
       </div>
+
+      <h3>Gerenciamento de Memória Unificado (Unified Memory Management)</h3>
+      <p>A partir do Spark 1.6, o <strong>Unified Memory Manager</strong> flexibilizou a barreira rígida entre Execution e Storage Memory. A fração conjunta (<code>spark.memory.fraction</code>, padrão 60% da Heap) é compartilhada dinamicamente:</p>
+      <ul>
+        <li><strong>Eviction Dinâmica:</strong> Se a Execution Memory precisar de mais espaço durante um Shuffle ou Join e houver memória ociosa no bloco de Storage, ela pode "despejar" (evict) blocos em cache (salvando em disco se configurado com <code>MEMORY_AND_DISK</code>) para evitar o erro de Out of Memory (OOM).</li>
+        <li><strong>Imunidade da Execution Memory:</strong> O inverso não é verdadeiro. A Storage Memory <em>não pode</em> expulsar dados da Execution Memory, pois isso interromperia o processamento ativo da Task.</li>
+        <li><strong>Unroll Memory:</strong> Antes de um bloco de dados ser efetivamente armazenado no cache (Storage), o Spark precisa "desenrolar" (unroll) os dados serializados iterando pelos registros. Esse processo consome memória temporária que é alocada e contabilizada como parte da Storage Memory. Caso não haja espaço suficiente para desenrolar o bloco, ele nem chega a ser armazenado.</li>
+        <li><strong>Off-Heap Execution:</strong> Ativar o <code>spark.memory.offHeap.enabled = true</code> e configurar <code>spark.memory.offHeap.size</code> permite que o Project Tungsten aloque dados brutos diretamente na memória do sistema operacional usando a API Unsafe. Essa abordagem escapa completamente do ciclo de Garbage Collection do Java, resultando em pausas nulas e alta performance para operações intensivas em ponteiros.</li>
+      </ul>
     </section>
 
     <section class="section" id="spark-arch">
@@ -463,6 +472,117 @@ df_processed = df_sales.withColumn(
 # Execução extremamente veloz e segura contra estouro de memória!</code></pre>
     </section>
 
+    <section class="section" id="spark-advanced-functions">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">06.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Funções Avançadas de API PySpark &amp; Otimização</h2>
+          <p>Higher-Order Functions (HOFs), Bloom Filters, Window Functions de alto desempenho e Exemplos de Código Baseados em Cores</p>
+        </div>
+      </div>
+
+      <p>As funções nativas do PySpark (disponíveis em <code>pyspark.sql.functions</code>) são implementadas em Scala/Java no backend e executadas diretamente no nível da JVM do Executor. Elas se beneficiam do <strong>Catalyst Optimizer</strong> (para colapsar expressões) e do <strong>Tungsten Engine</strong> (geração de código e alocação de memória direta). Isso significa que elas são drasticamente mais rápidas e eficientes em termos de memória do que as funções definidas pelo usuário (UDFs) em Python regular. <strong>Sempre dê preferência à API nativa do PySpark.</strong></p>
+
+      <h3>Higher-Order Functions (HOFs) em Arrays</h3>
+      <p>Evite o uso de <code>F.explode()</code> seguido de <code>F.groupBy()</code>, pois isso duplica os dados em memória e gera shuffles desnecessários. Use HOFs para manipular arrays diretamente no executor:</p>
+      <pre><code class="language-python"># Filtrar elementos de um array sem explode
+df.withColumn("active_users", F.expr("filter(users_array, x -> x.status == 'active')"))
+
+# Transformar elementos do array em tempo real
+df.withColumn("prices_with_tax", F.expr("transform(prices_array, p -> p * 1.10)"))</code></pre>
+
+      <h3>Bloom Filters para Otimização de Busca</h3>
+      <p>Em vez de varrer petabytes de dados procurando uma chave específica, um Bloom Filter cria uma estrutura probabilística mínima na memória que testa a presença do dado (sem falsos negativos). Útil antes de joins pesados:</p>
+      <pre><code class="language-python"># Cria o Bloom filter da tabela de anomalias (muito pequena)
+bf = df_anomalies.stat.bloomFilter("user_id", expectedNumItems=1000, fpp=0.01)
+
+# Filtra a tabela massiva ANTES do join (Filter Pushdown aprimorado)
+df_massive_filtered = df_massive.filter(F.col("user_id").might_contain(bf))</code></pre>
+
+      <h3>Otimização de Window Functions: rangeBetween vs rowsBetween</h3>
+      <p>A especificação física do Frame da Window Function muda drasticamente o consumo computacional:</p>
+      <ul>
+        <li><strong><code>rangeBetween</code> (Padrão):</strong> Agrupa dados baseando-se no valor da chave de ordenação. O Spark mantém na memória todos os registros atrelados àquele valor lógico, podendo causar picos de uso da Execution Memory se houverem milhares de registros com o mesmo valor (Data Skew na partição da window).</li>
+        <li><strong><code>rowsBetween</code> (Performance Otimizada):</strong> Usa a posição física da linha, independentemente do valor da chave. A alocação de memória do executor é perfeitamente previsível (ex: os últimos 10 registros lidos fisicamente). Use sempre que a regra de negócio permitir contagem posicional no lugar da contagem por valor.</li>
+      </ul>
+
+      <h3>Dica de Debugging e Testes com Exemplos Simples (Cores)</h3>
+      <p>Para testar e depurar lógicas complexas sem depender de clusters caros, crie conjuntos de dados (DataFrames) mínimos na memória. A abordagem visual com "cores" facilita o rastreamento lógico do agrupamento e ordenação (Window Functions):</p>
+      <pre><code class="language-python">from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+import pyspark.sql.functions as F
+
+spark = SparkSession.builder.appName("DebugLocal").getOrCreate()
+
+# Criação de um DataFrame mínimo para depurar a lógica
+data = [
+    ("Vermelho", "Carro", 100),
+    ("Vermelho", "Moto", 50),
+    ("Azul", "Carro", 120),
+    ("Azul", "Bicicleta", 30),
+    ("Verde", "Caminhão", 500)
+]
+df_colors = spark.createDataFrame(data, ["Cor", "Veículo", "Preço"])
+
+# 1. Definindo a Window particionada pela Cor
+window_spec = Window.partitionBy("Cor").orderBy(F.desc("Preço"))
+
+# 2. Aplicando funções avançadas usando a API PySpark nativa
+# Função row_number() numera as linhas dentro de cada partição de cor
+# Função max() calcula o teto de preço para cada cor
+df_ranked = df_colors \
+    .withColumn("Rank", F.row_number().over(window_spec)) \
+    .withColumn("Preco_Maximo_Cor", F.max("Preço").over(window_spec.rangeBetween(Window.unboundedPreceding, Window.unboundedFollowing)))
+
+df_ranked.show()
+# +--------+---------+-----+----+----------------+
+# |     Cor|  Veículo|Preço|Rank|Preco_Maximo_Cor|
+# +--------+---------+-----+----+----------------+
+# |    Azul|    Carro|  120|   1|             120|
+# |    Azul|Bicicleta|   30|   2|             120|
+# |Verde...|Caminhão...|  500|   1|             500|
+# |Vermelho|    Carro|  100|   1|             100|
+# |Vermelho|     Moto|   50|   2|             100|
+# +--------+---------+-----+----+----------------+
+
+# Dica de Debugging: Use .explain(True) para ver o plano físico gerado
+# df_ranked.explain(True) # Mostra o Sort, Window, e Projection no plano físico.</code></pre>
+
+      <h3 style="margin-top: 30px;">Desafios para Especialistas &amp; Otimização de Funções</h3>
+      <p>A diferença entre um código que roda em 10 horas e um que roda em 10 minutos reside na compreensão da compilação de código do Catalyst. Seguem desafios reais e abordagens performáticas exigidas de especialistas em engenharia de dados:</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Perguntas de Entrevista e Soluções</h4>
+          <ul style="font-size:13px; line-height:1.6; color:#cbd5e1; padding-left:15px; margin-top:10px;">
+            <li><strong>Por que evitar UDFs normais em Python?</strong><br><em>Resposta:</em> Os dados precisam ser serializados da JVM para um processo Python e voltar para a JVM. Isso causa overhead massivo e o código é uma "caixa preta" (Blackbox) ignorada pelo Catalyst Optimizer. Prefira sempre <code>pyspark.sql.functions</code>. Se UDF for inevitável, use <strong>Pandas UDFs (Arrow Vectorized)</strong>.</li>
+            <li><strong>Como otimizar a extração do evento mais recente por usuário?</strong><br><em>Resposta:</em> Evite self-joins lentos. Utilize uma Window Function com <code>row_number() over (partitionBy("user").orderBy(desc("timestamp")))</code> e filtre onde rank == 1.</li>
+            <li><strong>Como lidar com arrays complexos sem onerar a rede (Shuffles)?</strong><br><em>Resposta:</em> Não use <code>explode()</code> se a intenção for reagrupar depois. Use funções de alta ordem (HOFs) como <code>transform()</code>, <code>filter()</code> e <code>aggregate()</code> para manipular arrays nativamente linha a linha sem multiplicar os registros.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Exemplo Clássico: Lógica Condicional</h4>
+          <p style="font-size:12px; margin-bottom: 5px;"><strong>Pior Cenário (UDF Lenta - Não otimizada):</strong></p>
+          <pre><code class="language-python" style="font-size:11px;">from pyspark.sql.functions import udf
+
+@udf("string")
+def categoriza(idade):
+    return "Adulto" if idade >= 18 else "Menor"
+
+df.withColumn("cat", categoriza("idade")) # Blackbox p/ Catalyst</code></pre>
+          <p style="font-size:12px; margin-top: 10px; margin-bottom: 5px;"><strong>Melhor Cenário (PySpark API Nativa - Super rápida):</strong></p>
+          <pre><code class="language-python" style="font-size:11px;">import pyspark.sql.functions as F
+
+# O Catalyst compila em código Java de baixo nível
+df.withColumn(
+    "cat",
+    F.when(F.col("idade") >= 18, "Adulto").otherwise("Menor")
+)</code></pre>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="spark-joins">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--spark)">07</div>
@@ -568,6 +688,22 @@ df_stream.writeStream \
           <div class="recipe-icon">🗜️</div>
           <div class="recipe-text"><strong>Compressão colunar:</strong> Use o codec ZSTD no Parquet <code>spark.sql.parquet.compression.codec = zstd</code> para o melhor equilíbrio entre consumo de CPU e compressão física no S3.</div>
         </div>
+        <div class="recipe-row">
+          <div class="recipe-icon">🧠</div>
+          <div class="recipe-text"><strong>Fração de Memória (Memory Fraction):</strong> <code>spark.memory.fraction = 0.8</code> em workloads intensos de join. Ajuste o <code>spark.memory.storageFraction</code> (padrão 0.5) para valores mais baixos (ex: 0.2) se o job realizar pouco cache e exigir muita memória livre na etapa de Execution.</div>
+        </div>
+        <div class="recipe-row">
+          <div class="recipe-icon">🌐</div>
+          <div class="recipe-text"><strong>Rede e Shuffle Fetch:</strong> Para falhas de timeout em grandes Shuffles, aumente <code>spark.reducer.maxSizeInFlight = 96m</code> (padrão 48m) em instâncias potentes, reduzindo os round-trips de rede. Ajuste também <code>spark.shuffle.file.buffer = 1mb</code> (padrão 32k) para otimizar gravações de shuffle no disco.</div>
+        </div>
+        <div class="recipe-row">
+          <div class="recipe-icon">📦</div>
+          <div class="recipe-text"><strong>Serialização Avançada:</strong> Evite o serializador nativo do Java usando Kryo. Configure <code>spark.serializer = org.apache.spark.serializer.KryoSerializer</code>. A serialização via Kryo chega a ser 10x mais veloz, essencial em RDDs e Broadcasting gigante.</div>
+        </div>
+        <div class="recipe-row">
+          <div class="recipe-icon">⚖️</div>
+          <div class="recipe-text"><strong>AQE Skew Join Optimization:</strong> Assegure-se de ativar <code>spark.sql.adaptive.skewJoin.enabled = true</code>. O AQE detecta assimetrias extremas e divide dinamicamente tarefas superlotadas em sub-tarefas menores durante o runtime, mitigando OOMs sem alterar código SQL.</div>
+        </div>
       </div>
     </section>
 
@@ -588,12 +724,70 @@ df_stream.writeStream \
         </div>
         <div class="sui-tab">
           <div class="sui-tab-name">Stages Tab</div>
-          <div class="sui-tab-body">Detalhamento dos tempos de GC e volumes físicos de shuffle read/write.</div>
+          <div class="sui-tab-body">Detalhamento dos tempos de GC e volumes físicos de shuffle read/write. Verifique a métrica <strong>Shuffle Read Blocked Time</strong> (tempo de espera pela rede) e <strong>Spill to Disk</strong> (indício claro de RAM insuficiente, causando escrita em disco).</div>
         </div>
         <div class="sui-tab">
           <div class="sui-tab-name">SQL / Execution Tab</div>
-          <div class="sui-tab-body">Plano físico compilado com operadores codificados Tungsten.</div>
+          <div class="sui-tab-body">Plano físico compilado com operadores codificados Tungsten. A presença de um operador com o prefixo <code>*</code> (ex: <code>*HashAggregate</code>) indica o uso de WholeStageCodegen.</div>
         </div>
+      </div>
+
+      <h3 style="margin-top: 32px;">Fluxo Físico de um Plano de Execução (DAG)</h3>
+      <p>Um join típico na aba SQL apresentará o seguinte fluxo de nós codificados em Tungsten:</p>
+
+      <div class="dw" style="text-align: center; margin: 24px 0;">
+        <svg viewBox="0 0 600 300" width="600" height="300" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="600" height="300" fill="#0f172a" rx="14"/>
+
+          <!-- Node 1: Scan -->
+          <rect x="50" y="40" width="180" height="40" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="140" y="64" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">FileScan parquet</text>
+
+          <!-- Node 2: Exchange (Shuffle) -->
+          <rect x="50" y="110" width="180" height="40" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="140" y="134" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">Exchange hashpartitioning</text>
+
+          <!-- Node 3: Sort -->
+          <rect x="50" y="180" width="180" height="40" rx="6" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="140" y="204" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">*(1) Sort [key ASC]</text>
+
+          <!-- Node 4: Scan 2 -->
+          <rect x="370" y="40" width="180" height="40" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="460" y="64" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">FileScan parquet</text>
+
+          <!-- Node 5: Exchange 2 -->
+          <rect x="370" y="110" width="180" height="40" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="460" y="134" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">Exchange hashpartitioning</text>
+
+          <!-- Node 6: Sort 2 -->
+          <rect x="370" y="180" width="180" height="40" rx="6" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="460" y="204" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">*(2) Sort [key ASC]</text>
+
+          <!-- Merge Join -->
+          <rect x="210" y="240" width="180" height="40" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="300" y="264" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700">*(3) SortMergeJoin</text>
+
+          <!-- Connecting Lines -->
+          <path d="M 140 80 L 140 110" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="140,110 136,105 144,105" fill="#cbd5e1"/>
+
+          <path d="M 140 150 L 140 180" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="140,180 136,175 144,175" fill="#cbd5e1"/>
+
+          <path d="M 460 80 L 460 110" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="460,110 456,105 464,105" fill="#cbd5e1"/>
+
+          <path d="M 460 150 L 460 180" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="460,180 456,175 464,175" fill="#cbd5e1"/>
+
+          <path d="M 140 220 L 250 240" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="250,240 244,236 247,230" fill="#cbd5e1"/>
+
+          <path d="M 460 220 L 350 240" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="350,240 353,230 356,236" fill="#cbd5e1"/>
+
+          <text x="300" y="20" text-anchor="middle" fill="#94a3b8" font-size="8">O asterisco (*) denota WholeStageCodegen (compilação de operadores múltiplos em uma única função C/Java)</text>
+        </svg>
       </div>
     </section>
 
