@@ -106,6 +106,7 @@
       <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
       <a href="governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality</a>
       <a href="governance-security.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality Avançado</a>
+      <a href="governance-security.html#data-contracts" class="nav-sub"><span class="nav-sdot"></span>Contratos de Dados</a>
 
       <a href="finops.html" class="nav-a "><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
       <a href="finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>FinOps Fundamentos</a>
@@ -595,31 +596,127 @@ resource <span class="s">"aws_iam_role_policy_attachment" "attach_s3"</span> {
         <div class="sec-num" style="color:var(--muted)">10</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Observabilidade: Os 4 Golden Signals</h2>
-          <p>Monitoramento ativo da saúde e vazão dos pipelines</p>
+          <h2>Observabilidade: Os 4 Golden Signals com DataDog</h2>
+          <p>Centralização de logs, métricas e detecção de anomalias com a principal ferramenta de Data Observability do mercado</p>
         </div>
       </div>
 
+      <p>Em pipelines analíticos corporativos de alta escala, a observabilidade centralizada é crítica. Substituímos o monitoramento fragmentado pela integração robusta com o <strong>DataDog</strong>, coletando dados de execução da JVM/Spark, vazão física e monitoramento de anomalias.</p>
+
       <div class="grid-2">
         <div>
-          <h4>Os Sinais Operacionais Críticos</h4>
+          <h4>Os 4 Golden Signals Aplicados a Dados</h4>
           <div class="callout callout-info">
-            <strong>Latência:</strong> Tempo gasto no processamento físico dos pipelines (P50, P90, P99). Latências elevadas indicam gargalos de partição.<br><br>
-            <strong>Throughput:</strong> Volume total de records ou gigabytes gravados por segundo.<br><br>
-            <strong>Erros:</strong> Contagem de quebras técnicas de jobs e qualidade de dados inadequada detectada no pipeline.<br><br>
-            <strong>Saturação:</strong> Alocação física de CPU, memória ou partições de escrita no S3.
+            <strong>1. Latência:</strong> Tempo total de processamento de cada etapa do pipeline (leitura, shuffle e gravação). Métricas enviadas ao DataDog como <code>data.pipeline.duration</code>.
+          </div>
+          <div class="callout callout-info">
+            <strong>2. Tráfego (Throughput):</strong> Taxa de records lidos/escritos por segundo e volumetria em bytes processados: <code>data.pipeline.records_processed</code>.
+          </div>
+          <div class="callout callout-info">
+            <strong>3. Erros:</strong> Exceções de OOM, falhas de parse de schemas e quebras técnicas reportadas via logs estruturados: <code>data.pipeline.error_count</code>.
+          </div>
+          <div class="callout callout-info">
+            <strong>4. Saturação:</strong> Uso de memória heap/off-heap nos executores e limites de CPU dos nós EMR: <code>spark.driver.jvm.memory_used</code>.
           </div>
         </div>
+
         <div>
-          <h4>Arquitetura de Alertas e Métricas AWS</h4>
+          <h4>Arquitetura de Coleta DataDog na AWS</h4>
           <div class="abox">
-            <div class="abox-hdr" style="background:var(--arch)">Métricas para Incidentes</div>
-            <div class="abox-body">
-              <div class="arow"><div class="anode">Glue / EMR Job</div><span class="aarrow">→</span><div class="anode">CloudWatch Metrics</div><span class="aarrow">→</span><div class="anode">SNS / Slack Alarm</div></div>
-              <div class="arow"><div class="anode">Step Functions</div><span class="aarrow">→</span><div class="anode">EventBridge</div><span class="aarrow">→</span><div class="anode">Dashboard Operacional</div></div>
+            <div class="abox-hdr" style="background:var(--muted)">Fluxo de Telemetria e Alertas</div>
+            <div class="abox-body" style="padding: 20px;">
+              <p>Os jobs Glue e EMR enviam métricas para o DataDog de duas formas principais:</p>
+              <ol>
+                <li><strong>Spark Datadog Integration:</strong> O Spark envia métricas JMX e YARN para o Datadog Agent rodando como daemon no EMR ou coletadas via integrações integradas de métricas do CloudWatch.</li>
+                <li><strong>Datadog API Direct Ingestion:</strong> O próprio Job Spark faz requisições HTTPS na API do Datadog para publicar métricas customizadas de negócio.</li>
+              </ol>
+              <div class="arow" style="font-family: 'DM Mono', monospace; font-size: 10px; color: #a78bfa; margin-top: 15px;">
+                Glue Job ➔ AWS Secrets (DD_API_KEY) ➔ DataDog API ➔ Slack Alert/Incident
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <h3>Código de Produção: Envio de Métricas Customizadas ao DataDog com PySpark</h3>
+      <p>O exemplo abaixo demonstra como um job do AWS Glue busca com segurança a chave da API do Datadog no **Secrets Manager** e publica métricas de progresso de ingestão diretamente na API do Datadog:</p>
+
+      <pre><code class="language-python">import time
+import requests
+import json
+import boto3
+from pyspark.sql import SparkSession
+
+def get_dd_api_key():
+    # Recupera a chave secreta do DataDog do Secrets Manager
+    client = boto3.client('secretsmanager', region_name='us-east-1')
+    try:
+        response = client.get_secret_value(SecretId="prod/datadog/api_key")
+        secret_dict = json.loads(response['SecretString'])
+        return secret_dict['DD_API_KEY']
+    except Exception as e:
+        print(f"Erro ao recuperar chave do Datadog: {e}")
+        return None
+
+def send_metric_to_datadog(metric_name, value, tags=[]):
+    api_key = get_dd_api_key()
+    if not api_key:
+        return
+    
+    url = "https://api.datadoghq.com/api/v2/series"
+    headers = {
+        "Content-Type": "application/json",
+        "DD-API-KEY": api_key
+    }
+    
+    # Payload no formato v2 da API do Datadog
+    payload = {
+        "series": [
+            {
+                "metric": metric_name,
+                "type": 3,  # GAUGE
+                "points": [
+                    {
+                        "timestamp": int(time.time()),
+                        "value": float(value)
+                    }
+                ],
+                "resources": [
+                    {
+                        "type": "host",
+                        "name": "aws-glue-spark-job"
+                    }
+                ],
+                "tags": tags + ["env:production", "project:customer-churn"]
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=5)
+        if response.status_code != 202:
+            print(f"Erro ao enviar métrica Datadog: {response.text}")
+    except Exception as e:
+        print(f"Falha de rede ao conectar com Datadog: {e}")
+
+# --- EXECUÇÃO DENTRO DO PIPELINE SPARK ---
+spark = SparkSession.builder.appName("DataDogMetricsJob").getOrCreate()
+
+# Exemplo de leitura de dados e processamento
+df = spark.read.parquet("s3://company-datalake-silver/vendas/")
+start_time = time.time()
+record_count = df.count()
+duration = time.time() - start_time
+
+# Publica métricas customizadas no Datadog
+send_metric_to_datadog("data.pipeline.records_processed", record_count, tags=["layer:silver", "table:vendas"])
+send_metric_to_datadog("data.pipeline.duration", duration, tags=["layer:silver", "table:vendas"])
+
+print("Métricas operacionais enviadas com sucesso ao DataDog!")</code></pre>
+
+      <div class="callout callout-tip">
+        <strong>Detecção de Anomalias (Anomaly Alerts):</strong>
+        No painel do Datadog, configure um **Anomaly Monitor** sobre a métrica <code>data.pipeline.duration</code>. O algoritmo de machine learning do Datadog detectará se a execução de hoje demorou mais que 3 desvios padrão em comparação com as últimas segundas-feiras, alertando sobre possíveis travamentos de GC ou processamento de arquivos corrompidos antes que o SLA diário seja violado.
       </div>
     </section>
 
@@ -833,16 +930,145 @@ if regras_falhas.count() > 0:
       </div>
     </section>
 
+    <section class="section" id="data-contracts">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--muted)">09.6</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--muted)"></div>
+          <h2>Contratos de Dados (Data Contracts) em Produção</h2>
+          <p>Mecanismos ativos de validação de schemas em microsserviços e integração com o AWS Glue Schema Registry</p>
+        </div>
+      </div>
+
+      <p>Um <strong>Contrato de Dados (Data Contract)</strong> é um acordo formal entre os produtores (ex: times de microsserviços) e os consumidores (times analíticos). Ele previne que alterações silenciosas de esquema (*Schema Drift*) na origem interrompam pipelines downstream. O contrato define a estrutura (campos, tipos, obrigatoriedade) e é validado de forma ativa e impeditiva.</p>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-lbl">Etapa 1</div>
+          <h4>Definição Declarativa</h4>
+          <p>O contrato é definido usando especificações neutras de formato como **JSON Schema**, **Apache Avro** ou **Protobuf** e registrado centralmente no **AWS Glue Schema Registry**.</p>
+        </div>
+        <div class="card">
+          <div class="card-lbl">Etapa 2</div>
+          <h4>Validação no Produtor</h4>
+          <p>Antes de publicar mensagens no Kafka/Kinesis, a aplicação de origem serializa e valida o payload localmente contra o registro de schemas. Erros de incompatibilidade travam o deploy ou desviam a escrita.</p>
+        </div>
+        <div class="card">
+          <div class="card-lbl">Etapa 3</div>
+          <h4>Garantia de Evolução</h4>
+          <p>Regras rígidas de compatibilidade (ex: <code>BACKWARD_ALL</code>) são aplicadas no Registry para rejeitar deploys na origem que quebrem os leitores analíticos (ex: remoção de colunas existentes).</p>
+        </div>
+      </div>
+
+      <h3>Código de Produção: Registro e Validação de Schema com Boto3</h3>
+      <p>O exemplo abaixo demonstra como validar dinamicamente um payload de evento de vendas contra o **AWS Glue Schema Registry** antes de publicá-lo para a ingestão analítica:</p>
+
+      <pre><code class="language-python">import json
+import jsonschema
+import boto3
+from jsonschema import validate
+
+# 1. Definição do Contrato de Dados (JSON Schema)
+schema_contrato = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ContratoVenda",
+    "type": "object",
+    "properties": {
+        "id_venda": {"type": "string"},
+        "valor_total": {"type": "number", "minimum": 0.0},
+        "id_cliente": {"type": "integer"},
+        "email_comprador": {"type": "string", "format": "email"},
+        "itens": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "sku": {"type": "string"},
+                    "quantidade": {"type": "integer", "minimum": 1}
+                },
+                "required": ["sku", "quantidade"]
+            }
+        }
+    },
+    "required": ["id_venda", "valor_total", "id_cliente"]
+}
+
+def validar_e_publicar_evento(evento):
+    # Passo A: Validação Local contra o JSON Schema do Contrato
+    try:
+        validate(instance=evento, schema=schema_contrato)
+        print("✓ Evento validado localmente contra o Contrato de Dados.")
+    except jsonschema.exceptions.ValidationError as e:
+        print(f"✗ Erro de Violação de Contrato: {e.message}")
+        raise ValueError("Payload inválido de acordo com o contrato de dados.")
+
+    # Passo B: Validação e checagem de compatibilidade no AWS Glue Schema Registry
+    glue = boto3.client('glue', region_name='us-east-1')
+    try:
+        # Verifica se o schema está registrado e é compatível
+        response = glue.check_schema_version(
+            SchemaId={
+                'RegistryName': 'data-contracts-registry',
+                'SchemaName': 'ContratoVenda'
+            },
+            SchemaDefinition=json.dumps(schema_contrato)
+        )
+        print(f"✓ Schema verificado no AWS Registry. Status: {response['Status']}")
+    except glue.exceptions.EntityNotFoundException:
+        # Se não existir, cria sob política de evolução controlada
+        glue.create_schema(
+            RegistryId={'RegistryName': 'data-contracts-registry'},
+            SchemaName='ContratoVenda',
+            DataFormat='JSON',
+            Compatibility='BACKWARD_ALL',
+            SchemaDefinition=json.dumps(schema_contrato)
+        )
+        print("✓ Novo contrato de dados registrado sob regras BACKWARD_ALL.")
+
+    # Proceder com a gravação no stream de ingestão...
+    print("✓ Evento enviado para a fila de streaming analítico.")
+
+# Exemplo de Payload saudável
+venda_ok = {
+    "id_venda": "vda-908",
+    "valor_total": 450.50,
+    "id_cliente": 44920,
+    "email_comprador": "cliente@email.com",
+    "itens": [{"sku": "SKU-990", "quantidade": 2}]
+}
+
+validar_e_publicar_evento(venda_ok)</code></pre>
+
+      <div class="callout callout-tip">
+        <strong>Data Contracts Nativos do dbt (dbt v1.5+):</strong>
+        Para blindar as tabelas Gold dentro do Data Warehouse (Athena/Redshift), declare contratos explícitos no seu arquivo <code>models/schema.yml</code> do dbt. Isso força o banco a validar tipos de dados em tempo de compilação (enforced contracts) na query de build:
+        <pre>models:
+  - name: dim_clientes
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: id_cliente
+        data_type: integer
+        constraints:
+          - type: not_null
+          - type: primary_key</pre>
+      </div>
+    </section>
+
     <section class="section" id="iac">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--muted)">10</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Infraestrutura como Código (Terraform)</h2>
-          <p>Modelagem declarativa e reprodutível de recursos de Big Data</p>
+          <h2>Infraestrutura como Código (Terraform) &amp; CI/CD</h2>
+          <p>Modelagem declarativa de recursos analíticos, controle de estado e automação de testes com GitHub Actions</p>
         </div>
+      </div>
 
-        <pre><span class="k">resource</span> <span class="s">"aws_glue_catalog_table"</span> <span class="nf">"iceberg_table"</span> {
+      <p>A engenharia de dados moderna exige automação completa. Usamos o **Terraform** para modelar e implantar toda a infraestrutura analítica (buckets S3, Glue tables, clusters EMR e permissões do Lake Formation). Nossos deploys são protegidos por um pipeline de **CI/CD** no GitHub Actions, que roda testes unitários em Spark antes de qualquer modificação de infraestrutura.</p>
+
+      <pre><span class="k">resource</span> <span class="s">"aws_glue_catalog_table"</span> <span class="nf">"iceberg_table"</span> {
   name          = <span class="s">"cliente_trusted"</span>
   database_name = <span class="s">"trusted_db"</span>
   table_type    = <span class="s">"EXTERNAL_TABLE"</span>
@@ -858,16 +1084,124 @@ if regras_falhas.count() > 0:
     output_format = <span class="s">"org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"</span>
 
     ser_de_info {
-      serialization_library = <span class="s">"org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"</span>
+      serialization_library = <span class="s">"org.apache.hadoop.hive.ql.io.parquet.SerDe"</span>
     }
   }
 }</pre>
-      </div>
+
+      <h3>1. Testes Unitários de PySpark com Pytest</h3>
+      <p>Antes de empurrar o código do Glue Job para produção, o pipeline de CI executa testes unitários usando **Pytest** contra o Spark local (simulado na memória do contêiner de teste). Isso valida as regras lógicas de transformação e limpeza de dados:</p>
+
+      <pre><code class="language-python"># test_spark_transformations.py
+import pytest
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+
+@pytest.fixture(scope="session")
+def spark_session():
+    # Cria uma sessão Spark local na JVM do runner de teste
+    return SparkSession.builder \
+        .master("local[*]") \
+        .appName("PySpark-Unit-Testing") \
+        .config("spark.sql.shuffle.partitions", "1") \
+        .getOrCreate()
+
+def clean_sales_data(df):
+    # Regra lógica: remove valores nulos de id e filtra status indevidos
+    return df.filter(df["id_venda"].isNotNull()) \
+             .filter(df["status"] != "DRAFT")
+
+def test_clean_sales_data(spark_session):
+    # Massa de dados de teste (Input)
+    schema = StructType([
+        StructField("id_venda", StringType(), True),
+        StructField("status", StringType(), True),
+        StructField("valor", IntegerType(), True)
+    ])
+    data = [
+        ("vda-001", "APPROVED", 100),
+        (None, "APPROVED", 50),
+        ("vda-002", "DRAFT", 200)
+    ]
+    df_input = spark_session.createDataFrame(data, schema=schema)
+    
+    # Executa a transformação
+    df_output = clean_sales_data(df_input)
+    
+    # Validações das expectativas
+    resultados = df_output.collect()
+    assert len(resultados) == 1
+    assert resultados[0]["id_venda"] == "vda-001"
+    assert resultados[0]["valor"] == 100</code></pre>
+
+      <h3>2. Workflow de CI/CD Completo (GitHub Actions)</h3>
+      <p>Abaixo está o arquivo de configuração declarativo do workflow (<code>.github/workflows/data-pipeline.yml</code>) que roda os testes PySpark e aplica as modificações do Terraform na AWS de forma totalmente automatizada:</p>
+
+      <pre><code class="language-yaml"># .github/workflows/data-pipeline.yml
+name: Data Pipeline CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-pyspark:
+    name: Run PySpark Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install PySpark & Test Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyspark pytest pytest-cov requests
+
+      - name: Execute Tests with Coverage
+        run: |
+          pytest test_spark_transformations.py --cov=transformations --cov-report=xml
+
+  terraform-deploy:
+    name: Terraform Validate and Apply
+    needs: test-pyspark
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve</code></pre>
     </section>
 
     <section class="section" id="erros">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--muted)">10</div>
+        <div class="sec-num" style="color:var(--muted)">11</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--muted)"></div>
           <h2>Erros Comuns em Governança &amp; Arquitetura</h2>
