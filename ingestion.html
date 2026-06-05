@@ -85,6 +85,7 @@
       <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
       <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
+      <a href="serving.html#iceberg-manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção Iceberg</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -130,15 +131,38 @@
         <div class="sec-num" style="color:var(--emr)">01</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Amazon Kinesis Data Streams Deep Dive</h2>
-          <p>Sharding, contrapressão, limites de leitura e produtores resilientes com controle de concorrência</p>
+          <h2>Amazon Kinesis: Introdução Teórica &amp; Deep Dive</h2>
+          <p>Motor de streaming de dados em tempo real altamente escalável, baseado em Shards e controle de concorrência</p>
         </div>
       </div>
 
-      <p>O <strong>Amazon Kinesis Data Streams</strong> é o motor gerenciado de streaming na nuvem AWS. Ele permite a ingestão contínua de milhões de registros por segundo por meio de shards. Cada <strong>Shard</strong> provê:</p>
+      <p>O <strong>Amazon Kinesis Data Streams</strong> é um serviço de streaming de dados totalmente gerenciado e altamente durável, projetado para capturar continuamente gigabytes de dados por segundo de centenas de milhares de fontes (logs de servidores, transações financeiras, cliques em sites, telemetria de IoT). Ele permite que você construa aplicações de processamento de streaming em tempo real (Spark Streaming, Flink ou Lambda) para obter insights imediatos.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Escalabilidade</div>
+          <div class="cc-title">Particionamento por Shards</div>
+          <div class="cc-body">A unidade base de escala do Kinesis. Cada Shard fornece uma capacidade física fixa de escrita (1 MB/s ou 1.000 records/s) e leitura (2 MB/s). O throughput total do stream cresce de forma linear conforme novos shards são adicionados (rescaling via Split/Merge).</div>
+        </div>
+
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Roteamento</div>
+          <div class="cc-title">Partition Keys</div>
+          <div class="cc-body">Chave definida pelo produtor para rotear mensagens. O Kinesis aplica um hash MD5 sobre a Partition Key para mapear qual Shard receberá o registro. Chaves de alta cardinalidade garantem a distribuição homogênea dos dados entre os shards.</div>
+        </div>
+
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Durabilidade</div>
+          <div class="cc-title">Retenção de Mensagens</div>
+          <div class="cc-body">Ao contrário de filas clássicas (que apagam mensagens lidas), o Kinesis armazena dados em logs ordenados cronologicamente, retendo mensagens por padrão por 24 horas (configurável até 365 dias), permitindo múltiplos consumidores lerem simultaneamente.</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Limites de Throughput e Consumo</h3>
+      <p>Cada <strong>Shard</strong> provê capacidades estritas de trânsito físico que definem os limites de engenharia da sua aplicação:</p>
       <ul>
         <li><strong>Escrita (Ingress):</strong> Até 1 MB/s de taxa de transferência ou 1.000 registros de gravação por segundo.</li>
-        <li><strong>Leitura (Egress):</strong> Até 2 MB/s por padrão. Esse limite pode ser contornado usando <strong>Enhanced Fan-Out (EFO)</strong>, que aloca conexões HTTP/2 dedicadas de 2 MB/s por consumidor, reduzindo a latência para menos de 70 milissegundos.</li>
+        <li><strong>Leitura (Egress):</strong> Até 2 MB/s por padrão (compartilhado entre todos os consumidores daquele shard). Esse limite pode ser contornado usando <strong>Enhanced Fan-Out (EFO)</strong>, que aloca conexões HTTP/2 dedicadas de 2 MB/s por consumidor, reduzindo a latência de entrega para menos de 70 milissegundos.</li>
       </ul>
 
       <div class="callout callout-warn">
@@ -275,12 +299,52 @@ s3-bucket/trusted/org=!{partitionKeyFromQuery:org}/tipo=!{partitionKeyFromQuery:
         <div class="sec-num" style="color:var(--emr)">03</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Amazon MSK (Managed Streaming for Apache Kafka)</h2>
-          <p>Gerenciamento de tópicos, partições, retenção e integração com Spark Structured Streaming</p>
+          <h2>Amazon MSK: Introdução Teórica &amp; Sizing de Broker</h2>
+          <p>Clusters Apache Kafka gerenciados e diretrizes de dimensionamento de hardware e partições</p>
         </div>
       </div>
 
-      <p>O <strong>Amazon MSK</strong> entrega clusters Apache Kafka totalmente gerenciados. Em comparação com o Kinesis, o MSK não tem limitação de tamanho de registro de 1 MB (comum em arquivos de log extensos) e permite customizar o particionamento utilizando chaves de negócio avançadas.</p>
+      <p>O <strong>Amazon MSK (Managed Streaming for Apache Kafka)</strong> é um serviço totalmente gerenciado que facilita a criação e execução de aplicações baseadas no Apache Kafka. O Kafka é um log de commit distribuído que organiza streams de eventos em <strong>Tópicos</strong>. O MSK elimina a sobrecarga operacional de gerenciar a infraestrutura do Kafka (como provisionamento de instâncias, patches do SO, resiliência de brokers e coordenação via Apache ZooKeeper/KRaft).</p>
+
+      <div class="concept-grid">
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Topologia</div>
+          <div class="cc-title">Brokers &amp; Replicação</div>
+          <div class="cc-body">Os nós de execução do Kafka. Cada partição de um tópico é replicada entre múltiplos brokers (geralmente Replication Factor = 3). Um broker é eleito como Leader para aquela partição, recebendo escritas/leituras, enquanto os outros agem como seguidores (In-Sync Replicas - ISR).</div>
+        </div>
+
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Concorrência</div>
+          <div class="cc-title">Partições &amp; Consumidores</div>
+          <div class="cc-body">A unidade básica de paralelismo no Kafka. Tópicos são subdivididos em partições. Dentro de uma partição, as mensagens são estritamente ordenadas por offset. O paralelismo de leitura é limitado pelo número de partições (ex: 20 partições permitem no máximo 20 consumers simultâneos em um Consumer Group).</div>
+        </div>
+
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Armazenamento</div>
+          <div class="cc-title">Log Segments &amp; Retention</div>
+          <div class="cc-body">Diferente de sistemas que dependem exclusivamente de RAM, o Kafka grava eventos em arquivos de log em disco de forma sequencial (altamente performático). A retenção é definida por tempo ou tamanho, limpando segmentos fechados antigos de forma assíncrona.</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Diretrizes de Dimensionamento (MSK Broker Sizing Guidelines)</h3>
+      <p>Dimensionar um cluster Kafka no MSK requer equilibrar volume de ingestão, taxa de replicação, retenção de dados no disco e a capacidade de cache em memória da JVM e do SO:</p>
+      
+      <div class="abox" style="margin-top: 15px;">
+        <div class="abox-hdr" style="background: var(--tf)">Fórmula e Regras Práticas para Sizing de Cluster</div>
+        <div class="abox-body">
+          <ul>
+            <li><strong>Armazenamento em Disco:</strong> Calcule o storage total necessário usando a fórmula:<br>
+                <code>Storage Total (GB) = [Taxa de Ingestão (MB/s) * 3600s * 24h * Dias de Retenção * Fator de Replicação] * 1.15 (folga de index/compactação)</code><br>
+                <em>Exemplo:</em> Ingestão de 10 MB/s, retenção de 7 dias e replicação de 3:<br>
+                <code>[10 MB/s * 86400s * 7 dias * 3] * 1.15 = [18.144.000 MB] * 1.15 ≈ 18,14 TB * 1.15 ≈ 20,86 TB</code> de armazenamento total distribuído entre os brokers.
+            </li>
+            <li><strong>Capacidade de Memória (Page Cache):</strong> O Apache Kafka atinge performance extrema de leitura lendo direto do **Page Cache do Sistema Operacional** (evitando I/O de disco). Por padrão, a JVM do Kafka no MSK consome metade da RAM da instância (Heap). A outra metade deve ser suficiente para manter os logs de tópicos quentes ativos em cache.<br>
+                <em>Regra prática:</em> Mantenha em memória o equivalente a pelo menos as últimas 2 a 4 horas de tráfego de dados ativos de todo o cluster.
+            </li>
+            <li><strong>Cálculo do Número de Brokers:</strong> O mínimo recomendado em produção é **3 Brokers** (distribuídos em 3 Zonas de Disponibilidade distintas) para suportar falhas sem degradação do cluster. Se o armazenamento ou throughput por broker ultrapassar o limite da instância escolhida (ex: <code>kafka.m5.large</code> suporta até 10 TB de storage EBS e 100 MB/s de rede total), aumente a quantidade de brokers ou mude o tipo de instância.</li>
+          </ul>
+        </div>
+      </div>
 
       <h3>Leitura e Consumo de Tópicos MSK com PySpark (Glue / EMR):</h3>
       <p>Snippet real de leitura de streaming no Spark apontando para brokers MSK autenticados de forma segura:</p>
@@ -343,15 +407,89 @@ df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_pay
         <div class="sec-num" style="color:var(--emr)">04</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>AWS DMS Mapping Rules &amp; CDC Tuning</h2>
-          <p>Parametrização avançada de regras de inclusão, manuseio de LOBs e afinação de performance em tarefas de replicação lógica</p>
+          <h2>AWS DMS: Introdução Teórica &amp; CDC Flow</h2>
+          <p>Mecanismos de replicação lógica, captura contínua de alterações (CDC) e mapeamento físico de schemas</p>
         </div>
       </div>
 
-      <p>O <strong>AWS Database Migration Service (DMS)</strong> executa replicação lógica baseando-se em arquivos de regras JSON. Estas regras determinam quais tabelas replicar, o que renomear ou ocultar, e como injetar metadados de controle de auditoria (como tipo de operação DML, timestamp da alteração).</p>
+      <p>O <strong>AWS Database Migration Service (DMS)</strong> é um serviço gerenciado que permite migrar e replicar dados de bancos de dados relacionais, NoSQL e data warehouses para a nuvem AWS de forma segura. A funcionalidade mais crítica do DMS para Engenharia de Dados é o **CDC (Change Data Capture)**, que lê continuamente os arquivos de log de transação nativos do banco de origem (como o WAL no PostgreSQL ou Binlog no MySQL) e propaga essas alterações em tempo real para alvos como o Amazon S3, MSK ou Redshift.</p>
 
-      <h3>JSON de Regra de Mapeamento do DMS (DMS Task Mapping Rules)</h3>
-      <p>Abaixo está um exemplo de configuração de mapeamento de tabela adicionando colunas de auditoria da alteração na origem (CDC):</p>
+      <div class="concept-grid">
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Arquitetura</div>
+          <div class="cc-title">Replication Instance</div>
+          <div class="cc-body">O servidor EC2 gerenciado temporário ou permanente que executa as tarefas do DMS. Ele faz o trabalho pesado de ler os dados de origem, mantê-los em buffers de memória, converter formatos e gravá-los no destino final.</div>
+        </div>
+
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Conectividade</div>
+          <div class="cc-title">Source &amp; Target Endpoints</div>
+          <div class="cc-body">Configurações de conexão que definem as fontes de dados e destinos. Endpoints de origem exigem parâmetros específicos no banco de dados para habilitar replicação lógica (ex: <code>rds.logical_replication=1</code> no Aurora).</div>
+        </div>
+
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Processo</div>
+          <div class="cc-title">Full Load + CDC</div>
+          <div class="cc-body">O DMS inicia opcionalmente com o **Full Load** (cópia inicial em batch de todas as tabelas selecionadas) e automaticamente transiciona para o **CDC** (captura contínua e incremental) a partir do offset/LSN salvo.</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Diagrama Arquitetural: Replicação CDC com AWS DMS</h3>
+      <div class="dw">
+        <svg viewBox="0 0 760 300" width="760" height="300" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="300" fill="#0f172a" rx="14"/>
+          
+          <!-- Title -->
+          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">MIGRAÇÃO E REPLICAÇÃO CDC COM AWS DMS</text>
+          
+          <!-- Source DB -->
+          <rect x="40" y="80" width="170" height="150" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="125" y="105" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="600">Source DB (OLTP)</text>
+          <rect x="55" y="125" width="140" height="35" rx="4" fill="#0f172a" stroke="#64748b"/>
+          <text x="125" y="146" text-anchor="middle" fill="#cbd5e1" font-size="9">Transaction Log</text>
+          <text x="125" y="156" text-anchor="middle" fill="#64748b" font-size="7">(WAL / Binlog)</text>
+          <rect x="55" y="175" width="140" height="35" rx="4" fill="#0f172a" stroke="#64748b"/>
+          <text x="125" y="196" text-anchor="middle" fill="#cbd5e1" font-size="9">Tabelas Relacionais</text>
+      
+          <!-- DMS Replication Instance -->
+          <rect x="290" y="80" width="180" height="150" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="380" y="105" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="600">Replication Instance</text>
+          <rect x="305" y="125" width="150" height="35" rx="4" fill="#0f172a"/>
+          <text x="380" y="146" text-anchor="middle" fill="#cbd5e1" font-size="9">CDC Engine (Parser)</text>
+          <rect x="305" y="175" width="150" height="35" rx="4" fill="#0f172a"/>
+          <text x="380" y="196" text-anchor="middle" fill="#cbd5e1" font-size="9">Memory Buffer</text>
+      
+          <!-- Target (S3 Bucket) -->
+          <rect x="550" y="80" width="170" height="150" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="635" y="105" text-anchor="middle" fill="#10b981" font-size="10" font-weight="600">Target (Amazon S3)</text>
+          <rect x="565" y="125" width="140" height="35" rx="4" fill="#0f172a" stroke="#64748b"/>
+          <text x="635" y="146" text-anchor="middle" fill="#cbd5e1" font-size="9">Raw Landed files</text>
+          <text x="635" y="156" text-anchor="middle" fill="#64748b" font-size="7">(CSV / Parquet)</text>
+          <rect x="565" y="175" width="140" height="35" rx="4" fill="#0f172a" stroke="#64748b"/>
+          <text x="635" y="196" text-anchor="middle" fill="#cbd5e1" font-size="9">Audit metadata cols</text>
+      
+          <!-- Connectors -->
+          <!-- Source DB -> DMS -->
+          <path d="M210 145 L290 145" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+          <text x="250" y="135" text-anchor="middle" fill="#f59e0b" font-size="8">Lê WAL</text>
+          
+          <!-- DMS -> Target -->
+          <path d="M470 145 L550 145" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+          <text x="510" y="135" text-anchor="middle" fill="#10b981" font-size="8">Escreve Batch</text>
+      
+          <defs>
+            <marker id="arrow-orange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
+            </marker>
+            <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <h3 style="margin-top: 30px;">JSON de Regra de Mapeamento do DMS (DMS Task Mapping Rules)</h3>
+      <p>Abaixo está um exemplo de configuração de mapeamento de tabela adicionando colunas de auditoria da alteração na origem (CDC) via regras JSON:</p>
       <pre>{
     <span class="s">"rules"</span>: [
         {
@@ -404,6 +542,20 @@ df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_pay
           <br><em>Recomendação:</em> É a melhor prática de design para manter alta vazão sem risco de truncamento de dados.
         </li>
       </ul>
+
+      <h3>Configuração JSON de LOB no Task Settings</h3>
+      <p>Abaixo está o bloco de configuração JSON das **Task Settings** do DMS configurado para rodar com o modo **Inline LOB** (recomendado):</p>
+      <pre style="background:#0f172a; color:#f8fafc;"><span class="c">// Trecho de Task Settings JSON</span>
+{
+  <span class="s">"TargetMetadata"</span>: {
+    <span class="s">"SupportLobs"</span>: <span class="k">true</span>,
+    <span class="s">"FullLobMode"</span>: <span class="k">false</span>,
+    <span class="s">"LimitedSizeLobMode"</span>: <span class="k">false</span>,
+    <span class="s">"InlineLobMaxSize"</span>: 8, <span class="c">// LOBs até 8KB são carregados inline</span>
+    <span class="s">"LoadMaxFileSize"</span>: 0,
+    <span class="s">"ParallelLoadThreads"</span>: 8
+  }
+}</pre>
 
       <h3>Tuning Fino das Configurações de Tarefa (Task Settings)</h3>
       <p>Para otimizar o throughput do DMS CDC e Full Load, os seguintes parâmetros JSON devem ser ajustados no arquivo de configurações da Task:</p>

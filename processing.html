@@ -85,6 +85,7 @@
       <a href="serving.html" class="nav-a "><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
       <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
+      <a href="serving.html#iceberg-manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção Iceberg</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -132,10 +133,12 @@
         <div class="sec-num" style="color:var(--spark)">01</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Apache Spark: Conceitos Fundamentais</h2>
-          <p>Abstrações de dados e modelo lazy evaluation</p>
+          <h2>Apache Spark: Introdução Teórica &amp; Abstrações</h2>
+          <p>Visão geral sobre o motor distribuído em memória e abstrações de dados fundamentais</p>
         </div>
       </div>
+
+      <p>O <strong>Apache Spark</strong> é um motor de computação distribuída projetado para processamento de big data de alta performance. Diferente do ecossistema Hadoop tradicional (que grava resultados intermediários de map-reduce no HDFS), o Spark opera prioritariamente **em memória (in-memory processing)**, mantendo os dados cacheados na RAM dos executores e reduzindo o gargalo de I/O de disco físico. O ciclo de otimização do Spark baseia-se no **Catalyst Optimizer**, que compila expressões SQL lógicas em código Java otimizado em tempo de execução (JIT).</p>
 
       <div class="concept-grid">
         <div class="concept-card spark-card">
@@ -155,6 +158,48 @@
           <div class="cc-title">Lazy Evaluation &amp; DAG</div>
           <div class="cc-body">Operações no Spark apenas constroem um grafo acíclico direcionado (DAG) que é otimizado e compilado. A execução real só é acionada após a chamada de uma Action.</div>
         </div>
+      </div>
+
+      <h3>Arquitetura Interna da JVM do Executor (Layout de Memória)</h3>
+      <p>Cada executor Spark roda dentro de uma Java Virtual Machine (JVM). Compreender a subdivisão da Heap e Off-Heap é crucial para evitar erros catastróficos de OOM:</p>
+
+      <!-- DIAGRAMA SVG DE MEMÓRIA DO EXECUTOR SPARK -->
+      <div class="dw" style="text-align: center; margin: 24px 0;">
+        <svg viewBox="0 0 760 300" width="760" height="300" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="300" fill="#0f172a" rx="14"/>
+          <text x="380" y="25" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA DE MEMÓRIA INTERNA DO EXECUTOR SPARK JVM</text>
+          
+          <rect x="20" y="50" width="460" height="230" rx="8" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="250" y="70" text-anchor="middle" fill="#cbd5e1" font-size="10" font-weight="700">JVM HEAP MEMORY</text>
+
+          <rect x="35" y="85" width="280" height="180" rx="6" fill="#065f46" stroke="#a7f3d0" stroke-width="1.5"/>
+          <text x="175" y="105" text-anchor="middle" fill="#a7f3d0" font-size="9" font-weight="700">SPARK MEMORY (spark.memory.fraction = 0.6)</text>
+          
+          <rect x="45" y="120" width="120" height="130" rx="4" fill="#0f172a" stroke="#a7f3d0"/>
+          <text x="105" y="145" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">STORAGE MEMORY</text>
+          <text x="105" y="165" text-anchor="middle" fill="#64748b" font-size="7">(Cache, Broadcast)</text>
+          <text x="105" y="185" text-anchor="middle" fill="#64748b" font-size="7">Eviction dinâmica</text>
+
+          <rect x="185" y="120" width="120" height="130" rx="4" fill="#0f172a" stroke="#a7f3d0"/>
+          <text x="245" y="145" text-anchor="middle" fill="#f43f5e" font-size="8" font-weight="700">EXECUTION MEMORY</text>
+          <text x="245" y="165" text-anchor="middle" fill="#64748b" font-size="7">(Shuffles, Joins)</text>
+          <text x="245" y="185" text-anchor="middle" fill="#64748b" font-size="7">Prioritário s/ Storage</text>
+
+          <rect x="330" y="85" width="135" height="180" rx="6" fill="#881337" stroke="#fecdd3" stroke-width="1.5"/>
+          <text x="397" y="105" text-anchor="middle" fill="#fecdd3" font-size="8.5" font-weight="700">USER MEMORY (40%)</text>
+          <text x="397" y="140" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Metadata de partições</text>
+          <text x="397" y="160" text-anchor="middle" fill="#cbd5e1" font-size="7.5">UDFs Python puras</text>
+          <text x="397" y="180" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Estruturas do usuário</text>
+
+          <rect x="500" y="50" width="240" height="230" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="620" y="70" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">OFF-HEAP MEMORY</text>
+          
+          <rect x="515" y="90" width="210" height="175" rx="6" fill="#0f172a" stroke="#38bdf8"/>
+          <text x="620" y="115" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="700">PROJECT TUNGSTEN</text>
+          <text x="620" y="140" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Alocação direta de bytes</text>
+          <text x="620" y="160" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Ignora overhead do Java GC</text>
+          <text x="620" y="190" text-anchor="middle" fill="#10b981" font-size="8">spark.memory.offHeap.size</text>
+        </svg>
       </div>
     </section>
 
@@ -355,28 +400,54 @@ spark.dynamicAllocation.schedulerBacklogTimeout = 1s</code></pre>
         <div class="sec-num" style="color:var(--spark)">06</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Shuffle, Skew e Salting</h2>
-          <p>Resolução de gargalos causados por desbalanceamento em joins e shuffles</p>
+          <h2>Shuffle, Skew, Salting e Pandas UDFs</h2>
+          <p>Resolução de gargalos causados por desbalanceamento em joins e otimização de UDFs com Apache Arrow</p>
         </div>
       </div>
 
       <p>O <strong>Data Skew</strong> (desvio de dados) ocorre quando uma chave específica acumula mais de 80% do volume físico dos dados (ex: chaves nulas ou registros de auditoria padrão). O executor encarregado por processar essa chave demorará muito mais tempo que os demais, deixando os cores ociosos e estendendo a duração do estágio.</p>
 
-      <h3>Otimização via Salting (Distribuição de Chave no Join)</h3>
+      <h3>1. Otimização via Salting (Distribuição de Chave no Join)</h3>
+      <p>A técnica de **Salting** resolve o skew adicionando um sufixo numérico aleatório (o "sal") às chaves da tabela gigante e explodindo a tabela menor correspondente para conter todas as combinações desse sal, distribuindo os registros de forma uniforme pelos executores durante o shuffle:</p>
+
       <pre><span class="k">import</span> pyspark.sql.functions <span class="k">as</span> F
 n_salts = <span class="v">30</span>
 
-<span class="c"># Tabela principal: adiciona salt aleatório</span>
+<span class="c"># Tabela principal com skew: adiciona salt aleatório</span>
 df_large_salted = df_large.withColumn(
     <span class="s">"salt"</span>, (F.rand() * n_salts).cast(<span class="s">"int"</span>)
 ).withColumn(<span class="s">"salted_key"</span>, F.concat(F.col(<span class="s">"key"</span>), F.lit(<span class="s">"_"</span>), F.col(<span class="s">"salt"</span>)))
 
-<span class="c"># Tabela de lookup: explode criando todas as combinações de salts</span>
+<span class="c"># Tabela de lookup (pequena): explode gerando todas as chaves salgadas possíveis</span>
 df_small_exploded = df_small.withColumn(
     <span class="s">"salt"</span>, F.explode(F.array([F.lit(i) <span class="k">for</span> i <span class="k">in</span> range(n_salts)]))
 ).withColumn(<span class="s">"salted_key"</span>, F.concat(F.col(<span class="s">"key"</span>), F.lit(<span class="s">"_"</span>), F.col(<span class="s">"salt"</span>)))
 
+<span class="c"># Executa o join distribuído sem sobrecarregar um único nó (No skew bottleneck)</span>
 df_joined = df_large_salted.join(df_small_exploded, <span class="s">"salted_key"</span>).drop(<span class="s">"salt"</span>, <span class="s">"salted_key"</span>)</pre>
+
+      <h3>2. Otimização de UDFs com Pandas UDF (Vectorized Arrow)</h3>
+      <p>As UDFs (User Defined Functions) comuns do PySpark forçam a JVM a serializar os dados linha a linha para enviá-los ao interpretador Python, gerando uma sobrecarga severa e possíveis OOMs na **User Memory**. As **Pandas UDFs** otimizam esse processo transferindo dados em blocos (batches) usando o **Apache Arrow** diretamente na memória:</p>
+
+      <pre><code class="language-python">import pandas as pd
+from pyspark.sql.functions import pandas_udf
+from pyspark.sql.types import DoubleType
+
+# Ativa o Apache Arrow para otimização de conversão
+# spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")
+
+# Pandas UDF Vectorized usando type hints do Python
+@pandas_udf(DoubleType())
+def predict_discount_udf(price: pd.Series, rate: pd.Series) -> pd.Series:
+    # Executa a operação vetorizada rápida usando Pandas/NumPy C-extension
+    return price * (1.0 - rate)
+
+# Uso da UDF vetorizada no DataFrame do Spark
+df_processed = df_sales.withColumn(
+    "final_price", 
+    predict_discount_udf(F.col("base_price"), F.col("tax_rate"))
+)
+# Execução extremamente veloz e segura contra estouro de memória!</code></pre>
     </section>
 
     <section class="section" id="spark-joins">
