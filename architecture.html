@@ -53,6 +53,8 @@
       <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
       <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
       <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
+      <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
+      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
       <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
       <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
     </div>
@@ -870,6 +872,136 @@ resource <span class="k">"aws_glue_catalog_table"</span> <span class="s">"iceber
 }</pre>
     </section>
 
+    <!-- 09. COMPARATIVO DE ARQUITETURAS -->
+    <section class="section" id="comparativo-arquiteturas">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--arch)">09</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--arch)"></div>
+          <h2>Comparativo de Arquiteturas: Lambda vs Kappa vs Lakehouse</h2>
+          <p>Análise de caminhos físicos de dados, complexidade operacional e consistência temporal</p>
+        </div>
+      </div>
+
+      <p>A escolha entre padrões arquiteturais determina como os dados fluem dos sistemas de origem até a camada de consumo:</p>
+
+      <table class="diff-table" style="width:100%; font-size:12px; margin:20px 0; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#1e293b; color:white; text-align:left;">
+            <th style="padding:10px; border:1px solid #334155;">Característica</th>
+            <th style="padding:10px; border:1px solid #334155;">Arquitetura Lambda</th>
+            <th style="padding:10px; border:1px solid #334155;">Arquitetura Kappa</th>
+            <th style="padding:10px; border:1px solid #334155;">Modern Lakehouse</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:10px; border:1px solid #334155; font-weight:bold;">Caminho de Ingestão</td>
+            <td style="padding:10px; border:1px solid #334155;">Duplo (Batch e Speed Layers paralelos)</td>
+            <td style="padding:10px; border:1px solid #334155;">Único (Apenas Streaming / Kafka Log)</td>
+            <td style="padding:10px; border:1px solid #334155;">Unificado (Ingestão via Micro-batch ou Streaming)</td>
+          </tr>
+          <tr>
+            <td style="padding:10px; border:1px solid #334155; font-weight:bold;">Base de Código (ETL)</td>
+            <td style="padding:10px; border:1px solid #334155; color:#ef4444;">Duplicada (Código Batch + Código Streaming)</td>
+            <td style="padding:10px; border:1px solid #334155; color:#10b981;">Única (Código Streaming)</td>
+            <td style="padding:10px; border:1px solid #334155; color:#10b981;">Única (Ex: Spark/dbt operando sobre arquivos de dados)</td>
+          </tr>
+          <tr>
+            <td style="padding:10px; border:1px solid #334155; font-weight:bold;">Reprocessamento Histórico</td>
+            <td style="padding:10px; border:1px solid #334155;">Fácil (Executa o job Batch no S3 histórico)</td>
+            <td style="padding:10px; border:1px solid #334155; color:#eab308;">Complexo (Reseta offsets e reprocessa o log do Kafka)</td>
+            <td style="padding:10px; border:1px solid #334155; color:#10b981;">Simples (Time Travel nativo na tabela de metadados)</td>
+          </tr>
+          <tr>
+            <td style="padding:10px; border:1px solid #334155; font-weight:bold;">Consistência das Views</td>
+            <td style="padding:10px; border:1px solid #334155; color:#eab308;">Eventual (Divergência temporária entre batch e speed)</td>
+            <td style="padding:10px; border:1px solid #334155; color:#10b981;">Forte (Ordenação estrita por offset de eventos)</td>
+            <td style="padding:10px; border:1px solid #334155; color:#10b981;">Transacional ACID (Garantida pelo catálogo/metadados)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="dw">
+        <svg viewBox="0 0 800 480" width="100%" height="480" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="480" fill="#0f172a" rx="14"/>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700" letter-spacing="1">COMPARAÇÃO DE FLUXOS DE DADOS FÍSICOS</text>
+
+          <!-- LAMBDA LANE -->
+          <text x="30" y="75" fill="#f43f5e" font-size="11" font-weight="700">1. LAMBDA (Dois Caminhos)</text>
+          <rect x="30" y="85" width="740" height="100" fill="#1e293b" rx="6" stroke="#334155"/>
+          
+          <rect x="50" y="115" width="80" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="90" y="138" text-anchor="middle" fill="#f8fafc" font-size="8.5">Event Source</text>
+          
+          <path d="M 130 135 L 180 105 M 130 135 L 180 165" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="3,2"/>
+          
+          <rect x="180" y="90" width="200" height="30" rx="4" fill="#0f172a" stroke="#15803d"/>
+          <text x="280" y="108" text-anchor="middle" fill="#15803d" font-size="8.5" font-weight="700">Batch Layer (S3 / Glue)</text>
+          
+          <rect x="180" y="150" width="200" height="30" rx="4" fill="#0f172a" stroke="#b45309"/>
+          <text x="280" y="168" text-anchor="middle" fill="#b45309" font-size="8.5" font-weight="700">Speed Layer (MSK / Flink)</text>
+          
+          <path d="M 380 105 L 430 135 M 380 165 L 430 135" stroke="#cbd5e1" stroke-width="1.5"/>
+          
+          <rect x="430" y="115" width="160" height="40" rx="4" fill="#0f172a" stroke="#2563eb"/>
+          <text x="510" y="133" text-anchor="middle" fill="#2563eb" font-size="8.5" font-weight="700">Serving Layer</text>
+          <text x="510" y="145" text-anchor="middle" fill="#94a3b8" font-size="7.5">Consolidação (Redshift/Athena)</text>
+          
+          <path d="M 590 135 L 680 135" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="680,131 688,135 680,139" fill="#cbd5e1"/>
+          <text x="730" y="138" text-anchor="middle" fill="#cbd5e1" font-size="8.5">API / BI</text>
+
+          <!-- KAPPA LANE -->
+          <text x="30" y="215" fill="#38bdf8" font-size="11" font-weight="700">2. KAPPA (Caminho Único de Log)</text>
+          <rect x="30" y="225" width="740" height="100" fill="#1e293b" rx="6" stroke="#334155"/>
+          
+          <rect x="50" y="255" width="80" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="90" y="278" text-anchor="middle" fill="#f8fafc" font-size="8.5">Event Source</text>
+          
+          <line x1="130" y1="275" x2="180" y2="275" stroke="#cbd5e1" stroke-width="1.5"/>
+          
+          <rect x="180" y="255" width="200" height="40" rx="4" fill="#0f172a" stroke="#38bdf8"/>
+          <text x="280" y="273" text-anchor="middle" fill="#38bdf8" font-size="8.5" font-weight="700">Log Imutável (MSK/Kafka)</text>
+          <text x="280" y="285" text-anchor="middle" fill="#94a3b8" font-size="7.5">Retenção de longo prazo</text>
+          
+          <line x1="380" y1="275" x2="430" y2="275" stroke="#cbd5e1" stroke-width="1.5"/>
+          
+          <rect x="430" y="255" width="160" height="40" rx="4" fill="#0f172a" stroke="#b45309"/>
+          <text x="510" y="273" text-anchor="middle" fill="#b45309" font-size="8.5" font-weight="700">Stream Processing (Flink)</text>
+          <text x="510" y="285" text-anchor="middle" fill="#94a3b8" font-size="7.5">Reprocessa via Offset Reset</text>
+          
+          <line x1="590" y1="275" x2="680" y2="275" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="680,271 688,275 680,279" fill="#cbd5e1"/>
+          <text x="730" y="278" text-anchor="middle" fill="#cbd5e1" font-size="8.5">Serving Store</text>
+
+          <!-- LAKEHOUSE LANE -->
+          <text x="30" y="355" fill="#a78bfa" font-size="11" font-weight="700">3. LAKEHOUSE (Camada de Armazenamento Inteligente)</text>
+          <rect x="30" y="365" width="740" height="100" fill="#1e293b" rx="6" stroke="#334155"/>
+          
+          <rect x="50" y="395" width="80" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="90" y="418" text-anchor="middle" fill="#f8fafc" font-size="8.5">Event Source</text>
+          
+          <line x1="130" y1="415" x2="180" y2="415" stroke="#cbd5e1" stroke-width="1.5"/>
+          
+          <rect x="180" y="395" width="200" height="40" rx="4" fill="#0f172a" stroke="#10b981"/>
+          <text x="280" y="413" text-anchor="middle" fill="#10b981" font-size="8.5" font-weight="700">Unified Ingestion (Glue/Spark)</text>
+          <text x="280" y="425" text-anchor="middle" fill="#94a3b8" font-size="7.5">Streaming ou Micro-batch</text>
+          
+          <line x1="380" y1="415" x2="430" y2="415" stroke="#cbd5e1" stroke-width="1.5"/>
+          
+          <rect x="430" y="385" width="180" height="60" rx="4" fill="#0f172a" stroke="#a78bfa"/>
+          <text x="520" y="405" text-anchor="middle" fill="#a78bfa" font-size="8.5" font-weight="700">S3 Table Format (Iceberg)</text>
+          <text x="520" y="420" text-anchor="middle" fill="#cbd5e1" font-size="8">Transações ACID + Data Skipping</text>
+          <text x="520" y="435" text-anchor="middle" fill="#94a3b8" font-size="7.5">Metadados controlam tudo</text>
+          
+          <line x1="610" y1="415" x2="680" y2="415" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="680,411 688,415 680,419" fill="#cbd5e1"/>
+          <text x="730" y="418" text-anchor="middle" fill="#a78bfa" font-size="8.5" font-weight="700">Acesso Direto</text>
+        </svg>
+      </div>
+    </section>
+
     <!-- 10. DATA MESH -->
     <section class="section" id="datamesh">
       <div class="sec-hdr">
@@ -877,7 +1009,7 @@ resource <span class="k">"aws_glue_catalog_table"</span> <span class="s">"iceber
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--arch)"></div>
           <h2>Data Mesh: Governança Descentralizada</h2>
-          <p>Organização socio-técnica baseada em domínios de negócio e dados como produto</p>
+          <p>Organização socio-técnica baseada em domínios de negócio e dados como produto compartilhados de forma distribuída</p>
         </div>
       </div>
 
@@ -888,6 +1020,91 @@ resource <span class="k">"aws_glue_catalog_table"</span> <span class="s">"iceber
         <li><strong>Self-Serve Data Platform:</strong> Uma plataforma única central gerenciada (infra/governança/S3) que provê ferramentas automatizadas para que as equipes criem seus pipelines sem precisar acionar um time central de TI.</li>
         <li><strong>Federated Computational Governance:</strong> Definição de padrões de conformidade globais (ex: criptografia obrigatória KMS, tags padrão) auditados de forma automatizada por APIs.</li>
       </ol>
+
+      <h3>Mecânica de Compartilhamento Cross-Account na AWS</h3>
+      <p>Em topologias corporativas reais de Data Mesh, cada domínio reside em uma conta AWS distinta, enquanto uma conta de governança central gerencia as permissões globais usando o **AWS Lake Formation** e o **AWS RAM**:</p>
+
+      <div class="dw">
+        <svg viewBox="0 0 800 420" width="100%" height="420" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="420" fill="#0f172a" rx="14"/>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700" letter-spacing="1">TOPOLOGIA DATA MESH CROSS-ACCOUNT NA AWS</text>
+
+          <!-- Account Producer (Left) -->
+          <rect x="30" y="70" width="210" height="230" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="135" y="90" text-anchor="middle" fill="#10b981" font-size="10.5" font-weight="700">CONTA PRODUTOR (Vendas)</text>
+          
+          <rect x="50" y="115" width="170" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="135" y="132" text-anchor="middle" fill="#cbd5e1" font-size="9">S3 Data Bucket (Vendas)</text>
+          <text x="135" y="145" text-anchor="middle" fill="#94a3b8" font-size="7.5">s3://sales-domain-trusted/</text>
+
+          <rect x="50" y="175" width="170" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="135" y="192" text-anchor="middle" fill="#cbd5e1" font-size="9">Glue Data Catalog</text>
+          <text x="135" y="205" text-anchor="middle" fill="#94a3b8" font-size="7.5">tabela: vendas_trusted</text>
+
+          <rect x="50" y="235" width="170" height="45" rx="4" fill="#0f172a" stroke="#a78bfa"/>
+          <text x="135" y="252" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Bucket Policy</text>
+          <text x="135" y="265" text-anchor="middle" fill="#94a3b8" font-size="7.5">Libera leitura para Consumidor</text>
+
+          <!-- Governance Account (Middle) -->
+          <rect x="290" y="70" width="220" height="230" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="400" y="90" text-anchor="middle" fill="#38bdf8" font-size="10.5" font-weight="700">CONTA CENTRAL GOV</text>
+          
+          <rect x="310" y="125" width="180" height="50" rx="4" fill="#0f172a" stroke="#eab308"/>
+          <text x="400" y="145" text-anchor="middle" fill="#eab308" font-size="10" font-weight="700">AWS Lake Formation</text>
+          <text x="400" y="160" text-anchor="middle" fill="#94a3b8" font-size="7.5">Tag-Based Access Control (LF-Tags)</text>
+
+          <rect x="310" y="205" width="180" height="50" rx="4" fill="#0f172a" stroke="#2563eb"/>
+          <text x="400" y="225" text-anchor="middle" fill="#2563eb" font-size="10" font-weight="700">AWS RAM</text>
+          <text x="400" y="240" text-anchor="middle" fill="#94a3b8" font-size="7.5">Compartilhamento de Catálogo</text>
+
+          <!-- Consumer Account (Right) -->
+          <rect x="560" y="70" width="210" height="230" rx="8" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="665" y="90" text-anchor="middle" fill="#a78bfa" font-size="10.5" font-weight="700">CONTA CONSUMIDOR (BI)</text>
+          
+          <rect x="580" y="125" width="170" height="50" rx="4" fill="#0f172a" stroke="#fbbf24"/>
+          <text x="665" y="145" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700">Amazon Athena</text>
+          <text x="665" y="160" text-anchor="middle" fill="#cbd5e1" font-size="8.5">Executa queries SQL</text>
+
+          <rect x="580" y="205" width="170" height="50" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="665" y="222" text-anchor="middle" fill="#f8fafc" font-size="9">Glue Resource Link</text>
+          <text x="665" y="235" text-anchor="middle" fill="#94a3b8" font-size="7.5">Ponteiro local -> Produtor</text>
+
+          <!-- Connections -->
+          <!-- Produtor a Governança -->
+          <path d="M 240 185 L 290 185" stroke="#10b981" stroke-width="2" stroke-dasharray="3,3"/>
+          <polygon points="290,185 282,181 282,189" fill="#10b981"/>
+          <text x="265" y="175" text-anchor="middle" fill="#10b981" font-size="6.5" font-weight="700">Reg. Catalog</text>
+
+          <!-- Governança a Consumidor -->
+          <path d="M 510 185 L 560 185" stroke="#38bdf8" stroke-width="2"/>
+          <polygon points="560,185 552,181 552,189" fill="#38bdf8"/>
+          <text x="535" y="175" text-anchor="middle" fill="#38bdf8" font-size="6.5" font-weight="700">Grant Share</text>
+
+          <!-- Consumidor query Produtor S3 -->
+          <path d="M 665,300 C 665,370, 135,370, 135,300" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <polygon points="135,300 131,308 139,308" fill="#f43f5e"/>
+          <text x="400" y="360" text-anchor="middle" fill="#f43f5e" font-size="8.5" font-weight="700">Acesso físico aos dados via Credenciais Temporárias (STS vended pelo Lake Formation)</text>
+        </svg>
+      </div>
+
+      <ul>
+        <li><strong>Compartilhamento Federado por Metastore:</strong> O proprietário dos dados (Produtor) concede permissão ao catálogo de metadados para a conta central de Governança. A central gerencia quem pode visualizar ou acessar essas tabelas usando políticas corporativas globais.</li>
+        <li><strong>Glue Data Catalog Resource Links:</strong> Na conta consumidora, para evitar ler um catálogo remoto diretamente, cria-se um <i>Resource Link</i> (link de recurso local) no Glue Catalog. O Athena aponta para esse Resource Link, que redireciona de forma invisível e transparente a consulta ao catálogo produtor original.</li>
+        <li><strong>Bucket Policies Cruzadas:</strong> A conta consumidora precisa de permissão de leitura física no S3. O produtor deve configurar uma <code>Bucket Policy</code> que permita a ação <code>s3:GetObject</code> e <code>s3:ListBucket</code> para a Role/IAM do executor na conta de destino, validada pelo Lake Formation.</li>
+      </ul>
+
+      <div class="abox info" style="margin-top:20px;">
+        <strong><span style="color:var(--arch)">Manual Prático do Especialista em Dados - Recursos Cloud de Arquitetura &amp; Sharing:</span></strong>
+        <br><br>
+        <strong>1. AWS Lake Formation (Cross-Account Granting)</strong>
+        <br>• <strong>Como funciona na prática:</strong> O Lake Formation atua como um wrapper de segurança sobre o Glue Catalog e o S3. Em vez de gerenciar permissões no S3 e no Glue separa-mente, você concede privilégios SQL (SELECT, DESCRIBE) a contas externas ou usuários locais diretamente no console ou via API.
+        <br>• <strong>Gargalos Físicos e Redirecionamento de Credenciais (Vending System):</strong> O principal gargalo do Lake Formation é o limite de requisições à API do STS (Security Token Service), responsável por gerar credenciais temporárias para o Athena ler dados no S3. Em queries de altíssima concorrência executadas por dezenas de usuários em lote, o Athena pode apresentar throttling de STS.
+        <br>• <strong>Como evitar falhas:</strong> Faça o registro do bucket S3 no Lake Formation no modo <code>Hybrid Access Mode</code> ou habilite o cache de credenciais do Athena para reduzir chamadas ao STS.
+        <br><br>
+        <strong>2. AWS RAM (Resource Access Manager)</strong>
+        <br>• <strong>Como funciona na prática:</strong> RAM permite compartilhar recursos de infraestrutura da AWS (como subnets VPC, tabelas Glue e licenças de software) entre contas da mesma AWS Organization sem precisar de replicação física de recursos.
+        <br>• <strong>Gargalo e Comportamento:</strong> O RAM em si não possui gargalo de taxa de dados de tráfego, pois atua puramente no plano de controle de metadados. Apenas gerencia o handshake de convite/aceitação entre contas. As cotas principais são de limites de recursos compartilhados por conta (padrão 5.000 recursos por região).
+      </div>
     </section>
 
     <!-- 11. TUNING & CASOS LENTOS -->
