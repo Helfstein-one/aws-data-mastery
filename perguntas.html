@@ -51,6 +51,8 @@
       <a href="cases.html#case-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming</a>
       <a href="cases.html#case-mesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
       <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
+      <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
+      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
       <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
       <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
     </div>
@@ -96,9 +98,10 @@
     </div>
     <div id="service-cat" class="nav-cat-content ">
       <a href="genai.html" class="nav-a "><span class="nav-dot" style="background:#a78bfa"></span>🤖 GenAI & Dados</a>
-      <a href="genai.html#genai-pilares" class="nav-sub"><span class="nav-sdot"></span>Pilares GenAI</a>
-      <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG</a>
-      <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>Vector DB</a>
+      <a href="genai.html#genai-teoria" class="nav-sub"><span class="nav-sdot"></span>IA Teoria</a>
+      <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG &amp; Agentes</a>
+      <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>pgvector SQL</a>
+      <a href="genai.html#prompt-engineering" class="nav-sub"><span class="nav-sdot"></span>Prompt Engineering</a>
 
       <a href="governance-security.html" class="nav-a "><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança & IaC</a>
       <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
@@ -1607,6 +1610,47 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
         <div class="callout callout-info">
           <strong>A Solução Suprema: Gateway VPC Endpoint para S3</strong>
           <p>Crie um **VPC Endpoint do tipo Gateway** para o S3 na tabela de roteamento da sua VPC privada. Essa configuração cria uma rota interna privada direta e gratuita entre os recursos da subrede privada e o S3, desviando do NAT Gateway e reduzindo o custo de transferência de dados desse tráfego para **zero**.</p>
+        </div>
+      </div>
+
+      <!-- Case 48: Semantic Caching for LLMs in Data Platforms -->
+      <div class="card" id="q48" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 48 · IA Generativa &amp; Caching Semântico</div>
+        <h4>Como projetar um mecanismo de Caching Semântico usando Redis em uma plataforma de dados com LLMs para evitar custos redundantes de tokens de inferência e reduzir a latência de buscas duplicadas?</h4>
+        <p><strong>Cenário de Desperdício:</strong> Em aplicações de RAG corporativo ou de buscas internas em linguagem natural, múltiplos usuários realizam perguntas semanticamente muito similares (ex: "Qual é o faturamento de vendas de maio de 2026?" vs "Quanto faturamos nas vendas em maio de 26?"). Processar cada uma enviando-a ao Bedrock Sonnet consome milhares de tokens e eleva a latência.</p>
+        <div class="callout callout-info">
+          <strong>A Solução: Cache de Vetores com Distância de Cosseno no Redis</strong>
+          <p>Ao receber uma pergunta, calcule seu embedding. Execute uma busca KNN baseada em distância de Cosseno contra uma base de perguntas e respostas já cacheadas no **Amazon ElastiCache Redis** (usando o tipo de dados nativo de busca vetorial). Se a similaridade semântica for acima de um limiar rígido (ex: &gt; 95%), retorne a resposta salva no cache de forma instantânea (latência &lt; 10ms) sem invocar o modelo de linguagem, gerando 100% de economia de custo em tokens para aquela requisição.</p>
+        </div>
+      </div>
+
+      <!-- Case 49: Chunking Strategies & Context Windows -->
+      <div class="card" id="q49" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 49 · RAG &amp; Chunking de Arquivos</div>
+        <h4>Quais são as diferenças práticas, vantagens e riscos entre as estratégias de Chunking Estático (Fixed-size) e Chunking Dinâmico (Semantic Chunking) para ingestão em bases vetoriais no S3?</h4>
+        <p><strong>Impacto no RAG:</strong> Se a estratégia de quebra do documento for ruim, informações importantes de um parágrafo serão cortadas pela metade entre dois chunks diferentes. Isso degrada o embedding do vetor (dilui o significado) e impede que o LLM responda com precisão.</p>
+        <div class="callout callout-info">
+          <strong>Análise de Estratégias:</strong>
+          <ul>
+            <li><strong>Chunking Estático (Character/Token Limit):</strong> Divide o texto em um número fixo de caracteres ou tokens (ex: 512 tokens) com uma zona de overlap (ex: 10%). É rápido e simples de rodar via Glue Spark, mas pode cortar frases no meio, destruindo o contexto.</li>
+            <li><strong>Chunking Dinâmico (Semantic Chunking):</strong> Utiliza um modelo de embedding ou parser sintático para identificar transições reais de tópicos e quebras naturais de parágrafos/seções. Garante que uma unidade lógica de conteúdo (ex: um capítulo ou tabela inteira) permaneça íntegra no mesmo chunk, maximizando a relevância semântica recuperada pela query vetorial.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 50: RAG Evaluation Metrics (Ragas) -->
+      <div class="card" id="q50" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 50 · RAG &amp; Métricas de Avaliação (Ragas)</div>
+        <h4>Como avaliar sistemática e quantitativamente a qualidade de um pipeline RAG em produção na AWS sem depender de avaliações manuais humanas?</h4>
+        <p><strong>O Problema da Caixa Preta:</strong> Pipelines RAG falham silenciosamente: o banco vetorial pode trazer contexto correto mas o LLM ignora (Falta de Fidelidade), ou o banco traz contexto errado e o LLM alucina. Avaliar manualmente é lento e inviável em larga escala.</p>
+        <div class="callout callout-info">
+          <strong>A Solução: Framework Ragas (Retrieval Augmented Generation Assessment)</strong>
+          <p>Implemente rotinas automatizadas no SageMaker rodando o framework **Ragas** que usa LLMs potentes (ex: Claude 3.5 Sonnet) como avaliadores imparciais. Avalie o pipeline sob três pilares numéricos chave de 0 a 1:</p>
+          <ul>
+            <li><strong>Faithfulness (Fidelidade):</strong> Mede se a resposta gerada é inteiramente derivada do contexto recuperado (evita alucinações de conhecimento prévio do modelo).</li>
+            <li><strong>Answer Relevance (Relevância da Resposta):</strong> Mede se o texto gerado realmente responde à pergunta formulada pelo usuário (evita respostas genéricas ou evasivas).</li>
+            <li><strong>Context Recall (Recuperação do Contexto):</strong> Mede se o banco vetorial conseguiu recuperar todas as informações necessárias na base de conhecimento para construir a resposta correta.</li>
+          </ul>
         </div>
       </div>
     </section>
