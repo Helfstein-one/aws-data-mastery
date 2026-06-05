@@ -51,6 +51,8 @@
       <a href="cases.html#case-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming</a>
       <a href="cases.html#case-mesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
       <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
+      <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
+      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
       <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
       <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
     </div>
@@ -96,9 +98,10 @@
     </div>
     <div id="service-cat" class="nav-cat-content ">
       <a href="genai.html" class="nav-a "><span class="nav-dot" style="background:#a78bfa"></span>🤖 GenAI & Dados</a>
-      <a href="genai.html#genai-pilares" class="nav-sub"><span class="nav-sdot"></span>Pilares GenAI</a>
-      <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG</a>
-      <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>Vector DB</a>
+      <a href="genai.html#genai-teoria" class="nav-sub"><span class="nav-sdot"></span>IA Teoria</a>
+      <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG &amp; Agentes</a>
+      <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>pgvector SQL</a>
+      <a href="genai.html#prompt-engineering" class="nav-sub"><span class="nav-sdot"></span>Prompt Engineering</a>
 
       <a href="governance-security.html" class="nav-a "><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança & IaC</a>
       <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
@@ -2209,6 +2212,84 @@
       <div class="callout callout-tip">
         <strong>Resultado de Negócio Consolidado:</strong>
         <p>A fatura mensal da infraestrutura de dados caiu de <strong>$15.000 para $1.200</strong> nas primeiras 48 horas após a implantação das alterações via Terraform. O tempo médio de processamento dos relatórios caiu em 35% devido à consolidação de arquivos Parquet e redução de latências de rede VPC interna.</p>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 14: PLATAFORMA DE IA GENERATIVA SOBRE DATA LAKE COM BUSCA HÍBRIDA E AGENTES -->
+    <section class="section" id="case-genai-avancado">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">14</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>Case 14: Plataforma de IA Generativa sobre Data Lake S3 com Busca Híbrida e Agentes de Dados</h2>
+          <p>Superação de gargalos de latência (3s+), custos exorbitantes de API de LLM e problemas de precisão semântica na recuperação de documentos corporativos</p>
+        </div>
+      </div>
+
+      <p>Um grande conglomerado varejista implantou um sistema de IA conversacional para permitir que gerentes de negócios fizessem perguntas analíticas complexas sobre relatórios internos salvos no Data Lake. Contudo, na primeira semana de homologação, os gerentes enfrentaram alta latência de resposta, respostas incorretas (alucinações) e os custos da API do Amazon Bedrock dispararam devido a consultas redundantes dos usuários.</p>
+
+      <h3>Os Desafios Técnicos Identificados</h3>
+      <ul>
+        <li><strong>Custos Redundantes de Inferência (70% do orçamento de IA):</strong> Diferentes usuários frequentemente digitavam a mesma pergunta com mínimas variações (ex: "Qual o lucro de ontem?" vs "Quanto lucramos no dia de ontem?"), gerando chamadas de inferência duplicadas e caras ao Claude 3.5 Sonnet.</li>
+        <li><strong>Falta de Precisão na Busca Vetorial Pura (Semantic Miss):</strong> A busca puramente semântica no banco vetorial falhava em encontrar termos exatos essenciais, como códigos de peças específicos (ex: "Filtro-A350") ou chaves de erros de logs de auditoria, trazendo contextos ruidosos que induziam a LLM ao erro.</li>
+        <li><strong>Latência Elevada de Serving:</strong> O ciclo completo de converter a pergunta em vetor, consultar o banco e realizar a inferência de geração ultrapassava **3.8 segundos**, degradando a experiência de uso.</li>
+      </ul>
+
+      <h3>A Solução Arquitetural Implementada na AWS</h3>
+      <ol>
+        <li><strong>Implantação de Caching Semântico com Redis:</strong>
+          A equipe configurou um **Amazon ElastiCache Redis** com suporte a busca vetorial. Ao receber uma consulta, um Lambda Orchestrator gera o embedding e calcula a distância de Cosseno contra perguntas cacheadas anteriormente no Redis. Se a similaridade ultrapassar 95%, a resposta associada no cache é retornada instantaneamente. A latência de requisições repetidas caiu de **3.8s para 15ms**, gerando uma economia de **$8.200/mês** em tokens da API do Bedrock.
+        </li>
+        <li><strong>Implementação de Busca Híbrida e Re-Ranking:</strong>
+          No **OpenSearch Serverless**, a busca foi reestruturada para combinar a busca vetorial KNN com a busca lexical clássica por palavras-chave (BM25). Os resultados das duas abordagens foram fundidos usando o algoritmo **RRF (Reciprocal Rank Fusion)** e em seguida processados pelo modelo de **Re-Ranking** da Cohere no Bedrock. Isso garantiu que chaves exatas de erros e termos semânticos correlacionados fossem recuperados com precisão cirúrgica no contexto.
+        </li>
+        <li><strong>Orquestração com Bedrock Agents:</strong>
+          Para queries que exigiam consultar dados estruturados transacionais, o Bedrock Agent foi equipado com um Action Group conectado a uma Lambda que realizava validações de schema e disparava queries otimizadas diretamente via Amazon Athena no S3, impedindo que o modelo realizasse deduções errôneas ou queries SQL que causariam full scan.
+        </li>
+      </ol>
+
+      <div class="callout callout-tip">
+        <strong>Resultado de Negócio:</strong>
+        <p>A assertividade global do sistema medida via métricas de **Faithfulness (Ragas)** subiu de 62% para 97%, enquanto a latência para os usuários finais reduziu em média 65%, viabilizando o deploy seguro e econômico do projeto para toda a empresa.</p>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 15: INTELIGÊNCIA ARTIFICIAL PARA QUALIDADE DE DADOS E EXPLICAÇÃO DE DESVIOS -->
+    <section class="section" id="case-ai-data-quality">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">15</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>Case 15: Detecção Inteligente de Anomalias e Autogeração de Regras de Data Quality no AWS Glue</h2>
+          <p>Uso de LLMs com Amazon Bedrock para eliminar a escrita manual de regras DQDL de qualidade de dados e automatizar alertas explicativos de incidentes</p>
+        </div>
+      </div>
+
+      <p>Uma multinacional de logística possuía mais de 400 tabelas analíticas no seu Lakehouse S3. O time de engenharia sofria para criar e manter regras de Data Quality atualizadas. Regras fixas falhavam com a flutuação natural de sazonalidades de mercado, e incidentes de dados corrompidos passavam silenciosamente, gerando relatórios de negócios errados para a diretoria.</p>
+
+      <h3>Os Gargalos de Qualidade Convencionais</h3>
+      <ul>
+        <li><strong>Esforço Manual Excessivo:</strong> Escrever e calibrar regras DQDL (Data Quality Definition Language) manualmente para centenas de tabelas exigia milhares de horas de engenharia e era passível de erros de escopo.</li>
+        <li><strong>Falta de Contextualização em Alertas de Incidente:</strong> Alertas técnicos convencionais (ex: "Tabela X falhou na validação de desvio padrão") eram incompreensíveis para os analistas de negócios, gerando atritos de comunicação e atraso na resolução dos problemas na origem.</li>
+      </ul>
+
+      <h3>A Nova Engenharia de Qualidade Conduzida por IA</h3>
+      <ol>
+        <li><strong>Autogeração Dinâmica de Regras DQDL via LLM:</strong>
+          A equipe desenvolveu um Glue Job que executa estatísticas e profiling automatizado de cada nova tabela (volume, taxa de nulos, desvio padrão de colunas numéricas, formatos comuns). Essas estatísticas e o DDL da tabela são envelopados em um prompt robusto e enviados via API do Bedrock ao **Claude 3.5 Sonnet**. O modelo deduz a semântica do negócio de cada coluna e cospe de volta um bloco estruturado de regras DQDL otimizadas.
+        </li>
+        <li><strong>Análise Semântica de Anomalias e Explicação de Incidentes:</strong>
+          Quando o **AWS Glue Data Quality** falha ou detecta um desvio fora do padrão de comportamento histórico da tabela (anomalia detectada pelo algoritmo Random Cut Forest), o log do erro e as amostras das linhas com anomalia são injetados em um agente LLM. O modelo analisa os dados e redige um e-mail explicativo detalhando o impacto de negócios no Slack do time responsável (ex: "Incident Alert: Detectada queda de 45% nos registros da coluna 'valor_frete' de ontem. Isso indica que a tabela de taxas da transportadora X falhou ao carregar no batch diário.").
+        </li>
+      </ol>
+
+      <div class="callout callout-tip">
+        <strong>Resultado de Negócio:</strong>
+        <p>A cobertura de monitoramento de Data Quality saltou de apenas 15 tabelas críticas escritas à mão para 100% das 400 tabelas de produção do Lakehouse. O esforço operacional de escrita de testes de dados foi reduzido a zero, e o tempo médio de mitigação de incidentes de dados (MTTR) caiu de 18 horas para menos de 15 minutos.</p>
       </div>
     </section>
   </main>
