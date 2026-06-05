@@ -85,6 +85,7 @@
       <a href="serving.html" class="nav-a active"><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
       <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
       <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
+      <a href="serving.html#iceberg-manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção Iceberg</a>
       <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
       <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
     </div>
@@ -130,15 +131,40 @@
         <div class="sec-num" style="color:var(--genai)">01</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--genai)"></div>
-          <h2>Amazon Athena: Partition Projection Avançado</h2>
-          <p>Otimização de tempo e I/O de consultas SQL ad-hoc diretamente no S3 via computação de caminhos baseados em metadados</p>
+          <h2>Amazon Athena: Introdução Teórica &amp; Funcionamento</h2>
+          <p>O motor serverless de consultas interativas sobre dados armazenados de forma distribuída no S3</p>
         </div>
       </div>
+
+      <p>O <strong>Amazon Athena</strong> é um serviço de consulta interativa serverless que permite analisar dados diretamente no Amazon S3 utilizando SQL padrão. O Athena é construído sobre o motor open-source <strong>Trino (antigo Presto)</strong>, especializado em queries ad-hoc de baixa latência em escala petabyte. Por ser totalmente serverless, não há necessidade de provisionar ou gerenciar clusters (computação desacoplada de armazenamento), e você é cobrado estritamente pelo volume de dados escaneados por consulta.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Arquitetura</div>
+          <div class="cc-title">Computação Desacoplada</div>
+          <div class="cc-body">O Athena lê dados brutos do S3 em tempo de execução. O processamento SQL é distribuído dinamicamente entre workers gerenciados pela AWS, sem persistência local.</div>
+        </div>
+
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Integração</div>
+          <div class="cc-title">Glue Data Catalog</div>
+          <div class="cc-body">Funciona como o repositório central de metadados. O Glue armazena a estrutura de schemas, tabelas e caminhos S3 (serdes) que o Athena interpreta para rodar SQL.</div>
+        </div>
+
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Mapeamento</div>
+          <div class="cc-title">Partition Pruning</div>
+          <div class="cc-body">Em vez de ler o bucket inteiro, o Athena usa chaves de partição (pastas no S3) para ignorar arquivos irrelevantes, reduzindo o volume escaneado e o custo.</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Partition Projection Avançado</h3>
+      <p>Otimização de tempo e I/O de consultas via computação de caminhos baseados em metadados:</p>
 
       <div class="grid-2">
         <div>
           <h4>Como Funciona</h4>
-          <p>O <strong>Amazon Athena</strong> realiza consultas SQL Serverless sob arquivos no S3. Tradicionalmente, o Athena consulta o AWS Glue Catalog para listar as partições de uma tabela. Em tabelas com milhões de partições, essa consulta de metadados torna-se o principal gargalo.</p>
+          <p>Tradicionalmente, o Athena consulta o AWS Glue Catalog para listar as partições físicas de uma tabela no S3. Em tabelas com milhões de partições, essa consulta de metadados torna-se o principal gargalo de performance analítica.</p>
           <p>O <strong>Partition Projection</strong> inverte esse modelo: ao invés de ler metadados do catálogo, o Athena calcula os caminhos das partições no S3 em tempo de execução, baseando-se em regras configuradas no DDL. Isso elimina a latência de rede entre o motor de query e o repositório de metadados.</p>
         </div>
         <div>
@@ -201,7 +227,7 @@
         <div class="sec-num" style="color:var(--genai)">01.5</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--genai)"></div>
-          <h2>Amazon Athena: Federated Query & Workgroups</h2>
+          <h2>Amazon Athena: Federated Query &amp; Workgroups</h2>
           <p>Consultas federadas nativas, gerenciamento de concorrência massiva e isolamento de carga de trabalho</p>
         </div>
       </div>
@@ -227,16 +253,150 @@
       </div>
     </section>
 
+    <section class="section" id="iceberg-manutencao">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">01.8</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>Manutenção de Tabelas Apache Iceberg no Lakehouse</h2>
+          <p>Técnicas essenciais de Compaction (OPTIMIZE) e limpeza de versões antigas (VACUUM) via Athena/Spark</p>
+        </div>
+      </div>
+
+      <p>Em arquiteturas modernas de Lakehouse usando o formato <strong>Apache Iceberg</strong>, a escrita de múltiplos micro-batches ou pipelines de streaming gera o clássico <em>Small Files Problem</em> (milhares de arquivos pequenos que degradam a performance de leitura devido à latência de abertura de arquivos no S3). Além disso, atualizações frequentes geram arquivos de metadata antigos e arquivos órfãos. Para manter a performance ideal, realizamos manutenções contínuas:</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>1. Compaction (OPTIMIZE)</h4>
+          <p>O processo de <strong>Compaction</strong> consolida arquivos pequenos em arquivos maiores otimizados para leitura (geralmente ~512MB ou 1GB). Ele lê múltiplos arquivos de dados e os reescreve de forma combinada e sequencial, gerando novos manifestos de metadados.</p>
+          <pre><span class="c">-- Comando SQL no Amazon Athena v3 para rodar Compaction</span>
+<span class="k">OPTIMIZE</span> iceberg_db.tb_vendas <span class="k">REWRITE DATA</span> (
+    <span class="s">'bin-pack'</span> -- Consolida arquivos sem reordenar
+);</pre>
+        </div>
+        <div>
+          <h4>2. Remoção de Históricos (VACUUM)</h4>
+          <p>O Iceberg provê suporte a <em>Time Travel</em> mantendo snapshots antigos. Sem manutenção, o storage do S3 cresce indefinidamente. O <strong>VACUUM</strong> (ou expiração de snapshots) apaga os snapshots obsoletos e deleta fisicamente os arquivos do S3.</p>
+          <pre><span class="c">-- Comando SQL no Amazon Athena para remover dados antigos</span>
+<span class="k">VACUUM</span> iceberg_db.tb_vendas <span class="k">RETAIN</span> 7 <span class="k">DAYS</span>; -- Exclui snapshots com mais de 7 dias</pre>
+        </div>
+      </div>
+
+      <div class="callout callout-tip">
+        <strong>✓ Pro Tip (Manutenção Automatizada via PySpark):</strong>
+        Para datasets de grande escala, configure tarefas diárias ou semanais via AWS Glue ou EMR usando a API do Spark para gerenciar a expiração de metadados e otimização física:
+        <pre style="margin-top: 10px; background:#0f172a;"><span class="c"># Execução de Spark SQL para otimização de layout de dados</span>
+spark.sql(<span class="s">"CALL glue_catalog.system.rewrite_data_files(table => 'iceberg_db.tb_vendas', options => map('max-file-size-bytes', '536870912'))"</span>)
+
+<span class="c"># Expiração de Snapshots antigos para economizar custos de S3</span>
+spark.sql(<span class="s">"CALL glue_catalog.system.expire_snapshots(table => 'iceberg_db.tb_vendas', older_than => TIMESTAMP '2026-06-01 00:00:00')"</span>)</pre>
+      </div>
+    </section>
+
     <section class="section" id="redshift">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--genai)">02</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--genai)"></div>
-          <h2>Amazon Redshift: Otimizações de Modelagem Física</h2>
-          <p>Tabela de estratégias físicas e distribuição para processamento MPP</p>
+          <h2>Amazon Redshift: Introdução Teórica &amp; Arquitetura MPP</h2>
+          <p>O Data Warehouse corporativo escalável baseado em processamento massivamente paralelo</p>
         </div>
       </div>
 
+      <p>O <strong>Amazon Redshift</strong> é um serviço de Data Warehouse analítico rápido e totalmente gerenciado em escala petabyte. Ele é construído com base em uma arquitetura de <strong>Shared-Nothing</strong> e processamento <strong>MPP (Massively Parallel Processing)</strong>. Ao contrário dos bancos transacionais tradicionais (OLTP), que armazenam registros em linhas para rápida inserção/atualização, o Redshift armazena dados em <strong>colunas (columnar storage)</strong>. Isso reduz drasticamente a necessidade de I/O em queries analíticas, pois apenas as colunas envolvidas na query são lidas do disco.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Arquitetura</div>
+          <div class="cc-title">Leader Node</div>
+          <div class="cc-body">O nó de coordenação. Recebe a query SQL da aplicação, faz o parsing, gera o plano de execução otimizado, compila código C++ otimizado para o plano e distribui para os Compute Nodes.</div>
+        </div>
+
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Processamento</div>
+          <div class="cc-title">Compute Nodes &amp; Slices</div>
+          <div class="cc-body">Os nós que realizam o processamento real. Cada Compute Node possui múltiplos Slices (unidades de processamento com disco e memória dedicados) que executam a query compilada em paralelo.</div>
+        </div>
+
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Armazenamento</div>
+          <div class="cc-title">RA3 &amp; Managed Storage</div>
+          <div class="cc-body">Os nós modernos da série RA3 utilizam caches locais SSD de altíssima performance para dados quentes, enquanto o storage frio é arquivado de forma transparente e ilimitada no Amazon S3.</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Diagrama da Arquitetura e Fluxo de Consultas MPP</h3>
+      <div class="dw">
+        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="380" fill="#0f172a" rx="14"/>
+          
+          <!-- Title -->
+          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA MPP DO AMAZON REDSHIFT &amp; ROTEAMENTO DE QUERY</text>
+          
+          <!-- Client Application -->
+          <rect x="40" y="160" width="130" height="60" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="105" y="185" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="600">Client / BI</text>
+          <text x="105" y="200" text-anchor="middle" fill="#cbd5e1" font-size="9">Envia Query SQL</text>
+          
+          <!-- Leader Node -->
+          <rect x="230" y="100" width="190" height="180" rx="10" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="325" y="125" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="700">Leader Node</text>
+          <rect x="245" y="145" width="160" height="30" rx="4" fill="#0f172a"/>
+          <text x="325" y="163" text-anchor="middle" fill="#cbd5e1" font-size="8">1. Parser / SQL Optimizer</text>
+          <rect x="245" y="185" width="160" height="30" rx="4" fill="#0f172a"/>
+          <text x="325" y="203" text-anchor="middle" fill="#cbd5e1" font-size="8">2. Compilador de C++</text>
+          <rect x="245" y="225" width="160" height="30" rx="4" fill="#0f172a"/>
+          <text x="325" y="243" text-anchor="middle" fill="#cbd5e1" font-size="8">3. Agregador final</text>
+          
+          <!-- Compute Nodes Container -->
+          <rect x="490" y="60" width="230" height="260" rx="12" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="605" y="85" text-anchor="middle" fill="#f43f5e" font-size="12" font-weight="700">Compute Nodes (MPP)</text>
+          
+          <!-- Compute Node 1 -->
+          <rect x="505" y="100" width="200" height="95" rx="6" fill="#0f172a" stroke="#64748b"/>
+          <text x="605" y="118" text-anchor="middle" fill="#e2e8f0" font-size="9" font-weight="600">Compute Node 1</text>
+          <rect x="515" y="132" width="85" height="50" rx="4" fill="#1e293b" stroke="#10b981"/>
+          <text x="557" y="152" text-anchor="middle" fill="#10b981" font-size="9" font-weight="600">Slice 0</text>
+          <text x="557" y="167" text-anchor="middle" fill="#cbd5e1" font-size="7">Lê dados locais</text>
+          
+          <rect x="610" y="132" width="85" height="50" rx="4" fill="#1e293b" stroke="#10b981"/>
+          <text x="652" y="152" text-anchor="middle" fill="#10b981" font-size="9" font-weight="600">Slice 1</text>
+          <text x="652" y="167" text-anchor="middle" fill="#cbd5e1" font-size="7">Lê dados locais</text>
+      
+          <!-- Compute Node 2 -->
+          <rect x="505" y="210" width="200" height="95" rx="6" fill="#0f172a" stroke="#64748b"/>
+          <text x="605" y="228" text-anchor="middle" fill="#e2e8f0" font-size="9" font-weight="600">Compute Node 2</text>
+          <rect x="515" y="242" width="85" height="50" rx="4" fill="#1e293b" stroke="#10b981"/>
+          <text x="557" y="262" text-anchor="middle" fill="#10b981" font-size="9" font-weight="600">Slice 2</text>
+          <text x="557" y="277" text-anchor="middle" fill="#cbd5e1" font-size="7">Lê dados locais</text>
+          
+          <rect x="610" y="242" width="85" height="50" rx="4" fill="#1e293b" stroke="#10b981"/>
+          <text x="652" y="262" text-anchor="middle" fill="#10b981" font-size="9" font-weight="600">Slice 3</text>
+          <text x="652" y="277" text-anchor="middle" fill="#cbd5e1" font-size="7">Lê dados locais</text>
+          
+          <!-- Arrows -->
+          <!-- Client to Leader -->
+          <path d="M170 180 L220 180" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+          <!-- Leader back to Client -->
+          <path d="M220 200 L170 200" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-purple)"/>
+          
+          <!-- Leader to Compute Nodes -->
+          <path d="M420 160 L495 130" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <path d="M420 200 L495 240" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4,2"/>
+          
+          <!-- Definition of markers -->
+          <defs>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+            </marker>
+            <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#a78bfa"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <h3 style="margin-top: 30px;">Otimizações de Modelagem Física: Chaves e Distribuição</h3>
       <p>A performance das consultas no Redshift depende de como os dados são organizados nos discos de cada nó (slices). Configuramos isso via <strong>Sort Keys</strong> e <strong>Distribution Styles (DISTSTYLE)</strong>:</p>
 
       <div class="tbl-wrap">
@@ -351,6 +511,24 @@
           </ul>
         </div>
       </div>
+
+      <h3>Exemplo Prático 1: Plano Não Otimizado (DS_BCAST_INNER)</h3>
+      <p>Abaixo vemos o plano gerado quando a tabela menor <code>dim_cliente</code> não possui distribuição por chave compartilhada, exigindo broadcast físico de seus registros para todos os compute nodes:</p>
+      <pre style="background:#0f172a; color:#f8fafc;"><span class="c"># EXPLAIN OUTPUT (Tabelas com distribuição circular ou não correspondentes)</span>
+XN Hash Join <span style="color:#ef4444; font-weight:bold;">DS_BCAST_INNER</span>  (cost=100.25..54200.40 rows=2500000 width=128)
+  Hash Cond: (v.id_cliente = c.id_cliente)
+  ->  XN Seq Scan on fct_vendas v  (cost=0.00..25000.00 rows=2500000 width=84)
+  ->  XN Hash  (cost=50.00..50.00 rows=50000 width=44)
+        ->  XN Seq Scan on dim_cliente c  (cost=0.00..50.00 rows=50000 width=44)</pre>
+
+      <h3>Exemplo Prático 2: Plano Otimizado (DS_DIST_NONE)</h3>
+      <p>Abaixo vemos o plano gerado quando ambas as tabelas são distribuídas pela chave correspondente (<code>id_cliente</code>). Os dados residem nos mesmos discos locais, anulando a necessidade de tráfego de rede:</p>
+      <pre style="background:#0f172a; color:#f8fafc;"><span class="c"># EXPLAIN OUTPUT (Ambas as tabelas otimizadas com DISTSTYLE KEY no id_cliente)</span>
+XN Hash Join <span style="color:#10b981; font-weight:bold;">DS_DIST_NONE</span>  (cost=100.25..25150.00 rows=2500000 width=128)
+  Hash Cond: (v.id_cliente = c.id_cliente)
+  ->  XN Seq Scan on fct_vendas v  (cost=0.00..25000.00 rows=2500000 width=84)
+  ->  XN Hash  (cost=50.00..50.00 rows=50000 width=44)
+        ->  XN Seq Scan on dim_cliente c  (cost=0.00..50.00 rows=50000 width=44)</pre>
     </section>
 
     <section class="section" id="redshift-io">
