@@ -477,10 +477,12 @@ df_processed = df_sales.withColumn(
         <div class="sec-num" style="color:var(--spark)">06.5</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Funções Avançadas de API &amp; Otimização</h2>
-          <p>Higher-Order Functions (HOFs), Bloom Filters e Window Functions de alto desempenho</p>
+          <h2>Funções Avançadas de API PySpark &amp; Otimização</h2>
+          <p>Higher-Order Functions (HOFs), Bloom Filters, Window Functions de alto desempenho e Exemplos de Código Baseados em Cores</p>
         </div>
       </div>
+
+      <p>As funções nativas do PySpark (disponíveis em <code>pyspark.sql.functions</code>) são implementadas em Scala/Java no backend e executadas diretamente no nível da JVM do Executor. Elas se beneficiam do <strong>Catalyst Optimizer</strong> (para colapsar expressões) e do <strong>Tungsten Engine</strong> (geração de código e alocação de memória direta). Isso significa que elas são drasticamente mais rápidas e eficientes em termos de memória do que as funções definidas pelo usuário (UDFs) em Python regular. <strong>Sempre dê preferência à API nativa do PySpark.</strong></p>
 
       <h3>Higher-Order Functions (HOFs) em Arrays</h3>
       <p>Evite o uso de <code>F.explode()</code> seguido de <code>F.groupBy()</code>, pois isso duplica os dados em memória e gera shuffles desnecessários. Use HOFs para manipular arrays diretamente no executor:</p>
@@ -504,6 +506,48 @@ df_massive_filtered = df_massive.filter(F.col("user_id").might_contain(bf))</cod
         <li><strong><code>rangeBetween</code> (Padrão):</strong> Agrupa dados baseando-se no valor da chave de ordenação. O Spark mantém na memória todos os registros atrelados àquele valor lógico, podendo causar picos de uso da Execution Memory se houverem milhares de registros com o mesmo valor (Data Skew na partição da window).</li>
         <li><strong><code>rowsBetween</code> (Performance Otimizada):</strong> Usa a posição física da linha, independentemente do valor da chave. A alocação de memória do executor é perfeitamente previsível (ex: os últimos 10 registros lidos fisicamente). Use sempre que a regra de negócio permitir contagem posicional no lugar da contagem por valor.</li>
       </ul>
+
+      <h3>Dica de Debugging e Testes com Exemplos Simples (Cores)</h3>
+      <p>Para testar e depurar lógicas complexas sem depender de clusters caros, crie conjuntos de dados (DataFrames) mínimos na memória. A abordagem visual com "cores" facilita o rastreamento lógico do agrupamento e ordenação (Window Functions):</p>
+      <pre><code class="language-python">from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+import pyspark.sql.functions as F
+
+spark = SparkSession.builder.appName("DebugLocal").getOrCreate()
+
+# Criação de um DataFrame mínimo para depurar a lógica
+data = [
+    ("Vermelho", "Carro", 100),
+    ("Vermelho", "Moto", 50),
+    ("Azul", "Carro", 120),
+    ("Azul", "Bicicleta", 30),
+    ("Verde", "Caminhão", 500)
+]
+df_colors = spark.createDataFrame(data, ["Cor", "Veículo", "Preço"])
+
+# 1. Definindo a Window particionada pela Cor
+window_spec = Window.partitionBy("Cor").orderBy(F.desc("Preço"))
+
+# 2. Aplicando funções avançadas usando a API PySpark nativa
+# Função row_number() numera as linhas dentro de cada partição de cor
+# Função max() calcula o teto de preço para cada cor
+df_ranked = df_colors \
+    .withColumn("Rank", F.row_number().over(window_spec)) \
+    .withColumn("Preco_Maximo_Cor", F.max("Preço").over(window_spec.rangeBetween(Window.unboundedPreceding, Window.unboundedFollowing)))
+
+df_ranked.show()
+# +--------+---------+-----+----+----------------+
+# |     Cor|  Veículo|Preço|Rank|Preco_Maximo_Cor|
+# +--------+---------+-----+----+----------------+
+# |    Azul|    Carro|  120|   1|             120|
+# |    Azul|Bicicleta|   30|   2|             120|
+# |Verde...|Caminhão...|  500|   1|             500|
+# |Vermelho|    Carro|  100|   1|             100|
+# |Vermelho|     Moto|   50|   2|             100|
+# +--------+---------+-----+----+----------------+
+
+# Dica de Debugging: Use .explain(True) para ver o plano físico gerado
+# df_ranked.explain(True) # Mostra o Sort, Window, e Projection no plano físico.</code></pre>
     </section>
 
     <section class="section" id="spark-joins">
