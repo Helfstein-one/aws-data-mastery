@@ -548,6 +548,39 @@ df_ranked.show()
 
 # Dica de Debugging: Use .explain(True) para ver o plano físico gerado
 # df_ranked.explain(True) # Mostra o Sort, Window, e Projection no plano físico.</code></pre>
+
+      <h3 style="margin-top: 30px;">Desafios para Especialistas &amp; Otimização de Funções</h3>
+      <p>A diferença entre um código que roda em 10 horas e um que roda em 10 minutos reside na compreensão da compilação de código do Catalyst. Seguem desafios reais e abordagens performáticas exigidas de especialistas em engenharia de dados:</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h4>Perguntas de Entrevista e Soluções</h4>
+          <ul style="font-size:13px; line-height:1.6; color:#cbd5e1; padding-left:15px; margin-top:10px;">
+            <li><strong>Por que evitar UDFs normais em Python?</strong><br><em>Resposta:</em> Os dados precisam ser serializados da JVM para um processo Python e voltar para a JVM. Isso causa overhead massivo e o código é uma "caixa preta" (Blackbox) ignorada pelo Catalyst Optimizer. Prefira sempre <code>pyspark.sql.functions</code>. Se UDF for inevitável, use <strong>Pandas UDFs (Arrow Vectorized)</strong>.</li>
+            <li><strong>Como otimizar a extração do evento mais recente por usuário?</strong><br><em>Resposta:</em> Evite self-joins lentos. Utilize uma Window Function com <code>row_number() over (partitionBy("user").orderBy(desc("timestamp")))</code> e filtre onde rank == 1.</li>
+            <li><strong>Como lidar com arrays complexos sem onerar a rede (Shuffles)?</strong><br><em>Resposta:</em> Não use <code>explode()</code> se a intenção for reagrupar depois. Use funções de alta ordem (HOFs) como <code>transform()</code>, <code>filter()</code> e <code>aggregate()</code> para manipular arrays nativamente linha a linha sem multiplicar os registros.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Exemplo Clássico: Lógica Condicional</h4>
+          <p style="font-size:12px; margin-bottom: 5px;"><strong>Pior Cenário (UDF Lenta - Não otimizada):</strong></p>
+          <pre><code class="language-python" style="font-size:11px;">from pyspark.sql.functions import udf
+
+@udf("string")
+def categoriza(idade):
+    return "Adulto" if idade >= 18 else "Menor"
+
+df.withColumn("cat", categoriza("idade")) # Blackbox p/ Catalyst</code></pre>
+          <p style="font-size:12px; margin-top: 10px; margin-bottom: 5px;"><strong>Melhor Cenário (PySpark API Nativa - Super rápida):</strong></p>
+          <pre><code class="language-python" style="font-size:11px;">import pyspark.sql.functions as F
+
+# O Catalyst compila em código Java de baixo nível
+df.withColumn(
+    "cat",
+    F.when(F.col("idade") >= 18, "Adulto").otherwise("Menor")
+)</code></pre>
+        </div>
+      </div>
     </section>
 
     <section class="section" id="spark-joins">
