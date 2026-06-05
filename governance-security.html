@@ -53,6 +53,8 @@
       <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
       <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
       <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
+      <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
+      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
       <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
       <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
     </div>
@@ -177,6 +179,66 @@
           <p>Auditorias centralizadas no CloudTrail registrando quem leu qual linha ou coluna específica no data lake.</p>
         </div>
       </div>
+
+      <h3 style="margin-top:30px;">Fluxo de Interceptação e Autorização de Queries</h3>
+      <p>O AWS Lake Formation altera o modelo de permissões tradicional delegando a autenticação física de arquivos ao IAM/STS e aplicando regras lógicas em tempo de execução:</p>
+
+      <div class="dw">
+        <svg viewBox="0 0 800 320" width="100%" height="320" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="320" fill="#0f172a" rx="14"/>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700" letter-spacing="1">AWS LAKE FORMATION: FLUXO DE INTERCEPTAÇÃO</text>
+
+          <!-- User/Athena (Left) -->
+          <rect x="30" y="70" width="160" height="60" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="110" y="95" text-anchor="middle" fill="#cbd5e1" font-size="10.5" font-weight="700">Analista / Athena</text>
+          <text x="110" y="110" text-anchor="middle" fill="#94a3b8" font-size="8">Submete Query SQL</text>
+
+          <!-- AWS Lake Formation (Middle-Top) -->
+          <rect x="270" y="70" width="230" height="70" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="1.5"/>
+          <text x="385" y="95" text-anchor="middle" fill="#eab308" font-size="11" font-weight="700">AWS Lake Formation</text>
+          <text x="385" y="110" text-anchor="middle" fill="#cbd5e1" font-size="8">1. Valida Políticas SQL/ABAC</text>
+          <text x="385" y="123" text-anchor="middle" fill="#cbd5e1" font-size="8">2. Resolve filtros de linha/coluna</text>
+
+          <!-- AWS STS (Middle-Bottom) -->
+          <rect x="290" y="190" width="190" height="50" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="385" y="212" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">AWS STS</text>
+          <text x="385" y="225" text-anchor="middle" fill="#cbd5e1" font-size="8">Gera tokens temporários</text>
+
+          <!-- Amazon S3 (Right) -->
+          <rect x="580" y="70" width="180" height="170" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="670" y="95" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700">Amazon S3</text>
+          <text x="670" y="115" text-anchor="middle" fill="#cbd5e1" font-size="8">Arquivos Parquet brutos</text>
+          <text x="670" y="130" text-anchor="middle" fill="#94a3b8" font-size="7.5">s3://trusted_db/cliente/</text>
+          
+          <rect x="600" y="160" width="140" height="60" rx="4" fill="#0f172a" stroke="#ef4444"/>
+          <text x="670" y="178" text-anchor="middle" fill="#ef4444" font-size="8" font-weight="700">Column/Row Masking</text>
+          <text x="670" y="193" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Apenas linhas filtradas</text>
+          <text x="670" y="205" text-anchor="middle" fill="#cbd5e1" font-size="7.5">são descriptografadas</text>
+
+          <!-- Lines and Connections -->
+          <!-- Athena to Lake Formation -->
+          <path d="M 190 100 L 270 100" stroke="#cbd5e1" stroke-width="1.5"/>
+          <polygon points="270,100 262,96 262,104" fill="#cbd5e1"/>
+          
+          <!-- LF to STS -->
+          <path d="M 385 140 L 385 190" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <polygon points="385,190 381,182 389,182" fill="#cbd5e1"/>
+          
+          <!-- STS to LF -->
+          <path d="M 405 190 L 405 140" stroke="#38bdf8" stroke-width="1.5"/>
+          <polygon points="405,140 409,148 401,148" fill="#38bdf8"/>
+          
+          <!-- LF to Athena (Credentials vended) -->
+          <path d="M 270 120 L 190 120" stroke="#38bdf8" stroke-width="1.5"/>
+          <polygon points="190,120 198,124 198,116" fill="#38bdf8"/>
+          <text x="230" y="133" text-anchor="middle" fill="#38bdf8" font-size="7" font-weight="700">Vends Token</text>
+          
+          <!-- Athena reads S3 directly using token -->
+          <path d="M 110,130 C 110,280, 670,280, 670,240" stroke="#10b981" stroke-width="2" stroke-dasharray="4,4"/>
+          <polygon points="670,240 666,248 674,248" fill="#10b981"/>
+          <text x="400" y="278" text-anchor="middle" fill="#10b981" font-size="8.5" font-weight="700">Athena lê S3 diretamente filtrando registros via credencial temporária vended</text>
+        </svg>
+      </div>
     </section>
 
     <section class="section" id="lake-cli">
@@ -218,6 +280,53 @@ aws lakeformation grant-permissions \
     }
   }'</span> \
   --permissions <span class="s">'["SELECT"]'</span></pre>
+    </section>
+
+    <!-- 03-B. LF-TAGS ABAC -->
+    <section class="section" id="lf-abac">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--muted)">03B</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--muted)"></div>
+          <h2>Controle de Acesso Baseado em Atributos (ABAC) com LF-Tags</h2>
+          <p>Uso de tags de metadados para concessão simplificada e dinâmica de privilégios</p>
+        </div>
+      </div>
+
+      <p>Em ambientes com centenas de tabelas, conceder acessos individuais via RBAC (Role-Based Access Control) torna-se insustentável. O **ABAC (Attribute-Based Access Control)** no Lake Formation resolve isso através de tags de governança chamadas **LF-Tags**:</p>
+      
+      <ul>
+        <li><strong>Associação de LF-Tags:</strong> Você define tags de múltiplos valores (ex: <code>Confidencialidade = [Publica, Restrita, Sensivel]</code> ou <code>Domain = [Vendas, BI, Finanças]</code>) e as vincula a bancos de dados, tabelas ou colunas.</li>
+        <li><strong>Políticas Dinâmicas (Grants):</strong> Em vez de conceder privilégios na tabela <code>cliente_trusted</code> para a Role X, você concede privilégios SELECT a qualquer Principal cuja sessão IAM contenha tags que casem com a LF-Tag associada à tabela (ex: <code>Domain = Vendas</code>).</li>
+      </ul>
+
+      <div class="abox note" style="margin-top:20px;">
+        <strong>Política IAM do Principal para Enforcer de Tags (ABAC):</strong>
+        <br>Para que o ABAC funcione cross-account ou no contexto local, o Principal IAM deve carregar as tags de sessão correspondentes. A política IAM abaixo garante que os usuários só consigam assumir a Role do Athena se as tags de controle baterem:
+      </div>
+
+      <pre><code class="language-json">{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "EnforceABACTagging",
+            "Effect": "Allow",
+            "Action": [
+                "lakeformation:GetDataAccess",
+                "glue:GetDatabase",
+                "glue:GetTable",
+                "glue:GetTables"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:PrincipalTag/Domain": "${aws:ResourceTag/Domain}",
+                    "aws:PrincipalTag/Confidencialidade": "Restrita"
+                }
+            }
+        }
+    ]
+}</code></pre>
     </section>
 
     <section class="section" id="iam-kms">
@@ -1093,114 +1202,181 @@ validar_e_publicar_evento(venda_ok)</code></pre>
   }
 }</pre>
 
-      <h3>1. Testes Unitários de PySpark com Pytest</h3>
-      <p>Antes de empurrar o código do Glue Job para produção, o pipeline de CI executa testes unitários usando **Pytest** contra o Spark local (simulado na memória do contêiner de teste). Isso valida as regras lógicas de transformação e limpeza de dados:</p>
+  }
+}
+</pre>
+    </section>
 
-      <pre><code class="language-python"># test_spark_transformations.py
+    <!-- 10. PLATAFORMA DE TESTES DE ENGENHARIA DE DADOS -->
+    <section class="section" id="plataforma-testes">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--muted)">10</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--muted)"></div>
+          <h2>Plataforma de Testes de Engenharia de Dados</h2>
+          <p>Pirâmide de Testes de Dados, BDD, testes unitários/integrados/E2E, testes mutantes e dados sintéticos com Faker</p>
+        </div>
+      </div>
+
+      <h3>O Paradigma da Pirâmide de Testes de Dados</h3>
+      <p>Diferente do desenvolvimento de software tradicional, o teste de dados valida tanto a <strong>lógica do código (código ETL)</strong> quanto a <strong>conformidade e comportamento físico dos dados (schemas e distribuições estatísticas)</strong>. Adotamos o modelo de Pirâmide adaptado para Pipelines Analíticos:</p>
+
+      <div class="dw">
+        <svg viewBox="0 0 800 360" width="100%" height="360" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="360" fill="#0f172a" rx="14"/>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700" letter-spacing="1">A PIRÂMIDE DE TESTES DE DADOS NA AWS</text>
+
+          <!-- Triangle Structure -->
+          <!-- Unit Level (Base) -->
+          <polygon points="400,60 180,310 620,310" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+          
+          <!-- Top Layer (E2E) -->
+          <polygon points="400,60 350,120 450,120" fill="#ef4444" opacity="0.8"/>
+          <text x="400" y="100" text-anchor="middle" fill="white" font-size="9.5" font-weight="700">E2E ORCHESTRATION (~10%)</text>
+          <text x="400" y="112" text-anchor="middle" fill="#f8fafc" font-size="7">Valida fluxos inteiros / Airflow / Latência</text>
+
+          <!-- Middle Layer (Integration) -->
+          <polygon points="350,120 270,210 530,210 450,120" fill="#fbbf24" opacity="0.8"/>
+          <text x="400" y="155" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="700">CONTRATO &amp; INTEGRAÇÃO (~30%)</text>
+          <text x="400" y="170" text-anchor="middle" fill="#0f172a" font-size="7.5">Schema Drift / Mocks de Origens / Ephemeral S3</text>
+          <text x="400" y="182" text-anchor="middle" fill="#475569" font-size="7">Testa Glue Catalog / Delta Logs / Iceberg Metadata</text>
+
+          <!-- Bottom Layer (Unit) -->
+          <polygon points="270,210 180,310 620,310 530,210" fill="#10b981" opacity="0.8"/>
+          <text x="400" y="245" text-anchor="middle" fill="white" font-size="11" font-weight="700">TESTES UNITÁRIOS DE LÓGICA (~60%)</text>
+          <text x="400" y="260" text-anchor="middle" fill="#cbd5e1" font-size="8.5">Transformações em PySpark puro / UDFs / Parsing de Registros</text>
+          <text x="400" y="272" text-anchor="middle" fill="#94a3b8" font-size="8">Roda localmente na memória sem acionar recursos na nuvem</text>
+
+          <!-- Dimensions -->
+          <text x="130" y="210" text-anchor="middle" fill="#94a3b8" font-size="9" transform="rotate(-60 130 210)">Operação Rápida / Menor Custo</text>
+          <text x="670" y="210" text-anchor="middle" fill="#ef4444" font-size="9" transform="rotate(60 670 210)">Alta Fidelidade / Maior Custo</text>
+        </svg>
+      </div>
+
+      <h3>Testes Funcionais vs Comportamentais (BDD)</h3>
+      <p>Enquanto os testes funcionais validam o "como" as operações matemáticas ocorrem, o <strong>Behavior-Driven Development (BDD)</strong> valida o comportamento esperado dos dados em termos de regras de negócio compreensíveis pelo time de produto. Abaixo está a especificação Gherkin de comportamento de um pipeline de cálculo de comissão:</p>
+
+      <pre><code class="language-gherkin"># features/commission_calculation.feature
+Funcionalidade: Cálculo Dinâmico de Comissão de Vendas
+  Como analista de finanças
+  Quero que o pipeline de dados aplique descontos baseados no canal de vendas
+  Para que a comissão líquida seja consolidada corretamente na camada Silver
+
+  Cenário: Aplicar taxa reduzida para canal online
+    Dado que temos um lote de vendas com valor 1000.0 no canal "ONLINE"
+    Quando o Spark executa a rotina de limpeza e enriquecimento
+    Então a comissão final calculada deve ser exatamente de 50.0
+    E o status do registro final deve ser definido como "APPROVED"</code></pre>
+
+      <h3>Harness de Testes Unitários em PySpark</h3>
+      <p>O script abaixo demonstra a implementação de testes unitários isolados em Pytest, usando Fixtures para criar a sessão Spark em memória e a biblioteca <code>Faker</code> para gerar mocks dinâmicos de dados:</p>
+
+      <pre><code class="language-python"># tests/test_sales_pipeline.py
 import pytest
+from faker import Faker
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType
+
+fake = Faker()
 
 @pytest.fixture(scope="session")
 def spark_session():
-    # Cria uma sessão Spark local na JVM do runner de teste
+    """Cria sessão Spark local na JVM do container de testes (Sem dependência de AWS)"""
     return SparkSession.builder \
         .master("local[*]") \
-        .appName("PySpark-Unit-Testing") \
+        .appName("PySpark-Unit-Tests") \
         .config("spark.sql.shuffle.partitions", "1") \
         .getOrCreate()
 
-def clean_sales_data(df):
-    # Regra lógica: remove valores nulos de id e filtra status indevidos
-    return df.filter(df["id_venda"].isNotNull()) \
-             .filter(df["status"] != "DRAFT")
+def calculate_comission(df):
+    """Regra de negócio a ser testada funcionalmente"""
+    from pyspark.sql.functions import col, when
+    return df.withColumn(
+        "comissao",
+        when(col("canal") == "ONLINE", col("valor") * 0.05)
+        .otherwise(col("valor") * 0.10)
+    ).withColumn("status", when(col("valor") > 100.0, "APPROVED").otherwise("DRAFT"))
 
-def test_clean_sales_data(spark_session):
-    # Massa de dados de teste (Input)
+def test_calculate_comission_online(spark_session):
+    # Geração de dados dinâmicos de teste usando Faker
     schema = StructType([
-        StructField("id_venda", StringType(), True),
-        StructField("status", StringType(), True),
-        StructField("valor", IntegerType(), True)
+        StructField("id_venda", StringType(), False),
+        StructField("canal", StringType(), False),
+        StructField("valor", DoubleType(), False)
     ])
-    data = [
-        ("vda-001", "APPROVED", 100),
-        (None, "APPROVED", 50),
-        ("vda-002", "DRAFT", 200)
-    ]
-    df_input = spark_session.createDataFrame(data, schema=schema)
     
-    # Executa a transformação
-    df_output = clean_sales_data(df_input)
+    # Gerando dados mocks consistentes
+    mock_id = fake.uuid4()
+    mock_data = [(mock_id, "ONLINE", 1000.0)]
     
-    # Validações das expectativas
-    resultados = df_output.collect()
-    assert len(resultados) == 1
-    assert resultados[0]["id_venda"] == "vda-001"
-    assert resultados[0]["valor"] == 100</code></pre>
+    df_input = spark_session.createDataFrame(mock_data, schema=schema)
+    df_output = calculate_comission(df_input)
+    
+    result = df_output.collect()
+    assert len(result) == 1
+    assert result[0]["id_venda"] == mock_id
+    assert result[0]["comissao"] == 50.0
+    assert result[0]["status"] == "APPROVED"</code></pre>
 
-      <h3>2. Workflow de CI/CD Completo (GitHub Actions)</h3>
-      <p>Abaixo está o arquivo de configuração declarativo do workflow (<code>.github/workflows/data-pipeline.yml</code>) que roda os testes PySpark e aplica as modificações do Terraform na AWS de forma totalmente automatizada:</p>
+      <h3>Testes de Integração, Contratos e E2E na AWS</h3>
+      <p>Em testes de integração, validamos a escrita em repositórios temporários (S3 ephemere/local ou MinIO) e a comunicação com o Glue Schema Registry:</p>
 
-      <pre><code class="language-yaml"># .github/workflows/data-pipeline.yml
-name: Data Pipeline CI/CD
+      <pre><code class="language-python"># tests/test_integration_lakehouse.py
+import os
+import shutil
+import pytest
+from pyspark.sql import SparkSession
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+@pytest.fixture(scope="module")
+def local_lakehouse_dir():
+    # Cria uma pasta temporária imitando a camada Silver do S3
+    path = "/tmp/local_lakehouse/sales"
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path)
+    yield path
+    shutil.rmtree(path)
 
-jobs:
-  test-pyspark:
-    name: Run PySpark Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+def test_write_to_local_lakehouse(spark_session, local_lakehouse_dir):
+    data = [("vda-101", 350.0), ("vda-102", 450.0)]
+    df = spark_session.createDataFrame(data, ["id_venda", "valor"])
+    
+    # Escreve fisicamente no diretório simulado em formato Parquet
+    df.write.mode("overwrite").format("parquet").save(local_lakehouse_dir)
+    
+    # Valida o contrato e a existência de arquivos físicos no disco
+    assert len(os.listdir(local_lakehouse_dir)) > 0
+    df_read = spark_session.read.format("parquet").load(local_lakehouse_dir)
+    assert df_read.count() == 2
+    assert df_read.agg({"valor": "sum"}).collect()[0][0] == 800.0</code></pre>
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+      <h3>Testes Mutantes (Mutation Testing) com Mutmut</h3>
+      <p>Os testes mutantes garantem a qualidade dos seus assertions de teste. A biblioteca **Mutmut** modifica sutilmente o seu código ETL de produção (ex: trocando <code>valor > 100.0</code> por <code>valor >= 100.0</code>, ou trocando <code>* 0.05</code> por <code>/ 0.05</code>) e roda a suite de testes.
+        <br>Se todos os testes passarem mesmo após o código ter sido sabotado, significa que os testes têm <strong>lacunas de validação (Mutante Sobreviveu)</strong>. Se pelo menos um teste falhar, o mutante foi **morto**, provando a eficácia do seu harness de testes.</p>
 
-      - name: Install PySpark & Test Tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyspark pytest pytest-cov requests
+      <h3>Arquitetura da Plataforma de Testes de Dados (Ephemeral Schemas)</h3>
+      <p>Para testar pipelines de dados na nuvem sem gerar poluição física ou colisões concorrentes em PRs (Pull Requests), adote a seguinte arquitetura:</p>
+      <ul>
+        <li><strong>Schemas Efêmeros (Dynamic Sandbox):</strong> A cada Pull Request disparado no GitHub Actions, o pipeline de CI cria dinamicamente um prefixo físico de sandbox (ex: <code>s3://data-lake-sandbox/pr-42/</code>) e registra bancos temporários no Glue Catalog no formato <code>sandbox_pr42_db</code>.</li>
+        <li><strong>Validação de Volumetria e Distribuição:</strong> Injeta-se uma fração representativa de dados reais (ou dados sintéticos em escala criados por Faker) e valida-se distribuições estatísticas das saídas em relação a médias históricas usando **Great Expectations** ou **AWS Glue Data Quality**, prevenindo anomalias de regressão antes do merge.</li>
+      </ul>
 
-      - name: Execute Tests with Coverage
-        run: |
-          pytest test_spark_transformations.py --cov=transformations --cov-report=xml
-
-  terraform-deploy:
-    name: Terraform Validate and Apply
-    needs: test-pyspark
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Plan
-        run: terraform plan
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve</code></pre>
+      <div class="abox info" style="margin-top:20px;">
+        <strong><span style="color:var(--muted)">Manual Prático do Especialista em Dados - Recursos Cloud de Segurança &amp; Governança:</span></strong>
+        <br><br>
+        <strong>1. AWS KMS (Key Management Service)</strong>
+        <br>• <strong>Como funciona na prática:</strong> KMS executa criptografia envelope. Ele gera chaves de dados (Data Keys) para que os microsserviços (ex: EMR, Athena, Glue) possam encriptar e desencriptar dados físicos.
+        <br>• <strong>Limites Físicos e Throttling em Alta Escala:</strong> KMS possui um limite estrito de requisições por segundo (TPS) dependendo da região AWS (geralmente entre 5.500 e 10.000 requests/s). Se o Athena tentar ler uma tabela com 50.000 pequenos arquivos Parquet individuais criptografados, cada leitura de arquivo exigirá uma API `kms:Decrypt`, excedendo a cota do KMS e travando a query com erro de acesso.
+        <br>• <strong>Resolução:</strong> Use o **S3 Bucket Keys**. Ao invés de o S3 requisitar uma chave ao KMS para cada arquivo, o S3 obtém uma chave de balde temporária que vale por minutos, diminuindo as chamadas ao KMS em até 99%.
+        <br><br>
+        <strong>2. AWS Secrets Manager</strong>
+        <br>• <strong>Como funciona na prática:</strong> É um repositório central criptografado de segredos com suporte a rotação dinâmica (via Lambdas integrados).
+        <br>• <strong>Gargalo e Boas Práticas:</strong> Secrets Manager suporta apenas ~2.000 requisições de API por segundo por padrão. Chamar a API `get_secret_value` para cada partição gravada no cluster Spark gerará throttling. O engenheiro de dados deve recuperar o segredo uma única vez no Driver do Spark e repassá-lo de forma segura aos Workers ou criar um cache do segredo em memória.
+        <br><br>
+        <strong>3. AWS IAM (Identity and Access Management)</strong>
+        <br>• <strong>Como funciona na prática:</strong> Plano de controle global de autenticação e autorização na AWS.
+        <br>• <strong>Gargalo de Chaining e Avaliação Logística:</strong> IAM possui limites rígidos no tamanho dos documentos de políticas (ex: no máximo 10.240 caracteres por política gerenciada). Se você tentar adicionar caminhos de buckets S3 granulares individualmente, atingirá o limite de tamanho rapidamente. A melhor abordagem para lagos de dados corporativos é registrar os diretórios no AWS Lake Formation, limpando as políticas do IAM e delegando o controle de acesso ao motor de segurança lógica do Lake Formation.
+      </div>
     </section>
 
     <section class="section" id="erros">

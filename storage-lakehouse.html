@@ -53,6 +53,8 @@
       <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
       <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
       <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
+      <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
+      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
       <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
       <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
     </div>
@@ -434,6 +436,87 @@
 );</code></pre>
         </li>
       </ul>
+
+      <h3>Estratégias de Ingestão: Copy-on-Write (CoW) vs Merge-on-Read (MoR)</h3>
+      <p>O Apache Iceberg oferece duas abordagens fundamentais para gerenciar operações de alteração de dados (UPDATE, DELETE, MERGE). A escolha da estratégia impacta diretamente o throughput de escrita e a latência de leitura:</p>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <div class="card-title" style="color:var(--sql)">Copy-on-Write (CoW)</div>
+          <p>Qualquer atualização ou exclusão reescreve por completo os arquivos de dados que contêm as linhas modificadas.</p>
+          <ul style="margin-top:10px; padding-left:15px; font-size:12px; line-height:1.5;">
+            <li><strong>Mecanismo:</strong> Lê o arquivo Parquet original, aplica as edições/deletions em memória e grava um novo arquivo Parquet inteiro. O novo snapshot aponta apenas para o arquivo novo.</li>
+            <li><strong>Prós:</strong> Leitura limpa e veloz sem overhead de processamento ou joins em tempo de query.</li>
+            <li><strong>Contras:</strong> Alto custo de escrita (Write Amplification). Modificar uma única linha em um arquivo de 100MB força o Spark a reescrever 100MB de dados no S3.</li>
+            <li><strong>Uso Ideal:</strong> Tabelas de leitura pesada (Read-Heavy) com atualizações esporádicas ou em lotes massivos fora do horário comercial.</li>
+          </ul>
+        </div>
+
+        <div class="concept-card">
+          <div class="card-title" style="color:var(--arch)">Merge-on-Read (MoR)</div>
+          <p>Atualizações e exclusões são gravadas em arquivos de exclusão ("Delete Files") separados, preservando os arquivos originais.</p>
+          <ul style="margin-top:10px; padding-left:15px; font-size:12px; line-height:1.5;">
+            <li><strong>Mecanismo:</strong> As alterações são salvas imediatamente em arquivos de exclusão posicional ou por igualdade. O arquivo original não é tocado.</li>
+            <li><strong>Prós:</strong> Escrita extremamente rápida e eficiente com baixíssimo consumo de I/O no EMR/Glue.</li>
+            <li><strong>Contras:</strong> Custo computacional na leitura (Read Amplification). O motor de query precisa ler o arquivo original e aplicar um join dinâmico com o arquivo de exclusões para omitir os registros apagados.</li>
+            <li><strong>Uso Ideal:</strong> Cargas de streaming (Near-Real-Time) ou tabelas com alta frequência de atualizações em tempo real.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="abox note" style="margin-top:20px;">
+        <strong>Diferença entre Delete Files no MoR:</strong>
+        <br>• <strong>Position Deletes:</strong> Grava o caminho exato do arquivo de dados e a linha física (offset) do registro deletado. É o mais performático para leitura, pois o join dinâmico é feito por índice direto de offset.
+        <br>• <strong>Equality Deletes:</strong> Grava apenas o valor da chave que determina a deleção (ex: <code>id_cliente = 543</code>). A leitura é mais lenta pois exige avaliar predicados em todas as linhas.
+      </div>
+
+      <h3>Definição de Tabela com Spark SQL DDL de Alta Performance</h3>
+      <p>Ao criar tabelas produtivas na AWS com Spark SQL, aplique configurações avançadas de engine para garantir escalabilidade física, compactação inteligente e controle de deleção:</p>
+
+      <pre><code class="language-sql">CREATE TABLE glue_catalog.trusted_db.vendas_trusted (
+    id_venda STRING,
+    id_cliente STRING,
+    valor_venda DOUBLE,
+    data_venda DATE,
+    canal_venda STRING
+)
+USING iceberg
+PARTITIONED BY (days(data_venda))
+TBLPROPERTIES (
+    -- Define a estratégia padrão para atualizações e exclusões (MoR para escrita rápida)
+    'write.delete.mode' = 'merge-on-read',
+    'write.update.mode' = 'merge-on-read',
+    'write.merge.mode' = 'merge-on-read',
+    
+    -- Compactação inteligente de formatos e codecs robustos
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd', -- ZSTD oferece melhor balanço taxa/desempenho
+    'write.parquet.compression-level' = '7',
+    
+    -- Otimização física para prevenção de S3 SlowDown (Object Storage layout)
+    -- Habilita hashes pseudo-aleatórios nos prefixos S3 para espalhar partições físicas
+    'write.object-storage.enabled' = 'true',
+    
+    -- Distribuição das tarefas de escrita no Spark para evitar arquivos pequenos (Small Files)
+    'write.distribution-mode' = 'hash', -- Distribui partições usando hash nos Workers Spark
+    
+    -- Autolimpeza básica (Retenção de metadados e histórico de time travel)
+    'history.expire.max-snapshot-age-ms' = '259200000', -- Expira snapshots com mais de 3 dias (259200000 ms)
+    'history.expire.min-snapshots-to-keep' = '5'
+);</code></pre>
+
+      <div class="abox info" style="margin-top:20px;">
+        <strong><span style="color:var(--sql)">Manual Prático do Especialista em Dados - Recursos Cloud de Armazenamento:</span></strong>
+        <br><br>
+        <strong>1. Amazon S3 (Simple Storage Service)</strong>
+        <br>• <strong>Como funciona na prática:</strong> O S3 não possui diretórios reais, mas sim um índice de chaves (Key-Value flat structure). Os prefixos são representados por barras ("/").
+        <br>• <strong>Limites Físicos e Gargalos:</strong> Cada prefixo lógico suporta no máximo 3.500 requisições de escrita (PUT/POST/DELETE) e 5.500 requisições de leitura (GET/HEAD) por segundo. Se você acumular milhares de arquivos em <code>s3://bucket/ano=2026/mes=06/dia=05/</code>, um cluster Spark EMR com centenas de executores concorrentes atingirá esse limite, gerando HTTP 503 SlowDown.
+        <br>• <strong>Resolução com Iceberg:</strong> Ativando <code>write.object-storage.enabled=true</code>, o Iceberg injeta um hash na raiz dos paths físicos (ex: <code>s3://bucket/data/a5b1c8df/ano=2026/mes=06/</code>), gerando múltiplos caminhos paralelos que espalham os arquivos por partições internas do S3, escalando a vazão infinitamente.
+        <br><br>
+        <strong>2. AWS Glue Data Catalog</strong>
+        <br>• <strong>Como funciona na prática:</strong> Funciona como o catálogo de metadados Hive-compatible centralizado da AWS. Guarda apenas ponteiros, estatísticas e schemas estruturais (não lê ou armazena os dados físicos).
+        <br>• <strong>Gargalos e Transações ACID:</strong> Em tabelas Hive tradicionais, uma alteração exige que o Glue Catalog mude centenas de partições em lote, o que gera inconsistência (queries concorrentes enxergam a tabela parcialmente atualizada). No Iceberg, o Glue Catalog armazena apenas um único ponteiro que aponta para o arquivo <code>v3.metadata.json</code> ativo. A transação é concluída alterando atomicamente esse ponteiro. Se dois processos Spark tentarem atualizar o ponteiro no Glue Catalog concorrentemente, o catálogo aplica uma trava otimista (Compare-And-Swap), rejeitando a transação do mais lento para garantir consistência perfeita.
+      </div>
     </section>
 
     <section class="section" id="iceberg-internals">
@@ -442,49 +525,76 @@
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--arch)"></div>
           <h2>Árvore de Metadados do Apache Iceberg</h2>
-          <p>Como funciona o tracking semântico e o Data Skipping</p>
+          <p>Relação hierárquica entre Catálogos, Metadados, Manifestos e Arquivos de Exclusão (MoR)</p>
         </div>
       </div>
 
       <div class="dw">
-        <svg viewBox="0 0 760 300" width="760" height="300" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="300" fill="#0f172a" rx="14"/>
+        <svg viewBox="0 0 800 520" width="100%" height="520" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="520" fill="#0f172a" rx="14"/>
           
           <!-- Title -->
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA DE METADADOS APACHE ICEBERG</text>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700" letter-spacing="1">HIERARQUIA DE METADADOS &amp; OPERAÇÃO MERGE-ON-READ</text>
           
-          <!-- Catalog Box -->
-          <rect x="280" y="60" width="200" height="40" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
-          <text x="380" y="84" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="600">AWS Glue Data Catalog</text>
-          <text x="380" y="94" text-anchor="middle" fill="#64748b" font-size="8">Aponta para o JSON mais recente</text>
+          <!-- Catalog Block -->
+          <rect x="300" y="55" width="200" height="45" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+          <text x="400" y="77" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="700">AWS Glue Catalog</text>
+          <text x="400" y="90" text-anchor="middle" fill="#94a3b8" font-size="8">Ponteiro: db.tabela -> metadata.json</text>
           
-          <!-- Connector 1 -->
-          <line x1="380" y1="100" x2="380" y2="120" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <!-- Line Catalog -> Metadata -->
+          <path d="M400,100 L400,130" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4"/>
           
-          <!-- Metadata file -->
-          <rect x="260" y="120" width="240" height="40" rx="8" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
-          <text x="380" y="140" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="600">Metadata File (v3.metadata.json)</text>
-          <text x="380" y="152" text-anchor="middle" fill="#64748b" font-size="8">Histórico de Snapshots, Schemas e Partições</text>
+          <!-- Metadata.json -->
+          <rect x="250" y="130" width="300" height="60" rx="8" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+          <text x="400" y="148" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">v3.metadata.json (Imutável)</text>
+          <text x="400" y="163" text-anchor="middle" fill="#cbd5e1" font-size="8.5">Esquemas, Histórico de Snapshots, Partições</text>
+          <text x="400" y="178" text-anchor="middle" fill="#94a3b8" font-size="8">Ponteiro Snapshot Atual: snap-8271.avro</text>
           
-          <!-- Connector 2 -->
-          <line x1="380" y1="160" x2="380" y2="180" stroke="#a78bfa" stroke-width="1.5"/>
+          <!-- Line Metadata -> Manifest List -->
+          <path d="M400,190 L400,220" stroke="#a78bfa" stroke-width="2"/>
           
           <!-- Manifest List -->
-          <rect x="270" y="180" width="220" height="35" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
-          <text x="380" y="198" text-anchor="middle" fill="#f43f5e" font-size="9.5" font-weight="600">Manifest List (snap-8271.avro)</text>
-          <text x="380" y="209" text-anchor="middle" fill="#64748b" font-size="8">Lista arquivos manifestos do Snapshot</text>
+          <rect x="240" y="220" width="320" height="60" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+          <text x="400" y="238" text-anchor="middle" fill="#f43f5e" font-size="11" font-weight="700">Manifest List (snap-8271.avro)</text>
+          <text x="400" y="253" text-anchor="middle" fill="#cbd5e1" font-size="8.5">Estatísticas do Snapshot, Seq Numbers, Limites de Partição</text>
+          <text x="400" y="268" text-anchor="middle" fill="#94a3b8" font-size="8">Aponta para 1 ou mais arquivos manifestos</text>
           
-          <!-- Connectors 3 -->
-          <path d="M380,215 L230,240 M380,215 L530,240" stroke="#f43f5e" stroke-width="1.5"/>
+          <!-- Lines Manifest List -> Manifests -->
+          <path d="M400,280 L250,320" stroke="#f43f5e" stroke-width="1.5"/>
+          <path d="M400,280 L550,320" stroke="#f43f5e" stroke-width="1.5"/>
           
-          <!-- Manifest Files -->
-          <rect x="120" y="240" width="220" height="35" rx="6" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5"/>
-          <text x="230" y="258" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="600">Manifest File (manifest1.avro)</text>
-          <text x="230" y="269" text-anchor="middle" fill="#64748b" font-size="7.5">Min/Max stats de colunas (Data Skipping)</text>
+          <!-- Manifest File 1 (Data) -->
+          <rect x="90" y="320" width="310" height="70" rx="8" fill="#1e293b" stroke="#fbbf24" stroke-width="2"/>
+          <text x="245" y="338" text-anchor="middle" fill="#fbbf24" font-size="10.5" font-weight="700">Manifest File 1 (Data - Avro)</text>
+          <text x="245" y="353" text-anchor="middle" fill="#cbd5e1" font-size="8">Estatísticas Data Skipping (Min/Max por coluna)</text>
+          <text x="245" y="368" text-anchor="middle" fill="#10b981" font-size="8">Aponta para: data-0000.parquet</text>
+          <text x="245" y="380" text-anchor="middle" fill="#64748b" font-size="7.5">Contém os registros originais da tabela</text>
+          
+          <!-- Manifest File 2 (Deletes) -->
+          <rect x="410" y="320" width="310" height="70" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+          <text x="565" y="338" text-anchor="middle" fill="#f43f5e" font-size="10.5" font-weight="700">Manifest File 2 (Delete - Avro)</text>
+          <text x="565" y="353" text-anchor="middle" fill="#cbd5e1" font-size="8">Estatísticas de Exclusão e IDs dos Arquivos Deletados</text>
+          <text x="565" y="368" stroke="#ef4444" stroke-width="0" fill="#ef4444" font-size="8">Aponta para: delete-0000.parquet (Position)</text>
+          <text x="565" y="380" fill="#64748b" font-size="7.5">Instrui o engine a pular registros deletados na leitura</text>
+          
+          <!-- Lines Manifests -> Physical Files -->
+          <path d="M245,390 L245,430" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="3,3"/>
+          <path d="M565,390 L565,430" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="3,3"/>
+          
+          <!-- Physical Data File -->
+          <rect x="115" y="430" width="260" height="45" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+          <text x="245" y="448" text-anchor="middle" fill="#10b981" font-size="9.5" font-weight="700">data-0000.parquet (Physical)</text>
+          <text x="245" y="460" text-anchor="middle" fill="#94a3b8" font-size="8">Dados físicos em S3 (Parquet compactado)</text>
+          
+          <!-- Physical Delete File -->
+          <rect x="435" y="430" width="260" height="45" rx="6" fill="#0f172a" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="565" y="448" text-anchor="middle" fill="#ef4444" font-size="9.5" font-weight="700">delete-0000.parquet (Physical)</text>
+          <text x="565" y="460" text-anchor="middle" fill="#94a3b8" font-size="8">Arquivo posicional em S3 (offsets de deleção)</text>
 
-          <rect x="420" y="240" width="220" height="35" rx="6" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5"/>
-          <text x="530" y="258" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="600">Manifest File (manifest2.avro)</text>
-          <text x="530" y="269" text-anchor="middle" fill="#64748b" font-size="7.5">Ponteiros para os arquivos físicos S3</text>
+          <!-- Dynamic Merge on Read Relation -->
+          <path d="M435,452 L385,452" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <polygon points="380,452 388,448 388,456" fill="#ef4444"/>
+          <text x="410" y="444" text-anchor="middle" fill="#ef4444" font-size="7" font-weight="700">Leitor mescla na consulta</text>
         </svg>
       </div>
     </section>
