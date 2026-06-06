@@ -1850,8 +1850,7 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           </ul>
         </div>
       </div>
-
-      <!-- Case 64: Union vs UnionByName -->
+<!-- Case 64: Union vs UnionByName -->
       <div class="card" id="q64" style="margin-bottom: 24px;">
         <div class="card-lbl">Questão 64 · PySpark Union vs UnionByName</div>
         <h4>Qual o risco físico de utilizar o método .union() para juntar dois DataFrames em PySpark com colunas fora de ordem e como o .unionByName(allowMissingColumns=True) resolve este problema em produção?</h4>
@@ -1859,6 +1858,46 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
         <div class="callout callout-tip">
           <strong>Solução de Engenharia:</strong>
           <p>Utilize <code>df_a.unionByName(df_b, allowMissingColumns=True)</code>. Este método faz a junção baseada nos nomes de colunas. Se existirem colunas na tabela B que não constam na tabela A (ou vice-versa), o Spark criará dinamicamente as colunas ausentes em cada lado e as preencherá com valores nulos lógicos, preservando perfeitamente a semântica do schema.</p>
+        </div>
+      </div>
+
+      <!-- Case 67: Iceberg WAP Pattern & Data Validation -->
+      <div class="card" id="q67" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 67 · Apache Iceberg WAP (Write-Audit-Publish) Pattern</div>
+        <h4>Como funciona o padrão arquitetural WAP (Write-Audit-Publish) no Apache Iceberg e como as branches lógicas da tabela previnem a ingestão de registros órfãos ou inválidos na camada final de Serving?</h4>
+        <p><strong>Gargalo Operacional:</strong> Em pipelines analíticos tradicionais (Hive/Parquet puro), se um erro de qualidade de dados ocorrer no final de uma transação batch de 10 milhões de registros, a tabela física já estará modificada, forçando reversões complexas (rollbacks em S3) ou poluindo relatórios ativos de BI.</p>
+        <div class="callout callout-info">
+          <strong>Arquitetura e Fluxo do WAP:</strong>
+          <ul>
+            <li><strong>Write (Escrever na Branch):</strong> O pipeline PySpark ou dbt grava as alterações apontando para uma <strong>branch lógica temporária</strong> da tabela Iceberg (ex: <code>df.option("branch", "wap_temp").save(...)</code>). Os dados físicos são salvos no S3, mas o snapshot principal (main branch) da tabela continua inalterado.</li>
+            <li><strong>Audit (Auditar):</strong> Ferramentas de validação ativa ou queries SQL rodam contra a branch temporária buscando quebras de contratos de dados (valores negativos, nulos em PKs).</li>
+            <li><strong>Publish (Publicar via Fast-Forward):</strong> Se os testes passarem, a engine executa uma chamada de sistema (ex: <code>CALL system.cherry_pick_snapshot()</code>) para avançar a referência da branch <code>main</code> para o snapshot validado. Caso contrário, a branch temporária é descartada, impedindo a exposição dos dados inválidos.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 68: Whole-Stage CodeGen & JVM Virtual Calls -->
+      <div class="card" id="q68" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 68 · Spark Catalyst &amp; Whole-Stage CodeGen</div>
+        <h4>Como o Whole-Stage CodeGen do Catalyst Optimizer acelera a execução física de jobs Spark e qual o impacto de UDFs Python tradicionais na quebra deste ciclo de compilação da JVM?</h4>
+        <p><strong>Overhead do Java Clássico:</strong> A computação distribuída comum (Iterator-style) avalia registros chamando funções virtuais na pilha JVM para cada registro (ex: Filtro -> Projeção -> Agrupamento), gerando milhões de chamadas e reduzindo o uso dos registradores da CPU física.</p>
+        <div class="callout callout-tip">
+          <strong>Compilação JIT &amp; Quebra de Pipeline:</strong>
+          <ul>
+            <li><strong>Whole-Stage CodeGen:</strong> O Catalyst analisa o plano físico e colapsa múltiplos estágios de transformações em um **único loop em código Java plano**, compilando-o via Janino em tempo de execução. Isso remove todas as chamadas virtuais da JVM e permite que os dados fiquem nos registradores de alta velocidade do processador.</li>
+            <li><strong>Overhead de UDFs Python puras:</strong> Uma UDF comum em Python não pode ser compilada pelo Catalyst. Ela força o Spark a extrair os dados da JVM (formato Tungsten), serializar/converter para Python através de sockets (IPC), executar a UDF na CPU do usuário linha a linha, e converter de volta para a JVM. Esse processo desativa o Whole-Stage CodeGen e gera gargalos severos de processamento e latência de rede/memória local.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 69: FinOps Athena Workgroups Rateio -->
+      <div class="card" id="q69" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 69 · Rateio de Custos Athena &amp; FinOps</div>
+        <h4>Como gerenciar de forma transparente e auditar financeiramente queries concorrentes em um Data Lake multi-departamento no Amazon Athena para ratear a fatura de faturamento final (AWS CUR)?</h4>
+        <p><strong>Desafio de Auditoria:</strong> Se todos os departamentos (Marketing, Financeiro, Ciência de Dados) rodarem consultas analíticas sob o mesmo Workgroup padrão (<code>primary</code>), a AWS gerará uma única cobrança consolidada, impedindo a rastreabilidade e o rateio de custos.</p>
+        <div class="callout callout-info">
+          <strong>Solução Arquitetural de FinOps:</strong>
+          <p>Divida a infraestrutura lógica do Athena criando <strong>Workgroups específicos para cada centro de custo</strong>. Associe tags IaC exclusivas a esses grupos de trabalho no Terraform. As queries executadas herdam essas tags, que são propagadas de forma granular para o AWS Cost and Usage Report (CUR). Utilizando queries SQL no Athena sobre o CUR, é possível extrair o volume de dados escaneados (QueryBytes) agrupado pelo nome do Workgroup, calculando a fatura exata de cada time de forma dinâmica e automatizada.</p>
         </div>
       </div>
 

@@ -593,6 +593,90 @@ df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_pay
         <li>No arquivo JSON de Task Settings, configure o parâmetro <code>TargetTablePrepMode</code> e o objeto <code>SchemaBehavior</code>.</li>
         <li>A melhor prática para manter a estabilidade do pipeline downstream (como no S3 Data Lake) é configurar o comportamento de DDL para **Ignorar (Do Nothing)** ou **Propagar (Cascade)** no target, garantindo que o Glue Data Catalog consiga mapear as novas colunas sem parar a tarefa.</li>
       </ul>
+
+      <h3>Evolução de Schema com Confluent Schema Registry no MSK</h3>
+      <p>Em fluxos orientados a eventos via Amazon MSK, o controle de evolução de schemas de payloads deve ser feito na borda usando o **Confluent Schema Registry** (com compatibilidade Backward, Forward ou Full). A compatibilidade <strong>Backward</strong> (padrão recomendado) garante que os leitores analíticos downstream (ex: jobs Spark) consigam ler dados antigos gravados sob a versão anterior e também novos dados que adicionaram campos opcionais com valores nulos padrão, sem quebras no job.</p>
+
+      <div class="abox note">
+        <strong>Case Prático: Ingestão de CDC Resiliente com Evolução de Schema (DMS + Apache Iceberg)</strong>
+        <br>Em um cenário corporativo, uma alteração de banco (ex: inclusão da coluna <code>desconto_cupom</code> no PostgreSQL) precisa ser refletida no Lakehouse sem quebra de pipelines.
+        <br><strong>Fluxo Resiliente:</strong>
+        <ol>
+          <li>O AWS DMS detecta o <code>ALTER TABLE</code> no WAL do PostgreSQL.</li>
+          <li>Com o <code>SchemaBehavior</code> definido como <code>Cascade</code>, o DMS insere os novos registros contendo o campo extra no arquivo Parquet temporário de CDC no S3.</li>
+          <li>O Spark Structured Streaming consome os metadados do Iceberg.</li>
+          <li>Ao realizar o <code>MERGE INTO</code>, o Iceberg aplica <strong>Schema Evolution nativo</strong> (armazenando os novos dados mantendo a compatibilidade de IDs de colunas), atualizando a tabela de forma transparente sem recriar tabelas ou reescrever arquivos históricos.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- NOVA SEÇÃO: DYNAMIC PARTITIONING AVANÇADO NO FIREHOSE -->
+    <section class="section" id="firehose-dynamic">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">04.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Dynamic Partitioning no Kinesis Firehose Avançado</h2>
+          <p>Como usar Inline Parsing, expressões JQ e metadata projection para economia de processamento</p>
+        </div>
+      </div>
+
+      <p>O <strong>Dynamic Partitioning</strong> permite que o Firehose leia chaves de partições dinamicamente diretamente de campos do JSON e grave os arquivos Parquet/JSON organizados em pastas estruturadas no S3. Isso elimina a necessidade de rodar funções AWS Lambda complexas e caras apenas para reestruturar os caminhos lógicos do S3.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid var(--emr);">
+          <div class="cc-tag">Configuração</div>
+          <div class="cc-title">Expression Parsing JQ</div>
+          <div class="cc-body">
+            <strong>JQ Expressões:</strong> Permite extrair valores do JSON. Por exemplo, <code>.origem_canal</code> extrai o canal que enviou a transação (ex: Web, App, Store). O Firehose utiliza esse valor para compor o prefixo de salvamento no S3.
+          </div>
+        </div>
+
+        <div class="concept-card" style="border-top: 4px solid var(--emr);">
+          <div class="cc-tag">FinOps / S3</div>
+          <div class="cc-title">Metadata Projection</div>
+          <div class="cc-body">
+            <strong>Prefixos Dinâmicos:</strong> Defina caminhos customizados no S3 usando as variáveis obtidas: <code>dados/canal=!{partitionKeyFromQuery:origem_canal}/ano=!{timestamp:yyyy}/mes=!{timestamp:MM}/</code>. Organiza e previne gargalos de requisições no S3.
+          </div>
+        </div>
+      </div>
+
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># Exemplo de configuração Terraform do Kinesis Firehose com Dynamic Partitioning</span>
+resource <span class="s">"aws_kinesis_firehose_delivery_stream"</span> <span class="s">"extended_s3_stream"</span> {
+  name        = <span class="s">"kinesis-firehose-dynamic-partitioning"</span>
+  destination = <span class="s">"extended_s3"</span>
+
+  extended_s3_configuration {
+    role_arn   = aws_iam_role.firehose_role.arn
+    bucket_arn = aws_s3_bucket.bucket.arn
+
+    <span class="c"># Ativa a partição dinâmica no S3</span>
+    dynamic_partitioning_configuration {
+      enabled = true
+    }
+
+    <span class="c"># Prefixo do S3 customizado projetado a partir dos metadados</span>
+    prefix              = <span class="s">"transactions/canal=!{partitionKeyFromQuery:origem_canal}/ano=!{timestamp:yyyy}/"</span>
+    error_output_prefix = <span class="s">"transactions-errors/!{firehose:error-output-type}/"</span>
+
+    processing_configuration {
+      enabled = true
+
+      <span class="c"># Metadata Extraction baseada em JQ</span>
+      processors {
+        type = <span class="s">"MetadataExtraction"</span>
+        parameters {
+          parameter_name  = <span class="s">"JsonParsingEngine"</span>
+          parameter_value = <span class="s">"JQ-1.6"</span>
+        }
+        parameters {
+          parameter_name  = <span class="s">"MetadataCollectionQuery"</span>
+          parameter_value = <span class="s">"{origem_canal:.canal}"</span> <span class="c"># Extrai o campo '.canal' do payload JSON</span>
+        }
+      }
+    }
+  }
+}</pre>
     </section>
 
     <section class="section" id="dynamodb">
