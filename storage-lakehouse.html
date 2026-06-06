@@ -812,6 +812,46 @@ spark.sql(<span class="s">"""
       INSERT (id_cliente, nome, limite_credito, data_atualizacao)
       VALUES (source.id_cliente, source.nome, source.limite_credito, source.data_atualizacao)
 """</span>)</pre>
+
+      <h3>Manutenção Crítica de Metadados e Limpeza do Apache Iceberg</h3>
+      <p>Em ambientes de streaming ou batches frequentes (ex: micro-batches rodando a cada 5 minutos), o Apache Iceberg cria um snapshot a cada commit realizado com sucesso. Isso causa dois problemas de infraestrutura severos no Data Lake:</p>
+      <ul>
+        <li><strong>Metadados Inflados (Metadata Bloat):</strong> O arquivo <code>metadata.json</code> e os manifestos crescem cumulativamente. Um leitor (ex: query Athena) precisa baixar todo o histórico de snapshots ativos para montar a visão lógica da tabela, gerando latências de segundos apenas na etapa de parsing do catálogo.</li>
+        <li><strong>Arquivos Órfãos e Históricos:</strong> À medida que snapshots antigos expiram, os arquivos físicos Parquet correspondentes continuam no bucket S3, acumulando custos silenciosos de FinOps.</li>
+      </ul>
+
+      <p>Para mitigar esses gargalos, implemente uma rotina regular de **Manutenção e Compactação do Iceberg** via Spark SQL ou Procedure em seu orquestrador:</p>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Comandos de Manutenção do Apache Iceberg (Spark SQL / Procedures)</div>
+        <div class="abox-body">
+          <p>Execute estes comandos sequenciais em um Job Spark mensal ou semanal para limpar metadados e arquivos obsoletos:</p>
+          <pre><code class="language-sql">-- 1. Expirar Snapshots Antigos (Mantém histórico de Time-Travel por apenas 7 dias)
+CALL glue_catalog.system.expire_snapshots(
+  table => 'trusted_db.cliente_trusted',
+  older_than => TIMESTAMP '2026-05-30 00:00:00.000',
+  retain_last => 10
+);
+
+-- 2. Deletar Arquivos Órfãos (Arquivos físicos no S3 que não constam em nenhum metadados ativo)
+CALL glue_catalog.system.remove_orphan_files(
+  table => 'trusted_db.cliente_trusted',
+  older_than => TIMESTAMP '2026-05-30 00:00:00.000'
+);
+
+-- 3. Compactar Arquivos Pequenos (Otimiza a leitura transformando arquivos pequenos em blocos de 128MB/512MB)
+CALL glue_catalog.system.rewrite_data_files(
+  table => 'trusted_db.cliente_trusted',
+  strategy => 'binpack',
+  options => map('target-file-size-bytes', '536870912') -- Otimiza para arquivos de 512MB
+);
+
+-- 4. Reescrever Manifestos (Consolida manifestos esparsos em blocos sequenciais compactados)
+CALL glue_catalog.system.rewrite_manifests(
+  table => 'trusted_db.cliente_trusted'
+);</code></pre>
+        </div>
+      </div>
     </section>
 
     <section class="section" id="erros">

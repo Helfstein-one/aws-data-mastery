@@ -849,7 +849,6 @@ df_stream.writeStream \
         </div>
       </div>
 
-      <div class="grid-2">
         <div>
           <h4>Como Funciona</h4>
           <p>O Glue utiliza um ambiente Spark totalmente gerenciado. Ele abstrai a gestão de clusters, permitindo focar no código Python/Scala. O <strong>Data Catalog</strong> atua como um Metastore centralizado para o Lakehouse.</p>
@@ -859,16 +858,61 @@ df_stream.writeStream \
           </ul>
         </div>
         <div>
-          <h4>Performance & Configurações</h4>
-          <ul>
+          <h4>Performance & Configurações (Sizing de Workers e Executors)</h4>
+          <p>Diferente do Spark tradicional onde você define <code>spark.executor.instances</code>, no AWS Glue você provisiona DPUs (Data Processing Units) e seleciona o <strong>Worker Type</strong>. O runtime do Glue configura a JVM automaticamente:</p>
+          
+          <div class="tbl-wrap" style="margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Worker Type</th>
+                  <th>DPUs</th>
+                  <th>vCPUs</th>
+                  <th>RAM</th>
+                  <th>Spark Executors por Worker</th>
+                  <th>Recursos por Executor Spark</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>G.1X</strong></td>
+                  <td>1 DPU</td>
+                  <td>4 vCPUs</td>
+                  <td>16 GB</td>
+                  <td>1 Executor</td>
+                  <td>4 vCPUs, 10 GB RAM (restante para OS/YARN)</td>
+                </tr>
+                <tr>
+                  <td><strong>G.2X</strong></td>
+                  <td>2 DPUs</td>
+                  <td>8 vCPUs</td>
+                  <td>32 GB</td>
+                  <td>1 Executor</td>
+                  <td>8 vCPUs, 24 GB RAM (ideal para grandes volumes de dados)</td>
+                </tr>
+                <tr>
+                  <td><strong>G.4X</strong></td>
+                  <td>4 DPUs</td>
+                  <td>16 vCPUs</td>
+                  <td>64 GB</td>
+                  <td>1 Executor</td>
+                  <td>16 vCPUs, 52 GB RAM (processamento massivo e ML local)</td>
+                </tr>
+                <tr>
+                  <td><strong>G.8X</strong></td>
+                  <td>8 DPUs</td>
+                  <td>32 vCPUs</td>
+                  <td>128 GB</td>
+                  <td>1 Executor</td>
+                  <td>32 vCPUs, 108 GB RAM (altamente intensivo em memória)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ul style="margin-top:15px;">
             <li><strong>Worker Auto Scaling:</strong> Disponível no Glue 3.0+, escala dinamicamente o número de workers conforme a carga do job, reduzindo custos em shuffles ou processamentos variáveis.</li>
-            <li><strong>Tipos de Workers:</strong>
-              <ul>
-                <li><strong>G.1X:</strong> 4 vCPUs, 16 GB RAM, 64 GB Disk. (1 DPU)</li>
-                <li><strong>G.2X:</strong> 8 vCPUs, 32 GB RAM, 128 GB Disk. (2 DPUs)</li>
-                <li><strong>G.4X/G.8X:</strong> Para jobs de altíssima escala e memória intensiva.</li>
-              </ul>
-            </li>
+            <li><strong>Regra Prática de Tuning para OOM no Glue:</strong> Se o seu Job do Glue falhar por falta de memória física (OOM) no Worker, alterar de G.1X para G.2X <strong>dobra a memória disponível para o executor Spark (de 10GB para 24GB)</strong> mantendo o mesmo número de tarefas paralelas por nó, eliminando o estouro do contêiner JVM.</li>
           </ul>
         </div>
       </div>
@@ -879,24 +923,20 @@ df_stream.writeStream \
         <div class="sec-num" style="color:var(--emr)">14</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Amazon EMR on EC2: Clusters Customizados</h2>
-          <p>Máximo controle sobre a infraestrutura e tuning de performance</p>
-        </div>
-      </div>
-
+    
       <div class="grid-2">
         <div>
-          <h4>Como Funciona & Arquitetura</h4>
+          <h4>Como Funciona &amp; Arquitetura (Guia de Instâncias Master/Core/Task)</h4>
           <p>O EMR on EC2 permite rodar o ecossistema Hadoop completo. A separação física dos nós permite otimização de custos e performance:</p>
           <ul>
-            <li><strong>Master Node:</strong> Orquestra o cluster. Para alta disponibilidade, use 3 Masters.</li>
-            <li><strong>Core Nodes:</strong> Processamento e Armazenamento (HDFS). Essenciais para jobs que dependem de escrita local persistente.</li>
-            <li><strong>Task Nodes:</strong> Computação pura. Use 100% <strong>Spot Instances</strong> aqui para FinOps agressivo.</li>
+            <li><strong>Master Node (Coordenação):</strong> Orquestra o cluster (HDFS NameNode e YARN ResourceManager). Não faz processamento pesado de dados. Famílias recomendadas: <strong>m5.xlarge / m5.2xlarge</strong>. Para produção crítica, use 3 Masters para alta disponibilidade (Active-Passive NameNodes).</li>
+            <li><strong>Core Nodes (Dados + CPU):</strong> Executam os Daemons HDFS DataNode e executores Spark. Requerem alta performance de disco local e RAM. Famílias recomendadas: <strong>r5d.2xlarge / r6gd.2xlarge</strong> (o "d" indica NVMe SSD local, ideal para blocos HDFS e shuffle local rápido) ou instâncias <strong>i3en/i4g</strong> de armazenamento intenso. Nunca use Spot aqui em produção!</li>
+            <li><strong>Task Nodes (Processamento Puro):</strong> Não guardam dados HDFS. Apenas rodam executores do YARN/Spark. Famílias recomendadas: <strong>c5.2xlarge / c6g.2xlarge</strong> (otimizadas para CPU) ou <strong>r5.2xlarge</strong> se o job exigir mais memória física. <strong>Use 100% Spot Instances nos Task Nodes</strong> para máxima otimização FinOps.</li>
             <li><strong>Managed Scaling:</strong> Redimensiona o cluster automaticamente em segundos com base em métricas do YARN, muito mais eficiente que o Auto Scaling tradicional do EC2.</li>
           </ul>
         </div>
         <div>
-          <h4>Performance & Configurações</h4>
+          <h4>Performance &amp; Configurações</h4>
           <ul>
             <li><strong>Instance Fleets:</strong> Permite misturar até 30 tipos de instâncias EC2, garantindo que o cluster suba mesmo com baixa disponibilidade de certos tipos de Spot.</li>
             <li><strong>EMR Runtime:</strong> Ativado por padrão nas versões 6.x+, traz otimizações de query e melhor integração com S3 (EMRFS).</li>
@@ -904,6 +944,31 @@ df_stream.writeStream \
             <li><strong>Graceful Decommissioning:</strong> Vital para clusters que utilizam Spot nos Task Nodes. O YARN gerencia o desligamento da instância transferindo dados locais de shuffle antes do nó ser removido, mitigando erros de <code>FetchFailedException</code>.</li>
             <li><strong>Ajuste de YARN Queues:</strong> Utilizando o <code>CapacityScheduler</code>, você pode criar filas lógicas que particionam os recursos do cluster EC2 entre múltiplos pipelines concorrentes.</li>
           </ul>
+
+          <div class="abox">
+            <div class="abox-hdr" style="background: var(--navy)">Configuração de Filas Concorrentes (capacity-scheduler.xml)</div>
+            <div class="abox-body">
+              <p>Exemplo de tuning de fila YARN para dividir recursos do cluster: 60% para a fila <code>producao</code> e 40% para a fila <code>analistas</code>:</p>
+              <pre><code class="language-xml">&lt;configuration&gt;
+  &lt;property&gt;
+    &lt;name&gt;yarn.scheduler.capacity.root.queues&lt;/name&gt;
+    &lt;value&gt;producao,analistas&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;yarn.scheduler.capacity.root.producao.capacity&lt;/name&gt;
+    &lt;value&gt;60&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;yarn.scheduler.capacity.root.analistas.capacity&lt;/name&gt;
+    &lt;value&gt;40&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;yarn.scheduler.capacity.root.producao.maximum-capacity&lt;/name&gt;
+    &lt;value&gt;100&lt;/value&gt;
+  &lt;/property&gt;
+&lt;/configuration&gt;</code></pre>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -928,13 +993,16 @@ df_stream.writeStream \
           </ul>
         </div>
         <div>
-          <h4>Performance & Configurações</h4>
+          <h4>Performance, Dimensionamento &amp; FinOps (ACUs Sizing)</h4>
+          <p>No EMR Serverless, os custos e recursos são dimensionados em **ACUs (Application Capacity Units)**. Você define limites máximos e recursos por executor Spark:</p>
           <ul>
             <li><strong>Configuração de Workers:</strong> Diferente do Glue, você tem controle granular sobre os recursos de cada worker (ex: 2 vCPU e 16 GB RAM) até limites de 16 vCPU / 120 GB por worker.</li>
+            <li><strong>Fórmula de Cobrança / Sizing:</strong>
+              <br><code>Custo = (vCPU_total * Tempo_sec * $/vCPU-hora) + (RAM_total_GB * Tempo_sec * $/GB-hora)</code>
+              <br><em>Boas Práticas de Sizing:</em> Para jobs I/O intensive ou de processamento de texto pesado (ex: parsing JSON complexo), utilize mais vCPU por worker (ex: 4 vCPU e 16 GB RAM). Para Joins e agregações analíticas pesadas (onde ocorre muito spill), utilize mais memória por worker (ex: 2 vCPU e 32 GB RAM).
+            </li>
             <li><strong>Customização de Disco:</strong> É possível configurar o armazenamento efêmero por worker (de 20GB a 200GB), crucial para shuffles pesados.</li>
-            <li><strong>FinOps:</strong> Você paga apenas pelo que consome (vCPU, RAM, Storage por segundo), ideal para workloads esporádicos ou com picos imprevisíveis.</li>
             <li><strong>Custom Docker Images:</strong> Você pode empacotar bibliotecas Python/C++ complexas no Amazon ECR em uma imagem base customizada, acelerando a inicialização e garantindo isolamento total (multi-tenant).</li>
-            <li><strong>VPC e Redes Privadas:</strong> EMR Serverless provisiona ENIs diretamente nas suas sub-redes VPC, garantindo conectividade privada e segura a bancos como RDS e Redshift.</li>
           </ul>
         </div>
       </div>

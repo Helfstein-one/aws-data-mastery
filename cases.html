@@ -2393,6 +2393,45 @@
         <p>A eliminação de Lambdas na etapa de ingress cortou custos operacionais em 65%. O uso de VPC Endpoints reduziu em 92% os custos de transferências de dados de rede da VPC analítica, e a arquitetura ativa-passiva gerenciada pelo Route 53 resultou em 99,999% de disponibilidade global medida.</p>
       </div>
     </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 11: MIGRAÇÃO E SIZING EMR / ICEBERG -->
+    <section class="section" id="case-emr-iceberg-migracao">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#06b6d4">11</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#06b6d4"></div>
+          <h2>Case 11: Migração e Sizing de Data Lakehouse de 20 Bilhões de Registros (EMR &amp; Iceberg)</h2>
+          <p>Migração física de dados brutos legados para Apache Iceberg no EMR Serverless detalhando cálculos de ACU, compactação e Object Storage Layout</p>
+        </div>
+      </div>
+
+      <p>Um grande marketplace de e-commerce precisa consolidar e migrar 5 anos de transações de vendas do Datalake legado (tabelas externas Hive particionadas por data, totalizando 40 TB e 20 bilhões de registros de dados inconsistentes) para tabelas Apache Iceberg no EMR Serverless. A migração deve evitar gargalos de S3 SlowDown no bucket final, compactar mais de 4 milhões de arquivos pequenos legados na ingestão e definir o dimensionamento ideal do EMR para processar a janela em menos de 8 horas.</p>
+
+      <h3>Dimensionamento (Sizing) e Configuração das Aplicações</h3>
+      <ol>
+        <li><strong>Matemática de Sizing do EMR Serverless (ACUs):</strong>
+          <br>Considerando a leitura paralela e o volume de shuffle necessário para re-particionar 40 TB, desenhamos a seguinte estrutura:
+          <ul>
+            <li><strong>Worker Type Configuration:</strong> 4 vCPUs e 32 GB RAM por executor (relacionamento de 8GB por vCPU, ideal para evitar spills frequentes de disco em aggregations de joins).</li>
+            <li><strong>Executors Máximos:</strong> Limitado em 100 Workers simultâneos. Isso entrega: <code>400 vCPUs e 3.200 GB RAM</code> de capacidade máxima computacional.</li>
+            <li><strong>Armazenamento Efêmero por Worker:</strong> Configurado em 120 GB de disco NVMe temporário para evitar falhas físicas de estouro de disco local na gravação de partições do Iceberg (Shuffle Disk Space).</li>
+          </ul>
+        </li>
+        <li><strong>Prevenção de S3 SlowDown (Object Storage Layout):</strong>
+          <br>Para impedir HTTP 503 SlowDowns decorrentes de milhares de threads Spark gravando sequencialmente no mesmo prefixo do S3, ativamos a propriedade do Iceberg <code>'write.object-storage.enabled' = 'true'</code>. Isso injeta hashes MD5 pseudo-aleatórios na raiz das URIs das partições (ex: <code>s3://gold-bucket/a8f9c1/vendas/data_venda=...</code>), espalhando as conexões por diferentes sub-partições internas da infraestrutura física do S3 e superando o teto de 3.500 escritas/s.
+        </li>
+        <li><strong>Compactação de Pequenos Arquivos no Spark DDL:</strong>
+          <br>Os dados de entrada são distribuídos fisicamente via Spark aplicando a cláusula <code>'write.distribution-mode' = 'hash'</code>. Isso reagrupa os registros pelo hash da partição de destino nos executores corretos antes de iniciar o commit, assegurando que cada executor grave arquivos grandes de ~512 MB, em vez de centenas de arquivos de kilobytes.
+        </li>
+      </ol>
+
+      <div class="callout callout-tip">
+        <strong>Resultado de Negócio:</strong>
+        <p>A migração foi concluída em 5 horas e 40 minutos (SLA cumprido com folga). Os 4 milhões de arquivos pequenos foram compactados em menos de 85.000 arquivos Parquet de 512 MB. As consultas analíticas do Athena sobre a camada Gold tornaram-se 90% mais rápidas devido ao pruning aprimorado de metadados do Iceberg, e o custo do job no EMR Serverless foi de apenas $380 devido ao scaling agressivo em tempo de execução.</p>
+      </div>
+    </section>
   </main>
 </div>
 

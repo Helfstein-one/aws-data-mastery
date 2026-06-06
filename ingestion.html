@@ -617,6 +617,7 @@ df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_pay
       </ul>
 
       <h3>Estratégias de Chaves e Índices (Boas Práticas)</h3>
+      <h3>Estratégias de Chaves e Índices (Boas Práticas)</h3>
       <p>Diferente de bancos SQL que permitem buscas eficientes por qualquer coluna, no DynamoDB a performance é estritamente vinculada ao design das chaves de acesso:</p>
       <ul>
         <li><strong>Partition Key (PK):</strong> Determina o nó físico (hash) onde o dado será armazenado. A boa prática é usar IDs de alta cardinalidade (como `user_id`, `session_id` ou UUIDs) para evitar Hot Partitions, garantindo balanceamento de I/O por todo o cluster.</li>
@@ -624,6 +625,78 @@ df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_pay
         <li><strong>Global Secondary Index (GSI):</strong> Cria uma projeção paralela assíncrona da tabela com chaves de partição e classificação diferentes. Permite realizar consultas alternativas de leitura (ex: buscar um usuário pelo email quando a PK principal da tabela base for seu `id_numerico`), mas há um custo de escrita adicional à medida que as atualizações são propagadas em background da tabela principal.</li>
         <li><strong>Local Secondary Index (LSI):</strong> Compartilha a mesma PK que a tabela principal, mas possui SK diferente. LSI tem a restrição de que precisa ser definido no momento da criação da tabela e as coleções de itens da PK têm limite de 10 GB. Preferir GSI sobre LSI nas arquiteturas modernas.</li>
       </ul>
+
+      <h3>Matemática de Capacidade e Partições (Sizing de Especialista)</h3>
+      <p>Para desenhar arquiteturas resilientes e econômicas no DynamoDB, é indispensável dominar os limites físicos de partição e as fórmulas de cálculo de capacidade:</p>
+      
+      <div class="abox info">
+        <strong>Fórmulas de Cálculo de WCU e RCU:</strong>
+        <br><br>
+        <strong>1. Unidades de Capacidade de Escrita (WCU):</strong>
+        <br>1 WCU representa <strong>1 escrita por segundo para um item de até 1 KB</strong>.
+        <br>• Para itens maiores: <code>WCU = t_escrita * Teto(Tamanho do Item em KB / 1 KB)</code>
+        <br>• Para escritas transacionais (TransactWriteItems): Consomem o dobro da capacidade: <code>WCU = t_escrita * Teto(Tamanho do Item em KB / 1 KB) * 2</code>
+        <br><br>
+        <strong>2. Unidades de Capacidade de Leitura (RCU):</strong>
+        <br>1 RCU representa <strong>1 leitura fortemente consistente por segundo</strong> OU <strong>2 leituras eventualmente consistentes por segundo</strong> para um item de até 4 KB.
+        <br>• Leituras Fortemente Consistentes (Strongly Consistent): <code>RCU = t_leitura * Teto(Tamanho do Item em KB / 4 KB)</code>
+        <br>• Leituras Eventualmente Consistentes (Eventually Consistent): <code>RCU = t_leitura * Teto(Tamanho do Item em KB / 4 KB) * 0.5</code>
+        <br>• Leituras Transacionais (TransactGetItems): Consomem o dobro de RCU fortemente consistente: <code>RCU = t_leitura * Teto(Tamanho do Item em KB / 4 KB) * 2</code>
+      </div>
+
+      <div class="abox note" style="margin-top: 20px;">
+        <strong>Fórmula de Divisão de Partições Físicas:</strong>
+        <br>Uma partição do DynamoDB é alocada fisicamente quando a tabela ultrapassa os seguintes limites:
+        <br>• Limite de Armazenamento: <strong>10 GB de dados</strong> por partição.
+        <br>• Limite de Rendimento (Throughput): <strong>1.000 WCUs</strong> OU <strong>3.000 RCUs</strong> por partição.
+        <br><br>
+        A fórmula para determinar a quantidade de partições físicas de uma tabela provisionada é:
+        <br><code>Número de Partições = Teto( Max( (RCUs_Total / 3.000) + (WCUs_Total / 1.000), Armazenamento_Total_GB / 10 ) )</code>
+        <br><br>
+        <em>Implicação de Design:</em> A capacidade provisionada total é dividida <strong>igualmente</strong> entre todas as partições. Se a tabela tem 10 partições e 10.000 RCUs provisionados, cada partição física recebe apenas 1.000 RCUs. Um padrão de acesso concentrado em uma única chave de partição (Hot Partition) causará erro de <code>ProvisionedThroughputExceededException</code> mesmo que o consumo total esteja bem abaixo dos 10.000 RCUs globais da tabela.
+      </div>
+
+      <h3>Write Sharding: Mitigação Física de Hot Partitions</h3>
+      <p>Em fluxos de alta vazão (ex: IoT ou cliques em tempo real), concentrar o mesmo tipo de evento em uma única partição do DynamoDB causa gargalos. A técnica de <strong>Write Sharding</strong> adiciona um sufixo numérico (salt) na partição física:</p>
+
+      <div class="dw" style="margin: 20px 0;">
+        <svg viewBox="0 0 800 280" width="100%" height="280" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="280" fill="#0f172a" rx="14"/>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700" letter-spacing="1">WRITE SHARDING (SALTING) NO DYNAMODB</text>
+          
+          <!-- Ingress events -->
+          <rect x="20" y="80" width="180" height="150" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="110" y="105" text-anchor="middle" fill="#f43f5e" font-size="11" font-weight="700">Eventos de Alta Vazão</text>
+          <text x="110" y="130" text-anchor="middle" fill="#cbd5e1" font-size="8.5">Chave: "DEVICE_99"</text>
+          <text x="110" y="150" text-anchor="middle" fill="#cbd5e1" font-size="8.5">Vazão: 5.000 writes/s</text>
+          <text x="110" y="170" text-anchor="middle" fill="#94a3b8" font-size="8">(Excede 1.000 WCU/s)</text>
+          
+          <!-- Logic / Salting -->
+          <rect x="260" y="80" width="200" height="150" rx="8" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="360" y="105" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700">Função Hash (Salting)</text>
+          <text x="360" y="135" text-anchor="middle" fill="#cbd5e1" font-size="8">Calcula hash aleatório (0 a 4)</text>
+          <text x="360" y="155" fill="#a78bfa" font-size="8.5" font-weight="700">PK = "DEVICE_99_" + random(0,4)</text>
+          <text x="360" y="185" text-anchor="middle" fill="#64748b" font-size="7.5">Espalha o tráfego por múltiplos</text>
+          <text x="360" y="195" text-anchor="middle" fill="#64748b" font-size="7.5">nós físicos concorrentemente</text>
+
+          <!-- DynamoDB partitions -->
+          <rect x="520" y="80" width="250" height="150" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="645" y="105" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700">Partições Físicas (1.000 WCU/Part)</text>
+          
+          <rect x="540" y="125" width="210" height="25" rx="4" fill="#0f172a" stroke="#10b981"/>
+          <text x="645" y="141" text-anchor="middle" fill="#10b981" font-size="8.5">Nó Físico 1: "DEVICE_99_0" (1.000 WCU)</text>
+          
+          <rect x="540" y="155" width="210" height="25" rx="4" fill="#0f172a" stroke="#10b981"/>
+          <text x="645" y="171" text-anchor="middle" fill="#10b981" font-size="8.5">Nó Físico 2: "DEVICE_99_1" (1.000 WCU)</text>
+
+          <rect x="540" y="185" width="210" height="25" rx="4" fill="#0f172a" stroke="#10b981"/>
+          <text x="645" y="201" text-anchor="middle" fill="#10b981" font-size="8.5">Nó Físico 3: "DEVICE_99_2" (1.000 WCU)</text>
+
+          <!-- Arrows -->
+          <path d="M200,155 L250,155" stroke="#f43f5e" stroke-width="2" marker-end="url(#arrow)"/>
+          <path d="M460,155 L510,155" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+        </svg>
+      </div>
 
       <div class="abox">
         <div class="abox-hdr" style="background: var(--tf)">Infraestrutura como Código (Terraform) - DynamoDB Table</div>
@@ -710,12 +783,29 @@ df_rds = spark.read.format(<span class="s">"jdbc"</span>) \
         </div>
       </div>
 
-      <h3>Arquitetura de Leitura e Escrita Otimizada</h3>
-      <p>A ingestão a partir de bancos relacionais para o Data Lake requer cuidado absoluto para não impactar o tráfego operacional da aplicação (OLTP):</p>
-      <ul>
-        <li><strong>Arquitetura de Leitura (Offloading):</strong> Consultas pesadas de ingestão em batch (via Spark/JDBC) nunca devem apontar para a instância primária (Writer). Em vez disso, provisione <strong>Read Replicas</strong> exclusivas para o processo analítico. Com o <strong>Amazon Aurora Serverless v2</strong>, a instância de réplica pode escalar recursos de CPU/RAM (ACUs) em segundos antes de a tarefa do Glue iniciar e contrair a zero (ou ao mínimo) ao terminar.</li>
-        <li><strong>Arquitetura de Escrita:</strong> O Amazon Aurora possui uma arquitetura com storage desacoplado, replicado em 6 nós em 3 Zonas de Disponibilidade (Multi-AZ). A ingestão lógica que altera tabelas (inserts/updates) grava logs nativos diretamente na camada de armazenamento otimizada da AWS, reduzindo I/O na máquina de computação e aumentando a performance.</li>
-      </ul>
+      <h3>Arquitetura de Leitura e Escrita Otimizada (RDS vs Aurora Internals)</h3>
+      <p>A extração de dados analíticos a partir de bancos relacionais operacionais para o Data Lake (Data Ingestion) requer o domínio completo dos tradeoffs físicos entre o RDS tradicional e o Amazon Aurora:</p>
+      
+      <div class="abox info">
+        <strong>Física do I/O: RDS vs Amazon Aurora</strong>
+        <br><br>
+        <strong>1. RDS Tradicional (Multi-AZ Físico):</strong>
+        <br>• <strong>Replicação Síncrona:</strong> O RDS primário grava os blocos de dados localmente (EBS) e envia-os sincronamente pela rede para o storage do RDS secundário (Hot Standby) em outra AZ. 
+        <br>• <strong>Gargalo Analítico:</strong> Snapshots ou leituras longas na instância primária geram contenção nos discos EBS (fila de escrita de disco aumenta). Se você rodar um dump de tabela pesada na primária, pode estourar os créditos de IOPS (Burst Balance) de volumes <code>gp2/gp3</code>, degradando a aplicação transacional.
+        <br>• <strong>Réplicas de Leitura (Assíncronas):</strong> O RDS envia as alterações físicas das páginas de dados de forma assíncrona pela rede para as réplicas. Sob alta carga de gravação na primária, a rede ou o processamento de updates na réplica engargala, gerando alto <strong>Replica Lag</strong>.
+        <br><br>
+        <strong>2. Amazon Aurora (Storage Compartilhado Virtual):</strong>
+        <br>• <strong>Arquitetura Desacoplada e Baseada em Log:</strong> O Aurora não envia blocos de arquivos inteiros. O nó primário (Writer) escreve apenas registros de logs de transação (redo logs) para uma camada de armazenamento lógico virtual. Esse armazenamento é replicado em 6 cópias distribuídas por 3 AZs.
+        <br>• <strong>Quorum de Escrita (Quorum-Based Commits):</strong> A gravação é considerada confirmada assim que 4 das 6 cópias de storage reconhecem o recebimento do log. Isso elimina o gargalo de esperas de latência de rede em AZs mais lentas.
+        <br>• <strong>Réplicas de Leitura sem Replicação de Storage:</strong> Como todas as réplicas de leitura (até 15) compartilham o mesmo volume virtual lógico do cluster Aurora, <strong>não há replicação física de dados para a réplica</strong>. O lag de réplica é tipicamente sub-milissegundo porque a réplica lê do mesmo disco compartilhado, atualizando apenas sua memória cache local com os redo logs.
+        <br>• <strong>Snapshots sem Impacto:</strong> Backups automatizados e snapshots manuais no Aurora são realizados diretamente na camada de armazenamento virtual distribuído, <strong>sem qualquer impacto na performance ou interrupção de I/O</strong> das instâncias Writer ou Reader.
+      </div>
+
+      <div class="abox note" style="margin-top:20px;">
+        <strong>Auto-Scaling de Leitores e endpoints:</strong>
+        <br>Para evitar saturação durante dumps e extrações do Spark (JDBC), utilize o **Reader Endpoint** do Aurora. Ele distribui as conexões analíticas em round-robin entre todas as instâncias de réplica. 
+        <br>Você pode configurar políticas de **Auto Scaling do RDS** para as instâncias Reader com base em CPU (ex: quando uso médio de CPU ultrapassar 70%, adicione novas réplicas de leitura automaticamente para suportar o processamento analítico paralelo, destruindo-as após a janela batch encerrar).
+      </div>
 
       <h3>Estratégias de Índices e Chaves de Otimização</h3>
       <p>O desempenho da transferência relacional de dados sofre impactos profundos da modelagem do banco de dados na AWS:</p>
