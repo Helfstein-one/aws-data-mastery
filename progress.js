@@ -124,6 +124,16 @@
         "dataops-mlops.html#mlops-core"
       ]
     },
+    networking: {
+      name: "🌐 Rede &amp; Ingress de Dados",
+      badge: "Mestre das Redes",
+      color: "#06b6d4",
+      items: [
+        "networking-ingress.html#dns-cdn",
+        "networking-ingress.html#api-alb",
+        "networking-ingress.html#vpc-endpoints"
+      ]
+    },
     security: {
       name: "🛡️ Segurança & IaC",
       badge: "Guardião de Segurança",
