@@ -520,6 +520,70 @@ TBLPROPERTIES (
     'history.expire.min-snapshots-to-keep' = '5'
 );</code></pre>
 
+      <h3 style="margin-top: 30px;">Z-Order Clustering (Curva de Morton) vs. Particionamento Hierárquico</h3>
+      <p>Em volumes de dados muito grandes (Petabytes), o particionamento físico tradicional (ex: particionar por <code>ano/mes/dia</code>) gera problemas de "Overpartitioning" se o grão de busca for muito fino, criando milhões de arquivos pequenos. A alternativa para consultas que filtram por múltiplas colunas simultaneamente é o <strong>Z-Order Clustering</strong>:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Funcionalidade / Critério</th>
+              <th>Particionamento Hierárquico Tradicional</th>
+              <th>Z-Order Clustering (Multidimensional)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Conceito Físico</strong></td>
+              <td>Separa fisicamente os arquivos em diretórios separados no S3.</td>
+              <td>Mapeia dados multidimensionais em uma única dimensão (curva em Z) mantendo a localidade lógica de múltiplas colunas no mesmo arquivo.</td>
+            </tr>
+            <tr>
+              <td><strong>Campos Ideais</strong></td>
+              <td>Baixa cardinalidade (ex: <code>regiao</code>, <code>canal_venda</code>, <code>ano</code>).</td>
+              <td>Alta cardinalidade filtrada em conjunto (ex: <code>id_usuario</code> e <code>codigo_produto</code> simultaneamente).</td>
+            </tr>
+            <tr>
+              <td><strong>Custo de Escrita</strong></td>
+              <td>Baixo (Spark grava em pastas separadas).</td>
+              <td>Alto (exige reordenação física global do DataFrame com alta demanda de CPU e Shuffle de memória).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <pre><code class="language-sql">-- Otimizando o layout físico com Z-Order no Athena / Spark SQL
+ALTER TABLE prod.silver.transacoes WRITE ORDERED BY ZORDER (id_usuario, codigo_produto);</code></pre>
+
+      <h3 style="margin-top: 30px;">Write-Audit-Publish (WAP) com Apache Iceberg</h3>
+      <p>O padrão WAP garante que pipelines de dados nunca exponham dados corrompidos aos relatórios finais (camada Gold/Serving). Ele funciona gravando dados em uma **branch lógica temporária** (Write), rodando testes de qualidade/contratos (Audit), e avançando a branch principal (Publish) apenas em caso de sucesso:</p>
+
+      <pre><code class="language-python"># Exemplo de fluxo de trabalho WAP usando PySpark com Apache Iceberg
+# 1. Escreve os dados na branch temporária 'wap_branch'
+df_novos_dados.write \
+    .format("iceberg") \
+    .option("branch", "wap_branch") \
+    .mode("append") \
+    .save("prod.silver.transacoes")
+
+# 2. Audit: Executa consultas de qualidade direcionadas para a branch wap_branch
+df_audit = spark.read \
+    .format("iceberg") \
+    .option("branch", "wap_branch") \
+    .load("prod.silver.transacoes")
+
+erros_encontrados = df_audit.filter("valor_transacao < 0").count()
+
+# 3. Publish: Se auditoria passar, faz o Fast-Forward da branch principal para a wap_branch
+if erros_encontrados == 0:
+    print("Sucesso! Mesclando alterações na branch main.")
+    spark.sql("CALL prod.system.cherry_pick_snapshot('silver.transacoes', 'wap_branch')")
+else:
+    raise ValueError(f"Auditoria falhou. Encontrados {erros_encontrados} registros invalidos!")</code></pre>
+
+      <h3 style="margin-top:30px;">Metadata-Only Queries (Consulta de Custo Zero)</h3>
+      <p>Consultas de agregação simples (ex: <code>SELECT COUNT(*), MAX(data_atualizacao) FROM tabela</code>) em tabelas Iceberg bem compactadas são respondidas diretamente **lendo apenas os arquivos Manifestos (Avro)** de metadados, sem carregar um único byte dos arquivos físicos Parquet no S3. O Athena e o Spark resolvem a query em milissegundos com custo zero de varredura (Data Scanned = 0MB).</p>
+
       <div class="abox info" style="margin-top:20px;">
         <strong><span style="color:var(--sql)">Manual Prático do Especialista em Dados - Recursos Cloud de Armazenamento:</span></strong>
         <br><br>

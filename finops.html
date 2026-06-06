@@ -317,6 +317,37 @@ LIMIT 15;</code></pre>
         <strong>AWS Budgets e Anomalias de Custo:</strong>
         Configure o **AWS Cost Anomaly Detection** utilizando Machine Learning nativo para identificar picos de consumo atípicos (ex: um loop infinito no Spark gerando 100 novas instâncias EC2) e notificar imediatamente o time via Slack ou e-mail.
       </div>
+
+      <h3>Alocação de Custos FinOps Dinâmica: Rateio de Workgroups</h3>
+      <p>Em lagos de dados compartilhados corporativos (Multi-Tenant Data Lakes), múltiplos times e centros de custo executam queries analíticas concorrentes. A melhor prática para ratear custos de forma dinâmica e justa baseia-se no uso de <strong>Amazon Athena Workgroups</strong>:</p>
+      <ul>
+        <li><strong>Isolamento Lógico:</strong> Crie um Workgroup para cada Centro de Custo/Squad (ex: <code>wg-marketing</code>, <code>wg-financeiro</code>).</li>
+        <li><strong>Limites Rígidos de Escaneamento:</strong> Defina limites de dados escaneados por query (ex: limite de 10 GB por consulta no Marketing) e limites cumulativos diários/mensais para evitar queries cartesianas acidentais que impactem o orçamento geral.</li>
+        <li><strong>Metodologia de Rateio Financeiro:</strong> As tags IaC associadas a cada Workgroup se propagam para o AWS CUR (Cost and Usage Report). Isso viabiliza o cálculo do custo exato por departamento a partir da extração do volume de dados processados por grupo de trabalho.</li>
+      </ul>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--ok)">Query SQL: Rateio de Custos Athena por Workgroup</div>
+        <div class="abox-body">
+          <p>Para extrair o rateio de custos de faturamento agrupados por Workgroup no faturamento mensal do CUR:</p>
+          <pre><code class="language-sql">SELECT 
+    line_item_usage_account_id AS conta_aws,
+    -- Identifica o Workgroup do Athena nas propriedades do recurso
+    split_part(line_item_resource_id, '/', 2) AS workgroup_name,
+    SUM(line_item_usage_amount) AS gb_escaneados,
+    SUM(line_item_unblended_cost) AS custo_total_dolar
+FROM 
+    billing_cur_database.cur_table
+WHERE 
+    line_item_product_code = 'AmazonAthena'
+    AND line_item_usage_type LIKE '%QueryBytes%'
+    AND usage_start_date >= current_date - interval '30' day
+GROUP BY 
+    1, 2
+ORDER BY 
+    custo_total_dolar DESC;</code></pre>
+        </div>
+      </div>
     </section>
 
     <section class="section" id="finops-terraform">

@@ -483,7 +483,28 @@ resource <span class="s">"aws_vpc_endpoint"</span> <span class="s">"s3"</span> {
   <span class="c"># Associa automaticamente à tabela de rotas das subredes privadas</span>
   route_table_ids = [aws_route_table.private.id]
   tags            = { Name = <span class="s">"s3-gateway-endpoint"</span> }
+}
+
+<span class="c"># 6. Conectividade Multi-Account / Multi-VPC com Transit Gateway</span>
+<span class="c"># Quando diferentes contas da AWS precisam interagir de forma privada (ex: Conta Ingestion conectada ao Data Lake na Conta Storage)</span>
+<span class="c"># sem expor o tráfego a internet pública.</span>
+resource <span class="s">"aws_ec2_transit_gateway"</span> <span class="s">"tgw"</span> {
+  description = <span class="s">"Transit Gateway Centralizador para Roteamento Analitico Multi-Account"</span>
+  tags        = { Name = <span class="s">"central-analytics-tgw"</span> }
+}
+
+resource <span class="s">"aws_ec2_transit_gateway_vpc_attachment"</span> <span class="s">"attachment"</span> {
+  subnet_ids         = [aws_subnet.private_az1.id]
+  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
+  vpc_id             = aws_vpc.main.id
 }</pre>
+
+      <h3>Topologias VPC Multi-Account &amp; Peering de Rede</h3>
+      <p>Em grandes plataformas de dados organizadas em <strong>Data Mesh</strong> ou arquiteturas de múltiplas contas (Multi-Account Setup), as VPCs de contas diferentes (ex: Ingestion, Processamento e Serving) precisam de conexões rápidas. As duas principais abordagens de roteamento privado são:</p>
+      <ul>
+        <li><strong>VPC Peering:</strong> Estabelece uma conexão direta ponto-a-ponto entre duas VPCs. O tráfego corre na infraestrutura global interna da AWS e não é cobrado por tráfego cruzado se as VPCs estiverem na mesma região e AZ. É o modelo de <strong>menor custo (zero custo de processamento, apenas tráfego inter-AZ se aplicável)</strong> e menor latência.</li>
+        <li><strong>AWS Transit Gateway (TGW):</strong> Funciona como um hub ou roteador virtual na nuvem que conecta dezenas de VPCs e redes locais (Direct Connect / VPN). É o modelo ideal para <strong>gerenciamento e escala centralizados</strong>. No entanto, o TGW possui tarifas por hora e um custo de processamento por gigabyte transitado. *Aviso FinOps:* Para pipelines massivos de ETL que movem Petabytes, o TGW pode inflar exponencialmente a fatura; prefira VPC Peering direto para as rotas principais de movimentação de dados volumosos.</li>
+      </ul>
     </section>
 
   </main>
