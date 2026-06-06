@@ -49,19 +49,15 @@
       <a href="perguntas.html#q14" class="nav-sub"><span class="nav-sdot"></span>Spark Tuning</a>
       <a href="perguntas.html#q24" class="nav-sub"><span class="nav-sdot"></span>RAG & GenAI</a>
 
-      <a href="cases.html" class="nav-a "><span class="nav-dot" style="background:var(--ext)"></span>💼 Cases de Plataformas</a>
+            <a href="cases.html" class="nav-a"><span class="nav-dot" style="background:var(--ext)"></span>💼 Cases de Plataformas</a>
       <a href="cases.html#case-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming</a>
       <a href="cases.html#case-mesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
       <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
       <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
-      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality
-      <a href="cases.html#case-polaris-flink" class="nav-sub"><span class="nav-sdot"></span>Mesh Polaris Flink</a>
-      <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
-      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality
+      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
       <a href="cases.html#case-polaris-flink" class="nav-sub"><span class="nav-sdot"></span>Mesh Polaris Flink</a>
       <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
-      <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
-    </div>
+      <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a></div>
     
     <div class="nav-lbl collapsible " onclick="toggleCategory('pipeline-cat', this)">
       <span>Pipeline de Engenharia</span>
@@ -110,6 +106,15 @@
       <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG &amp; Agentes</a>
       <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>pgvector SQL</a>
       <a href="genai.html#prompt-engineering" class="nav-sub"><span class="nav-sdot"></span>Prompt Engineering</a>
+
+      <a href="dataops-mlops.html" class="nav-a "><span class="nav-dot" style="background:#06b6d4"></span>⚙️ DataOps &amp; MLOps</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>DataOps</a>
+      <a href="dataops-mlops.html#mlops-core" class="nav-sub"><span class="nav-sdot"></span>MLOps</a>
+
+      <a href="networking-ingress.html" class="nav-a "><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
+      <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
+      <a href="networking-ingress.html#api-alb" class="nav-sub"><span class="nav-sdot"></span>API &amp; ALB</a>
+      <a href="networking-ingress.html#vpc-endpoints" class="nav-sub"><span class="nav-sdot"></span>VPC Endpoints</a>
 
       <a href="governance-security.html" class="nav-a "><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança & IaC</a>
       <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
@@ -1739,6 +1744,44 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
         <div class="callout callout-tip">
           <strong>Ajuste Operacional (RRF Tuning):</strong>
           <p>Utilize o algoritmo **Reciprocal Rank Fusion (RRF)** no OpenSearch. Configure o parâmetro de ponderação de relevância inicial (normalmente pesos como 0.7 para embeddings semânticos para cobrir intenções amplas, e 0.3 para palavras-chave para assegurar acertos técnicos de termos específicos). Ajuste a constante de suavização (rank constant `k`, tipicamente configurado em 60) para impedir que documentos de baixa relevância em uma busca ganhem prioridade excessiva na junção final dos resultados.</p>
+        </div>
+      </div>
+
+      <!-- Case 57: VPC Endpoints & Costs -->
+      <div class="card" id="q57" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 57 · VPC Endpoints &amp; Custos NAT</div>
+        <h4>Como a arquitetura de VPC Endpoints (Gateway vs Interface) reduz drasticamente as faturas de rede (NAT Gateway) em pipelines analíticos que leem petabytes do S3?</h4>
+        <p><strong>Gargalo de FinOps de Rede:</strong> Por padrão, containers rodando em subredes privadas (ECS/Glue/EMR) acessam endpoints públicos (como S3 e DynamoDB) roteando o tráfego via NAT Gateway. O NAT Gateway cobra uma taxa fixa por GB processado (~$0.045/GB). Sob picos de processamento de petabytes de dados brutos, o custo de rede pode superar o custo de computação dos clusters.</p>
+        <div class="callout callout-tip">
+          <strong>Ação Corretiva: Gateway Endpoints</strong>
+          <p>Associe um <strong>Gateway Endpoint para S3 e DynamoDB</strong> diretamente à tabela de rotas das subredes privadas. O Gateway Endpoint roteia o tráfego de dados de forma transparente pela rede privada interna da AWS para os serviços sem sair para a internet pública e sem passar pelo NAT Gateway. O recurso é gratuito e elimina 100% da tarifa por GB do NAT para esses serviços.</p>
+          <p><em>Ressalva de Entrevista:</em> Outros serviços (como Kinesis, Secrets Manager ou Glue Schema Registry) requerem <strong>Interface Endpoints</strong> (PrivateLink), que utilizam Elastic Network Interfaces (ENIs) locais e cobram uma taxa fixa horária mais taxa de dados menor, sendo ainda assim muito mais em conta que o NAT Gateway para grandes volumes.</p>
+        </div>
+      </div>
+
+      <!-- Case 58: API Gateway Direct Integration -->
+      <div class="card" id="q58" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 58 · API Gateway Direct Ingestion</div>
+        <h4>Qual o ganho arquitetural, de custo e latência de configurar a integração direta (Service Integration) do API Gateway com SQS/Kinesis em vez de usar uma Lambda intermédia de repasse?</h4>
+        <p><strong>Anti-padrão de Ingestão:</strong> Desenhar um fluxo onde o cliente envia dados para o API Gateway &rarr; Lambda &rarr; SQS/Kinesis adiciona um "hop" de rede desnecessário, dobra os handshakes SSL, introduz latência de inicialização de container (Cold Starts) e gera custos duplicados na conta AWS por requisição concorrente.</p>
+        <div class="callout callout-info">
+          <strong>Vantagens da Integração Direta:</strong>
+          <ul>
+            <li><strong>Latência:</strong> O API Gateway escreve diretamente na fila/stream reduzindo a resposta do webhook para menos de 40ms.</li>
+            <li><strong>Resiliência:</strong> Elimina o risco de atingir o limite de concorrência simultânea do AWS Lambda em picos extremos de tráfego.</li>
+            <li><strong>Custo:</strong> Paga-se apenas pelo volume de chamadas à API Gateway e requisições do SQS, reduzindo a conta de computação analítica em até 70% na etapa de ingress.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 59: CloudFront Analytical Caching -->
+      <div class="card" id="q59" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 59 · CloudFront Caching para Analytics</div>
+        <h4>Como desenhar políticas de cache no CloudFront para servir relatórios analíticos complexos de forma performática sem saturar o Athena ou Redshift?</h4>
+        <p><strong>Sobrecarga do Engine:</strong> Dashboards de BI atualizando a cada segundo podem gerar centenas de queries repetidas que analisam os mesmos dados históricos. No Athena, isso explode a fatura linearmente; no Redshift, consome filas de concorrência e causa travamentos.</p>
+        <div class="callout callout-tip">
+          <strong>Desenho de Cache com CloudFront:</strong>
+          <p>Implante o CloudFront à frente da API analítica. Defina uma <strong>Caching Policy</strong> baseada nas chaves da query (ex: parâmetros de filtro como ID da categoria e data). Configure o TTL padrão para 10 a 15 minutos (ou conforme o SLA de atualização de dados da sua camada analítica). Requisições idênticas serão respondidas em milissegundos a partir das Edge Locations globais, desonerando o engine analítico e estabilizando custos operacionais.</p>
         </div>
       </div>
     </section>
