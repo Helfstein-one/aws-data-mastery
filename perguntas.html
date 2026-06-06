@@ -1784,6 +1784,70 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           <p>Implante o CloudFront à frente da API analítica. Defina uma <strong>Caching Policy</strong> baseada nas chaves da query (ex: parâmetros de filtro como ID da categoria e data). Configure o TTL padrão para 10 a 15 minutos (ou conforme o SLA de atualização de dados da sua camada analítica). Requisições idênticas serão respondidas em milissegundos a partir das Edge Locations globais, desonerando o engine analítico e estabilizando custos operacionais.</p>
         </div>
       </div>
+
+      <!-- Case 60: DynamoDB Partition Split Math -->
+      <div class="card" id="q60" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 60 · DynamoDB Sizing &amp; Particionamento</div>
+        <h4>Dada uma tabela DynamoDB de 35 GB de dados com pico de tráfego de 4.500 WCUs e 8.000 RCUs (leituras fortemente consistentes), calcule o número exato de partições físicas alocadas e o rendimento (throughput) resultante por partição.</h4>
+        <p><strong>Desafio Técnico:</strong> A performance do DynamoDB é horizontal e dividida igualmente entre as partições baseando-se em limites físicos. Um dimensionamento incorreto pode induzir a erros de <code>ProvisionedThroughputExceededException</code>.</p>
+        <div class="callout callout-tip">
+          <strong>Resolução Matemática do Especialista:</strong>
+          <p>Para determinar o número de partições, utilizamos as restrições físicas de capacidade (1.000 WCU / 3.000 RCU por partição) e tamanho (10 GB por partição):</p>
+          <ul>
+            <li><strong>Fórmula de Capacidade:</strong> <code>Partições_Capacidade = (8.000 RCU / 3.000) + (4.500 WCU / 1.000) = 2.67 + 4.5 = 7.17 partições</code></li>
+            <li><strong>Fórmula de Armazenamento:</strong> <code>Partições_Armazenamento = 35 GB / 10 GB = 3.5 partições</code></li>
+            <li><strong>Total de Partições Físicas:</strong> <code>Teto( Max(7.17, 3.5) ) = Teto(7.17) = 8 partições físicas</code></li>
+            <li><strong>Capacidade Efetiva por Partição:</strong>
+              <br>• RCU por partição: <code>8.000 / 8 = 1.000 RCUs</code>
+              <br>• WCU por partição: <code>4.500 / 8 = 562.5 WCUs</code>
+            </li>
+          </ul>
+          <p>Se o tráfego de leitura de um único item/ID (Hot Key) ultrapassar 1.000 RCUs em um segundo, a requisição sofrerá <strong>Throttling</strong>, mesmo que os outros 7.000 RCUs globais da tabela estejam ociosos.</p>
+        </div>
+      </div>
+
+      <!-- Case 61: YARN Decommissioning Spot EMR -->
+      <div class="card" id="q61" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 61 · EMR Spot Instances &amp; YARN Decommissioning</div>
+        <h4>Como gerenciar de forma resiliente a interrupção física de instâncias Spot analíticas nos Task Nodes de um cluster EMR no EC2 para prevenir falhas de "FetchFailedException" nos jobs Spark?</h4>
+        <p><strong>Gargalo Operacional:</strong> A remoção abrupta de um nó Spot que estava hospedando resultados intermediários de map-reduce força o Spark a reprocessar estágios (stages) inteiros. Se os metadados forem perdidos de forma recorrente, o job falha por timeout ou contagem máxima de tentativas de stage excedida.</p>
+        <div class="callout callout-info">
+          <strong>Configuração de Alta Resiliência:</strong>
+          <p>Para contornar o problema, ative o **Graceful Decommissioning** no YARN e configure as diretivas do Spark:</p>
+          <ol>
+            <li><strong>YARN Decommissioning Timeout:</strong> Defina <code>yarn.resourcemanager.decommissioning.timeout</code> (ex: 300 segundos). Isso dá tempo para que o nó em processo de terminação transfira seus dados de shuffle local para nós persistentes (Core Nodes) antes de cair.</li>
+            <li><strong>Spark Decommissioning:</strong> Ative <code>spark.decommission.enabled = true</code> e <code>spark.storage.decommission.enabled = true</code>. O Spark proativamente migrará blocos de RDD armazenados em cache e arquivos de shuffle persistidos no disco local do executor sendo finalizado para outros executores ativos no cluster.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Case 62: Glue Executor OOM Tuning -->
+      <div class="card" id="q62" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 62 · AWS Glue Executor OOM Tuning</div>
+        <h4>Seu job do AWS Glue (rodando com workers G.1X) está falhando com erros de JVM OOM (Java heap space) durante um estágio de parse de campos JSON complexos de alta cardinalidade. Como sintonizar o tamanho do worker, a memória e a paginação do Spark sem elevar os custos do pipeline?</h4>
+        <p><strong>Gargalo de Memória:</strong> O parsing de JSONs com estruturas variantes gera milhões de objetos de metadados na memória heap, superando os 10 GB úteis do executor G.1X.</p>
+        <div class="callout callout-tip">
+          <strong>Ajustes de Sizing &amp; Tuning:</strong>
+          <ul>
+            <li><strong>Upgrade de Worker (G.1X para G.2X):</strong> Ao migrar para G.2X, a memória disponível para o executor sobe de 10 GB para 24 GB. Como a fatura de DPU dobra, você pode <strong>reduzir a quantidade total de workers pela metade</strong>. O custo total do job se mantém estável, enquanto a RAM útil por thread Spark aumenta drasticamente, extinguindo a falha física de Heap Space.</li>
+            <li><strong>Parâmetros de Ajuste da JVM:</strong> Configure <code>spark.sql.objectHashAggregate.sortBased.fallbackThreshold = 128</code> para forçar o Spark a fazer agregação em disco antes de estourar a memória. Ajuste também <code>spark.memory.fraction = 0.8</code> (padrão 0.6) para ceder mais espaço da JVM para armazenamento de shuffle de dados ativos.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 63: Aurora Read Scaling & Lag -->
+      <div class="card" id="q63" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 63 · Amazon Aurora Replica Lag &amp; Read Scaling</div>
+        <h4>Como mitigar gargalos de performance e isolar o tráfego operacional (OLTP) de gravação durante extrações analíticas massivas no Amazon Aurora PostgreSQL?</h4>
+        <p><strong>Desafio de Concorrência:</strong> Consultas analíticas pesadas (Full Table Scans) concorrendo com gravações na instância primária (Writer) geram locks de páginas de banco de dados e saturação de I/O de disco.</p>
+        <div class="callout callout-info">
+          <strong>Estratégia Arquitetural de Ingestão:</strong>
+          <ul>
+            <li><strong>Leitura via Reader Endpoint com Autoscaling:</strong> Aponte o pipeline analítico (JDBC Spark) estritamente para o <strong>Reader Endpoint</strong> do Aurora. Configure o auto-scaling do cluster Aurora com base na utilização média de CPU dos nós leitores. À medida que o job analítico inicia, réplicas adicionais são ligadas dinamicamente e as conexões balanceadas em round-robin.</li>
+            <li><strong>Minimização de Lag de Réplica:</strong> Devido à arquitetura de armazenamento compartilhado do Aurora (Aurora Storage Volume), as réplicas analíticas não processam gravações físicas de dados nos seus discos. No entanto, elas devem atualizar seus caches locais na memória RAM com os logs de transação da Writer. Monitore a métrica <code>AuroraReplicaLag</code> e garanta que queries pesadas não mantenham transações abertas por longos períodos, o que impediria a réplica de atualizar sua memória (gerando lag artificial).</li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 </div>
