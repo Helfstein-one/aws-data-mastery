@@ -1697,11 +1697,48 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
         <div class="callout callout-info">
           <strong>A Solução: Credential Vending com OAuth2 no Polaris</strong>
           <p>Mantenha o S3 privado e registre a tabela no Apache Polaris REST Catalog. Quando o Snowflake precisa ler a tabela, ele faz uma requisição HTTP REST ao Polaris enviando um token de autenticação **OAuth2**:</p>
-          <ol>
-            <li>O Polaris valida a identidade do Snowflake e verifica se ele possui privilégio SQL `SELECT` sobre os metadados da tabela.</li>
-            <li>Se autorizado, o Polaris solicita credenciais temporárias do S3 à AWS via chamada ao **AWS STS** (vending de credenciais limitadas).</li>
-            <li>O Polaris retorna ao Snowflake o caminho físico dos arquivos Parquet correspondentes mais o token de acesso temporário, que expira automaticamente em minutos e dá permissão de leitura estritamente aos caminhos dos arquivos Parquet daquela tabela específica.</li>
           </ol>
+        </div>
+      </div>
+
+      <!-- Case 54: MLOps Feature Store latency -->
+      <div class="card" id="q54" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 54 · MLOps &amp; Feature Store</div>
+        <h4>Como arquitetar uma ingestão em tempo real de variáveis analíticas (Feature Store) com baixíssima latência na AWS integrando MSK, Flink e SageMaker Feature Store?</h4>
+        <p><strong>Desafio de Latência:</strong> Para detecção de fraudes ou score de crédito em tempo real, modelos de ML precisam consultar features agregadas recentes (ex: "soma de transações do cliente nos últimos 5 minutos") em menos de 10 milissegundos. Processar isso em batch seria ineficaz.</p>
+        <div class="callout callout-info">
+          <strong>Arquitetura para Ingestão e Baixa Latência:</strong>
+          <ul>
+            <li><strong>Fluxo de Processamento (MSK + Flink):</strong> Os eventos de transações entram no **Amazon MSK**. O **Managed Service for Apache Flink** consome as mensagens em tempo real e calcula agregações deslizantes (sliding windows) em memória com estado.</li>
+            <li><strong>Ingestão no Feature Store Online:</strong> O Flink envia o resultado agregado usando chamadas simultâneas `PutRecord` para o **Amazon SageMaker Feature Store (Online Store)**. O Feature Store Online escreve estes valores em tabelas do DynamoDB gerenciadas internamente, garantindo latências de leitura inferiores a 10ms na inferência do modelo.</li>
+            <li><strong>Persistência no Feature Store Offline:</strong> Automaticamente, o SageMaker sincroniza estes registros para a **Offline Store** (no S3 como Parquet) para que os cientistas de dados re-treinem os modelos em batch usando dados históricos consolidados.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 55: DataOps & Schema Contracts -->
+      <div class="card" id="q55" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 55 · DataOps &amp; Contratos de Dados</div>
+        <h4>Como projetar um validador de contratos de dados em tempo real acoplado à ingestão S3 para isolar registros corrompidos de forma serverless?</h4>
+        <p><strong>Risco de Quebra:</strong> Se a equipe de produto alterar o schema de origem (ex: remover coluna obrigatória ou mudar string para int), isso causará erros de conversão de tipos no Spark/Athena, derrubando painéis. Precisamos de uma barreira defensiva.</p>
+        <div class="callout callout-warn">
+          <strong>Solução de Validação Ativa (Credential Vending + Lambda):</strong>
+          <ol>
+            <li><strong>Ingestão via API Gateway/Kinesis:</strong> Os payloads chegam no Kinesis Data Streams. Uma tarefa Fargate ou Lambda lê os registros da fila.</li>
+            <li><strong>Validação de Contrato com JSON Schema:</strong> O script Python aciona uma biblioteca de validação rápida (como `jsonschema`) e compara o JSON contra o arquivo de contrato de dados mantido no S3.</li>
+            <li><strong>Separação de Rotas:</strong> Registros em conformidade recebem um hash de sucesso e continuam para o pipeline de dados analíticos Bronze. Registros que falharem na auditoria são etiquetados com a mensagem de erro da causa e encaminhados para uma pasta **Quarentena** no S3, acionando um alerta de quebra de contrato no Slack/CloudWatch.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Case 56: GenAI & Hybrid search tuning -->
+      <div class="card" id="q56" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 56 · GenAI &amp; OpenSearch Tuning</div>
+        <h4>Como sintonizar o balanceamento de relevância semântica contra busca léxica em buscas híbridas (Dense + Sparse) usando Amazon OpenSearch Serverless?</h4>
+        <p><strong>Desafio de Precisão:</strong> Em buscas híbridas, a distância de cosseno dos embeddings lida mal com termos exatos (ex: códigos de produtos), enquanto a busca léxica clássica (BM25) não entende sinônimos. Como unificar as notas de forma balanceada?</p>
+        <div class="callout callout-tip">
+          <strong>Ajuste Operacional (RRF Tuning):</strong>
+          <p>Utilize o algoritmo **Reciprocal Rank Fusion (RRF)** no OpenSearch. Configure o parâmetro de ponderação de relevância inicial (normalmente pesos como 0.7 para embeddings semânticos para cobrir intenções amplas, e 0.3 para palavras-chave para assegurar acertos técnicos de termos específicos). Ajuste a constante de suavização (rank constant `k`, tipicamente configurado em 60) para impedir que documentos de baixa relevância em uma busca ganhem prioridade excessiva na junção final dos resultados.</p>
         </div>
       </div>
     </section>
@@ -1785,13 +1822,8 @@ window.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('click', function(e) {
   var sb = document.getElementById('sidebar');
   var hb = document.getElementById('hamburger');
-  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
-    if (sb.classList.contains('open')) {
-      sb.classList.remove('open');
-      if (hb) hb.innerHTML = '☰';
-    }
-  }
 });
 </script>
+<script src="progress.js"></script>
 </body>
 </html>
