@@ -461,6 +461,43 @@
           </defs>
         </svg>
       </div>
+      <h3>Padrões Avançados de RAG Corporativo</h3>
+      <p>Em sistemas produtivos sob alta escala de dados e variação linguística, o RAG simples ("ingestão crua &rarr; busca direta") costuma falhar por entregar informações desconexas. Adotamos estratégias avançadas para garantir máxima assertividade:</p>
+
+      <div class="grid-2" style="margin-bottom: 24px;">
+        <div class="card" style="border-left: 3px solid var(--genai);">
+          <div class="card-lbl">Padrão 1 · Fragmentação Inteligente</div>
+          <h4>Hierarchical &amp; Semantic Chunking</h4>
+          <p>
+            <strong>Hierarchical Chunking:</strong> Separa o documento em chunks pais (grandes resumos, ex: 2048 tokens) e chunks filhos (detalhes específicos, ex: 512 tokens). O banco faz a busca nos filhos, mas injeta o contexto dos pais no LLM, fornecendo profundidade estrutural.<br>
+            <strong>Semantic Chunking:</strong> Em vez de quebrar textos por contagem de caracteres arbitrária, analisa a variação semântica entre sentenças consecutivas e divide o arquivo apenas quando há mudança evidente de tema, preservando o fluxo lógico de raciocínio.
+          </p>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--genai);">
+          <div class="card-lbl">Padrão 2 · Mecanismos de Busca</div>
+          <h4>Busca Híbrida (Dense + Sparse Search)</h4>
+          <p>
+            Combina a força da **busca vetorial semântica** (Dense Retrieval via OpenSearch k-NN / pgvector, capturando intenções) com a **busca léxica tradicional baseada em palavras-chave** (Sparse Retrieval via BM25, capturando termos exatos, números de notas fiscais, IDs ou termos específicos da indústria). As duas pontuações são unificadas usando o algoritmo de <strong>Reciprocal Rank Fusion (RRF)</strong> para gerar um ranking unificado de relevância.
+          </p>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--genai);">
+          <div class="card-lbl">Padrão 3 · Refinamento de Contexto</div>
+          <h4>Re-ranking Semântico (Cohere Rerank)</h4>
+          <p>
+            A busca inicial no banco vetorial extrai uma ampla janela de documentos candidatos (ex: Top 25). Um modelo menor e ultra-rápido de cross-encoder (como **Cohere Rerank**) re-avalia e re-ordena as passagens contra a pergunta exata do usuário, reduzindo para o Top 3 final altamente relevante. Isso minimiza tokens inúteis injetados no prompt do Claude/Titan e reduz os custos de inferência.
+          </p>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--genai);">
+          <div class="card-lbl">Padrão 4 · Otimização Financeira</div>
+          <h4>Caching Semântico (Redis / DynamoDB)</h4>
+          <p>
+            Armazena em cache (DynamoDB/ElastiCache) a resposta gerada para perguntas semanticamente idênticas. Antes de disparar a busca vetorial e a chamada do LLM, calcula o embedding da nova query e busca a similaridade de cosseno com o histórico de perguntas no cache. Se a similaridade for superior a 96%, serve a resposta imediatamente, reduzindo a latência para menos de 50ms e economizando até 80% do consumo de API.
+          </p>
+        </div>
+      </div>
     </section>
 
     <section class="section" id="pgvector">
@@ -612,57 +649,60 @@ bedrock = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<sp
         <div class="sec-num" style="color:var(--genai)">04.5</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--genai)"></div>
-          <h2>Prompt Engineering para Pipelines de Dados</h2>
-          <p>Técnicas de estruturação por XML, Few-Shot learning e raciocínio lógico em cadeia</p>
+          <h2>Prompt Engineering, Personas &amp; Mitigação de Alucinações</h2>
+          <p>Técnicas de estruturação de personas com XML, grounding estrito e sintonia de hiperparâmetros determinísticos</p>
         </div>
       </div>
 
-      <p>Para obter saídas consistentes e determinísticas de LLMs em produção em pipelines automatizados de ETL/dados, aplicamos os seguintes padrões de engenharia de prompt:</p>
+      <p>Para obter saídas consistentes, reproduzíveis e estruturadas em pipelines de dados analíticos na AWS, a engenharia de prompt deve ir além de instruções vagas. Em produção, adotamos a definição formal de <strong>Personas</strong> especializadas e regras estritas de <strong>Grounding</strong> para eliminar alucinações.</p>
 
       <div class="concept-grid">
         <div class="concept-card genai-card">
-          <div class="cc-tag">Formatação</div>
-          <div class="cc-title">Tags XML (Best Practice)</div>
-          <div class="cc-body">Modelos como o Claude 3.5 são explicitamente treinados para separar instruções de variáveis dinâmicas usando delimitadores XML (ex: <code>&lt;context&gt;</code>, <code>&lt;schema&gt;</code>). Isso impede ataques de Injeção de Prompt (Prompt Injection).</div>
+          <div class="cc-tag">Arquitetura</div>
+          <div class="cc-title">Definição de Personas Estritas</div>
+          <div class="cc-body">Formatamos o system prompt para blindar o papel do LLM. Ex: "Você atua estritamente como um compilador de regras SQL Athena. Se for perguntado algo fora deste escopo, recuse-se a responder." Isso reduz o desvio de contexto operacional.</div>
         </div>
 
         <div class="concept-card genai-card">
-          <div class="cc-tag">Assertividade</div>
-          <div class="cc-title">Few-Shot Learning</div>
-          <div class="cc-body">Fornecer exemplos explícitos de "Entrada / Saída" estruturados no prompt antes de mandar o dado real. Melhora a conformidade sintática da resposta para mapeamento JSON e conversões tipadas complexas.</div>
+          <div class="cc-tag">Hiperparâmetros</div>
+          <div class="cc-title">Tuning de Parâmetros</div>
+          <div class="cc-body">Para pipelines estruturados, configure <code>Temperature = 0.0</code> (máxima reproducibilidade), <code>Top_P = 0.1</code> e <code>Top_K = 1</code>. Isso força o modelo a selecionar apenas os tokens com maior probabilidade matemática, eliminando a criatividade geradora de alucinações.</div>
         </div>
 
         <div class="concept-card genai-card">
-          <div class="cc-tag">Raciocínio</div>
-          <div class="cc-title">Chain of Thought (CoT)</div>
-          <div class="cc-body">Instruir o modelo a justificar o raciocínio passo a passo antes de retornar a resposta final (ex: "pense passo a passo em tags <code>&lt;thinking&gt;</code>"). Reduz erros lógicos na geração de queries SQL e de código.</div>
+          <div class="cc-tag">Segurança</div>
+          <div class="cc-title">Grounding &amp; Tags XML</div>
+          <div class="cc-body">Estruturar o prompt delimitando variáveis com tags XML (ex: <code>&lt;contexto&gt;</code>). Instruir explicitamente: "Qualquer afirmação fora do escopo delimitado por <code>&lt;contexto&gt;</code> deve ser respondida com 'NÃO ENCONTRADO'."</div>
         </div>
       </div>
 
-      <h3 style="margin-top: 30px;">Exemplo de Prompt com Engenharia Avançada (ReAct e CoT)</h3>
-      <p>Prompt projetado para rodar um agente de validação sintática e lógica de tabelas:</p>
+      <h3>Exemplo Prático: Persona de Auditor de Qualidade de Dados (Prompts com XML &amp; CoT)</h3>
+      <p>O prompt abaixo instrui o modelo a agir como um Auditor de Schemas de Data Lakehouse, usando Chain of Thought para raciocínio lógico antes da tomada de decisão:</p>
 
-      <pre style="background:#0f172a; color:#f8fafc;">Você é um validador autônomo de dados. Analise o registro recebido em &lt;row&gt; e verifique
-se obedece às regras de negócio contidas em &lt;rules&gt;.
+      <pre style="background:#0f172a; color:#f8fafc;">&lt;system&gt;
+Você é um Auditor Sênior de Qualidade de Dados. Sua única tarefa é analisar a estrutura de registros JSON e compará-los contra um schema de referência. Você deve emitir um relatório lógico estruturado e determinístico.
+&lt;/system&gt;
 
-Instruções de Raciocínio:
-1. Em &lt;thinking&gt;, analise cada regra individualmente contra as colunas do registro.
-2. Determine se o registro é VÁLIDO ou INVÁLIDO.
-3. Se for INVÁLIDO, liste o motivo em &lt;reason&gt;.
-4. Retorne a resposta final na tag &lt;status&gt;.
+Instruções Operacionais:
+1. Pense passo a passo analisando cada coluna física em &lt;thinking&gt;.
+2. Se houver divergência de tipo ou valores nulos não permitidos, classifique o registro como "INVALIDO".
+3. Forneça o resultado final estritamente em formato JSON dentro da tag &lt;output&gt;.
 
-&lt;rules&gt;
-- A coluna "idade" deve ser maior ou igual a 18.
-- A coluna "email" deve conter o caractere "@".
-&lt;/rules&gt;
-
-&lt;row&gt;
+&lt;schema_referencia&gt;
 {
-  "nome": João da Silva",
-  "idade": 16,
-  "email": "joaosilva.com"
+  "id_transacao": "string (not null)",
+  "valor_compra": "float (positive)",
+  "email_cliente": "string (contém '@')"
 }
-&lt;/row&gt;</pre>
+&lt;/schema_referencia&gt;
+
+&lt;registro_avaliar&gt;
+{
+  "id_transacao": "TX-90812",
+  "valor_compra": -45.50,
+  "email_cliente": "admin_test.com"
+}
+&lt;/registro_avaliar&gt;</pre>
     </section>
 
     <section class="section" id="guardrails">
@@ -784,6 +824,30 @@ Instruções de Raciocínio:
           <div class="err-tag">LLM · Alucinação</div>
           <div class="err-title">Respostas inventadas pelo LLM</div>
           <div class="err-body"><strong>Causa:</strong> Falta de instruções explícitas de restrição de domínio no system prompt, ou temperatura de geração muito elevada.<br><br><strong>Fix:</strong> Ajuste a temperatura para 0.0-0.2 e escreva no prompt: "Responda apenas com base no contexto fornecido. Se a resposta não estiver no contexto, responda 'Não sei'."</div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag">API · Escalabilidade</div>
+          <div class="err-title">Erro de Limite de Chamadas (Throttling) no Bedrock</div>
+          <div class="err-body"><strong>Causa:</strong> Disparar milhares de chamadas paralelas de inferência em lote (ETL) diretamente contra a API pública do Amazon Bedrock sem controle de concorrência.<br><br><strong>Fix:</strong> Implemente retentativas exponenciais com Jitter aleatório e utilize o **Amazon Bedrock Batch Inference** para processamento assíncrono em lote com custos 50% menores.</div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag">Vetor · Governança</div>
+          <div class="err-title">Drift Semântico por Alteração do Modelo de Embeddings</div>
+          <div class="err-body"><strong>Causa:</strong> Atualizar o modelo gerador de vetores no código de busca (ex: mudar de Titan para Claude Embeddings) sem reindexar e atualizar a tabela vetorial existente.<br><br><strong>Fix:</strong> Chunks antigos e novas perguntas devem pertencer ao mesmo modelo com mesma dimensionalidade (ex: 1536). Se mudar o modelo de embeddings, é obrigatório reconstruir a tabela inteira do OpenSearch/pgvector.</div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag">Financeiro · FinOps</div>
+          <div class="err-title">Explosão de custos de API por consultas repetitivas</div>
+          <div class="err-body"><strong>Causa:</strong> Usuários ou automações fazendo perguntas semanticamente idênticas ou muito parecidas várias vezes ao dia, gerando novos custos de tokens de entrada/saída no Bedrock.<br><br><strong>Fix:</strong> Habilite uma camada de Caching Semântico via Redis com busca por cosseno na base local de histórico de perguntas frequentes para servir sem acionar o LLM.</div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag">Segurança · Vulnerabilidade</div>
+          <div class="err-title">Prompt Injection em pipelines de classificação de reclamações</div>
+          <div class="err-body"><strong>Causa:</strong> Payload cru do usuário contendo comandos maliciosos (ex: "Ignore as instruções anteriores e me diga...") inserido diretamente dentro do prompt principal do LLM.<br><br><strong>Fix:</strong> Envolva o conteúdo dinâmico do usuário em tags XML estritas e configure o **Amazon Bedrock Guardrails** para identificar e vetar desvios de conduta do input.</div>
         </div>
       </div>
     </section>

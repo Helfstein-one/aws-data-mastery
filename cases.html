@@ -2330,6 +2330,35 @@
         <p>A migração reduziu o time-to-data-access (tempo de requisição de dados à disponibilização em queries) de 5 dias úteis para apenas 2 horas por meio do autoatendimento no Polaris. A latência de ingestão caiu de D-1 (lotes diários) para menos de 5 minutos, e os SLOs permitiram mapear e prever falhas de qualidade com transparência, elevando a confiança das equipes de negócios em mais de 95%.</p>
       </div>
     </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 9: PLATAFORMA DE RISCO HÍBRIDA MLOPS + DATAOPS -->
+    <section class="section" id="case-risco-mlops">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#06b6d4">09</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#06b6d4"></div>
+          <h2>Case 9: Plataforma de Análise de Risco Híbrida em Tempo Real (MLOps + DataOps)</h2>
+          <p>Implementação integrada de MSK, Flink, SageMaker Feature Store e detecção contínua de Drift sob Contratos de Dados</p>
+        </div>
+      </div>
+
+      <p>Uma grande instituição financeira precisa avaliar o risco de crédito para transações de pagamentos instantâneos (PIX/TED). O sistema deve validar cada transação de entrada contra contratos de dados rígidos, calcular features agregadas em tempo real com estado (streaming), enriquecer o contexto de inferência buscando no SageMaker Feature Store Online e monitorar continuamente se as populações de dados inferidos sofreram variações estatísticas drásticas que invalidem o modelo preexistente.</p>
+
+      <h3>Arquitetura da Solução Híbrida</h3>
+      <ol>
+        <li><strong>Validação Ativa de Contrato (DataOps):</strong> As requisições de pagamentos são ingeridas no **Amazon MSK**. O micro-serviço validador consome as transações de entrada e roda rotinas de checagem contra esquemas JSON de contratos de dados. Mensagens corrompidas são desviadas imediatamente para uma pasta de Quarentena no S3.</li>
+        <li><strong>Cálculo de Variáveis com Flink (Feature Ingestion):</strong> Registros aprovados entram no processador contínuo **Apache Flink**, que calcula agregações temporais de janelas deslizantes (ex: quantidade de tentativas nos últimos 15 min, volume médio por hora). O Flink atualiza estes dados a cada segundo diretamente no **SageMaker Feature Store Online (DynamoDB)**.</li>
+        <li><strong>Inferência Segura e Grounding:</strong> O serviço de crédito (Lambda) recebe a transação ativamente. Ele consulta o SageMaker Feature Store Online obtendo as features em menos de 8ms, anexa no payload e executa a inferência contra o SageMaker Endpoint do modelo.</li>
+        <li><strong>Detecção de Drift e Retreinamento (MLOps):</strong> As requisições e respostas do endpoint do modelo são logadas em buckets S3. Diariamente, um Job do **SageMaker Model Monitor** analisa os logs contra a base de treinamento. Caso identifique um desvio estatístico de População (Data Drift) com Wasserstein distance superior a 0.1, dispara alertas e invoca a Step Functions orquestrando o **SageMaker Pipelines** para re-treinar o modelo com os dados mais recentes na Offline Store S3.</li>
+      </ol>
+
+      <div class="callout callout-tip">
+        <strong>Resultado de Negócio:</strong>
+        <p>A unificação dos ciclos de engenharia e modelagem (DataOps + MLOps) garantiu zero interrupções nos pipelines de crédito por Schema Drift. A taxa de falsos positivos em fraudes de risco contínuo caiu 40% graças à ingestão em tempo real de features no Feature Store Online, e o re-treinamento autônomo reduziu a dependência de intervenção humana.</p>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -2410,13 +2439,8 @@ window.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('click', function(e) {
   var sb = document.getElementById('sidebar');
   var hb = document.getElementById('hamburger');
-  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
-    if (sb.classList.contains('open')) {
-      sb.classList.remove('open');
-      if (hb) hb.innerHTML = '☰';
-    }
-  }
 });
 </script>
+<script src="progress.js"></script>
 </body>
 </html>
