@@ -2097,6 +2097,74 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
             </li>
             <li><strong>Resultado Prático:</strong> Mesmo que o engenheiro crie uma Role e tente anexar <code>AdministratorAccess</code> a ela, o poder de execução efetivo daquela Role será restrito ao escopo declarado na Permission Boundary, mitigando a escalação de privilégios.</li>
           </ul>
+      </div>
+
+      <!-- Case 77: Slowly Changing Dimensions (SCD) -->
+      <div class="card" id="q77" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 77 · Slowly Changing Dimensions (SCD) no Data Lake</div>
+        <h4>Como gerenciar alterações cadastrais históricas em tabelas de dimensão (Slowly Changing Dimensions - SCD) utilizando ferramentas de processamento de dados na AWS, e quais os trade-offs entre Tipo 1, Tipo 2 e Tipo 4?</h4>
+        <p><strong>Conceito de SCD:</strong> Entidades descritivas (como dados cadastrais de clientes ou produtos) mudam de valor lentamente ao longo do tempo. Capturar e registrar essas mudanças de forma controlada é fundamental para manter a consistência e a rastreabilidade histórica em análises analíticas de faturamento e vendas.</p>
+        <div class="callout callout-info">
+          <strong>Tipos de SCD e Implementação na AWS:</strong>
+          <ul>
+            <li><strong>SCD Tipo 1 (Sobrescrita Direta):</strong> O novo valor cadastral substitui o antigo. Não há histórico.
+              <br>• <em>Caso de Uso:</em> Correção de erros ortográficos simples.
+              <br>• <em>Implementação:</em> No PySpark/Glue, execute uma query de <code>UPDATE</code> ou um merge direto de partição utilizando formatos transacionais (como Apache Iceberg/HUDI).
+            </li>
+            <li><strong>SCD Tipo 2 (Histórico por Versões com Linhas Adicionais):</strong> Uma nova linha é inserida para registrar a mudança, mantendo a linha antiga ativa sob indicadores temporais (colunas <code>data_inicio</code>, <code>data_fim</code> e flag <code>registro_ativo</code>).
+              <br>• <em>Caso de Uso:</em> Mudança de endereço de cliente para cálculo de tributação histórica de vendas.
+              <br>• <em>Implementação:</em> No Spark/Iceberg, utilize o comando <code>MERGE INTO</code> comparando a chave natural. Se houver diferença nos dados descritivos, expire o registro antigo setando <code>registro_ativo = false</code>, <code>data_fim = timestamp_atual</code>, e insira a nova linha ativa.
+            </li>
+            <li><strong>SCD Tipo 4 (Tabela de Histórico Separada / Outrigger):</strong> A dimensão principal mantém sempre apenas o valor atual ativo (estilo Tipo 1), mas cada modificação é gravada em uma tabela satélite separada de histórico (Log de Alterações).
+              <br>• <em>Caso de Uso:</em> Rastreabilidade de status de contratos muito dinâmicos sem inflar a tabela de dimensão principal.
+              <br>• <em>Implementação:</em> Insira o registro Tipo 1 na dimensão principal via Iceberg e, em paralelo, envie o evento de mudança bruto para um bucket S3 histórico usando Kinesis Data Firehose para compor a tabela histórica de auditoria de forma assíncrona.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 78: Star Schema vs Snowflake no Redshift -->
+      <div class="card" id="q78" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 78 · Star Schema vs. Snowflake no Amazon Redshift</div>
+        <h4>Ao projetar um Data Warehouse corporativo no Amazon Redshift, qual arquitetura de modelagem de dados é preferível entre Star Schema e Snowflake Schema, e qual o impacto dos Joins na execução distribuída do cluster?</h4>
+        <p><strong>Gargalo de Processamento Distribuído:</strong> O Amazon Redshift é um banco de dados Massivamente Paralelo (MPP). Em queries distribuídas, realizar joins exige que as fatias de dados de diferentes nós computacionais sejam redistribuídas pela rede (Data Shuffle) para que os registros correspondentes sejam pareados na memória física.</p>
+        <div class="callout callout-tip">
+          <strong>Estratégia Recomendada para o Redshift:</strong>
+          <ul>
+            <li><strong>Preferência pelo Star Schema:</strong> O **Star Schema é amplamente preferido** em relação ao Snowflake no Redshift. Por possuir dimensões desnormalizadas e achatadas, as queries analíticas exigem apenas um nível de join (Fato ➔ Dimensão). Isso diminui drasticamente a necessidade de shuffles de rede complexos e agiliza a execução da query.</li>
+            <li><strong>O Problema do Snowflake no Redshift:</strong> No Snowflake, a normalização fragmenta os dados em múltiplas tabelas (Fato ➔ Cliente ➔ Cidade ➔ Estado). Queries analíticas básicas exigem joins em cascata. O otimizador de plano do Redshift precisará mover dados de várias dimensões entre nós para resolver a query, gerando congestionamento na rede interna do cluster.</li>
+            <li><strong>Otimização com Chaves de Distribuição:</strong> No Star Schema, configure a chave de distribuição (<code>DISTKEY</code>) da tabela Fato e da maior dimensão (ex: Cliente) com o mesmo campo ID. O Redshift executará o join localmente sem mover dados de nó em nó. Para as demais dimensões menores (como Tempo e Categoria), use <code>DISTSTYLE ALL</code> para clonar as tabelas em todos os nós, garantindo joins de latência zero.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 79: Surrogate Keys vs Natural Keys -->
+      <div class="card" id="q79" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 79 · Chaves Substitutas (Surrogate Keys) vs. Chaves Naturais</div>
+        <h4>O que são chaves substitutas (Surrogate Keys) e por que elas são fundamentais em modelagem dimensional de Data Warehouses em vez do uso direto de chaves naturais de negócio vindas dos bancos OLTP?</h4>
+        <p><strong>Conceito de Chave Substituta:</strong> Uma chave substituta (Surrogate Key) é um identificador numérico artificial e sequencial (ou um Hash MD5/SHA256 gerado deterministicamente) gerado no Data Warehouse para atuar como chave primária de uma tabela de dimensão. A chave natural é o identificador gerado pelo sistema transacional de origem (ex: <code>id_usuario</code> no banco OLTP ou CPF).</p>
+        <div class="callout callout-info">
+          <strong>Vantagens Técnicas e Motivações:</strong>
+          <ul>
+            <li><strong>Independência de Sistemas de Origem:</strong> Sistemas transacionais podem ser migrados, resetados ou substituídos. Se duas fontes diferentes usarem o mesmo ID de chave natural para entidades distintas, o Data Warehouse sofrerá colisão. A chave substituta isola o Data Warehouse e garante unicidade global.</li>
+            <li><strong>Suporte a Histórico de Mudanças (SCD Tipo 2):</strong> Para registrar a alteração de endereço de um cliente mantendo o histórico, precisaremos de duas linhas na dimensão para a mesma chave natural (ex: duas linhas com CPF 123.456...). Como a chave primária da tabela de dimensão deve ser única, a chave natural não serve. A Surrogate Key diferencia as versões físicas do mesmo cliente (ex: SK `1004` e SK `2854` mapeando para o mesmo CPF).</li>
+            <li><strong>Performance Física de Joins:</strong> Fazer joins entre chaves de texto longas (como chaves compostas de string ou UUIDs) é computacionalmente caro. Usar chaves substitutas inteiras (Integers ou BigInt) compactas acelera a comparação na memória do motor analítico (Redshift/Spark) e reduz o tamanho dos índices e das tabelas Fato.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 80: One Big Table (OBT) no S3/Athena -->
+      <div class="card" id="q80" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 80 · One Big Table (OBT) e Queries de Alta Performance no Athena</div>
+        <h4>Por que a modelagem desnormalizada completa em uma única tabela analítica gigante (One Big Table - OBT) superou o uso de Star Schema e Snowflake Schema no S3/Athena, e qual o impacto financeiro e de CPU dessa abordagem?</h4>
+        <p><strong>Desafio Serverless de Consultas S3:</strong> O Amazon Athena é uma engine baseada em Presto/Trino que executa queries diretamente em arquivos colunares (Parquet/ORC) salvos no Amazon S3. Diferente de um banco de dados tradicional com discos SSD locais rápidos, a leitura física de dados no Athena envolve latência de rede HTTP para cada requisição ao S3.</p>
+        <div class="callout callout-tip">
+          <strong>Vantagens Computacionais e Financeiras de OBT no Athena:</strong>
+          <ul>
+            <li><strong>Eliminação Total de Joins e Shuffles:</strong> Em um Star Schema, a query Athena precisa ler os arquivos da tabela Fato e de todas as Dimensões no S3, carregar os dados na memória RAM dos nós do Athena e executar a junção de dados. Em OBT, todos os atributos descritivos já estão desnormalizados fisicamente na mesma linha de dados do arquivo. O Athena lê um único caminho de arquivo do S3 e executa filtros diretos sem gastar CPU ou tempo executando joins de rede.</li>
+            <li><strong>Mitigação do Custo de Armazenamento Via Parquet/ZSTD:</strong> Embora a OBT tenha alta redundância (duplicando strings de nomes de clientes ou produtos milhões de vezes), os formatos de armazenamento colunares (como Parquet) organizam os dados por coluna e aplicam algoritmos de compressão pesados (Snappy ou ZSTD). Strings repetidas consecutivamente são comprimidas a frações mínimas do tamanho original. O custo de armazenamento extra no S3 é quase irrelevante frente ao ganho em performance analítica.</li>
+            <li><strong>Economia Financeira de Querying:</strong> O Athena cobra pelo volume de dados escaneado no S3. Como a OBT é salva em formato colunar Parquet, se uma query ler apenas colunas como <code>valor_venda</code> e <code>nome_cliente</code>, o Athena lerá apenas as colunas solicitadas, varrendo muito menos dados do S3 em comparação a varrer tabelas inteiras em joins, gerando queries até 10x mais rápidas e baratas.</li>
+          </ul>
         </div>
       </div>
     </section>
