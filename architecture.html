@@ -1532,6 +1532,147 @@ resource <span class="k">"aws_glue_catalog_table"</span> <span class="s">"iceber
       </div>
     </section>
 
+      </div>
+    </section>
+
+    <!-- 10B.1 MODELAGEM DIMENSIONAL PROFUNDA: OLAP VS OLTP & STAR VS SNOWFLAKE -->
+    <section class="section" id="modelagem-dimensional-profunda">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--arch)">10B.1</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--arch)"></div>
+          <h2>Modelagem Dimensional Profunda</h2>
+          <p>Diferenças fundamentais entre processamento transacional (OLTP), analítico (OLAP), e o impacto físico de Star vs. Snowflake Schema no ecossistema AWS</p>
+        </div>
+      </div>
+
+      <h3>OLTP vs. OLAP: Propósito e Arquitetura Físicas</h3>
+      <p>A arquitetura física de um banco de dados é projetada especificamente para o padrão de acessos que ele atende. Tentar usar um banco transacional para analítico, ou vice-versa, gera sérios problemas de escala e gargalos de IO/CPU:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Característica</th>
+              <th>OLTP (Online Transaction Processing)</th>
+              <th>OLAP (Online Analytical Processing)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Propósito</strong></td>
+              <td>Operações de escrita rápidas diárias (INSERT, UPDATE, DELETE).</td>
+              <td>Consultas analíticas complexas e agregações históricas (SUM, AVG, GROUP BY).</td>
+            </tr>
+            <tr>
+              <td><strong>Padrão de Query</strong></td>
+              <td>Acessa poucos registros específicos por vez (busca por ID ou chave primária).</td>
+              <td>Varre milhões de linhas agregando poucas colunas (full scans).</td>
+            </tr>
+            <tr>
+              <td><strong>Normalização</strong></td>
+              <td>Altamente normalizado (geralmente até a 3ª Forma Normal - 3NF) para eliminar redundâncias e evitar anomalias de escrita.</td>
+              <td>Desnormalizado (Star Schema ou OBT) para reduzir o número de joins necessários e otimizar velocidade de leitura.</td>
+            </tr>
+            <tr>
+              <td><strong>Armazenamento</strong></td>
+              <td>Orientado a Linhas (Row-oriented). Excelente para ler/gravar uma linha completa rapidamente.</td>
+              <td>Orientado a Colunas (Columnar). Lê do disco apenas as colunas envolvidas na query, maximizando compressão.</td>
+            </tr>
+            <tr>
+              <td><strong>Tecnologias AWS</strong></td>
+              <td>Amazon RDS (PostgreSQL/MySQL), Amazon Aurora.</td>
+              <td>Amazon Redshift, Amazon Athena (com S3).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Star Schema vs. Snowflake Schema: O Embate do Data Warehouse</h3>
+      <p>Dentro de um Data Warehouse tradicional (como o Redshift) ou Lakehouse moderno, a organização das tabelas dimensionais determina o custo computacional das queries:</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-lbl">Kimball Star Schema</div>
+          <h4>Estrutura Desnormalizada Estrela</h4>
+          <p>O centro do diagrama é a tabela Fato, que é cercada diretamente por tabelas de Dimensão. As dimensões <strong>não são normalizadas</strong>; por exemplo, os atributos de cidade, estado e país de uma dimensão cliente residem na própria tabela de cliente.</p>
+          <p class="good-txt">✓ Vantagem: Apenas um nível de join para associar qualquer dimensão ao fato. Menor shuffle de rede em leitura.</p>
+          <p class="bad-txt">✗ Desvantagem: Redundância de dados e maior espaço consumido (embora mitigado por compressões colunares modernos).</p>
+        </div>
+
+        <div class="card">
+          <div class="card-lbl">Inmon Snowflake Schema</div>
+          <h4>Estrutura Normalizada Floco de Neve</h4>
+          <p>As dimensões do Star Schema são <strong>normalizadas</strong> em múltiplas tabelas satélites. A tabela de cliente aponta para uma tabela de cidades, que aponta para estados, etc., criando ramificações que lembram um floco de neve.</p>
+          <p class="good-txt">✓ Vantagem: Menor redundância de dados (Single Source of Truth de atributos descritivos) e menor espaço em disco analítico.</p>
+          <p class="bad-txt">✗ Desvantagem: Queries exigem múltiplos joins aninhados (fatos ➔ clientes ➔ cidades ➔ estados), degradando severamente a performance no S3/Athena.</p>
+        </div>
+      </div>
+
+      <div class="tbl-wrap" style="margin-top:20px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Métrica</th>
+              <th>Star Schema</th>
+              <th>Snowflake Schema</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Normalização das Dimensões</strong></td>
+              <td>Não (Totalmente Desnormalizadas)</td>
+              <td>Sim (Normalizadas em tabelas auxiliares)</td>
+            </tr>
+            <tr>
+              <td><strong>Número de Joins</strong></td>
+              <td>Baixo (Apenas Fato ➔ Dimensão)</td>
+              <td>Alto (Joins recursivos entre dimensões filhas)</td>
+            </tr>
+            <tr>
+              <td><strong>Desempenho no Redshift/Athena</strong></td>
+              <td><span class="yes">Excelente</span> (Favorece joins simples colunares)</td>
+              <td><span class="no">Ruim/Médio</span> (Gera shuffles de rede excessivos)</td>
+            </tr>
+            <tr>
+              <td><strong>Manutenção e Carga (ETL)</strong></td>
+              <td>Mais complexo no carregamento de dados</td>
+              <td>Mais simples (dados estruturados e limpos)</td>
+            </tr>
+            <tr>
+              <td><strong>Espaço em Disco</strong></td>
+              <td>Maior (Redundância de strings)</td>
+              <td>Menor (Chaves ID compactas)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Como Otimizar Joins Dimensionais na AWS</h3>
+      <p>Em ambientes distribuídos da AWS, o maior gargalo de performance de joins entre tabelas é o <strong>Data Shuffle</strong> (transferência física de partições de dados entre os nós computacionais via rede local do datacenter). Veja como mitigar isso:</p>
+
+      <div class="concept-grid">
+        <div class="concept-card arch-card">
+          <div class="cc-tag">Amazon Redshift</div>
+          <div class="cc-title">Redshift Distribution Keys</div>
+          <div class="cc-body">
+            <ul>
+              <li><strong>DISTSTYLE KEY:</strong> Defina a mesma chave de distribuição (ex: <code>id_cliente</code>) na tabela Fato e na tabela Dimensão Cliente gigante. O Redshift salvará as fatias de dados correspondentes no mesmo nó físico, executando um **Colocated Join** sem nenhum tráfego de rede.</li>
+              <li><strong>DISTSTYLE ALL:</strong> Para dimensões pequenas (ex: <code>dim_tempo</code>, <code>dim_categoria</code>), copie a tabela inteira em todos os nós computacionais do cluster. Isso elimina shuffles de rede no join analítico.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Amazon Athena &amp; S3</div>
+          <div class="cc-title">Desnormalização Total (OBT)</div>
+          <div class="cc-body">
+            Como o Athena lê dados diretamente do S3 de forma serverless, joins pesados exigem que o motor analítico distribua dados dinamicamente na memória RAM. A melhor prática no S3/Athena é a desnormalização completa em **One Big Table (OBT)**. O custo extra de armazenamento do S3 é insignificante em comparação ao ganho de velocidade de leitura e corte de custos de processamento de queries Athena.
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 10C. GESTÃO E MODELAGEM DE PRODUTOS DE DADOS (DPM) -->
     <section class="section" id="data-product-management">
       <div class="sec-hdr">
