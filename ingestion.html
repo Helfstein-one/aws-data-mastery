@@ -113,6 +113,9 @@
       <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
       <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
       <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
+      <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
+      <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
 
       <a href="networking-ingress.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
       <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
@@ -424,6 +427,66 @@ df_parsed = df_msk.selectExpr(<span class="s">"CAST(value AS STRING) as json_pay
       </div>
     </section>
 
+    <!-- SECTION 3.6: CDC COMPARATIVO (DEBEZIUM VS AWS DMS) -->
+    <section class="section" id="cdc-comparativo">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">03.6</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Change Data Capture (CDC): Debezium vs. AWS DMS</h2>
+          <p>Comparação profunda de arquiteturas de replicação lógica e captura de alterações em tempo real</p>
+        </div>
+      </div>
+
+      <p>A captura de dados de alteração (CDC) baseada em logs transacionais é o padrão ouro para integrar bancos relacionais de produção (OLTP) a lagos de dados analíticos sem degradar a CPU do banco de origem com queries pesadas (<code>SELECT *</code>). As duas principais abordagens na AWS são o **Debezium (rodando no Kafka Connect / MSK)** e o **AWS DMS (Database Migration Service)**:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Critério / Feature</th>
+              <th>Debezium (Kafka Connect no MSK)</th>
+              <th>AWS DMS (Database Migration Service)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Arquitetura Interna</strong></td>
+              <td>Baseada em conectores Kafka Connect. Lê diretamente os arquivos de log transacional (WAL/Binlog) e publica eventos granulares estruturados em tópicos Kafka.</td>
+              <td>Serviço de replicação standalone gerenciado pela AWS (Replication Instance) que lê logs e escreve direto no destino (S3, Redshift, etc).</td>
+            </tr>
+            <tr>
+              <td><strong>Desacoplamento e Latência</strong></td>
+              <td>**Máximo Desacoplamento**. Os dados residem em tópicos. Múltiplos consumidores podem consumir independentemente. Latência de milissegundos.</td>
+              <td>**Acoplamento Ponto a Ponto**. O DMS lê da origem e escreve diretamente no destino. A adição de novos destinos exige criar novas instâncias/tarefas DMS de leitura.</td>
+            </tr>
+            <tr>
+              <td><strong>Evolução do Schema (Schema Drift)</strong></td>
+              <td>**Excelente**. Suporta integração nativa com Schema Registry (Glue/Confluent). Propaga alterações de colunas estruturadas perfeitamente.</td>
+              <td>**Limitada**. Alterações complexas de schema na origem (ex: alterar tipo de coluna) frequentemente travam a tarefa DMS, exigindo Full Reload.</td>
+            </tr>
+            <tr>
+              <td><strong>Transformação de Dados</strong></td>
+              <td>Permite transformações em tempo real (SMTs - Single Message Transforms) ou via ksqlDB/Flink antes da gravação no lago.</td>
+              <td>Transformações básicas de mapeamento (renomeação de tabelas/colunas, filtros simples de exclusão).</td>
+            </tr>
+            <tr>
+              <td><strong>Write Amplification e Custo</strong></td>
+              <td>Custo embutido na infraestrutura do MSK. Excelente custo-benefício para múltiplos destinos analíticos.</td>
+              <td>Instâncias de replicação dedicadas e caras. Custos adicionais significativos de processamento por GB transitado no NAT Gateway.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="abox note" style="margin-top:20px;">
+        <strong>Internals de Replicação Lógica e Impacto no Banco de Origem:</strong>
+        <br>• <strong>Consumo de WAL / Redo Log:</strong> Tanto o Debezium quanto o DMS dependem da replicação lógica ativa (ex: slots de replicação no PostgreSQL). Se a conexão com o conector cair e o slot de replicação ficar ativo sem consumo, o banco de dados OLTP continuará retendo os arquivos WAL em disco. Em poucas horas, isso pode **estourar o espaço em disco do RDS**, derrubando o banco de dados transacional de produção. Mantenha alertas rigorosos de monitoramento sobre a métrica <code>OldestReplicationSlotLag</code> no CloudWatch.
+        <br>• <strong>Concorrência e Locks:</strong> Durante o carregamento inicial (Full Load), ambos os serviços executam queries de leitura sequencial (Table Scans). Isso pode gerar locks de leitura e gargalos de I/O em tabelas volumosas não indexadas de produção. Execute o carregamento inicial sempre a partir de réplicas de leitura (Read Replicas).
+      </div>
+    </section>
+
+    <!-- SECTION 4: AWS DMS -->
     <section class="section" id="dms">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--emr)">04</div>

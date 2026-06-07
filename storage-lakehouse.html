@@ -113,6 +113,9 @@
       <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
       <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
       <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
+      <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
+      <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
 
       <a href="networking-ingress.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
       <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
@@ -582,6 +585,60 @@ if erros_encontrados == 0:
     spark.sql("CALL prod.system.cherry_pick_snapshot('silver.transacoes', 'wap_branch')")
 else:
     raise ValueError(f"Auditoria falhou. Encontrados {erros_encontrados} registros invalidos!")</code></pre>
+
+      <h3 style="margin-top: 30px;">Tuning Avançado de Escrita do Apache Iceberg: Write Distribution</h3>
+      <p>Escrever em tabelas altamente particionadas de forma concorrente no Spark pode causar sérios problemas de **Small Files (arquivos pequenos)** e alta degradação de memória nos Workers. Para controlar como o Spark distribui os dados antes de gravar no S3, configuramos o parâmetro <code>write.distribution-mode</code>:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Modo de Distribuição</th>
+              <th>Como o Spark se comporta</th>
+              <th>Impacto na Computação (EMR)</th>
+              <th>Ideal para...</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>none</strong></td>
+              <td>Nenhuma reorganização. Cada Worker grava os dados que possui localmente na partição correspondente.</td>
+              <td>Zero custo de Shuffle de rede ou ordenação em memória.</td>
+              <td>Tabelas não particionadas ou quando o DataFrame de origem já está ordenado e bem distribuído.</td>
+            </tr>
+            <tr>
+              <td><strong>hash</strong></td>
+              <td>Aplica um hash nas chaves de partição e agrupa os dados de forma que o mesmo Worker concentre os registros da mesma partição.</td>
+              <td>Gera custo moderado de Shuffle de rede entre Workers para redistribuição de partições.</td>
+              <td>Tabelas particionadas tradicionais, reduzindo drasticamente o problema de arquivos muito pequenos espalhados.</td>
+            </tr>
+            <tr>
+              <td><strong>range</strong></td>
+              <td>Distribui e ordena os dados pelo grão das partições e chaves de ordenação da tabela.</td>
+              <td>Alto consumo de CPU e memória. Exige amostragem de dados e Shuffle global no cluster.</td>
+              <td>Tabelas que usam ordenação física (Sort/Z-Order) para maximizar o Data Skipping na leitura.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 30px;">Estratégias de Compactação de Arquivos no Apache Iceberg</h3>
+      <p>Mesmo com distribuições otimizadas, tabelas que recebem inserções frequentes em streaming (MoR) acumulam arquivos de metadados manifestos e arquivos de exclusão (*Delete Files*). A manutenção periódica de compactação é essencial para restaurar o desempenho de leitura através da procedure <code>rewrite_data_files</code>:</p>
+
+      <ul>
+        <li><strong>Bin-packing (Estratégia Padrão):</strong>
+          Combina arquivos pequenos adjacentes em arquivos maiores de tamanho ideal (ex: 512MB) sem reordenar os dados físicamente. É a estratégia **mais rápida e de menor custo computacional**, ideal para execução recorrente durante o dia.
+          <pre><code class="language-sql">-- Executando a compactação simples por Bin-packing no Spark / EMR
+CALL prod.system.rewrite_data_files(
+  table => 'silver.transacoes',
+  strategy => 'sort',
+  options => map('sort-order', 'id_venda') -- ou omitir strategy para Bin-packing padrão
+);</code></pre>
+        </li>
+        <li><strong>Sort &amp; Z-Order Clustering:</strong>
+          Reescreve os dados reordenando os registros com base em uma ou mais colunas de alta cardinalidade. Embora **exija alto processamento e movimentação de dados**, minimiza brutalmente as partições varridas no S3 pelas queries analíticas ao otimizar o índice de estatísticas Min/Max das colunas no nível de Page do Parquet.
+        </li>
+      </ul>
 
       <h3 style="margin-top:30px;">Metadata-Only Queries (Consulta de Custo Zero)</h3>
       <p>Consultas de agregação simples (ex: <code>SELECT COUNT(*), MAX(data_atualizacao) FROM tabela</code>) em tabelas Iceberg bem compactadas são respondidas diretamente **lendo apenas os arquivos Manifestos (Avro)** de metadados, sem carregar um único byte dos arquivos físicos Parquet no S3. O Athena e o Spark resolvem a query em milissegundos com custo zero de varredura (Data Scanned = 0MB).</p>
