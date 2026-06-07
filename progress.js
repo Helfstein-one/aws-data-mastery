@@ -186,6 +186,18 @@
         "playbook-crises.html#crise-nulos",
         "playbook-crises.html#crise-sla"
       ]
+    },
+    platform: {
+      name: "🏗️ Plataforma de Dados",
+      badge: "Arquiteto de Plataforma",
+      color: "var(--accent)",
+      items: [
+        "plataforma-dados.html#estrategico",
+        "plataforma-dados.html#topologia",
+        "plataforma-dados.html#arquitetura",
+        "plataforma-dados.html#alinhamento",
+        "plataforma-dados.html#perguntas"
+      ]
     }
   };
 
