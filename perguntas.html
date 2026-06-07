@@ -116,6 +116,9 @@
       <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
       <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
       <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
+      <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
+      <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
 
       <a href="networking-ingress.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
       <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
@@ -1989,6 +1992,86 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
             <li><strong>Network Load Balancer (NLB) Privado:</strong> Provisione um NLB privado nas sub-redes privadas onde o cluster EMR reside. Crie Target Groups do tipo <code>ip</code> mapeando os endereços IP privados dos nós Master do EMR para a porta de interesse (ex: TCP 18080).</li>
             <li><strong>VPC Endpoint Service (PrivateLink):</strong> Crie um VPC Endpoint Service associado ao NLB privado. Esse serviço gera um ARN de serviço que pode ser compartilhado com outras contas AWS autorizadas.</li>
             <li><strong>Interface VPC Endpoint:</strong> Na VPC de consumo (onde estão os analistas ou parceiros), crie um Interface VPC Endpoint apontando para o Endpoint Service criado. A AWS provisionará placas de rede virtuais (ENIs) locais que resolvem o tráfego diretamente para o NLB privado e consequentemente para as portas internas do EMR de forma segura, com criptografia em trânsito e latência de sub-milissegundos.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 74: IoT High-Throughput (Standard vs Express State Machine) -->
+      <div class="card" id="q74" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 74 · IoT High-Throughput: Standard vs Express Workflows no Step Functions</div>
+        <h4>Você está desenhando um pipeline para receber telemetria de 50.000 sensores de IoT enviando eventos a cada segundo. Cada mensagem precisa ser validada, enriquecida e persistida no S3. O time propôs usar uma Step Function para orquestrar o fluxo. Qual tipo de Workflow (Standard ou Express) deve ser selecionado, quais os limites a considerar e como integrar isso com ECS Fargate atrás de um ALB para Ingestão?</h4>
+        <p><strong>Desafio de Volumetria e Custo:</strong> Standard Workflows cobram por transição de estados e possuem limite de 2.000 execuções por segundo. Em 50.000 eventos/s, os limites de concorrência seriam estourados no primeiro segundo, gerando estrangulamento de chamadas e uma fatura financeira astronômica.</p>
+        <div class="callout callout-info">
+          <strong>Arquitetura e Solução de Ingestão:</strong>
+          <ul>
+            <li><strong>Escolha do Express Workflow:</strong> Deve-se selecionar o **Express Workflow**. Ele suporta taxas de início superiores a 100.000 execuções/s e a cobrança é baseada apenas no tempo de CPU consumido e número de requests (idêntico ao modelo do AWS Lambda), reduzindo o custo operacional em até 95% para este padrão de tráfego. O limite físico é a duração de 5 minutos, o que é ideal para tratamentos ultra rápidos de mensagens.</li>
+            <li><strong>Desacoplamento via ECS e ALB:</strong> Para proteger o ecossistema, os sensores IoT não disparam a Step Function diretamente. Eles batem em uma API REST de alta performance construída em Go/Python rodando em containers **ECS Fargate** altamente escaláveis, localizados atrás de um **Application Load Balancer (ALB)**.</li>
+            <li><strong>Fluxo de Ingestão Desacoplado:</strong> O ECS recebe o payload JSON, faz uma validação estrutural inicial rápida e o publica em uma **Fila SQS**. Um Lambda consome lotes (batches) da fila SQS de forma paralela e dispara as execuções assíncronas do **Express Workflow** para enriquecimento complexo, persistindo os dados higienizados no data lake.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 75: Idempotency Spark / EMR from SQS Standard -->
+      <div class="card" id="q75" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 75 · Reprocessamento Resiliente: Idempotência de Consumo SQS em Spark / EMR</div>
+        <h4>Seu pipeline Spark rodando no Amazon EMR consome dados continuamente de uma fila SQS Standard (at-least-once). Devido a instabilidades temporárias de rede, mensagens processadas com sucesso não são deletadas a tempo e reaparecem na fila, sendo entregues novamente. Como desenhar a lógica no Spark para garantir a idempotência física dos registros gravados em tabelas Apache Iceberg (camada Silver)?</h4>
+        <p><strong>Risco de Duplicidade Analítica:</strong> Como filas SQS Standard não garantem entrega única, o reprocessamento puro de mensagens duplicadas gera linhas duplicadas no data lake, corrompendo agregações financeiras e métricas de negócios.</p>
+        <div class="callout callout-tip">
+          <strong>Solução de Engenharia de Dados:</strong>
+          <ul>
+            <li><strong>Uso de Deduplicação Nativa do Apache Iceberg (Upsert / Merge Into):</strong> Em vez de executar comandos de Append cego no Spark, utilize o padrão **Merge Into (Upsert)** com base em uma chave única de negócios (ex: <code>transaction_id</code>):
+              <pre><code class="language-sql">-- Comando executado no Spark / EMR para atualizar dados existentes ou inserir novos
+MERGE INTO silver.transacoes t
+USING staging_df s
+ON t.transaction_id = s.transaction_id
+WHEN MATCHED THEN
+  UPDATE SET t.valor = s.valor, t.data_atualizacao = s.data_atualizacao
+WHEN NOT MATCHED THEN
+  INSERT (transaction_id, valor, data_atualizacao) VALUES (s.transaction_id, s.valor, s.data_atualizacao);</code></pre>
+            </li>
+            <li><strong>Tabelamento de Estado Temporário (Redis / DynamoDB):</strong> Se a operação de Merge Into for muito cara devido ao tamanho físico da tabela, o Spark pode consultar um banco de dados KV ultra rápido como o DynamoDB antes de processar. O pipeline faz um write lock do <code>messageId</code> do SQS no DynamoDB com um TTL (Time-To-Live) de 24 horas. Se o ID já existir, o Spark descarta o registro imediatamente (Drop), garantindo processamento único.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 76: Claim Check Pattern and RDS Proxy / Aurora DB -->
+      <div class="card" id="q76" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 76 · Padrão Claim Check e Proteção de Banco de Dados Aurora via RDS Proxy</div>
+        <h4>Um pipeline de ETL recebe payloads volumosos de terceiros contendo imagens codificadas em Base64 e metadados lógicos (> 1.5 MB). O pipeline deve ler os metadados e gravá-los em uma tabela transacional no Amazon Aurora PostgreSQL. Como projetar essa arquitetura usando Claim Check no SQS e proteger o Aurora de sobrecarga de conexões concorrentes durante picos de escrita?</h4>
+        <p><strong>Limite de Payload SQS e Limite de Conexões Aurora:</strong> O SQS rejeitará a mensagem porque excede 256 KB. Se tentarmos contornar isso escalando executores do Fargate para processar e gravar direto no Aurora, o volume massivo de conexões concorrentes geradas pelas tarefas do Fargate esgotará a memória (max_connections) do Aurora, derrubando o banco de dados OLTP.</p>
+        <div class="callout callout-info">
+          <strong>Arquitetura Claim Check + RDS Proxy:</strong>
+          <ol>
+            <li><strong>Claim Check via S3 e SQS:</strong> A aplicação de borda recebe o payload de 1.5 MB, grava a imagem Base64 em um bucket **S3** e envia uma mensagem curta ao **SQS** contendo apenas a referência (URI do S3) e os metadados lógicos limpos.</li>
+            <li><strong>Throttling e Pooling com RDS Proxy:</strong> Provisione o **Amazon RDS Proxy** entre os consumidores SQS (Lambda/ECS Fargate) e o banco de dados Aurora PostgreSQL. O RDS Proxy mantém um pool estabelecido de conexões persistentes com o Aurora. Múltiplas tarefas concorrentes do ECS Fargate compartilham (multiplexação) esse pool de conexões estável.</li>
+            <li><strong>Benefício de Resiliência:</strong> Se as tarefas do Fargate escalarem para 1.000 instâncias concorrentes devido a um pico de ingestão, elas não abrirão 1.000 conexões com o Aurora. Elas farão fila no RDS Proxy, que gerenciará o tráfego sem estourar o limite de conexões físicas do banco de dados, enquanto o SQS serve como buffer de backpressure.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Case 77: Cross-Account Event Routing and Step Functions Orchestration -->
+      <div class="card" id="q77" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 77 · Roteamento Cross-Account no EventBridge e Orquestração Glue com Step Functions</div>
+        <h4>Em uma organização multinacional estruturada em Data Mesh, como rotear eventos de atualização de dados da Conta de Negócios A para a Conta Analítica Central B utilizando EventBridge, disparar uma Step Function para orquestrar múltiplos Glue Jobs sequenciais com passagem de parâmetros e enviar notificações segmentadas via SNS baseadas na criticidade da falha?</h4>
+        <p><strong>Desafio Cross-Account e Governança:</strong> Recursos em contas AWS diferentes não conseguem se comunicar diretamente sem políticas de recursos explícitas e permissões cruzadas que respeitem princípios de privilégio mínimo.</p>
+        <div class="callout callout-tip">
+          <strong>Arquitetura Organizacional de Eventos:</strong>
+          <ul>
+            <li><strong>Roteamento de Evento Cross-Account (EventBridge):</strong>
+              <br>• Na **Conta A (Negócios)**, crie uma regra do EventBridge cuja ação (target) aponte diretamente para o ARN do Barramento de Eventos (Event Bus) padrão ou customizado da **Conta B (Analítica)**.
+              <br>• Na **Conta B**, configure a política de permissão do Event Bus para autorizar a Conta A a publicar eventos (ação <code>events:PutEvents</code>).
+            </li>
+            <li><strong>Orquestração Serverless com Step Functions:</strong>
+              Na Conta B, crie uma regra do EventBridge que escuta os eventos direcionados da Conta A e dispara o início de execução do **Step Functions**. A máquina de estados inicia e executa uma cadeia de Glue Jobs:
+              <br>1. Roda o <code>Glue Job 1 (Bronze para Silver)</code> e aguarda a finalização (<code>.sync</code>).
+              <br>2. Se o status for bem-sucedido, um Choice State direciona para o <code>Glue Job 2 (Silver para Gold)</code>.
+              <br>3. Se qualquer passo falhar, o bloco <code>Catch</code> captura o erro e envia para a task final de notificação.
+            </li>
+            <li><strong>Notificação Segmentada via SNS (Message Filtering):</strong>
+              O Step Functions publica a falha em um Tópico SNS associado a dois consumidores diferentes:
+              <br>• <strong>Assinatura SQS do Time de Operações (Alta Prioridade):</strong> Filtra por atributos <code>{ "criticidade": ["alta"] }</code> (falhas no processamento da Gold).
+              <br>• <strong>Assinatura de Email do Time de Desenvolvimento (Média Prioridade):</strong> Filtra por <code>{ "criticidade": ["media", "baixa"] }</code> (falhas menores ou retentativas automáticas na Silver).
+            </li>
           </ul>
         </div>
       </div>
