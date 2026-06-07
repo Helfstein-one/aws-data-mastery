@@ -171,6 +171,18 @@
         "data-engineering-oop.html#design-patterns",
         "data-engineering-oop.html#oop-cases-perguntas"
       ]
+    },
+    playbook: {
+      name: "🚒 Playbook de Crises",
+      badge: "Gerenciador de Crises",
+      color: "var(--warn)",
+      items: [
+        "playbook-crises.html#introducao",
+        "playbook-crises.html#crise-streaming",
+        "playbook-crises.html#crise-kms",
+        "playbook-crises.html#crise-genai",
+        "playbook-crises.html#crise-fechamento"
+      ]
     }
   };
 
