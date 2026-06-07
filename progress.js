@@ -193,6 +193,10 @@
       color: "var(--accent)",
       items: [
         "plataforma-dados.html#estrategico",
+        "plataforma-dados.html#cenario-cdc",
+        "plataforma-dados.html#cenario-sharing",
+        "plataforma-dados.html#cenario-lineage",
+        "plataforma-dados.html#cenario-llmops",
         "plataforma-dados.html#topologia",
         "plataforma-dados.html#arquitetura",
         "plataforma-dados.html#alinhamento",
