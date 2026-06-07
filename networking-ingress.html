@@ -403,6 +403,91 @@ resource <span class="s">"aws_api_gateway_integration"</span> <span class="s">"i
     <span class="s">"application/json"</span> = <span class="s">"Action=SendMessage&amp;MessageBody=$input.body"</span>
   }
 }</pre>
+
+      <h3>Código Prático: Provisionamento de ALB para Múltiplas Aplicações (EMR no EC2 &amp; ECS Fargate)</h3>
+      <p>O exemplo abaixo demonstra como configurar em Terraform um **Application Load Balancer (ALB)** público que atua como ponto único de entrada (Ingress), roteando tráfego baseado no caminho da URL para a interface web de um cluster **EMR no EC2 (nó Master)** e para microsserviços de dados rodando em **ECS Fargate**:</p>
+
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Provisionamento do Application Load Balancer Público</span>
+resource <span class="s">"aws_lb"</span> <span class="s">"ingress_alb"</span> {
+  name               = <span class="s">"prod-ingress-load-balancer"</span>
+  internal           = false
+  load_balancer_type = <span class="s">"application"</span>
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = [aws_subnet.public_az1.id, aws_subnet.public_az2.id]
+  tags               = { Environment = <span class="s">"production"</span> }
+}
+
+<span class="c"># 2. Target Group para a API Analítica rodando em ECS Fargate (porta 8080)</span>
+resource <span class="s">"aws_lb_target_group"</span> <span class="s">"ecs_api_tg"</span> {
+  name        = <span class="s">"tg-prod-ecs-analytics-api"</span>
+  port        = 8080
+  protocol    = <span class="s">"HTTP"</span>
+  vpc_id      = aws_vpc.main.id
+  target_type = <span class="s">"ip"</span> # Necessário para modo awsvpc do Fargate
+
+  health_check {
+    path                = <span class="s">"/health"</span>
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+  }
+}
+
+<span class="c"># 3. Target Group para a Spark UI / Zeppelin rodando no Master do EMR no EC2 (porta 18080)</span>
+resource <span class="s">"aws_lb_target_group"</span> <span class="s">"emr_master_tg"</span> {
+  name        = <span class="s">"tg-prod-emr-spark-ui"</span>
+  port        = 18080
+  protocol    = <span class="s">"HTTP"</span>
+  vpc_id      = aws_vpc.main.id
+  target_type = <span class="s">"instance"</span> # Mapeamento direto de Instâncias EC2
+
+  health_check {
+    path                = <span class="s">"/jobs/"</span> # Endpoint padrão do Spark History Server
+    port                = <span class="s">"18080"</span>
+    interval            = 45
+    timeout             = 10
+  }
+}
+
+<span class="c"># 4. Listener HTTPS (Porta 443) do ALB</span>
+resource <span class="s">"aws_lb_listener"</span> <span class="s">"https"</span> {
+  load_balancer_arn = aws_lb.ingress_alb.arn
+  port              = 443
+  protocol          = <span class="s">"HTTPS"</span>
+  ssl_policy        = <span class="s">"ELBSecurityPolicy-TLS13-1-2-2021-06"</span>
+  certificate_arn   = var.ssl_certificate_arn
+
+  # Ação padrão: Direciona para a API de dados no ECS
+  default_action {
+    type             = <span class="s">"forward"</span>
+    target_group_arn = aws_lb_target_group.ecs_api_tg.arn
+  }
+}
+
+<span class="c"># 5. Regra Adicional de Roteamento para a Spark UI do EMR por Caminho (Path-Based routing)</span>
+resource <span class="s">"aws_lb_listener_rule"</span> <span class="s">"emr_spark_ui_rule"</span> {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 10 # Prioridade maior que a default rule
+
+  action {
+    type             = <span class="s">"forward"</span>
+    target_group_arn = aws_lb_target_group.emr_master_tg.arn
+  }
+
+  condition {
+    path_pattern {
+      values = [<span class="s">"/sparkhistory*"</span>, <span class="s">"/sparkhistory/*"</span>]
+    }
+  }
+}
+
+<span class="c"># 6. Associação física do nó Master do EMR no Target Group</span>
+resource <span class="s">"aws_lb_target_group_attachment"</span> <span class="s">"emr_master_attachment"</span> {
+  target_group_arn = aws_lb_target_group.emr_master_tg.arn
+  target_id        = var.emr_master_instance_id # ID da instância EC2 do nó Master do EMR
+  port             = 18080
+}</pre>
     </section>
 
     <!-- SECTION 3: VPC ENDPOINTS -->
