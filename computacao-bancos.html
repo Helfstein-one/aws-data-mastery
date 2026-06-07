@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado.">
+  <title>Computação &amp; Bancos - AWS Data Specialist</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar">
+  <div class="nav-logo">
+    <div class="t">AWS Data<br>Engineering</div>
+    <div class="s">Portal de Estudos</div>
+    <div class="auth" style="font-family: 'DM Mono', monospace; font-size: 8px; color: #38bdf8; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase;">Autor: Mauricio Helfstein</div>
+  </div>
+  <div style="padding:0 12px">
+    <div class="nav-lbl">Visão Geral</div>
+    <a href="index.html" class="nav-a"><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
+    
+    <div class="nav-lbl collapsible" onclick="toggleCategory('arch-cat', this)">
+      <span>Arquitetura &amp; Padrões</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="arch-cat" class="nav-cat-content">
+      <a href="architecture.html" class="nav-a"><span class="nav-dot" style="background:var(--arch)"></span>📐 Arquitetura de Dados</a>
+      <a href="architecture.html#pilares" class="nav-sub"><span class="nav-sdot"></span>7 Pilares</a>
+      <a href="architecture.html#mensageria" class="nav-sub"><span class="nav-sdot"></span>Mensageria</a>
+      <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>Kafka/MSK ➔</a>
+      <a href="architecture.html#triggers" class="nav-sub"><span class="nav-sdot"></span>Triggers</a>
+      <a href="architecture.html#workflows" class="nav-sub"><span class="nav-sdot"></span>Workflows</a>
+      <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation ➔</a>
+      <a href="architecture.html#lambda" class="nav-sub"><span class="nav-sdot"></span>Lambda</a>
+      <a href="architecture.html#kappa" class="nav-sub"><span class="nav-sdot"></span>Kappa</a>
+      <a href="architecture.html#lakehouse" class="nav-sub"><span class="nav-sdot"></span>Lakehouse</a>
+      <a href="architecture.html#datamesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+      <a href="architecture.html#modelagem-dados" class="nav-sub"><span class="nav-sdot"></span>Modelagem Dados</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>Gestão Produtos ➔</a>
+
+      <a href="perguntas.html" class="nav-a"><span class="nav-dot" style="background:var(--spark)"></span>❓ Perguntas de Entrevista</a>
+      <a href="perguntas.html#q1" class="nav-sub"><span class="nav-sdot"></span>Spark & Kafka</a>
+      <a href="perguntas.html#q5" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="perguntas.html#q7" class="nav-sub"><span class="nav-sdot"></span>Memory & OOM</a>
+      <a href="perguntas.html#q14" class="nav-sub"><span class="nav-sdot"></span>Spark Tuning</a>
+      <a href="perguntas.html#q24" class="nav-sub"><span class="nav-sdot"></span>RAG & GenAI</a>
+
+      <a href="cases.html" class="nav-a"><span class="nav-dot" style="background:var(--ext)"></span>💼 Cases de Plataformas</a>
+      <a href="cases.html#case-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming</a>
+      <a href="cases.html#case-mesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+      <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
+      <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
+      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
+      <a href="cases.html#case-polaris-flink" class="nav-sub"><span class="nav-sdot"></span>Mesh Polaris Flink</a>
+      <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
+      <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
+    </div>
+    
+    <div class="nav-lbl collapsible" onclick="toggleCategory('pipeline-cat', this)">
+      <span>Pipeline de Engenharia</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="pipeline-cat" class="nav-cat-content">
+      <a href="ingestion.html" class="nav-a"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Ingestão & Streaming</a>
+      <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
+      <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
+      <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate</a>
+      <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
+      <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
+
+      <a href="storage-lakehouse.html" class="nav-a"><span class="nav-dot" style="background:var(--arch)"></span>💾 Lakehouse & Storage</a>
+      <a href="storage-lakehouse.html#s3-camadas" class="nav-sub"><span class="nav-sdot"></span>Camadas S3</a>
+      <a href="storage-lakehouse.html#s3-tiers" class="nav-sub"><span class="nav-sdot"></span>S3 Tiers & FinOps</a>
+      <a href="storage-lakehouse.html#formatos" class="nav-sub"><span class="nav-sdot"></span>Formatos</a>
+      <a href="storage-lakehouse.html#iceberg" class="nav-sub"><span class="nav-sdot"></span>Iceberg</a>
+      <a href="storage-lakehouse.html#iceberg-vs-delta" class="nav-sub"><span class="nav-sdot"></span>Iceberg vs Delta</a>
+      <a href="storage-lakehouse.html#iceberg-rest-catalog" class="nav-sub"><span class="nav-sdot"></span>REST Catalog</a>
+
+      <a href="processing.html" class="nav-a"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Processamento Spark</a>
+      <a href="processing.html#spark-arch" class="nav-sub"><span class="nav-sdot"></span>Spark Arch</a>
+      <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
+      <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
+      <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+      <a href="processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>EMR on EKS</a>
+      <a href="processing.html#flink-streaming" class="nav-sub"><span class="nav-sdot"></span>Flink Streaming</a>
+
+      <a href="serving.html" class="nav-a"><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
+      <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
+      <a href="serving.html#iceberg-manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção Iceberg</a>
+      <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
+      <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
+    </div>
+    
+    <div class="nav-lbl collapsible" onclick="toggleCategory('ai-genai-cat', this)">
+      <span>Inteligência Artificial &amp; GenAI</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="ai-genai-cat" class="nav-cat-content">
+      <a href="genai.html" class="nav-a"><span class="nav-dot" style="background:#a78bfa"></span>🤖 GenAI &amp; Dados</a>
+      <a href="genai.html#genai-teoria" class="nav-sub"><span class="nav-sdot"></span>IA Teoria</a>
+      <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG &amp; Agentes</a>
+      <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>pgvector SQL</a>
+      <a href="genai.html#prompt-engineering" class="nav-sub"><span class="nav-sdot"></span>Prompt Engineering</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('ops-dev-cat', this)">
+      <span>Operações &amp; Desenvolvimento</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="ops-dev-cat" class="nav-cat-content open">
+      <a href="dataops-mlops.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>⚙️ DataOps &amp; MLOps</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>DataOps</a>
+      <a href="dataops-mlops.html#mlops-core" class="nav-sub"><span class="nav-sdot"></span>MLOps</a>
+      <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
+      <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
+      <a href="dataops-mlops.html#git-flow" class="nav-sub"><span class="nav-sdot"></span>Git Flow & CI/CD</a>
+
+      <a href="data-engineering-oop.html" class="nav-a"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ OOP &amp; Python para Dados</a>
+      <a href="data-engineering-oop.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>PEP8/Tipagem</a>
+      <a href="data-engineering-oop.html#oop-dados" class="nav-sub"><span class="nav-sdot"></span>4 Pilares OOP</a>
+      <a href="data-engineering-oop.html#design-patterns" class="nav-sub"><span class="nav-sdot"></span>Design Patterns</a>
+      <a href="data-engineering-oop.html#oop-cases-perguntas" class="nav-sub"><span class="nav-sdot"></span>Cases & Perguntas</a>
+
+      <a href="playbook-crises.html" class="nav-a"><span class="nav-dot" style="background:var(--warn)"></span>🚒 Playbook de Crises</a>
+      <a href="playbook-crises.html#introducao" class="nav-sub"><span class="nav-sdot"></span>Framework</a>
+      <a href="playbook-crises.html#crise-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming OOM</a>
+      <a href="playbook-crises.html#crise-kms" class="nav-sub"><span class="nav-sdot"></span>KMS Lockout</a>
+      <a href="playbook-crises.html#crise-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI Cost/Lat</a>
+      <a href="playbook-crises.html#crise-fechamento" class="nav-sub"><span class="nav-sdot"></span>Balanço Bancário</a>
+      <a href="playbook-crises.html#crise-duplicacao" class="nav-sub"><span class="nav-sdot"></span>Deduplicação API</a>
+      <a href="playbook-crises.html#crise-nulos" class="nav-sub"><span class="nav-sdot"></span>Dados Nulos / Drift</a>
+      <a href="playbook-crises.html#crise-sla" class="nav-sub"><span class="nav-sdot"></span>Atraso SLA Mesh</a>
+
+      <a href="plataforma-dados.html" class="nav-a"><span class="nav-dot" style="background:var(--accent)"></span>🏗️ Plataforma de Dados</a>
+      <a href="plataforma-dados.html#estrategico" class="nav-sub"><span class="nav-sdot"></span>Da Necessidade ao Plano</a>
+      <a href="plataforma-dados.html#topologia" class="nav-sub"><span class="nav-sdot"></span>Topologia & Roadmap</a>
+      <a href="plataforma-dados.html#arquitetura" class="nav-sub"><span class="nav-sdot"></span>Arquitetura & APIs</a>
+      <a href="plataforma-dados.html#alinhamento" class="nav-sub"><span class="nav-sdot"></span>Pitch & Alinhamento</a>
+      <a href="plataforma-dados.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas & Cases</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('sec-net-fin-cat', this)">
+      <span>Segurança, Redes &amp; FinOps</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="sec-net-fin-cat" class="nav-cat-content">
+      <a href="governance-security.html" class="nav-a"><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança &amp; IaC</a>
+      <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="governance-security.html#iam-kms" class="nav-sub"><span class="nav-sdot"></span>IAM &amp; KMS</a>
+      <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
+      <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>Data Quality ➔</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>Contratos de Dados ➔</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>Linhagem Dados ➔</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>Plataforma Testes ➔</a>
+
+      <a href="networking-ingress.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
+      <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
+      <a href="networking-ingress.html#api-alb" class="nav-sub"><span class="nav-sdot"></span>API &amp; ALB</a>
+      <a href="networking-ingress.html#vpc-endpoints" class="nav-sub"><span class="nav-sdot"></span>VPC Endpoints</a>
+
+      <a href="computacao-bancos.html" class="nav-a active"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
+      <a href="computacao-bancos.html#ecs" class="nav-sub"><span class="nav-sdot"></span>Containers ECS</a>
+      <a href="computacao-bancos.html#load-balancers" class="nav-sub"><span class="nav-sdot"></span>Load Balancers</a>
+      <a href="computacao-bancos.html#rds-aurora" class="nav-sub"><span class="nav-sdot"></span>RDS &amp; Aurora</a>
+      <a href="computacao-bancos.html#operacao" class="nav-sub"><span class="nav-sdot"></span>Guia de Operação</a>
+
+      <a href="finops.html" class="nav-a"><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
+      <a href="finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>FinOps Fundamentos</a>
+      <a href="finops.html#finops-boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas</a>
+      <a href="finops.html#finops-analise" class="nav-sub"><span class="nav-sdot"></span>Análise de Custos</a>
+      <a href="finops.html#finops-terraform" class="nav-sub"><span class="nav-sdot"></span>Terraform &amp; Cost Explorer</a>
+    </div>
+  </div>
+</nav>
+
+<div id="main">
+  <div class="hero" style="background-color: var(--navy)">
+    <div class="hero-ey">Infraestrutura Operacional &amp; Bancos de Dados</div>
+    <h1>Containers ECS, Load Balancers &amp; RDS/Aurora</h1>
+    <p class="hero-d">Arquitetura de microsserviços orientada a dados, balanceamento de carga de alta concorrência e engines de bancos relacionais OLTP escaláveis na AWS.</p>
+  </div>
+
+  <main class="main-content">
+    
+    <!-- SECTION 1: ECS -->
+    <section class="section" id="ecs">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Amazon ECS: Teoria de Containers &amp; Launch Types</h2>
+          <p>Diferenças fundamentais entre ECS Fargate e ECS on EC2, estrutura de blueprints e segurança</p>
+        </div>
+      </div>
+
+      <p>O <strong>Amazon ECS (Elastic Container Service)</strong> é o serviço de orquestração de containers altamente escalável e de alta performance nativo da AWS. Diferente do Kubernetes (EKS), o ECS foca em simplificar o deploy eliminando a necessidade de gerenciar nós de controle complexos (Control Plane).</p>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
+          <div class="cc-tag">Launch Type</div>
+          <div class="cc-title">ECS Fargate (Serverless)</div>
+          <div class="cc-body">
+            <strong>Como funciona:</strong> A AWS gerencia toda a computação. O engenheiro declara apenas o tamanho de CPU e Memória da Task.
+            <br><strong>Tradeoffs:</strong> Menor overhead operacional, isolamento físico de segurança por task (micro-VMs Firecracker). Custo ligeiramente superior por recurso ativo e boot time mais longo.
+          </div>
+        </div>
+
+        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
+          <div class="cc-tag">Launch Type</div>
+          <div class="cc-title">ECS on EC2 (Gerenciado)</div>
+          <div class="cc-body">
+            <strong>Como funciona:</strong> O cluster ECS usa instâncias EC2 gerenciadas no seu próprio grupo de Auto Scaling como workers de container.
+            <br><strong>Tradeoffs:</strong> Controle total do sistema operacional, suporte a volumes EBS locais e GPUs dedicadas. Exige gerenciar patches do SO e agentes do ECS instalados nas máquinas.
+          </div>
+        </div>
+      </div>
+
+      <h3>Arquitetura ECS: Cluster, Service, Task &amp; Task Definition</h3>
+      <p>A tabela a seguir explica a hierarquia de objetos lógicos dentro do ecossistema do ECS:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Componente</th>
+              <th>Propósito</th>
+              <th>Análogo Físico</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Cluster</strong></td>
+              <td>Agrupamento lógico de computação (Fargate ou EC2) em subredes privadas.</td>
+              <td>Data Center Virtualizado</td>
+            </tr>
+            <tr>
+              <td><strong>Task Definition</strong></td>
+              <td>O blueprint em formato JSON definindo a imagem Docker, portas, variáveis de ambiente e volumes.</td>
+              <td>Dockerfile / Docker Compose</td>
+            </tr>
+            <tr>
+              <td><strong>Task</strong></td>
+              <td>A instância ativa e executável do container em si, rodando de forma isolada na VPC.</td>
+              <td>Container Ativo (Docker Run)</td>
+            </tr>
+            <tr>
+              <td><strong>Service</strong></td>
+              <td>Gerenciador que garante que a quantidade solicitada de Tasks esteja saudável, integrando-as ao Load Balancer.</td>
+              <td>Process Daemon / Orquestrador</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Segurança de Containers: Task Role vs. Task Execution Role</h3>
+      <p>Um erro de segurança recorrente em projetos de ECS é conceder permissões excessivas às instâncias que executam os containers. A AWS divide a identidade IAM no ECS em duas camadas de privilégio de grão fino:</p>
+      
+      <ul>
+        <li><strong>Task Execution Role:</strong> Utilizada pelo **agente do ECS** rodando na infraestrutura (antes do container iniciar). Permissões típicas: baixar a imagem do container do ECR, enviar logs de stdout para o CloudWatch, descriptografar variáveis sensíveis vindas do Secrets Manager ou System Manager Parameter Store.</li>
+        <li><strong>Task Role:</strong> Utilizada pela **sua aplicação** de fato rodando dentro do container (após a inicialização). Permissões típicas: ler/gravar dados em um bucket S3, consultar uma tabela do DynamoDB, ou publicar mensagens em um tópico SNS.</li>
+      </ul>
+
+      <div class="dw">
+        <svg viewBox="0 0 800 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="240" fill="#0f172a" rx="14"/>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ISOLAMENTO IAM: TASK ROLE VS. TASK EXECUTION ROLE</text>
+
+          <!-- System Roles -->
+          <rect x="30" y="80" width="220" height="120" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="140" y="105" text-anchor="middle" fill="#f43f5e" font-size="10" font-weight="700">Task Execution Role</text>
+          <text x="140" y="135" text-anchor="middle" fill="#cbd5e1" font-size="8">Usado pelo ECS Agent (Host)</text>
+          <text x="140" y="155" text-anchor="middle" fill="#94a3b8" font-size="7.5">Ações: ecr:GetAuthorizationToken</text>
+          <text x="140" y="170" text-anchor="middle" fill="#94a3b8" font-size="7.5">secretsmanager:GetSecretValue</text>
+
+          <!-- Container -->
+          <rect x="290" y="80" width="220" height="120" rx="8" fill="#0f172a" stroke="#a78bfa" stroke-width="2"/>
+          <text x="400" y="105" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">ECS Task Container</text>
+          <text x="400" y="135" text-anchor="middle" fill="#cbd5e1" font-size="8">Código da Aplicação (App)</text>
+          <text x="400" y="155" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Executa em runtime isolado</text>
+
+          <!-- App Roles -->
+          <rect x="550" y="80" width="220" height="120" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="660" y="105" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">Task Role</text>
+          <text x="660" y="135" text-anchor="middle" fill="#cbd5e1" font-size="8">Concedida à aplicação (Runtime)</text>
+          <text x="660" y="155" text-anchor="middle" fill="#94a3b8" font-size="7.5">Ações: s3:PutObject / s3:GetObject</text>
+          <text x="660" y="170" text-anchor="middle" fill="#94a3b8" font-size="7.5">dynamodb:Query / UpdateItem</text>
+
+          <!-- Arrows -->
+          <line x1="250" y1="140" x2="280" y2="140" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <line x1="510" y1="140" x2="540" y2="140" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)"/>
+        </svg>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 2: LOAD BALANCERS -->
+    <section class="section" id="load-balancers">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>AWS Load Balancers: ALB vs. NLB vs. GLB</h2>
+          <p>Entendendo as camadas L7, L4, L3, roteamento inteligente e estratégias de connection draining</p>
+        </div>
+      </div>
+
+      <p>A distribuição de requisições analíticas e operacionais entre instâncias é realizada pela camada de **Elastic Load Balancing (ELB)**. Escolher a camada de balanceamento errada prejudica a latência e impede o uso de protocolos modernos.</p>
+
+      <div class="grid-3">
+        <div class="card" style="border-top: 3px solid var(--accent)">
+          <h4>Application Load Balancer (ALB) - L7</h4>
+          <p><strong>Camada:</strong> HTTP, HTTPS, HTTP/2 e gRPC (Layer 7).
+          <br><strong>Funcionalidade:</strong> Roteamento inteligente por caminhos de URL (Path-based) e headers. Ideal para APIs e microsserviços operacionais baseados em REST.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--spark)">
+          <h4>Network Load Balancer (NLB) - L4</h4>
+          <p><strong>Camada:</strong> TCP, UDP, TLS (Layer 4).
+          <br><strong>Funcionalidade:</strong> Latências ultra-baixas na casa de microssegundos. Escala para milhões de requisições por segundo instantaneamente. Ideal para streaming e mensageria (Kafka/Kafka Connect).</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--muted)">
+          <h4>Gateway Load Balancer (GLB) - L3</h4>
+          <p><strong>Camada:</strong> Roteador de pacotes IP puros (Layer 3).
+          <br><strong>Funcionalidade:</strong> Intercepta tráfego de rede bruto para direcionar a firewalls virtuais de terceiros (Palo Alto, Fortinet) para inspeção profunda de pacotes.</p>
+        </div>
+      </div>
+
+      <h3>Deregistration Delay (Connection Draining)</h3>
+      <p>Durante uma atualização de versão do microsserviço (Rolling Update), o ECS desliga as Tasks antigas e ativa as novas. Se o Load Balancer fechar a conexão abruptamente, clientes receberão erros HTTP. O **Deregistration Delay** (antigo Connection Draining) especifica o tempo (ex: 30 a 300 segundos) que o Load Balancer deve esperar para que as requisições ativas/em trânsito na Task antiga sejam concluídas, impedindo novas conexões de caírem na Task em processo de encerramento.</p>
+
+      <h3>Decodificando Códigos de Erro de Ingress (ALB Troubleshooting)</h3>
+      <ul>
+        <li><strong>HTTP 502: Bad Gateway:</strong> O Load Balancer recebeu uma resposta inválida ou falha de conexão do container. Causas comuns: o container falhou antes de responder, a porta declarada no Target Group está incorreta, ou a aplicação travou devido a estouro de memória (OOM).</li>
+        <li><strong>HTTP 503: Service Unavailable:</strong> O ALB não encontrou instâncias de container saudáveis registradas no Target Group para responder à requisição, ou os pools de processamento estão saturados.</li>
+        <li><strong>HTTP 504: Gateway Timeout:</strong> O container mestre demorou mais que o timeout limite definido no ALB (default 60s) para enviar o cabeçalho de resposta. Comum em queries SQL complexas executadas de forma síncrona que travam o backend da API.</li>
+      </ul>
+
+      <h3>IaC Completa: Terraform de ECS Fargate + ALB</h3>
+      <p>Este código Terraform provisiona uma infraestrutura completa: cluster ECS, Task Definition baseada em Fargate com duas roles lógicas distintas, Service associado a um Target Group, e um Application Load Balancer roteando na porta 80:</p>
+
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Criação do Cluster ECS</span>
+resource <span class="s">"aws_ecs_cluster"</span> <span class="s">"cluster"</span> {
+  name = <span class="s">"prod-analytics-cluster"</span>
+}
+
+<span class="c"># 2. Roles IAM do ECS (Execução vs Task)</span>
+resource <span class="s">"aws_iam_role"</span> <span class="s">"execution_role"</span> {
+  name = <span class="s">"ecs-task-execution-role"</span>
+  assume_role_policy = jsonencode({
+    Version = <span class="s">"2012-10-17"</span>
+    Statement = [{ Action = <span class="s">"sts:AssumeRole"</span>, Effect = <span class="s">"Allow"</span>, Principal = { Service = <span class="s">"ecs-tasks.amazonaws.com"</span> } }]
+  })
+}
+
+resource <span class="s">"aws_iam_role_policy_attachment"</span> <span class="s">"execution_policy"</span> {
+  role       = aws_iam_role.execution_role.name
+  policy_arn = <span class="s">"arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"</span>
+}
+
+resource <span class="s">"aws_iam_role"</span> <span class="s">"task_role"</span> {
+  name = <span class="s">"ecs-app-task-role"</span>
+  assume_role_policy = jsonencode({
+    Version = <span class="s">"2012-10-17"</span>
+    Statement = [{ Action = <span class="s">"sts:AssumeRole"</span>, Effect = <span class="s">"Allow"</span>, Principal = { Service = <span class="s">"ecs-tasks.amazonaws.com"</span> } }]
+  })
+}
+
+<span class="c"># Permissões específicas da aplicação (ex: S3) na Task Role</span>
+resource <span class="s">"aws_iam_role_policy"</span> <span class="s">"app_s3_policy"</span> {
+  name = <span class="s">"app-s3-permissions"</span>
+  role = aws_iam_role.task_role.id
+  policy = jsonencode({
+    Version = <span class="s">"2012-10-17"</span>
+    Statement = [{ Action = [<span class="s">"s3:PutObject"</span>, <span class="s">"s3:GetObject"</span>], Effect = <span class="s">"Allow"</span>, Resource = <span class="s">"arn:aws:s3:::prod-analyt-bucket/*"</span> }]
+  })
+}
+
+<span class="c"># 3. Task Definition Fargate</span>
+resource <span class="s">"aws_ecs_task_definition"</span> <span class="s">"app"</span> {
+  family                   = <span class="s">"analytics-api"</span>
+  network_mode             = <span class="s">"awsvpc"</span> # Obrigatório para Fargate
+  requires_compatibilities = [<span class="s">"FARGATE"</span>]
+  cpu                      = <span class="s">"512"</span>  # 0.5 vCPU
+  memory                   = <span class="s">"1024"</span> # 1 GB
+  execution_role_arn       = aws_iam_role.execution_role.arn
+  task_role_arn            = aws_iam_role.task_role.arn
+
+  container_definitions = jsonencode([{
+    name      = <span class="s">"api-container"</span>
+    image     = <span class="s">"nginx:latest"</span>
+    essential = true
+    portMappings = [{
+      containerPort = 80
+      hostPort      = 80
+    }]
+  }])
+}
+
+<span class="c"># 4. ALB e Target Group</span>
+resource <span class="s">"aws_lb_target_group"</span> <span class="s">"tg"</span> {
+  name        = <span class="s">"tg-ecs-analytics"</span>
+  port        = 80
+  protocol    = <span class="s">"HTTP"</span>
+  vpc_id      = var.vpc_id
+  target_type = <span class="s">"ip"</span> # Obrigatório para modo awsvpc
+
+  health_check {
+    path                = <span class="s">"/"</span>
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 15
+  }
+}
+
+resource <span class="s">"aws_lb"</span> <span class="s">"alb"</span> {
+  name               = <span class="s">"ecs-alb"</span>
+  internal           = false
+  load_balancer_type = <span class="s">"application"</span>
+  security_groups    = [var.alb_sg_id]
+  subnets            = var.public_subnet_ids
+}
+
+resource <span class="s">"aws_lb_listener"</span> <span class="s">"http"</span> {
+  load_balancer_arn = aws_lb.alb.arn
+  port              = <span class="s">"80"</span>
+  protocol          = <span class="s">"HTTP"</span>
+  default_action {
+    type             = <span class="s">"forward"</span>
+    target_group_arn = aws_lb_target_group.tg.arn
+  }
+}
+
+<span class="c"># 5. ECS Service interligado ao ALB Target Group</span>
+resource <span class="s">"aws_ecs_service"</span> <span class="s">"service"</span> {
+  name            = <span class="s">"analytics-service"</span>
+  cluster         = aws_ecs_cluster.cluster.id
+  task_definition = aws_ecs_task_definition.app.arn
+  desired_count   = 2
+  launch_type     = <span class="s">"FARGATE"</span>
+
+  network_configuration {
+    subnets         = var.private_subnet_ids
+    security_groups = [var.ecs_sg_id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.tg.arn
+    container_name   = <span class="s">"api-container"</span>
+    container_port   = 80
+  }
+
+  depends_on = [aws_lb_listener.http]
+}</pre>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 3: RDS & AURORA -->
+    <section class="section" id="rds-aurora">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">03</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Bancos de Dados Relacionais: RDS vs. Aurora Internals</h2>
+          <p>Mapeamento físico do armazenamento compartilhado do Aurora, quorums, serverless v2 e RDS Proxy</p>
+        </div>
+      </div>
+
+      <p>Entender a física e os tradeoffs de performance das engines OLTP na nuvem da AWS é indispensável para evitar gargalos em migrações e cargas de dados massivas de plataformas analíticas.</p>
+
+      <div class="abox info">
+        <div class="abox-hdr" style="background:var(--navy)"> trade-offs de Arquitetura de Dados: RDS vs. Aurora</div>
+        <div class="abox-body">
+          <p><strong>RDS Tradicional:</strong> Utiliza armazenamento de blocos padrão da AWS (Amazon EBS). A réplica secundária Multi-AZ é sincronizada a nível de blocos de disco físico. Escritas lentas na primária replicam síncrona e fisicamente, dobrando a latência de I/O em rede.</p>
+          <p><strong>Amazon Aurora:</strong> Desacopla completamente processamento (SQL Engine) de armazenamento. O armazenamento é virtualizado e estruturado em logs (Log-structured storage), espalhado em 6 réplicas físicas em 3 AZs. Não há replicação de blocos de disco; em vez disso, o Aurora envia apenas os redo logs para o storage compartilhado.</p>
+        </div>
+      </div>
+
+      <h3>Escrita em Quorum (Write Quorum) no Aurora</h3>
+      <p>Para otimizar escritas, o Aurora utiliza um sistema de quórum distribuído. Cada bloco de dados é segmentado e gravado em 6 instâncias de storage (2 por AZ). Uma escrita é considerada um commit válido assim que <strong>4 das 6 instâncias confirmam a gravação física (4/6 Write Quorum)</strong>. Leituras de blocos requerem a confirmação de <strong>3 de 6 cópias (3/6 Read Quorum)</strong> para reconstruir dados de forma consistente caso ocorram falhas parciais em storage pools.</p>
+
+      <h3>Aurora Read Replicas (Zero-Copy Storage Link)</h3>
+      <p>Em um banco RDS tradicional, cada Réplica de Leitura tem seu próprio volume EBS individual, gerando atrasos (Replica Lag) sob fluxos intensos de escrita. No Aurora, <strong>todas as réplicas de leitura (até 15) enxergam e compartilham o mesmo volume virtual lógico do Writer</strong>. Como não há replicação física de disco, o Replica Lag é insignificante (&lt; 10ms), servindo como barreira contra dados desatualizados em queries analíticas.</p>
+
+      <h3>Amazon RDS Proxy: Connection Pooling &amp; Multiplexing</h3>
+      <p>Microsserviços serverless (como lambdas disparadas por eventos rápidos) ou dezenas de tarefas ECS podem subir centenas de conexões TCP de banco de dados concorrentes em segundos. Isso esgota rapidamente a memória da instância RDS (que consome cerca de 10MB por conexão inativa do Postgres).
+      O **RDS Proxy** atua como uma barreira transparente:</p>
+      <ul>
+        <li><strong>Connection Pooling:</strong> Mantém um pool de conexões físicas estabelecidas abertas com o banco de dados.</li>
+        <li><strong>Multiplexing (Multiplexação):</strong> Permite que dezenas de conexões de clientes compartilhem a mesma conexão física ativa do banco caso não estejam executando transações simultâneas.</li>
+        <li><strong>Failover Acelerado:</strong> Em caso de failover (Writer principal cair), o RDS Proxy redireciona as conexões automaticamente para a nova réplica promovida a Writer sem forçar o cliente a renegociar handshakes TCP demorados, reduzindo o tempo de interrupção de 30s para menos de 3s.</li>
+      </ul>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 4: OPERACAO & TROUBLESHOOTING -->
+    <section class="section" id="operacao">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Guia Operacional: Monitoramento &amp; Troubleshooting Avançado</h2>
+          <p>Queries SQL de tuning de bancos, comandos CLI cruciais de diagnóstico do ECS e Load Balancers</p>
+        </div>
+      </div>
+
+      <h3>CLI Cheat Sheet: Operando e Diagnosticando ECS &amp; Load Balancers</h3>
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Obter informações de tarefas rodando no ECS</span>
+aws ecs list-tasks --cluster prod-analytics-cluster
+
+<span class="c"># 2. Descrever detalhes de uma task específica (verificar se há erros de Out of Memory - OOM)</span>
+aws ecs describe-tasks \
+  --cluster prod-analytics-cluster \
+  --tasks arn:aws:ecs:us-east-1:123456789012:task/prod-analytics-cluster/99b6622
+
+<span class="c"># 3. Forçar um redesploy limpo sem alterar a Task Definition</span>
+aws ecs update-service \
+  --cluster prod-analytics-cluster \
+  --service analytics-service \
+  --force-new-deployment
+
+<span class="c"># 4. Interagir diretamente (SSH/Bash) dentro do container ECS rodando no Fargate</span>
+aws ecs execute-command \
+  --cluster prod-analytics-cluster \
+  --task 99b66223a4 \
+  --container api-container \
+  --interactive \
+  --command <span class="s">"/bin/sh"</span>
+
+<span class="c"># 5. Verificar o status de integridade do ALB Target Group</span>
+aws elbv2 describe-target-health \
+  --target-group-arn arn:aws:elasticloadbalancing:us-east-1:12345678:targetgroup/tg-ecs-analytics/bc51</pre>
+
+      <h3 style="margin-top: 30px;">SQL Diagnostics para Administradores de Bancos (PostgreSQL RDS / Aurora)</h3>
+      <p>Em momentos de travamento no banco, utilize as queries estruturadas abaixo para descobrir e encerrar locks e processos órfãos consumindo CPU:</p>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Query 1: Listar conexões ativas ordenadas por tempo de execução (identificar queries travando)</div>
+        <div class="abox-body">
+          <pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span> pid, age(query_start, clock_timestamp()), usename, state, query 
+<span class="k">FROM</span> pg_stat_activity 
+<span class="k">WHERE</span> state != <span class="s">'idle'</span> 
+<span class="k">ORDER BY</span> query_start <span class="k">ASC</span> 
+<span class="k">LIMIT</span> 10;</pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Query 2: Identificar Locks Ativos (Tabelas bloqueadas por transações pendentes)</div>
+        <div class="abox-body">
+          <pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span>
+    blocked_locks.pid     <span class="k">AS</span> blocked_pid,
+    blocked_activity.usename  <span class="k">AS</span> blocked_user,
+    blocking_locks.pid    <span class="k">AS</span> blocking_pid,
+    blocking_activity.usename <span class="k">AS</span> blocking_user,
+    blocked_activity.query    <span class="k">AS</span> blocked_statement,
+    blocking_activity.query   <span class="k">AS</span> blocking_statement
+<span class="k">FROM</span>  pg_catalog.pg_locks         blocked_locks
+<span class="k">JOIN</span> pg_catalog.pg_stat_activity blocked_activity <span class="k">ON</span> blocked_activity.pid = blocked_locks.pid
+<span class="k">JOIN</span> pg_catalog.pg_locks         blocking_locks 
+    <span class="k">ON</span> blocking_locks.locktype = blocked_locks.locktype
+    <span class="k">AND</span> blocking_locks.database <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.database
+    <span class="k">AND</span> blocking_locks.relation <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.relation
+    <span class="k">AND</span> blocking_locks.page <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.page
+    <span class="k">AND</span> blocking_locks.tuple <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.tuple
+    <span class="k">AND</span> blocking_locks.virtualxid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.virtualxid
+    <span class="k">AND</span> blocking_locks.transactionid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.transactionid
+    <span class="k">AND</span> blocking_locks.classid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.classid
+    <span class="k">AND</span> blocking_locks.objid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.objid
+    <span class="k">AND</span> blocking_locks.objsubid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.objsubid
+    <span class="k">AND</span> blocking_locks.pid != blocked_locks.pid
+<span class="k">JOIN</span> pg_catalog.pg_stat_activity blocking_activity <span class="k">ON</span> blocking_activity.pid = blocking_locks.pid
+<span class="k">WHERE</span> <span class="k">NOT</span> blocked_locks.granted;</pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Comando 3: Derrubar transação bloqueadora específica via ID do processo (PID)</div>
+        <div class="abox-body">
+          <pre style="background:#0f172a; color:#f8fafc;"><span class="c">-- Termina a query de forma limpa</span>
+<span class="k">SELECT</span> pg_cancel_backend(blocking_pid);
+
+<span class="c">-- Força o encerramento imediato da conexão física com o banco</span>
+<span class="k">SELECT</span> pg_terminate_backend(blocking_pid);</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+<script src="progress.js"></script>
+</body>
+</html>

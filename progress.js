@@ -186,6 +186,33 @@
         "playbook-crises.html#crise-nulos",
         "playbook-crises.html#crise-sla"
       ]
+    },
+    platform: {
+      name: "🏗️ Plataforma de Dados",
+      badge: "Arquiteto de Plataforma",
+      color: "var(--accent)",
+      items: [
+        "plataforma-dados.html#estrategico",
+        "plataforma-dados.html#cenario-cdc",
+        "plataforma-dados.html#cenario-sharing",
+        "plataforma-dados.html#cenario-lineage",
+        "plataforma-dados.html#cenario-llmops",
+        "plataforma-dados.html#topologia",
+        "plataforma-dados.html#arquitetura",
+        "plataforma-dados.html#alinhamento",
+        "plataforma-dados.html#perguntas"
+      ]
+    },
+    infra_operacional: {
+      name: "🏗️ Computação & Bancos",
+      badge: "Especialista em Computação e Bancos",
+      color: "#f43f5e",
+      items: [
+        "computacao-bancos.html#ecs",
+        "computacao-bancos.html#load-balancers",
+        "computacao-bancos.html#rds-aurora",
+        "computacao-bancos.html#operacao"
+      ]
     }
   };
 
