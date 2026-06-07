@@ -211,62 +211,203 @@
         <div class="sec-num" style="color:var(--arch)">02</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--arch)"></div>
-          <h2>Padrões de Mensageria e Event-Driven</h2>
-          <p>Comunicação assíncrona desacoplada para pipelines analíticos e transacionais</p>
+          <h2>Padrões de Mensageria e Event-Driven (SQS &amp; SNS)</h2>
+          <p>Comunicação assíncrona desacoplada, tratamento de falhas, padrões avançados e infraestrutura como código (Terraform)</p>
         </div>
       </div>
 
-      <p>A mensageria assíncrona é a espinha dorsal de sistemas distribuídos modernos. Ela substitui chamadas diretas síncronas HTTP (que causam acoplamento forte e falhas em cascata) por filas e tópicos intermediários.</p>
+      <p>A mensageria assíncrona é a espinha dorsal de sistemas distribuídos modernos. Ela substitui chamadas diretas síncronas HTTP (que causam acoplamento forte e falhas em cascata) por filas e tópicos intermediários. Na AWS, os serviços nativos fundamentais para essa arquitetura são o **Amazon SQS** e o **Amazon SNS**.</p>
 
       <div class="grid-2">
         <div class="card">
-          <div class="card-lbl">Publish-Subscribe (Pub-Sub)</div>
-          <h4>Distribuição 1-para-N</h4>
-          <p>O produtor publica a mensagem em um <strong>Tópico (ex: Amazon SNS, SNS FIFO)</strong>. Múltiplos consumidores (filas SQS, Lambdas, Webhooks) assinam esse tópico e recebem uma cópia independente de cada mensagem.</p>
+          <div class="card-lbl">Publish-Subscribe (Pub-Sub) - Amazon SNS</div>
+          <h4>Distribuição 1-para-N (Broadcast)</h4>
+          <p>O produtor publica a mensagem em um <strong>Tópico SNS</strong>. Múltiplos consumidores (filas SQS, Lambdas, Webhooks, endpoints HTTPS) assinam esse tópico e recebem uma cópia independente de cada mensagem. Ideal para espalhar eventos de negócios comuns (ex: "venda_concluida") para múltiplos domínios analíticos independentes.</p>
         </div>
         <div class="card">
-          <div class="card-lbl">Point-to-Point (Queue)</div>
-          <h4>Processamento 1-para-1</h4>
-          <p>O produtor envia a mensagem para uma <strong>Fila (ex: Amazon SQS, SQS FIFO)</strong>. Apenas um único consumidor processa cada mensagem. Quando o processamento termina com sucesso, a mensagem é excluída da fila.</p>
+          <div class="card-lbl">Point-to-Point (Queue) - Amazon SQS</div>
+          <h4>Processamento 1-para-1 (Buffer &amp; Escalabilidade)</h4>
+          <p>O produtor envia a mensagem para uma <strong>Fila SQS</strong>. Apenas um único consumidor processa cada mensagem por vez. Quando o processamento termina com sucesso, o consumidor exclui a mensagem da fila. Se o consumidor falhar, a mensagem retorna à fila após o período de visibilidade. Ideal para amortecer picos de carga (Throttling) e desacoplar escrita em bancos relacionais.</p>
         </div>
       </div>
 
-      <h3>Garantias Operacionais Críticas</h3>
+      <h3 style="margin-top: 30px;">Internals e Dimensionamento Crítico do Amazon SQS</h3>
       <ul>
-        <li><strong>Dead Letter Queue (DLQ):</strong> Se uma mensagem falhar no processamento por N tentativas seguidas, ela é movida para uma DLQ (uma fila SQS secundária) para isolamento, auditoria e debugging manual, impedindo que bloqueie a fila principal.</li>
-        <li><strong>Idempotência:</strong> A garantia de que processar a mesma mensagem duas vezes produz o mesmo efeito lógico (evita duplicidade de compras ou registros duplicados no banco).</li>
-        <li><strong>Controle de Fluxo &amp; Backpressure:</strong> Consumidores puxam dados conforme sua capacidade de processamento (Pull pattern), evitando saturação de memória ou sobrecarga de bancos relacionais destinatários.</li>
+        <li><strong>Standard vs FIFO Queues:</strong>
+          <br>• <strong>Standard:</strong> Taxa de transferência virtualmente ilimitada. Oferece entrega *at-least-once* (pelo menos uma vez, podendo haver duplicidade) e ordenação por *best-effort* (sem garantia estrita).
+          <br>• <strong>FIFO (First-In-First-Out):</strong> Limite de até 3.000 mensagens/segundo com batching (ou mais usando high throughput mode). Garante entrega *exactly-once* (exatamente uma vez no nível da fila) e ordenação estrita. Exige a definição de <code>MessageGroupId</code> (para ordenar grupos de mensagens) e <code>MessageDeduplicationId</code> (ou deduplicação baseada em hash do conteúdo).
+        </li>
+        <li><strong>Visibility Timeout (Tempo de Visibilidade):</strong> Quando um consumidor lê uma mensagem da fila, ela permanece fisicamente na fila mas fica "invisível" para outros consumidores por este intervalo de tempo.
+          <br><span class="warning-box" style="display:block; padding:15px; border-left:4px solid var(--arch); background:rgba(255,255,255,0.05); margin:10px 0;"><strong>Regra de Sizing Fundamental:</strong> O Visibility Timeout deve ser configurado para no mínimo <strong>6 vezes</strong> o tempo de execução máximo esperado do seu consumidor (ex: se o Lambda demora até 10 segundos para processar um lote, o Visibility Timeout deve ser de pelo menos 60 segundos). Caso contrário, a mensagem voltará a ficar visível antes de o processamento acabar, gerando duplicidade extrema e concorrência na gravação dos mesmos dados.</span>
+        </li>
+        <li><strong>Short Polling vs Long Polling:</strong>
+          <br>• <strong>Short Polling:</strong> O SQS consulta apenas um subconjunto de seus servidores físicos de fila e retorna imediatamente, mesmo vazia. Aumenta drasticamente o número de requests cobrados.
+          <br>• <strong>Long Polling (Padrão Recomendado):</strong> O SQS espera até que uma mensagem chegue ou o timeout expire (máximo de 20 segundos) antes de responder. **Reduz custos operacionais e requisições vazias a zero.**
+        </li>
       </ul>
 
-      <div class="callout callout-info">
-        <strong>Exemplo Prático: Resiliência em AWS Lambda consumindo SQS</strong>
-        <p>Abaixo está um script em Python para Lambda que processa lotes (batches) de mensagens do SQS de forma segura. Ele implementa o retorno parcial de falhas (Report Batch Item Failures) para evitar reprocessar mensagens bem-sucedidas do lote.</p>
+      <h3 style="margin-top: 30px;">O Padrão Claim Check (Contornando o Limite de 256 KB)</h3>
+      <p>O limite físico máximo de payload para mensagens do SQS e do SNS é de **256 KB**. Quando pipelines de dados precisam trafegar registros volumosos (ex: grandes objetos JSON ou metadados de arquivos analíticos), aplicamos o **Claim Check Pattern**:</p>
+      
+      <div class="tbl-wrap" style="margin-bottom: 20px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Passo</th>
+              <th>Entidade Produtora</th>
+              <th>Transporte (SQS)</th>
+              <th>Entidade Consumidora</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Ação</strong></td>
+              <td>Grava o payload bruto pesado no bucket **S3** (camada temporária ou raw).</td>
+              <td>Envia uma mensagem curta para o SQS contendo o Bucket Name e o Object Key (URI).</td>
+              <td>Lê a mensagem curta da fila, usa as coordenadas para baixar o payload direto do **S3** e executa o processamento.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <pre><span class="k">import</span> json
+      <div class="callout callout-info">
+        <strong>Implementação PySpark/Python: Consumidor Claim Check</strong>
+        <p>Abaixo está o script executado em uma task do ECS Fargate ou no Spark para resolver o payload utilizando Claim Check:</p>
+      </div>
 
-<span class="k">def</span> <span class="nf">lambda_handler</span>(event, context):
-    batch_item_failures = []
+      <pre><code class="language-python">import json
+import boto3
+
+s3_client = boto3.client('s3')
+
+def process_sqs_message_claim_check(sqs_record):
+    # 1. Parse da mensagem curta da fila SQS
+    message_body = json.loads(sqs_record['body'])
     
-    <span class="k">for</span> record <span class="k">in</span> event[<span class="s">'Records'</span>]:
-        message_id = record[<span class="s">'messageId'</span>]
-        <span class="k">try</span>:
-            <span class="c"># Processamento lógico da mensagem</span>
-            body = json.loads(record[<span class="s">'body'</span>])
-            process_data(body)
-        <span class="k">except</span> Exception <span class="k">as</span> e:
-            print(f<span class="s">"Erro ao processar mensagem {message_id}: {str(e)}"</span>)
-            <span class="c"># Registra apenas o ID da mensagem que falhou</span>
-            batch_item_failures.append({<span class="s">"itemIdentifier"</span>: message_id})
-            
-    <span class="c"># Retorna as falhas para que o SQS mantenha na fila apenas o que deu erro</span>
-    <span class="k">return</span> {<span class="s">"batchItemFailures"</span>: batch_item_failures}
+    # 2. Verifica se a mensagem contém as referências do S3 (Claim Check)
+    if 's3_bucket' in message_body and 's3_key' in message_body:
+        bucket = message_body['s3_bucket']
+        key = message_body['s3_key']
+        
+        # 3. Baixa o payload pesado diretamente do S3
+        print(f"Baixando payload pesado de s3://{bucket}/{key}")
+        s3_object = s3_client.get_object(Bucket=bucket, Key=key)
+        payload_data = json.loads(s3_object['Body'].read().decode('utf-8'))
+        
+        # 4. Processa os dados pesados
+        execute_data_processing(payload_data)
+        
+        # Opcional: deletar o arquivo temporário do S3 após processamento bem-sucedido
+        # s3_client.delete_object(Bucket=bucket, Key=key)
+    else:
+        # Processamento comum para payloads menores de 256 KB
+        execute_data_processing(message_body)
 
-<span class="k">def</span> <span class="nf">process_data</span>(data):
-    <span class="k">if</span> <span class="s">'user_id'</span> <span class="k">not in</span> data:
-        <span class="k">raise</span> ValueError(<span class="s">"Payload inválido: faltando user_id"</span>)
-    <span class="c"># Grava no banco/datalake</span>
-    print(f<span class="s">"Mensagem gravada com sucesso para: {data['user_id']}"</span>)</pre>
+def execute_data_processing(data):
+    print(f"Processando registros: {len(data)}")</code></pre>
+
+      <h3 style="margin-top: 30px;">Filtragem de Mensagens no SNS (Message Filtering)</h3>
+      <p>Em vez de entregar todas as mensagens de um tópico para todas as filas assinantes (o que geraria processamento desnecessário, concorrência e custos com Lambdas ignorando mensagens), configuramos **Subscription Filter Policies** no SNS:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Atributos da Mensagem</th>
+              <th>Regra de Filtro da Fila A</th>
+              <th>Regra de Filtro da Fila B</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>{ "domain": "financas", "region": "us-east-1" }</code></td>
+              <td>Assinatura SQS Filtra por: <code>{ "domain": ["financas"] }</code> ➔ <strong>Recebe</strong></td>
+              <td>Assinatura SQS Filtra por: <code>{ "region": ["us-west-2"] }</code> ➔ <strong>Ignorado</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 30px;">Infraestrutura como Código (Terraform)</h3>
+      <p>Abaixo está a implementação IaC completa de um padrão **Fan-out** resiliente contendo um Tópico SNS associado a uma fila SQS FIFO com Dead Letter Queue (DLQ), encriptação via chaves KMS e política de filtragem de atributos.</p>
+
+      <pre><code class="language-hcl"># 1. Chave KMS para Encriptação de Mensagens (Repouso)
+resource "aws_kms_key" "sns_sqs_key" {
+  description             = "Chave KMS para encriptar topicos e filas de dados"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+# 2. Topico SNS FIFO de Origem
+resource "aws_sns_topic" "data_events_topic" {
+  name                        = "vendas-events.fifo"
+  fifo_topic                  = true
+  content_based_deduplication = true
+  kms_master_key_id           = aws_kms_key.sns_sqs_key.arn
+}
+
+# 3. Fila SQS FIFO Secundária (Dead Letter Queue)
+resource "aws_sqs_queue" "analytics_dlq" {
+  name                        = "analytics-processing-dlq.fifo"
+  fifo_queue                  = true
+  kms_master_key_id           = aws_kms_key.sns_sqs_key.arn
+  message_retention_seconds   = 1209600 # Retém por 14 dias para auditoria
+}
+
+# 4. Fila SQS FIFO Principal (Consumer de Ingestão)
+resource "aws_sqs_queue" "analytics_queue" {
+  name                        = "analytics-processing-queue.fifo"
+  fifo_queue                  = true
+  kms_master_key_id           = aws_kms_key.sns_sqs_key.arn
+  visibility_timeout_seconds  = 180 # 3 minutos (compatível com Lambda/Glue rápidos)
+  message_retention_seconds   = 345600 # 4 dias
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.analytics_dlq.arn
+    maxReceiveCount     = 3 # Move para DLQ após 3 falhas de processamento
+  })
+}
+
+# 5. Permissão para o SNS Enviar Mensagens para o SQS
+resource "aws_sqs_queue_policy" "analytics_queue_policy" {
+  queue_url = aws_sqs_queue.analytics_queue.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowSNSSend"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "sqs:SendMessage"
+        Resource  = aws_sqs_queue.analytics_queue.arn
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = aws_sns_topic.data_events_topic.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+# 6. Assinatura do Tópico SNS direcionando para a Fila SQS com Message Filtering
+resource "aws_sns_topic_subscription" "sns_to_sqs_subscription" {
+  topic_arn = aws_sns_topic.data_events_topic.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.analytics_queue.arn
+
+  # Apenas envia para esta fila se o evento for do domínio 'faturamento' ou 'vendas_online'
+  filter_policy = jsonencode({
+    domain = ["faturamento", "vendas_online"]
+    source = [{"anything-but" : "legacy_system"}]
+  })
+}</code></pre>
+
+      <div class="abox note" style="margin-top:20px;">
+        <strong>Resiliência de Batching em Consumidores Lambda / ECS:</strong>
+        <br>Para evitar reprocessar todas as mensagens corretas de um lote (batch) quando apenas uma mensagem falha, ative a opção <code>ReportBatchItemFailures</code> no gatilho do SQS. No retorno da sua função, envie um JSON contendo o array <code>batchItemFailures</code> com os IDs das mensagens específicas que deram erro. O SQS as manterá na fila principal para nova tentativa e removerá as mensagens bem-sucedidas imediatamente.
+      </div>
     </section>
 
     <!-- 3. KAFKA & MSK -->
@@ -294,73 +435,132 @@
         <div class="sec-num" style="color:var(--arch)">04</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--arch)"></div>
-          <h2>AWS Triggers e Pipelines Event-Driven</h2>
-          <p>Disparos automatizados baseados em eventos físicos de infraestrutura</p>
+          <h2>Amazon EventBridge e Arquiteturas Event-Driven</h2>
+          <p>Disparos automatizados baseados em eventos lógicos, roteamento cross-account e agendamentos serverless globais</p>
         </div>
       </div>
 
-      <p>Pipelines eficientes não rodam em cron jobs de hora em hora se os dados chegam a todo momento. A arquitetura **Event-Driven** responde instantaneamente a eventos na nuvem.</p>
+      <p>Pipelines analíticos eficientes não rodam em agendamentos fixos (cron jobs) se os dados originais chegam de forma contínua ou flutuante. A arquitetura **Event-Driven (orientada a eventos)** responde instantaneamente a mudanças físicas de infraestrutura ou de negócios usando o **Amazon EventBridge**.</p>
 
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Evento AWS</th>
-              <th>Trigger Gerado</th>
-              <th>Caso de Uso Clássico</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Amazon S3 ObjectCreated</strong></td>
-              <td>Lambda / EventBridge</td>
-              <td>Assim que um arquivo JSON/CSV cai na Bronze, um Lambda dispara um Glue Job para convertê-lo em Parquet.</td>
-            </tr>
-            <tr>
-              <td><strong>DynamoDB Streams</strong></td>
-              <td>AWS Lambda</td>
-              <td>Qualquer escrita/atualização na tabela OLTP dispara um fluxo CDC para indexar os dados no OpenSearch ou Lake.</td>
-            </tr>
-            <tr>
-              <td><strong>EventBridge Scheduler</strong></td>
-              <td>Step Functions / ECS Task</td>
-              <td>Substitui Crontabs do Linux por agendamentos serverless globais de alta precisão com controle de retentativas.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <h3 style="margin-top: 30px;">Conceitos Chave do Amazon EventBridge</h3>
+      <ul>
+        <li><strong>Barramentos de Eventos (Event Buses):</strong>
+          <br>• <strong>Default Event Bus:</strong> Recebe automaticamente todos os eventos gerados pelos próprios serviços da AWS (ex: modificações no S3, alteração de estados do EC2/ECS/Glue).
+          <br>• <strong>Custom Event Buses:</strong> Criados para receber eventos das suas próprias aplicações customizadas (ex: microsserviço no ECS publica <code>"event_type": "pedido_pago"</code>). Suporta barramentos centralizados e compartilhamento cross-account para centralizar auditoria de dados.
+        </li>
+        <li><strong>Regras de Roteamento (Rules) e Filtros de Padrão (Event Patterns):</strong> As regras aplicam padrões de correspondência (JSON matching) para interceptar apenas eventos específicos antes de enviá-los para um ou mais alvos (targets).
+          <pre><code class="language-json">// Exemplo de Event Pattern para interceptar apenas arquivos Parquet criados na camada Raw do S3
+{
+  "source": ["aws.s3"],
+  "detail-type": ["Object Created"],
+  "detail": {
+    "bucket": {
+      "name": ["empresa-data-lake-raw"]
+    },
+    "object": {
+      "key": [{ "suffix": ".parquet" }]
+    }
+  }
+}</code></pre>
+        </li>
+        <li><strong>EventBridge Scheduler vs EventBridge Rules (Cron):</strong>
+          <br>• <strong>Rules (Cron clássica):</strong> Baseada no barramento de eventos padrão, ideal para tarefas clássicas de infraestrutura em intervalos curtos.
+          <br>• <strong>Scheduler:</strong> Um serviço altamente otimizado para agendamentos individuais de alta densidade (milhões de schedules independentes). Suporta janelas flexíveis de execução, fuso horário nativo (Timezone), controle de retentativas automáticas com Dead Letter Queue (DLQ) associada ao target, e entrega do tipo *at-least-once*.
+        </li>
+      </ul>
 
-      <div class="callout callout-tip">
-        <strong>Script Python Lambda disparado por S3 ObjectCreated</strong>
-        <p>Este script intercepta a criação de um arquivo no S3, lê o nome do arquivo dinamicamente e dispara a execução de um pipeline do AWS Glue passando o caminho do arquivo como argumento do Job.</p>
-      </div>
+      <h3 style="margin-top: 30px;">Input Transformers: Higienização de Payloads</h3>
+      <p>Muitas vezes, o evento gerado pela AWS é gigante e contém dezenas de propriedades de metadados inúteis. Usando o **Input Transformer**, você filtra e mapeia apenas as chaves necessárias antes de disparar o Target final (evitando que o Glue ou ECS gaste CPU decodificando metadados redundantes da AWS):</p>
+      
+      <pre><code class="language-json">// 1. Input Paths Map (extrai propriedades do evento S3)
+{
+  "s3_bucket": "$.detail.bucket.name",
+  "s3_file_key": "$.detail.object.key"
+}
 
-      <pre><span class="k">import</span> boto3
-<span class="k">import</span> urllib.parse
+// 2. Input Template (formato limpo entregue ao Target, ex: Glue Job)
+{
+  "raw_bucket_path": "s3://<s3_bucket>/<s3_file_key>",
+  "ingested_at": "<time>"
+}</code></pre>
 
-glue = boto3.client(<span class="s">'glue'</span>)
+      <h3 style="margin-top: 30px;">Infraestrutura como Código (Terraform)</h3>
+      <p>O snippet abaixo demonstra como configurar uma regra do EventBridge para capturar eventos de criação de objetos em um bucket S3 específico e disparar uma Máquina de Estados do **AWS Step Functions** passando o caminho do arquivo de forma limpa.</p>
 
-<span class="k">def</span> <span class="nf">lambda_handler</span>(event, context):
-    <span class="c"># Extrair informações do evento do S3</span>
-    bucket = event[<span class="s">'Records'</span>][0][<span class="s">'s3'</span>][<span class="s">'bucket'</span>][<span class="s">'name'</span>]
-    key = urllib.parse.unquote_plus(event[<span class="s">'Records'</span>][0][<span class="s">'s3'</span>][<span class="s">'object'</span>][<span class="s">'key'</span>], encoding=<span class="s">'utf-8'</span>)
-    s3_path = f<span class="s">"s3://{bucket}/{key}"</span>
-    
-    print(f<span class="s">"Novo arquivo detectado: {s3_path}"</span>)
-    
-    <span class="c"># Dispara o Glue Job com argumentos dinâmicos</span>
-    response = glue.start_job_run(
-        JobName=<span class="s">'glue-silver-processing-job'</span>,
-        Arguments={
-            <span class="s">'--input_file_path'</span>: s3_path,
-            <span class="s">'--target_table'</span>: <span class="s">'silver_db.vendas'</span>
+      <pre><code class="language-hcl"># 1. Regra no EventBridge (Default Bus) buscando criacao de arquivos no S3
+resource "aws_cloudwatch_event_rule" "s3_upload_rule" {
+  name        = "capture-s3-raw-uploads"
+  description = "Dispara pipeline quando novo arquivo JSON chega no bucket Raw"
+  event_bus_name = "default"
+
+  event_pattern = jsonencode({
+    source      = ["aws.s3"]
+    detail_type = ["Object Created"]
+    detail = {
+      bucket = {
+        name = ["my-raw-data-bucket"]
+      }
+      object = {
+        key = [{ "prefix" : "ingestion/" }]
+      }
+    }
+  })
+}
+
+# 2. Target associado: Direciona para a Step Function
+resource "aws_cloudwatch_event_target" "step_function_target" {
+  rule      = aws_cloudwatch_event_rule.s3_upload_rule.name
+  target_id = "TriggerStepFunction"
+  arn       = "arn:aws:states:us-east-1:123456789012:stateMachine:DataPipelineOrchestrator"
+  role_arn  = aws_iam_role.eventbridge_invocation_role.arn
+
+  # Utiliza Input Transformer para limpar a mensagem para a Step Function
+  input_transformer {
+    input_paths = {
+      bucket_name = "$.detail.bucket.name"
+      file_key    = "$.detail.object.key"
+    }
+    input_template = <<EOF
+{
+  "input_s3_uri": "s3://<bucket_name>/<file_key>"
+}
+EOF
+  }
+}
+
+# 3. Role IAM para permitir que o EventBridge invoque a Step Function
+resource "aws_iam_role" "eventbridge_invocation_role" {
+  name = "eventbridge-trigger-stepfunction-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
         }
-    )
-    
-    <span class="k">return</span> {
-        <span class="s">'statusCode'</span>: 200,
-        <span class="s">'jobRunId'</span>: response[<span class="s">'JobRunId'</span>]
-    }</pre>
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "eventbridge_execution_policy" {
+  name = "eventbridge-execution-policy"
+  role = aws_iam_role.eventbridge_invocation_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "states:StartExecution"
+        Resource = "arn:aws:states:us-east-1:123456789012:stateMachine:DataPipelineOrchestrator"
+      }
+    ]
+  })
+}</code></pre>
     </section>
 
     <!-- 5. WORKFLOWS & ORQUESTRAÇÃO -->
@@ -369,73 +569,225 @@ glue = boto3.client(<span class="s">'glue'</span>)
         <div class="sec-num" style="color:var(--arch)">05</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--arch)"></div>
-          <h2>Orquestração e Workflows de Dados</h2>
-          <p>Gerenciamento de dependências, controle de estados e tratamento de falhas em DAGs</p>
+          <h2>Orquestração e Workflows de Dados (Step Functions)</h2>
+          <p>Orquestração serverless, DAGs programáticas, tratamento de erros, Map States e integrações Glue/EMR/ECS</p>
         </div>
       </div>
 
-      <p>Um pipeline complexo possui dependências rígidas: a camada Silver só pode rodar se a Bronze finalizar com sucesso, e a Gold depende de múltiplas tabelas da Silver. Para isso, usamos orquestradores de fluxo (Workflows).</p>
+      <p>Um pipeline complexo possui dependências rígidas: a camada Silver só pode rodar se a Bronze finalizar com sucesso, e a Gold depende de múltiplas tabelas da Silver. Para isso, usamos orquestradores de fluxo (Workflows). O **AWS Step Functions** destaca-se como o orquestrador serverless nativo por excelência na nuvem.</p>
 
       <div class="grid-3">
         <div class="card">
           <div class="card-lbl">AWS Step Functions</div>
           <h4>Serverless State Machine</h4>
-          <p>Melhor opção para fluxos baseados em microsserviços (Lambda, ECS, SQS, API Gateway). Cobra por transição de estado. Possui latência extremamente baixa e suporte visual nativo.</p>
+          <p>Melhor opção para fluxos integrando serviços AWS (Lambda, Glue, ECS, EMR, Athena, SQS, SNS). Cobra por transição de estado. Latência extremamente baixa, suporte visual completo e zero servidores para gerenciar.</p>
         </div>
         <div class="card">
           <div class="card-lbl">AWS Glue Workflows</div>
-          <h4>Orquestrador Interno</h4>
-          <p>Indicado quando o ecossistema é estritamente baseado em triggers internos do Glue, Crawlers e Glue Jobs. Simples de implementar, mas sem flexibilidade para integrações externas.</p>
+          <h4>Orquestrador Interno Simplificado</h4>
+          <p>Indicado apenas quando o ecossistema é 100% baseado em Crawlers e Glue Jobs. Muito limitado em termos de controle de fluxo lógico complexo, ifs/choices e integrações com computação customizada externa.</p>
         </div>
         <div class="card">
-          <div class="card-lbl">Amazon MWAA (Airflow)</div>
-          <h4>Programmatic DAGs</h4>
-          <p>O padrão ouro do mercado. Gerencia dependências complexas escritas puramente em Python. Excelente para ambientes híbridos e fluxos de dados com dezenas de tarefas interdependentes.</p>
+          <div class="card-lbl">Amazon MWAA (Managed Airflow)</div>
+          <h4>Programmatic Python DAGs</h4>
+          <p>O padrão ouro do mercado para pipelines complexos e heterogêneos. Ideal para times de engenharia que preferem escrever dependências como código Python e integrar com bancos on-premises.</p>
         </div>
       </div>
 
-      <div class="callout callout-info">
-        <strong>Exemplo de DAG Apache Airflow (MWAA) orquestrando AWS Glue</strong>
-        <p>Abaixo está o código de uma DAG do Airflow. Ela dispara um Glue Job, monitora seu status (aguardando finalização) e envia um e-mail de alerta em caso de falha.</p>
+      <h3 style="margin-top: 30px;">Step Functions: Standard vs Express Workflows</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Característica</th>
+              <th>Standard Workflows</th>
+              <th>Express Workflows</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Tempo de Execução Máximo</strong></td>
+              <td>Até 1 ano.</td>
+              <td>Até 5 minutos.</td>
+            </tr>
+            <tr>
+              <td><strong>Preço</strong></td>
+              <td>Cobrado por transição de estados (passos).</td>
+              <td>Cobrado por volume de requisições e duração da computação (GB-segundo).</td>
+            </tr>
+            <tr>
+              <td><strong>Taxa de Invocação</strong></td>
+              <td>Até 2.000 execuções por segundo.</td>
+              <td>**Mais de 100.000 execuções por segundo**.</td>
+            </tr>
+            <tr>
+              <td><strong>Garantia de Execução</strong></td>
+              <td>**Exactly-Once**. Histórico detalhado de passos no console visual para debugging.</td>
+              <td>**At-Least-Once**. Logs enviados apenas para o CloudWatch. Sem console de visualização histórica passo a passo.</td>
+            </tr>
+            <tr>
+              <td><strong>Ideal para...</strong></td>
+              <td>Orquestração de pipelines de dados batch de longa duração (ex: rodar EMR/Glue).</td>
+              <td>Ingestão serverless de alta frequência, transformações de mensagens rápidas IoT, APIs REST.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <pre><span class="k">from</span> datetime <span class="k">import</span> datetime, timedelta
-<span class="k">from</span> airflow <span class="k">import</span> DAG
-<span class="k">from</span> airflow.providers.amazon.aws.operators.glue <span class="k">import</span> GlueJobOperator
-<span class="k">from</span> airflow.operators.email <span class="k">import</span> EmailOperator
+      <h3 style="margin-top: 30px;">Integração e Orquestração do Ecossistema de Dados</h3>
+      <p>O Step Functions atua como maestro dos serviços computacionais de dados na AWS, usando **Service Integrations (pontos `.sync`)**:</p>
+      
+      <ul>
+        <li><strong>AWS Glue integration:</strong> Dispara o Glue Job e suspende o fluxo (<code>arn:aws:states:::glue:startJobRun.sync</code>) até que o Job termine, retornando o status final (SUCCEEDED/FAILED) para a máquina de estados tomar a decisão.</li>
+        <li><strong>Amazon EMR (Ephemeral Clusters):</strong> Step Functions consegue instanciar um cluster EMR sob demanda (passo <code>CreateCluster</code>), enviar passos do Spark (passo <code>AddJobFlowSteps</code>), aguardar a conclusão (<code>.sync</code>), e terminar as instâncias de forma limpa (passo <code>TerminateJobFlow</code>), garantindo FinOps absoluto.</li>
+        <li><strong>Amazon ECS Fargate Tasks:</strong> Dispara uma tarefa de contêiner customizada no Fargate (ex: scraping complexo ou inferência de IA) passando variáveis de ambiente dinâmicas capturadas de eventos anteriores.</li>
+      </ul>
 
-default_args = {
-    <span class="s">'owner'</span>: <span class="s">'data-team'</span>,
-    <span class="s">'depends_on_past'</span>: False,
-    <span class="s">'start_date'</span>: datetime(2026, 6, 1),
-    <span class="s">'retries'</span>: 1,
-    <span class="s">'retry_delay'</span>: timedelta(minutes=5)
+      <h3 style="margin-top: 30px;">Código ASL (Amazon States Language)</h3>
+      <p>Abaixo está o código ASL JSON que define uma máquina de estados robusta. Ela roda um Glue Job, possui política de **Retry com Backoff Exponencial** para contornar limites de DPUs ocupadas, faz o **Catch (Captura)** de falhas e publica um alerta formatado em um tópico do Amazon SNS em caso de erro definitivo:</p>
+
+      <pre><code class="language-json">{
+  "Comment": "Pipeline orquestrador de ETL com Retry e Notificacao de Erro",
+  "StartAt": "ExecutaGlueETL",
+  "States": {
+    "ExecutaGlueETL": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "spark-silver-processing-job",
+        "Arguments": {
+          "--camada": "silver",
+          "--data_execucao.$": "$.input_s3_uri"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Glue.ConcurrentRunsExceededException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "EnviaAlertaErro"
+        }
+      ],
+      "End": true
+    },
+    "EnviaAlertaErro": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:datalake-alerts",
+        "Subject": "ALERTA: Falha Critica no Pipeline Silver",
+        "Message": {
+          "alerta": "O Glue Job falhou definitivamente apos retentativas.",
+          "origem_dado.$": "$.input_s3_uri"
+        }
+      },
+      "End": true
+    }
+  }
+}</code></pre>
+
+      <h3 style="margin-top: 30px;">Código IaC (Terraform) da Máquina de Estados</h3>
+      <p>Abaixo está o Terraform necessário para provisionar a máquina de estados declarada no ASL acima:</p>
+
+      <pre><code class="language-hcl">resource "aws_sfn_state_machine" "etl_orchestrator" {
+  name     = "DataPipelineOrchestrator"
+  role_arn = aws_iam_role.step_functions_role.arn
+
+  # Importa o ASL JSON
+  definition = <<EOF
+{
+  "Comment": "Pipeline orquestrador de ETL com Retry e Notificacao de Erro",
+  "StartAt": "ExecutaGlueETL",
+  "States": {
+    "ExecutaGlueETL": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "spark-silver-processing-job"
+      },
+      "End": true
+    }
+  }
+}
+EOF
 }
 
-with DAG(
-    <span class="s">'aws_data_pipeline'</span>,
-    default_args=default_args,
-    schedule_interval=<span class="s">'@daily'</span>,
-    catchup=False
-) as dag:
+# Role de Execucao do Step Functions
+resource "aws_iam_role" "step_functions_role" {
+  name = "step-functions-etl-orchestrator-role"
 
-    <span class="c"># Dispara e aguarda a execução do Job do AWS Glue</span>
-    run_glue_etl = GlueJobOperator(
-        task_id=<span class="s">'run_glue_etl'</span>,
-        job_name=<span class="s">'spark-silver-processing'</span>,
-        script_args={<span class="s">'--camada'</span>: <span class="s">'silver'</span>},
-        aws_conn_id=<span class="s">'aws_default'</span>
-    )
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "states.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
 
-    send_success_notification = EmailOperator(
-        task_id=<span class="s">'send_success_notification'</span>,
-        to=<span class="s">'datalake-alerts@empresa.com'</span>,
-        subject=<span class="s">'Pipeline Concluído com Sucesso'</span>,
-        html_content=<span class="s">'<p>O job do Glue finalizou com sucesso e a camada Silver foi populada.</p>'</span>
-    )
+resource "aws_iam_role_policy" "step_functions_policy" {
+  name = "step-functions-etl-policy"
+  role = aws_iam_role.step_functions_role.id
 
-    <span class="c"># Definição de dependência linear</span>
-    run_glue_etl >> send_success_notification</pre>
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "glue:StartJobRun",
+          "glue:GetJobRun",
+          "glue:GetJobRuns",
+          "glue:BatchStopJobRun"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}</code></pre>
+
+      <h3 style="margin-top: 30px;">Diagrama Arquitetural de Ingestão de Eventos e Orquestração</h3>
+      <p>O diagrama textual abaixo demonstra a arquitetura lógica de uma ingestão desacoplada de dados transacionais, do Aurora até o processamento no Lago de Dados:</p>
+      
+      <div class="tbl-wrap" style="margin-top: 20px; margin-bottom: 20px;">
+        <pre style="background:var(--card-bg); padding:20px; font-family:monospace; line-height:1.4;">
+[ Banco Aurora PostgreSQL ]
+            │
+            ▼ (CDC Ativo via DMS ou Aurora Activity Streams)
+[ Evento de Mutacao do DB ]
+            │
+            ▼ (Enviado para)
+[ Amazon EventBridge Custom Bus ] ◄─── (Filtra eventos de INSERT/UPDATE apenas)
+            │
+            ▼ (Input Transformer formata S3 Key e IDs)
+[ AWS Step Functions (Standard Workflow) ]
+            │
+            ├───► Passo 1: Executa [ AWS Glue Job ] (Processamento Spark) ──► Grava no S3 (Silver)
+            │
+            └───► Em caso de ERRO ──► Dispara [ Tópico SNS ] ──► Notifica time no SQS/PagerDuty
+        </pre>
+      </div>
     </section>
 
     <!-- 6. AWS LAKE FORMATION -->
