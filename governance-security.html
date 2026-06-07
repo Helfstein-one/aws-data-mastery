@@ -552,12 +552,12 @@ df_trusted.show(5)</code></pre>
         <div class="sec-num" style="color:var(--muted)">06</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>AWS IAM na Engenharia de Dados: Roles, Trusts &amp; Boundaries</h2>
-          <p>Configuração robusta de papéis, relações de confiança, grupos SSO e limites de menor privilégio para Big Data</p>
+          <h2>AWS IAM Avançado em Dados: Roles, Trusts e Resource Policies</h2>
+          <p>Configuração robusta de papéis, relações de confiança contra Confused Deputy, políticas de recursos lincadas (S3, KMS, Glue) e Terraform</p>
         </div>
       </div>
 
-      <p>A governança de segurança baseada no <strong>AWS IAM (Identity and Access Management)</strong> é o alicerce de qualquer pipeline analítico corporativo. Em ambientes modernos, dividimos estritamente os acessos de <strong>usuários humanos</strong> (que realizam consultas e desenvolvem código) dos acessos de <strong>máquinas e microsserviços</strong> (que executam processamentos pesados e rotinas agendadas).</p>
+      <p>A governança de segurança baseada no **AWS IAM (Identity and Access Management)** é o pilar mais crítico de conformidade e isolamento em Datalakes e arquiteturas Data Mesh. Engenheiros de dados seniores precisam dominar o funcionamento conjunto de políticas baseadas em identidades (Identity-Based), baseadas em recursos (Resource-Based), Relações de Confiança (Trust Policies) e as intersecções com criptografia no KMS.</p>
 
       <h3>Mapeamento de Grupos Humanos vs Roles de Máquinas</h3>
       <table class="table" style="margin-bottom: 24px;">
@@ -597,76 +597,12 @@ df_trusted.show(5)</code></pre>
         </tbody>
       </table>
 
-      <!-- SVG DIAGRAM FOR IAM SECURITY FLOW -->
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 320" width="760" height="320" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="320" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">FLUXO DE SEGURANÇA E AUTORIZAÇÃO IAM NO BIG DATA</text>
-          
-          <!-- Human User -->
-          <rect x="20" y="70" width="130" height="60" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="85" y="95" text-anchor="middle" fill="#3b82f6" font-size="8.5" font-weight="700">User: Eng. Dados</text>
-          <text x="85" y="112" text-anchor="middle" fill="#cbd5e1" font-size="7">Autenticação AWS SSO</text>
-
-          <!-- Group membership -->
-          <path d="M 150 100 L 190 100" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Group -->
-          <rect x="200" y="70" width="130" height="60" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="265" y="95" text-anchor="middle" fill="#3b82f6" font-size="8.5" font-weight="700">Grupo: DataEngineers</text>
-          <text x="265" y="112" text-anchor="middle" fill="#10b981" font-size="7">iam:PassRole Permitido</text>
-
-          <!-- Deploy Glue Job -->
-          <path d="M 265 130 L 265 210 L 180 210" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="255" y="180" text-anchor="middle" fill="#7c3aed" font-size="7.5" transform="rotate(-90 255 180)">1. Dispara Job (PassRole)</text>
-
-          <!-- AWS Glue Job -->
-          <rect x="20" y="190" width="150" height="90" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="95" y="215" text-anchor="middle" fill="#7c3aed" font-size="9" font-weight="700">AWS Glue Spark Job</text>
-          <text x="95" y="235" text-anchor="middle" fill="#cbd5e1" font-size="7">2. Tenta Assumir Role</text>
-          <text x="95" y="255" text-anchor="middle" fill="#cbd5e1" font-size="7">via AWS STS API</text>
-
-          <!-- STS Call -->
-          <path d="M 170 235 L 340 235" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="255" y="225" text-anchor="middle" fill="#cbd5e1" font-size="7.5">3. sts:AssumeRole Request</text>
-
-          <!-- Security Policy Checker -->
-          <rect x="350" y="150" width="180" height="150" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="440" y="170" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700">ROLE SECURITY CONTROL</text>
-          
-          <rect x="365" y="185" width="150" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1" stroke-width="1"/>
-          <text x="440" y="198" text-anchor="middle" fill="#cbd5e1" font-size="7">Trust Policy: glue.amazonaws.com</text>
-          <text x="440" y="212" text-anchor="middle" fill="#10b981" font-size="7">Permite STS (Allow)</text>
-
-          <rect x="365" y="235" width="150" height="45" rx="4" fill="#0f172a" stroke="#ef4444" stroke-width="1"/>
-          <text x="440" y="250" text-anchor="middle" fill="#ef4444" font-size="7">Permission Boundary Limiter</text>
-          <text x="440" y="262" text-anchor="middle" fill="#cbd5e1" font-size="7">Bloqueia S3 Delete/Admin</text>
-
-          <!-- Token issued to access S3 -->
-          <path d="M 530 225 L 590 225" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="560" y="215" text-anchor="middle" fill="#10b981" font-size="7">4. Token STS</text>
-
-          <!-- S3 Bucket Target -->
-          <rect x="600" y="180" width="140" height="90" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="670" y="205" text-anchor="middle" fill="#10b981" font-size="9.5" font-weight="700">S3 Silver Bucket</text>
-          <text x="670" y="222" text-anchor="middle" fill="#cbd5e1" font-size="7">Criptografia: KMS CMK</text>
-          <text x="670" y="238" text-anchor="middle" fill="#cbd5e1" font-size="7">Policy: Apenas leitura</text>
-          <text x="670" y="252" text-anchor="middle" fill="#cbd5e1" font-size="7">e gravação segura</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-        </svg>
-      </div>
-
-      <h3>Como funcionam as Relações de Confiança (Trust Policies)</h3>
-      <p>Para que uma Role do IAM seja assumida por um serviço específico da AWS (como o motor computacional do AWS Glue), a Role deve obrigatoriamente possuir uma <strong>Trust Policy (Relação de Confiança)</strong> que autorize o principal correspondente a chamar o método <code>sts:AssumeRole</code>. Se a relação de confiança estiver vazia ou mal configurada, o Spark falhará instantaneamente ao subir a JVM com erros de acesso não autorizado.</p>
+      <h3>Relações de Confiança (Trust Policies) e Prevenção de Confused Deputy</h3>
+      <p>Para que um serviço AWS (como Glue ou EMR Serverless) assuma uma Role de execução do IAM, a Role precisa declarar uma **Trust Policy**. Ela define quem (o Principal) está autorizado a chamar o método <code>sts:AssumeRole</code>.</p>
       
-      <div class="callout callout-info">
-        <strong>Trust Policy JSON Recomendada para o AWS Glue:</strong>
-        <pre>{
+      <p>No entanto, expor uma Role genericamente para o serviço (ex: permitir <code>glue.amazonaws.com</code> assumir sem restrições) abre margem para o **Confused Deputy Problem** (onde um invasor na mesma região usa a infraestrutura compartilhada da AWS para fazer o serviço da AWS ler recursos da sua conta). Para mitigar isso em produção, aplicamos chaves de condição restritivas (<code>aws:SourceAccount</code> e <code>aws:SourceArn</code>):</p>
+
+      <pre><code class="language-json">{
   "Version": "2012-10-17",
   "Statement": [
     {
@@ -674,89 +610,205 @@ df_trusted.show(5)</code></pre>
       "Principal": {
         "Service": "glue.amazonaws.com"
       },
-      "Action": "sts:AssumeRole"
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEquals": {
+          "aws:SourceAccount": "123456789012"
+        },
+        "ArnLike": {
+          "aws:SourceArn": "arn:aws:glue:us-east-1:123456789012:job/*"
+        }
+      }
     }
   ]
-}</pre>
+}</code></pre>
+
+      <h3 style="margin-top: 30px;">A Tríade de Permissões de Dados: IAM + Bucket Policy + KMS Key Policy</h3>
+      <p>Para que um job Spark no EMR/Glue acesse dados criptografados no S3 com sucesso, a AWS avalia três camadas de autorização independentes. **Se qualquer uma delas bloquear o acesso, o pipeline falhará física ou logicamente (Access Denied):**</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Camada de Permissão</th>
+              <th>Onde se Anexa</th>
+              <th>Responsabilidade Crítica</th>
+              <th>Relação IaC / Terraform</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Identity-Based Policy (IAM)</strong></td>
+              <td>Na Role de execução (ex: EMR Role).</td>
+              <td>Diz o que aquela identidade específica tem a intenção de fazer (ex: Ler/Gravar S3, usar chave KMS X).</td>
+              <td><code>aws_iam_role_policy</code></td>
+            </tr>
+            <tr>
+              <td><strong>2. Resource-Based Policy (S3 Bucket Policy)</strong></td>
+              <td>No Bucket S3 físico.</td>
+              <td>Controla quem pode bater no bucket (origens IP, VPCEs, apenas SSL) e rejeita explicitamente qualquer gravação sem criptografia KMS.</td>
+              <td><code>aws_s3_bucket_policy</code></td>
+            </tr>
+            <tr>
+              <td><strong>3. KMS Key Policy (Resource-Based)</strong></td>
+              <td>Na chave KMS CMK customizada.</td>
+              <td>Define quais ARNs de Roles e usuários têm permissão física de usar os algoritmos criptográficos da chave para encriptação e desencriptação dos arquivos Parquet/Iceberg salvos.</td>
+              <td><code>aws_kms_key_policy</code></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <h3>Permission Boundaries (Fronteiras de Permissão)</h3>
-      <p>Em ambientes corporativos complexos, os engenheiros de dados têm permissão para criar novas Roles de execução para microsserviços e funções Lambdas. Porém, isso abre uma brecha crítica de segurança chamada <strong>Privilege Escalation (Escalação de Privilégios)</strong>, onde um usuário poderia criar uma Role com privilégios de administrador global e assumi-la para burlar controles do IAM.</p>
-      
-      <p>A <strong>Permission Boundary</strong> é uma política de controle aplicada como limite que define as permissões máximas que uma Role criada pode exercer. Mesmo que o engenheiro anexe a política <code>AdministratorAccess</code> à Role de execução de um contêiner, as permissões efetivas finais serão a intersecção matemática da política anexada com a Permission Boundary de dados, impedindo qualquer acesso a áreas proibidas (como faturamentos, segurança ou exclusão de logs).</p>
+      <h3 style="margin-top: 30px;">Permission Boundaries (Fronteiras de Permissão)</h3>
+      <p>A **Permission Boundary** é uma política de controle aplicada como limite que define as permissões máximas que uma Role criada pode exercer. Mesmo que o engenheiro anexe a política <code>AdministratorAccess</code> à Role de execução de um contêiner, as permissões efetivas finais serão a intersecção matemática da política anexada com a Permission Boundary de dados, impedindo qualquer acesso a áreas proibidas (como faturamentos ou exclusão de logs).</p>
 
-      <h3>Declaração IaC Completa com Terraform</h3>
-      <p>O exemplo prático abaixo ilustra a criação de uma Role IAM de execução do AWS Glue Spark, com uma política de menor privilégio associada para S3/KMS e vinculando uma política limite de Permission Boundary:</p>
+      <h3 style="margin-top: 30px;">Associação de Recursos e Roles com Terraform</h3>
+      <p>O exemplo IaC abaixo codifica de forma estrita a inter-relação entre uma Role de processamento analítico, um Bucket S3 e uma chave KMS de criptografia customizada, fechando o ciclo de segurança de menor privilégio.</p>
 
-      <pre><span class="c"># 1. Definição da Permission Boundary (Limite Máximo de Permissões)</span>
-resource <span class="s">"aws_iam_policy" "boundary"</span> {
-  name        = <span class="s">"data-engineering-permission-boundary"</span>
-  description = <span class="s">"Fronteira limite para garantir que nenhuma role crie recursos fora de dados"</span>
-  policy      = jsonencode({
-    Version = <span class="s">"2012-10-17"</span>
-    Statement = [
-      {
-        Effect   = <span class="s">"Allow"</span>
-        Action   = [
-          <span class="s">"s3:GetObject"</span>,
-          <span class="s">"s3:PutObject"</span>,
-          <span class="s">"s3:ListBucket"</span>,
-          <span class="s">"glue:GetTable"</span>,
-          <span class="s">"glue:GetPartitions"</span>,
-          <span class="s">"kms:Decrypt"</span>,
-          <span class="s">"kms:GenerateDataKey"</span>
-        ]
-        Resource = <span class="s">"*"</span>
-      }
-    ]
-  })
+      <pre><code class="language-hcl"># 1. Chave KMS customizada para encriptacao do Data Lake
+resource "aws_kms_key" "datalake_key" {
+  description             = "Chave KMS customizada para dados Silver/Gold"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
 }
 
-<span class="c"># 2. Criação da Role do IAM com a Trust Policy do AWS Glue e a Permission Boundary</span>
-resource <span class="s">"aws_iam_role" "glue_execution_role"</span> {
-  name                 = <span class="s">"glue-processing-execution-role"</span>
-  permissions_boundary = aws_iam_policy.boundary.arn
+# 2. Bucket S3 Silver
+resource "aws_s3_bucket" "silver_bucket" {
+  bucket        = "empresa-datalake-silver-prod"
+  force_destroy = false
+}
 
+# 3. Role de Execucao do EMR Serverless / Glue
+resource "aws_iam_role" "data_processing_role" {
+  name = "data-processing-executor-role"
+
+  # Trust policy com protecao contra Confused Deputy
   assume_role_policy = jsonencode({
-    Version = <span class="s">"2012-10-17"</span>
+    Version = "2012-10-17"
     Statement = [
       {
-        Action    = <span class="s">"sts:AssumeRole"</span>
-        Effect    = <span class="s">"Allow"</span>
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
         Principal = {
-          Service = <span class="s">"glue.amazonaws.com"</span>
+          Service = "emr-serverless.amazonaws.com"
+        }
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = "123456789012"
+          }
         }
       }
     ]
   })
 }
 
-<span class="c"># 3. Anexação de Políticas de Menor Privilégio locais</span>
-resource <span class="s">"aws_iam_policy" "s3_access_policy"</span> {
-  name   = <span class="s">"glue-s3-kms-access"</span>
+# 4. Politica de Identidade do IAM (Identity-Based Policy)
+resource "aws_iam_role_policy" "processing_permissions" {
+  name = "processing-s3-kms-permissions"
+  role = aws_iam_role.data_processing_role.id
+
   policy = jsonencode({
-    Version = <span class="s">"2012-10-17"</span>
+    Version = "2012-10-17"
     Statement = [
       {
-        Effect = <span class="s">"Allow"</span>
+        Effect = "Allow"
         Action = [
-          <span class="s">"s3:GetObject"</span>,
-          <span class="s">"s3:PutObject"</span>,
-          <span class="s">"s3:ListBucket"</span>
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket"
         ]
         Resource = [
-          <span class="s">"arn:aws:s3:::meu-datalake-trusted"</span>,
-          <span class="s">"arn:aws:s3:::meu-datalake-trusted/*"</span>
+          aws_s3_bucket.silver_bucket.arn,
+          "${aws_s3_bucket.silver_bucket.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+        ]
+        Resource = [
+          aws_kms_key.datalake_key.arn
         ]
       }
     ]
   })
 }
 
-resource <span class="s">"aws_iam_role_policy_attachment" "attach_s3"</span> {
-  role       = aws_iam_role.glue_execution_role.name
-  policy_arn = aws_iam_policy.s3_access_policy.arn
-}</pre>
+# 5. Politica do Bucket S3 (Resource-Based Policy) - Forcando SSL e acessos estritos
+resource "aws_s3_bucket_policy" "silver_bucket_policy" {
+  bucket = aws_s3_bucket.silver_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "EnforceSSLOnly"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.silver_bucket.arn,
+          "${aws_s3_bucket.silver_bucket.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      },
+      {
+        Sid       = "AllowExecutionRoleOnly"
+        Effect    = "Allow"
+        Principal = {
+          AWS = aws_iam_role.data_processing_role.arn
+        }
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject"
+        ]
+        Resource = [
+          "${aws_s3_bucket.silver_bucket.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+# 6. Politica da Chave KMS (KMS Key Policy) - Permitindo uso a Role de dados
+resource "aws_kms_key_policy" "datalake_key_policy" {
+  key_id = aws_kms_key.datalake_key.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowRootFullControl"
+        Effect    = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::123456789012:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid       = "AllowDataProcessingRoleUse"
+        Effect    = "Allow"
+        Principal = {
+          AWS = aws_iam_role.data_processing_role.arn
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey",
+          "kms:Encrypt",
+          "kms:GenerateDataKey*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}</code></pre>
     </section>
 
 <section class="section" id="observabilidade">

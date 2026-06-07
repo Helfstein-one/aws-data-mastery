@@ -1989,6 +1989,71 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           </ul>
         </div>
       </div>
+
+      <!-- Case 74: Prevention of Confused Deputy in Trust Policies -->
+      <div class="card" id="q74" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 74 · IAM Trust Policies Avançadas &amp; Prevenção de Confused Deputy</div>
+        <h4>Ao configurar uma Role para o AWS Glue ou EMR Serverless, como a Trust Policy (Política de Confiança) deve ser codificada para impedir o ataque de Confused Deputy (Deputado Confuso), e qual o papel das chaves de condição aws:SourceArn e aws:SourceAccount neste cenário?</h4>
+        <p><strong>Desafio de Segurança Multi-Tenant:</strong> Serviços analíticos compartilhados da AWS rodam em infraestruturas multi-tenant. Se você autorizar o serviço (ex: <code>glue.amazonaws.com</code>) a assumir sua Role globalmente sem restrições, uma conta externa AWS maliciosa poderia instruir o Glue a rodar um Job assumindo o ARN da sua Role, obtendo acesso de leitura/gravação ao seu datalake S3 privado.</p>
+        <div class="callout callout-info">
+          <strong>Solução Arquitetural de Relação de Confiança:</strong>
+          <ul>
+            <li><strong>Mecanismo de Defesa:</strong> A Trust Policy deve limitar de forma explícita o escopo de atuação do serviço. Anexamos chaves de condição na política que forçam o principal a bater com o ID da sua conta e com ARNs controlados.</li>
+            <li><strong>Condições Recomendadas:</strong>
+              <br>• <code>aws:SourceAccount</code>: Garante que apenas recursos criados sob o seu ID de conta AWS (ex: <code>123456789012</code>) consigam induzir o serviço a assumir a Role.
+              <br>• <code>aws:SourceArn</code>: Restringe a invocação a ARNs específicos (ex: apenas o Job do Glue de nome <code>job-silver-vendas</code> pode assumir a Role).
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 75: Cross-Account Data Sharing with S3 and KMS CMK -->
+      <div class="card" id="q75" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 75 · Segurança Cross-Account em Data Lake: Bucket Policy + KMS Key Policy</div>
+        <h4>Em um cenário Data Mesh, um job PySpark rodando na Conta Consumidora A precisa ler dados analíticos Parquet salvos no S3 na Conta Produtora B. Os dados estão encriptados via chave KMS CMK customizada na Conta B. Como devem interagir as políticas IAM da Role da Conta A, a Bucket Policy da Conta B e a Key Policy do KMS da Conta B para permitir o acesso de menor privilégio?</h4>
+        <p><strong>Desafio de Avaliação de Políticas Cross-Account:</strong> Em acessos na mesma conta, basta a Role ter permissão no IAM. Em acessos cross-account (contas diferentes), a AWS exige autorização explícita **em ambos os lados**: na política de identidade do chamador e nas políticas de recurso do proprietário do recurso (Bucket Policy e KMS Key Policy).</p>
+        <div class="callout callout-tip">
+          <strong>Arquitetura de Concessão Cross-Account:</strong>
+          <ol>
+            <li><strong>Permissões na Conta Consumidora A (Identity-Based):</strong> A Role de execução do Spark na Conta A deve receber permissões explícitas no IAM de leitura no S3 (<code>s3:GetObject</code>, <code>s3:ListBucket</code>) apontando para o ARN do bucket da Conta B, e descriptografia no KMS (<code>kms:Decrypt</code>) apontando para o ARN da chave KMS da Conta B.</li>
+            <li><strong>Bucket Policy na Conta Produtora B (Resource-Based):</strong> A Bucket Policy da Conta B deve autorizar explicitamente o ARN físico da Role da Conta A a listar e ler objetos:
+              <pre><code class="language-json">{
+  "Effect": "Allow",
+  "Principal": { "AWS": "arn:aws:iam::ACCOUNT_A:role/data-processing-role" },
+  "Action": ["s3:GetObject", "s3:ListBucket"],
+  "Resource": ["arn:aws:s3:::bucket-conta-b", "arn:aws:s3:::bucket-conta-b/*"]
+}</code></pre>
+            </li>
+            <li><strong>KMS Key Policy na Conta Produtora B (Resource-Based):</strong> A política da chave KMS customizada na Conta B deve conter um statement autorizando o ARN da Role da Conta A a realizar a descriptografia (<code>kms:Decrypt</code>, <code>kms:DescribeKey</code>). **Sem este passo, o Spark baixará os bytes do S3 mas falhará em decodificar o Parquet, gerando erro de I/O.**</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Case 76: Privilege Escalation Prevention and Permission Boundaries -->
+      <div class="card" id="q76" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 76 · Privilege Escalation e Permission Boundaries em Times de Dados</div>
+        <h4>Para dar autonomia a engenheiros de dados em uma grande corporação, foi cedida a eles permissão de criar novas Roles de execução no IAM para Glue e Lambda. Como evitar que um engenheiro abuse dessa autonomia para criar uma Role com permissões administrativas completas (Administrador) e a assuma (Privilege Escalation)?</h4>
+        <p><strong>Risco de Quebra de Governança:</strong> Um usuário com permissão de criar Roles (<code>iam:CreateRole</code>) e anexar políticas (<code>iam:AttachRolePolicy</code>) pode anexar a política gerenciada <code>AdministratorAccess</code> a uma Role nova e depois usá-la em um Lambda para alterar a infraestrutura corporativa.</p>
+        <div class="callout callout-info">
+          <strong>Solução IaC com Permission Boundary:</strong>
+          <ul>
+            <li><strong>Fronteiras de Permissão do IAM:</strong> O administrador de segurança da AWS cria uma política limite chamada **Permission Boundary** (que descreve as ações máximas que qualquer recurso de dados pode rodar, ex: ler S3, gravar logs, ler Glue, sem acessos administrativos de rede ou billing).</li>
+            <li><strong>Vinculação via Políticas IAM:</strong> Na política IAM dos engenheiros de dados, a permissão <code>iam:CreateRole</code> só é concedida sob a condição estrita de que a nova Role criada venha associada à Permission Boundary predefinida:
+              <pre><code class="language-json">{
+  "Effect": "Allow",
+  "Action": ["iam:CreateRole", "iam:PutRolePermissionsBoundary"],
+  "Resource": "*",
+  "Condition": {
+    "StringEquals": {
+      "iam:PermissionsBoundary": "arn:aws:iam::123456789012:policy/data-boundary"
+    }
+  }
+}</code></pre>
+            </li>
+            <li><strong>Resultado Prático:</strong> Mesmo que o engenheiro crie uma Role e tente anexar <code>AdministratorAccess</code> a ela, o poder de execução efetivo daquela Role será restrito ao escopo declarado na Permission Boundary, mitigando a escalação de privilégios.</li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 </div>
