@@ -1996,82 +1996,67 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
         </div>
       </div>
 
-      <!-- Case 74: IoT High-Throughput (Standard vs Express State Machine) -->
+      <!-- Case 74: Prevention of Confused Deputy in Trust Policies -->
       <div class="card" id="q74" style="margin-bottom: 24px;">
-        <div class="card-lbl">Questão 74 · IoT High-Throughput: Standard vs Express Workflows no Step Functions</div>
-        <h4>Você está desenhando um pipeline para receber telemetria de 50.000 sensores de IoT enviando eventos a cada segundo. Cada mensagem precisa ser validada, enriquecida e persistida no S3. O time propôs usar uma Step Function para orquestrar o fluxo. Qual tipo de Workflow (Standard ou Express) deve ser selecionado, quais os limites a considerar e como integrar isso com ECS Fargate atrás de um ALB para Ingestão?</h4>
-        <p><strong>Desafio de Volumetria e Custo:</strong> Standard Workflows cobram por transição de estados e possuem limite de 2.000 execuções por segundo. Em 50.000 eventos/s, os limites de concorrência seriam estourados no primeiro segundo, gerando estrangulamento de chamadas e uma fatura financeira astronômica.</p>
+        <div class="card-lbl">Questão 74 · IAM Trust Policies Avançadas &amp; Prevenção de Confused Deputy</div>
+        <h4>Ao configurar uma Role para o AWS Glue ou EMR Serverless, como a Trust Policy (Política de Confiança) deve ser codificada para impedir o ataque de Confused Deputy (Deputado Confuso), e qual o papel das chaves de condição aws:SourceArn e aws:SourceAccount neste cenário?</h4>
+        <p><strong>Desafio de Segurança Multi-Tenant:</strong> Serviços analíticos compartilhados da AWS rodam em infraestruturas multi-tenant. Se você autorizar o serviço (ex: <code>glue.amazonaws.com</code>) a assumir sua Role globalmente sem restrições, uma conta externa AWS maliciosa poderia instruir o Glue a rodar um Job assumindo o ARN da sua Role, obtendo acesso de leitura/gravação ao seu datalake S3 privado.</p>
         <div class="callout callout-info">
-          <strong>Arquitetura e Solução de Ingestão:</strong>
+          <strong>Solução Arquitetural de Relação de Confiança:</strong>
           <ul>
-            <li><strong>Escolha do Express Workflow:</strong> Deve-se selecionar o **Express Workflow**. Ele suporta taxas de início superiores a 100.000 execuções/s e a cobrança é baseada apenas no tempo de CPU consumido e número de requests (idêntico ao modelo do AWS Lambda), reduzindo o custo operacional em até 95% para este padrão de tráfego. O limite físico é a duração de 5 minutos, o que é ideal para tratamentos ultra rápidos de mensagens.</li>
-            <li><strong>Desacoplamento via ECS e ALB:</strong> Para proteger o ecossistema, os sensores IoT não disparam a Step Function diretamente. Eles batem em uma API REST de alta performance construída em Go/Python rodando em containers **ECS Fargate** altamente escaláveis, localizados atrás de um **Application Load Balancer (ALB)**.</li>
-            <li><strong>Fluxo de Ingestão Desacoplado:</strong> O ECS recebe o payload JSON, faz uma validação estrutural inicial rápida e o publica em uma **Fila SQS**. Um Lambda consome lotes (batches) da fila SQS de forma paralela e dispara as execuções assíncronas do **Express Workflow** para enriquecimento complexo, persistindo os dados higienizados no data lake.</li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Case 75: Idempotency Spark / EMR from SQS Standard -->
-      <div class="card" id="q75" style="margin-bottom: 24px;">
-        <div class="card-lbl">Questão 75 · Reprocessamento Resiliente: Idempotência de Consumo SQS em Spark / EMR</div>
-        <h4>Seu pipeline Spark rodando no Amazon EMR consome dados continuamente de uma fila SQS Standard (at-least-once). Devido a instabilidades temporárias de rede, mensagens processadas com sucesso não são deletadas a tempo e reaparecem na fila, sendo entregues novamente. Como desenhar a lógica no Spark para garantir a idempotência física dos registros gravados em tabelas Apache Iceberg (camada Silver)?</h4>
-        <p><strong>Risco de Duplicidade Analítica:</strong> Como filas SQS Standard não garantem entrega única, o reprocessamento puro de mensagens duplicadas gera linhas duplicadas no data lake, corrompendo agregações financeiras e métricas de negócios.</p>
-        <div class="callout callout-tip">
-          <strong>Solução de Engenharia de Dados:</strong>
-          <ul>
-            <li><strong>Uso de Deduplicação Nativa do Apache Iceberg (Upsert / Merge Into):</strong> Em vez de executar comandos de Append cego no Spark, utilize o padrão **Merge Into (Upsert)** com base em uma chave única de negócios (ex: <code>transaction_id</code>):
-              <pre><code class="language-sql">-- Comando executado no Spark / EMR para atualizar dados existentes ou inserir novos
-MERGE INTO silver.transacoes t
-USING staging_df s
-ON t.transaction_id = s.transaction_id
-WHEN MATCHED THEN
-  UPDATE SET t.valor = s.valor, t.data_atualizacao = s.data_atualizacao
-WHEN NOT MATCHED THEN
-  INSERT (transaction_id, valor, data_atualizacao) VALUES (s.transaction_id, s.valor, s.data_atualizacao);</code></pre>
+            <li><strong>Mecanismo de Defesa:</strong> A Trust Policy deve limitar de forma explícita o escopo de atuação do serviço. Anexamos chaves de condição na política que forçam o principal a bater com o ID da sua conta e com ARNs controlados.</li>
+            <li><strong>Condições Recomendadas:</strong>
+              <br>• <code>aws:SourceAccount</code>: Garante que apenas recursos criados sob o seu ID de conta AWS (ex: <code>123456789012</code>) consigam induzir o serviço a assumir a Role.
+              <br>• <code>aws:SourceArn</code>: Restringe a invocação a ARNs específicos (ex: apenas o Job do Glue de nome <code>job-silver-vendas</code> pode assumir a Role).
             </li>
-            <li><strong>Tabelamento de Estado Temporário (Redis / DynamoDB):</strong> Se a operação de Merge Into for muito cara devido ao tamanho físico da tabela, o Spark pode consultar um banco de dados KV ultra rápido como o DynamoDB antes de processar. O pipeline faz um write lock do <code>messageId</code> do SQS no DynamoDB com um TTL (Time-To-Live) de 24 horas. Se o ID já existir, o Spark descarta o registro imediatamente (Drop), garantindo processamento único.</li>
           </ul>
         </div>
       </div>
 
-      <!-- Case 76: Claim Check Pattern and RDS Proxy / Aurora DB -->
-      <div class="card" id="q76" style="margin-bottom: 24px;">
-        <div class="card-lbl">Questão 76 · Padrão Claim Check e Proteção de Banco de Dados Aurora via RDS Proxy</div>
-        <h4>Um pipeline de ETL recebe payloads volumosos de terceiros contendo imagens codificadas em Base64 e metadados lógicos (> 1.5 MB). O pipeline deve ler os metadados e gravá-los em uma tabela transacional no Amazon Aurora PostgreSQL. Como projetar essa arquitetura usando Claim Check no SQS e proteger o Aurora de sobrecarga de conexões concorrentes durante picos de escrita?</h4>
-        <p><strong>Limite de Payload SQS e Limite de Conexões Aurora:</strong> O SQS rejeitará a mensagem porque excede 256 KB. Se tentarmos contornar isso escalando executores do Fargate para processar e gravar direto no Aurora, o volume massivo de conexões concorrentes geradas pelas tarefas do Fargate esgotará a memória (max_connections) do Aurora, derrubando o banco de dados OLTP.</p>
-        <div class="callout callout-info">
-          <strong>Arquitetura Claim Check + RDS Proxy:</strong>
+      <!-- Case 75: Cross-Account Data Sharing with S3 and KMS CMK -->
+      <div class="card" id="q75" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 75 · Segurança Cross-Account em Data Lake: Bucket Policy + KMS Key Policy</div>
+        <h4>Em um cenário Data Mesh, um job PySpark rodando na Conta Consumidora A precisa ler dados analíticos Parquet salvos no S3 na Conta Produtora B. Os dados estão encriptados via chave KMS CMK customizada na Conta B. Como devem interagir as políticas IAM da Role da Conta A, a Bucket Policy da Conta B e a Key Policy do KMS da Conta B para permitir o acesso de menor privilégio?</h4>
+        <p><strong>Desafio de Avaliação de Políticas Cross-Account:</strong> Em acessos na mesma conta, basta a Role ter permissão no IAM. Em acessos cross-account (contas diferentes), a AWS exige autorização explícita **em ambos os lados**: na política de identidade do chamador e nas políticas de recurso do proprietário do recurso (Bucket Policy e KMS Key Policy).</p>
+        <div class="callout callout-tip">
+          <strong>Arquitetura de Concessão Cross-Account:</strong>
           <ol>
-            <li><strong>Claim Check via S3 e SQS:</strong> A aplicação de borda recebe o payload de 1.5 MB, grava a imagem Base64 em um bucket **S3** e envia uma mensagem curta ao **SQS** contendo apenas a referência (URI do S3) e os metadados lógicos limpos.</li>
-            <li><strong>Throttling e Pooling com RDS Proxy:</strong> Provisione o **Amazon RDS Proxy** entre os consumidores SQS (Lambda/ECS Fargate) e o banco de dados Aurora PostgreSQL. O RDS Proxy mantém um pool estabelecido de conexões persistentes com o Aurora. Múltiplas tarefas concorrentes do ECS Fargate compartilham (multiplexação) esse pool de conexões estável.</li>
-            <li><strong>Benefício de Resiliência:</strong> Se as tarefas do Fargate escalarem para 1.000 instâncias concorrentes devido a um pico de ingestão, elas não abrirão 1.000 conexões com o Aurora. Elas farão fila no RDS Proxy, que gerenciará o tráfego sem estourar o limite de conexões físicas do banco de dados, enquanto o SQS serve como buffer de backpressure.</li>
+            <li><strong>Permissões na Conta Consumidora A (Identity-Based):</strong> A Role de execução do Spark na Conta A deve receber permissões explícitas no IAM de leitura no S3 (<code>s3:GetObject</code>, <code>s3:ListBucket</code>) apontando para o ARN do bucket da Conta B, e descriptografia no KMS (<code>kms:Decrypt</code>) apontando para o ARN da chave KMS da Conta B.</li>
+            <li><strong>Bucket Policy na Conta Produtora B (Resource-Based):</strong> A Bucket Policy da Conta B deve autorizar explicitamente o ARN físico da Role da Conta A a listar e ler objetos:
+              <pre><code class="language-json">{
+  "Effect": "Allow",
+  "Principal": { "AWS": "arn:aws:iam::ACCOUNT_A:role/data-processing-role" },
+  "Action": ["s3:GetObject", "s3:ListBucket"],
+  "Resource": ["arn:aws:s3:::bucket-conta-b", "arn:aws:s3:::bucket-conta-b/*"]
+}</code></pre>
+            </li>
+            <li><strong>KMS Key Policy na Conta Produtora B (Resource-Based):</strong> A política da chave KMS customizada na Conta B deve conter um statement autorizando o ARN da Role da Conta A a realizar a descriptografia (<code>kms:Decrypt</code>, <code>kms:DescribeKey</code>). **Sem este passo, o Spark baixará os bytes do S3 mas falhará em decodificar o Parquet, gerando erro de I/O.**</li>
           </ol>
         </div>
       </div>
 
-      <!-- Case 77: Cross-Account Event Routing and Step Functions Orchestration -->
-      <div class="card" id="q77" style="margin-bottom: 24px;">
-        <div class="card-lbl">Questão 77 · Roteamento Cross-Account no EventBridge e Orquestração Glue com Step Functions</div>
-        <h4>Em uma organização multinacional estruturada em Data Mesh, como rotear eventos de atualização de dados da Conta de Negócios A para a Conta Analítica Central B utilizando EventBridge, disparar uma Step Function para orquestrar múltiplos Glue Jobs sequenciais com passagem de parâmetros e enviar notificações segmentadas via SNS baseadas na criticidade da falha?</h4>
-        <p><strong>Desafio Cross-Account e Governança:</strong> Recursos em contas AWS diferentes não conseguem se comunicar diretamente sem políticas de recursos explícitas e permissões cruzadas que respeitem princípios de privilégio mínimo.</p>
-        <div class="callout callout-tip">
-          <strong>Arquitetura Organizacional de Eventos:</strong>
+      <!-- Case 76: Privilege Escalation Prevention and Permission Boundaries -->
+      <div class="card" id="q76" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 76 · Privilege Escalation e Permission Boundaries em Times de Dados</div>
+        <h4>Para dar autonomia a engenheiros de dados em uma grande corporação, foi cedida a eles permissão de criar novas Roles de execução no IAM para Glue e Lambda. Como evitar que um engenheiro abuse dessa autonomia para criar uma Role com permissões administrativas completas (Administrador) e a assuma (Privilege Escalation)?</h4>
+        <p><strong>Risco de Quebra de Governança:</strong> Um usuário com permissão de criar Roles (<code>iam:CreateRole</code>) e anexar políticas (<code>iam:AttachRolePolicy</code>) pode anexar a política gerenciada <code>AdministratorAccess</code> a uma Role nova e depois usá-la em um Lambda para alterar a infraestrutura corporativa.</p>
+        <div class="callout callout-info">
+          <strong>Solução IaC com Permission Boundary:</strong>
           <ul>
-            <li><strong>Roteamento de Evento Cross-Account (EventBridge):</strong>
-              <br>• Na **Conta A (Negócios)**, crie uma regra do EventBridge cuja ação (target) aponte diretamente para o ARN do Barramento de Eventos (Event Bus) padrão ou customizado da **Conta B (Analítica)**.
-              <br>• Na **Conta B**, configure a política de permissão do Event Bus para autorizar a Conta A a publicar eventos (ação <code>events:PutEvents</code>).
+            <li><strong>Fronteiras de Permissão do IAM:</strong> O administrador de segurança da AWS cria uma política limite chamada **Permission Boundary** (que descreve as ações máximas que qualquer recurso de dados pode rodar, ex: ler S3, gravar logs, ler Glue, sem acessos administrativos de rede ou billing).</li>
+            <li><strong>Vinculação via Políticas IAM:</strong> Na política IAM dos engenheiros de dados, a permissão <code>iam:CreateRole</code> só é concedida sob a condição estrita de que a nova Role criada venha associada à Permission Boundary predefinida:
+              <pre><code class="language-json">{
+  "Effect": "Allow",
+  "Action": ["iam:CreateRole", "iam:PutRolePermissionsBoundary"],
+  "Resource": "*",
+  "Condition": {
+    "StringEquals": {
+      "iam:PermissionsBoundary": "arn:aws:iam::123456789012:policy/data-boundary"
+    }
+  }
+}</code></pre>
             </li>
-            <li><strong>Orquestração Serverless com Step Functions:</strong>
-              Na Conta B, crie uma regra do EventBridge que escuta os eventos direcionados da Conta A e dispara o início de execução do **Step Functions**. A máquina de estados inicia e executa uma cadeia de Glue Jobs:
-              <br>1. Roda o <code>Glue Job 1 (Bronze para Silver)</code> e aguarda a finalização (<code>.sync</code>).
-              <br>2. Se o status for bem-sucedido, um Choice State direciona para o <code>Glue Job 2 (Silver para Gold)</code>.
-              <br>3. Se qualquer passo falhar, o bloco <code>Catch</code> captura o erro e envia para a task final de notificação.
-            </li>
-            <li><strong>Notificação Segmentada via SNS (Message Filtering):</strong>
-              O Step Functions publica a falha em um Tópico SNS associado a dois consumidores diferentes:
-              <br>• <strong>Assinatura SQS do Time de Operações (Alta Prioridade):</strong> Filtra por atributos <code>{ "criticidade": ["alta"] }</code> (falhas no processamento da Gold).
-              <br>• <strong>Assinatura de Email do Time de Desenvolvimento (Média Prioridade):</strong> Filtra por <code>{ "criticidade": ["media", "baixa"] }</code> (falhas menores ou retentativas automáticas na Silver).
-            </li>
+            <li><strong>Resultado Prático:</strong> Mesmo que o engenheiro crie uma Role e tente anexar <code>AdministratorAccess</code> a ela, o poder de execução efetivo daquela Role será restrito ao escopo declarado na Permission Boundary, mitigando a escalação de privilégios.</li>
           </ul>
         </div>
       </div>
