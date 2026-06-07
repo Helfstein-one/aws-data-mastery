@@ -160,6 +160,17 @@
         "finops.html#finops-analise",
         "finops.html#finops-terraform"
       ]
+    },
+    oop: {
+      name: "🏗️ Python & OOP",
+      badge: "Engenheiro Pythonico",
+      color: "#f43f5e",
+      items: [
+        "data-engineering-oop.html#boas-praticas",
+        "data-engineering-oop.html#oop-dados",
+        "data-engineering-oop.html#design-patterns",
+        "data-engineering-oop.html#oop-cases-perguntas"
+      ]
     }
   };
 
