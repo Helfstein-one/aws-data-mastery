@@ -257,6 +257,105 @@ payload_valido = TransacaoModel(
     valor=250.50,
     criado_em=datetime.now()
 )</code></pre>
+
+      <h3>Estruturas de Dados Fundamentais e Complexidade Big-O</h3>
+      <p>Em processamento de dados local ou pipelines Python puros, a escolha da estrutura de dados nativa dita o consumo de memória e a latência de processamento de buscas. Conhecer a complexidade de tempo (Big-O) evita gargalos clássicos:</p>
+
+      <table class="tuning-table" style="width:100%; margin-bottom: 24px; font-size:12px;">
+        <thead>
+          <tr>
+            <th>Estrutura</th>
+            <th>Inserção/Append</th>
+            <th>Busca por Elemento (`x in collection`)</th>
+            <th>Uso de Memória</th>
+            <th>Caso de Ingestão Ideal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>List</strong></td>
+            <td>O(1) amortizado</td>
+            <td>O(N) (Pesquisa linear)</td>
+            <td>Baixo / Sequencial</td>
+            <td>Manter ordem física de colunas ou acumular batches ordenados de registros.</td>
+          </tr>
+          <tr>
+            <td><strong>Set</strong></td>
+            <td>O(1)</td>
+            <td>O(1) (Hash table lookup)</td>
+            <td>Médio (Hash tables exigem padding)</td>
+            <td>Filtrar IDs duplicados de transações recebidos em lote da Raw Layer.</td>
+          </tr>
+          <tr>
+            <td><strong>Dict</strong></td>
+            <td>O(1)</td>
+            <td>O(1) (Busca de chaves)</td>
+            <td>Alto (Armazena chaves, hashes e valores)</td>
+            <td>Representar registros e mapeamento de chaves para consultas rápidas (*Lookup Tables*).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-tip" style="margin-bottom:24px;">
+        <strong>Otimização de Loops: Compreensão de Listas (List Comprehension):</strong>
+        Loops tradicionais (<code>for x in lista: ...</code>) em Python interpretado geram custos de interpretação a cada ciclo. A compreensão de listas (<code>[processa(x) for x in lista]</code>) é executada no nível da linguagem C sob o capô, gerando ganhos de até 25% na velocidade de processamento.
+      </div>
+
+      <pre><code class="language-python"># Código Ineficiente (Iteração Lenta com loops)
+ids_invalidos = []
+for transacao in transacoes:
+    if transacao.valor <= 0:
+        ids_invalidos.append(transacao.id)
+
+# Código Pythonic O(1) Lookup & List Comprehension
+# Se ids_blacklist for um SET em vez de LIST, a pesquisa 'in' cai de O(N) para O(1)
+ids_blacklist = {"uuid-1", "uuid-2", "uuid-3"}
+transacoes_validas = [t for t in transacoes if t.id not in ids_blacklist]</code></pre>
+
+      <h3>Performance, Vetorização e Otimização com Pandas DataFrame</h3>
+      <p>Pandas é amplamente utilizado para manipulação local de volumes médios de dados. No entanto, o Pandas foi escrito em C/Cython. Utilizar laços manuais do Python sobre DataFrames é um dos maiores gargalos cometidos por engenheiros:</p>
+
+      <ul>
+        <li><strong>Anti-Pattern (<code>iterrows</code>):</strong> O método <code>.iterrows()</code> converte cada linha em um objeto Pandas Series do Python em tempo de execução, gerando um overhead computacional massivo.</li>
+        <li><strong>Vectorization (Vetorização):</strong> Operações vetorizadas enviam a instrução de cálculo diretamente para arrays nativos do C (NumPy) sem passar pelo interpretador Python a cada linha (SIMD - Single Instruction, Multiple Data).</li>
+      </ul>
+
+      <div class="abox" style="margin-bottom:24px;">
+        <div class="abox-hdr" style="background: var(--navy)">Técnicas de Performance: Iteração Manual vs. Vetorização no Pandas</div>
+        <div class="abox-body">
+          <pre><code class="language-python">import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({"valor_dolar": np.random.uniform(1, 100, 1_000_000)})
+taxa = 5.30
+
+# ANTI-PATTERN: iterrows (Lento - pode levar vários segundos)
+valores_reais = []
+for index, row in df.iterrows():
+    valores_reais.append(row["valor_dolar"] * taxa)
+df["valor_real_lento"] = valores_reais
+
+# PADRÃO OURO: Vetorização (Ultra Rápido - milissegundos)
+df["valor_real_rapido"] = df["valor_dolar"] * taxa  # Processamento C nativo</code></pre>
+        </div>
+      </div>
+
+      <p><strong>Otimização de Tipos de Dados no Pandas:</strong> Por padrão, o Pandas pode inferir inteiros como <code>int64</code> e decimais como <code>float64</code>, consumindo mais memória do que o necessário. Além disso, strings repetidas consomem muita RAM. Podemos otimizar a memória utilizando <code>downcast</code> e convertendo tipos de strings para <code>category</code>:</p>
+
+      <pre><code class="language-python"># Redução drástica do tamanho do DataFrame na RAM
+def otimizar_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    for col in df.columns:
+        # Downcast de inteiros
+        if df[col].dtype == "int64":
+            df[col] = pd.to_numeric(df[col], downcast="integer")
+        # Downcast de floats
+        elif df[col].dtype == "float64":
+            df[col] = pd.to_numeric(df[col], downcast="float")
+        # Conversão de objetos/strings repetitivos para Category (Consome muito menos RAM)
+        elif df[col].dtype == "object":
+            if df[col].nunique() / len(df[col]) < 0.5: # Menos de 50% de valores únicos
+                df[col] = df[col].astype("category")
+    return df</code></pre>
     </section>
 
     <!-- SECTION 2: OOP EM DADOS -->
@@ -394,42 +493,119 @@ class DynamoDBExecutionRepository(ExecutionRepository):
         print(f"Gravando logs de {job_name} no DynamoDB")
         # Logica de escrita física no DynamoDB...</code></pre>
 
-      <h3>Diagrama de Classes: Framework de Ingestão Orientado a Objetos</h3>
-      <p>Abaixo está detalhada a relação arquitetural e a linhagem de classes para o framework de dados flexível:</p>
+      <h3>4. Strategy Pattern (Leitura Dinâmica de Formatos)</h3>
+      <p>Permite injetar dinamicamente diferentes algoritmos de leitura física (CSV, Parquet, JSON) no conector em tempo de execução, mantendo a classe do pipeline isolada das particularidades de cada formato:</p>
+
+      <pre><code class="language-python">class FileReadStrategy(ABC):
+    @abstractmethod
+    def read_file(self, filepath: str) -> DataFrame:
+        pass
+
+class ParquetReadStrategy(FileReadStrategy):
+    def __init__(self, spark: SparkSession):
+        self.spark = spark
+    def read_file(self, filepath: str) -> DataFrame:
+        return self.spark.read.parquet(filepath)
+
+class CSVReadStrategy(FileReadStrategy):
+    def __init__(self, spark: SparkSession):
+        self.spark = spark
+    def read_file(self, filepath: str) -> DataFrame:
+        return self.spark.read.option("header", "true").csv(filepath)
+
+class FlexiblePipeline:
+    def __init__(self, strategy: FileReadStrategy):
+        self.strategy = strategy  # Injeção da estratégia
+
+    def run(self, filepath: str) -> DataFrame:
+        return self.strategy.read_file(filepath)</code></pre>
+
+      <h3>5. Otimização de Memória com <code>__slots__</code> em Classes de Entidades</h3>
+      <p>Por padrão, cada objeto em Python cria um dicionário <code>__dict__</code> interno dinâmico para poder receber novos atributos a qualquer momento. Em Big Data, ao representar milhões de registros estruturados como objetos Python em memória, esse overhead consome centenas de Megabytes de RAM. Utilizar <code>__slots__</code> impede o uso do dicionário dinâmico, economizando até 70% de RAM:</p>
+
+      <pre><code class="language-python"># Sem __slots__ (Consome alta memória por dicionário interno)
+class LinhaDatalakeLegada:
+    def __init__(self, id_transacao: str, valor: float):
+        self.id_transacao = id_transacao
+        self.valor = valor
+
+# Com __slots__ (Reduz em até 70% o uso de RAM por instância física)
+class LinhaDatalakeOtimizada:
+    __slots__ = ("id_transacao", "valor")  # Trava atributos fixos
+    
+    def __init__(self, id_transacao: str, valor: float):
+        self.id_transacao = id_transacao
+        self.valor = valor</code></pre>
+
+      <h3>6. Ingestão Eficiente com Generators (<code>yield</code> vs Listas Completas)</h3>
+      <p>Ao extrair dados de bancos transacionais OLTP (PostgreSQL, Oracle) usando Python, acumular todos os dados em listas na memória RAM causa estouro de heap (OOM). Generators (<code>yield</code>) transmitem os dados de forma lazy:</p>
+
+      <pre><code class="language-python"># ANTI-PATTERN: fetchall() acumula tudo na memória do servidor local
+def carregar_dados_lista(cursor) -> list:
+    return cursor.fetchall()  # Perigo de OOM para tabelas grandes
+
+# PADRÃO OURO: yield streaming paginado de dados
+def streaming_dados_generator(cursor, batch_size=1000):
+    while True:
+        linhas = cursor.fetchmany(batch_size)
+        if not linhas:
+            break
+        for linha in linhas:
+            yield linha  # Retorna de forma preguiçosa (Lazy Evaluation)</code></pre>
+
+      <h3>Diagrama de Classes: Arquitetura Avançada de Ingestão OOP</h3>
+      <p>Abaixo está detalhada a relação arquitetural e a linhagem de classes contendo os padrões Factory, Strategy e Repository integrados para desacoplamento e altíssima testabilidade:</p>
 
       <div class="dw">
-        <svg viewBox="0 0 800 340" width="100%" height="340" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="800" height="340" fill="#0f172a" rx="14"/>
+        <svg viewBox="0 0 800 480" width="100%" height="480" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="480" fill="#0f172a" rx="14"/>
           
-          <!-- Abstract Class -->
-          <rect x="260" y="30" width="280" height="90" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+          <!-- Abstract DataConnector -->
+          <rect x="270" y="30" width="260" height="90" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
           <text x="400" y="52" text-anchor="middle" fill="#f43f5e" font-size="11" font-weight="700">&lt;&lt;Abstract&gt;&gt;</text>
           <text x="400" y="70" text-anchor="middle" fill="white" font-size="12" font-weight="700">DataConnector</text>
-          <line x1="260" y1="80" x2="540" y2="80" stroke="#f43f5e" stroke-width="1"/>
-          <text x="280" y="98" fill="#cbd5e1" font-size="9">+ read(source_path: str): DataFrame</text>
+          <line x1="270" y1="80" x2="530" y2="80" stroke="#f43f5e" stroke-width="1"/>
+          <text x="290" y="98" fill="#cbd5e1" font-size="9">+ read(source: str): DataFrame</text>
           
           <!-- S3Connector -->
-          <rect x="70" y="210" width="270" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-          <text x="205" y="232" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700">S3Connector</text>
-          <line x1="70" y1="242" x2="340" y2="242" stroke="#10b981" stroke-width="1"/>
-          <text x="90" y="262" fill="#cbd5e1" font-size="9">+ read(source_path: str): DataFrame</text>
-          <text x="90" y="278" fill="#64748b" font-size="7.5">(Leitura Parquet nativa no S3)</text>
+          <rect x="130" y="200" width="220" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="240" y="222" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700">S3Connector</text>
+          <line x1="130" y1="232" x2="350" y2="232" stroke="#10b981" stroke-width="1"/>
+          <text x="145" y="252" fill="#cbd5e1" font-size="8.5">- read_strategy: FileReadStrategy</text>
+          <text x="145" y="266" fill="#cbd5e1" font-size="8.5">+ read(source: str): DataFrame</text>
           
           <!-- JDBCConnector -->
-          <rect x="460" y="210" width="270" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-          <text x="595" y="232" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700">JDBCConnector</text>
-          <line x1="460" y1="242" x2="730" y2="242" stroke="#10b981" stroke-width="1"/>
-          <text x="480" y="262" fill="#cbd5e1" font-size="9">+ read(source_path: str): DataFrame</text>
-          <text x="480" y="278" fill="#64748b" font-size="7.5">(Leitura JDBC estruturada paralela)</text>
+          <rect x="450" y="200" width="220" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="560" y="222" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700">JDBCConnector</text>
+          <line x1="450" y1="232" x2="670" y2="232" stroke="#10b981" stroke-width="1"/>
+          <text x="465" y="252" fill="#cbd5e1" font-size="8.5">- db_url: str</text>
+          <text x="465" y="266" fill="#cbd5e1" font-size="8.5">+ read(source: str): DataFrame</text>
 
-          <!-- Connecting Arrows (Inheritance) -->
-          <path d="M 205 210 L 205 160 L 370 160 L 370 120" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
-          <polygon points="370,120 365,128 375,128" fill="#f43f5e"/>
+          <!-- Strategy Pattern (Abstract Strategy) -->
+          <rect x="40" y="340" width="230" height="90" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+          <text x="155" y="362" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">&lt;&lt;Interface Strategy&gt;&gt;</text>
+          <text x="155" y="380" text-anchor="middle" fill="white" font-size="11" font-weight="700">FileReadStrategy</text>
+          <line x1="40" y1="390" x2="270" y2="390" stroke="#38bdf8" stroke-width="1"/>
+          <text x="50" y="408" fill="#cbd5e1" font-size="8.5">+ read_file(filepath: str): DataFrame</text>
+
+          <!-- Repository Pattern (Abstract Repository) -->
+          <rect x="520" y="340" width="240" height="90" rx="8" fill="#1e293b" stroke="#fbbf24" stroke-width="2"/>
+          <text x="640" y="362" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700">&lt;&lt;Interface&gt;&gt;</text>
+          <text x="640" y="380" text-anchor="middle" fill="white" font-size="11" font-weight="700">ExecutionRepository</text>
+          <line x1="520" y1="390" x2="760" y2="390" stroke="#fbbf24" stroke-width="1"/>
+          <text x="530" y="408" fill="#cbd5e1" font-size="8.5">+ save_log(job, status, recs): None</text>
+
+          <!-- Inheritances -->
+          <path d="M 240 200 L 240 150 L 380 150 L 380 120" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
+          <polygon points="380,120 375,128 385,128" fill="#f43f5e"/>
           
-          <path d="M 595 210 L 595 160 L 430 160 L 430 120" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
-          <polygon points="430,120 425,128 435,128" fill="#f43f5e"/>
+          <path d="M 560 200 L 560 150 L 420 150 L 420 120" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
+          <polygon points="420,120 415,128 425,128" fill="#f43f5e"/>
 
-          <text x="400" y="150" text-anchor="middle" fill="#f43f5e" font-size="8" font-weight="700">Herança</text>
+          <!-- Composites (S3Connector uses FileReadStrategy) -->
+          <path d="M 155 340 L 155 280" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <polygon points="155,280 151,288 159,288" fill="#38bdf8"/>
+          <text x="165" y="315" fill="#38bdf8" font-size="8">Composição</text>
         </svg>
       </div>
 
