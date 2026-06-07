@@ -113,6 +113,9 @@
       <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
       <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
       <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
+      <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
+      <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
 
       <a href="networking-ingress.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
       <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
@@ -305,16 +308,54 @@ aws lakeformation grant-permissions \
         <div class="sec-num" style="color:var(--muted)">03B</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Controle de Acesso Baseado em Atributos (ABAC) com LF-Tags</h2>
-          <p>Uso de tags de metadados para concessão simplificada e dinâmica de privilégios</p>
+          <h2>Controle de Acesso Baseado em Atributos (ABAC) vs RBAC</h2>
+          <p>Comparação profunda, limites de escala de políticas IAM/Lake Formation e governança via LF-Tags (LF-TBAC)</p>
         </div>
       </div>
 
-      <p>Em ambientes com centenas de tabelas, conceder acessos individuais via RBAC (Role-Based Access Control) torna-se insustentável. O **ABAC (Attribute-Based Access Control)** no Lake Formation resolve isso através de tags de governança chamadas **LF-Tags**:</p>
-      
+      <p>Em lagos de dados corporativos de grande escala (centenas de contas AWS, milhares de tabelas e múltiplos domínios de negócio), a abordagem clássica de segurança baseada em papéis (**RBAC - Role-Based Access Control**) esbarra rapidamente em limites físicos e operacionais do provedor de nuvem. O **ABAC / LF-TBAC (Tag-Based Access Control)** surge como a arquitetura padrão para garantir escalabilidade.</p>
+
+      <h3>Comparativo Técnico: RBAC vs ABAC</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Característica</th>
+              <th>RBAC (Role-Based Access Control)</th>
+              <th>ABAC / LF-TBAC (Attribute-Based Access Control)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Mecanismo de Controle</strong></td>
+              <td>Mapeamento explícito de permissões diretamente a identidades (ex: IAM Role X tem permissão na Tabela Y).</td>
+              <td>Associação de tags às tabelas/colunas (recursos) e concessão baseada nas tags do Principal (identidade).</td>
+            </tr>
+            <tr>
+              <td><strong>Limites de Escala da AWS</strong></td>
+              <td><strong>Alto risco de Policy Bloat</strong>. Políticas de IAM inline possuem limite de <strong>20 KB</strong>; políticas gerenciadas possuem <strong>6.144 bytes</strong>. O Lake Formation também impõe limites no volume de concessões diretas por recurso.</td>
+              <td><strong>Altamente Escalável</strong>. Uma única política IAM genérica avalia tags de sessão dinamicamente, suportando crescimento linear de tabelas sem alterar políticas.</td>
+            </tr>
+            <tr>
+              <td><strong>Complexidade Operacional</strong></td>
+              <td>Alta. A criação de cada nova tabela exige alteração de permissões ou criação de novos papéis e políticas de acesso.</td>
+              <td>Baixa. Novos recursos herdam permissões automaticamente ao serem rotulados com as tags corretas de governança.</td>
+            </tr>
+            <tr>
+              <td><strong>Modelo Organizacional Ideal</strong></td>
+              <td>Sistemas monolíticos ou equipes pequenas com poucos papéis bem definidos e de baixa variabilidade.</td>
+              <td>**Data Mesh** e descentralização por domínios, onde proprietários de dados classificam seus próprios recursos.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 30px;">Limites de Escala Críticos em Grandes Data Lakes</h3>
+      <p>Quando implementamos segurança estrita em nível de tabela e coluna para milhares de tabelas no AWS Glue Catalog:</p>
       <ul>
-        <li><strong>Associação de LF-Tags:</strong> Você define tags de múltiplos valores (ex: <code>Confidencialidade = [Publica, Restrita, Sensivel]</code> ou <code>Domain = [Vendas, BI, Finanças]</code>) e as vincula a bancos de dados, tabelas ou colunas.</li>
-        <li><strong>Políticas Dinâmicas (Grants):</strong> Em vez de conceder privilégios na tabela <code>cliente_trusted</code> para a Role X, você concede privilégios SELECT a qualquer Principal cuja sessão IAM contenha tags que casem com a LF-Tag associada à tabela (ex: <code>Domain = Vendas</code>).</li>
+        <li><strong>IAM Policy Size Limits:</strong> Se você tentar controlar o acesso ao Glue Catalog via políticas IAM com permissões explícitas por tabela/ARN, atingirá o limite de tamanho da política de forma muito rápida.</li>
+        <li><strong>Lake Formation Limits:</strong> Embora o Lake Formation simplifique o gerenciamento das políticas, o número total de permissões diretas aplicadas a bancos de dados e tabelas é finito e pode gerar overhead de latência na autorização do Athena/EMR.</li>
+        <li><strong>LF-TBAC (Lake Formation Tag-Based Access Control):</strong> Ao conceder permissões baseadas em <code>LF-Tags</code> (ex: <code>Confidencialidade = Restrita</code>), o Lake Formation armazena apenas um punhado de regras genéricas de associação de tags, reduzindo o consumo do catálogo e o tempo de decisão de acesso a milissegundos.</li>
       </ul>
 
       <div class="abox note" style="margin-top:20px;">

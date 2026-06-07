@@ -113,6 +113,9 @@
       <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
       <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
       <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
+      <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
+      <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
 
       <a href="networking-ingress.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
       <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
@@ -1925,6 +1928,69 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
             <li><strong>Reutilização e Manutenibilidade (Abstração &amp; Herança):</strong> A lógica de conexão e persistência reside em classes base (ex: <code>DataConnector</code>). Mudar a origem de arquivos locais para o S3 exige apenas trocar a classe especializada (ex: instanciar <code>S3Connector</code>), sem tocar no código de transformação.</li>
             <li><strong>Desacoplamento por Design Patterns:</strong> Com o **Factory Pattern**, a fábrica decide qual conector instanciar baseando-se em parâmetros do scheduler de orquestração. Com o **Builder Pattern**, encadeamos transformações de forma isolada, limpa e legível (Clean Code), facilitando mocks e testes de regressão automatizados em CI/CD.</li>
           </ul>
+        </div>
+      </div>
+
+      <!-- Case 70: AWS Direct Connect Failover & Routing -->
+      <div class="card" id="q70" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 70 · AWS Direct Connect Failover &amp; BGP Routing</div>
+        <h4>Como projetar uma arquitetura de rede híbrida resiliente de alta disponibilidade para ingestão de dados on-premises para a AWS utilizando AWS Direct Connect (DX) com failover automático para VPN Site-to-Site, garantindo que o tráfego prefira o DX sob condições normais usando atributos de roteamento BGP?</h4>
+        <p><strong>Desafio de Roteamento Dinâmico:</strong> O tráfego híbrido de dados volumosos precisa trafegar de forma prioritária pelo link privado de fibra óptica (Direct Connect) devido à largura de banda e estabilidade. A VPN IPSec deve atuar puramente como canal de failover passivo.</p>
+        <div class="callout callout-info">
+          <strong>Arquitetura BGP de Resiliência:</strong>
+          <ul>
+            <li><strong>Tráfego de Saída da AWS (Outbound):</strong> Configure o atributo BGP **Local Preference** no roteador virtual da AWS. Defina um valor de Local Preference maior para a sessão BGP do Direct Connect (ex: 200) e um valor menor para a conexão BGP da VPN (ex: 100). A AWS preferirá sempre o caminho com maior Local Preference para enviar dados ao seu data center.</li>
+            <li><strong>Tráfego de Entrada na AWS (Inbound):</strong> Para forçar a AWS a preferir o DX ao enviar dados para a origem, anuncie os prefixos on-premises com **AS PATH Prepend** na sessão BGP da VPN Site-to-Site (adicionando o seu ASN local repetidas vezes, ex: 3 a 5 vezes). A AWS preferirá o caminho do DX porque ele apresentará um AS PATH menor (caminho mais curto). Alternativamente, utilize comunidades BGP suportadas pela AWS (como <code>7224:7100</code> para baixa preferência na VPN).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 71: Apache Iceberg CommitFailedException -->
+      <div class="card" id="q71" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 71 · Apache Iceberg Concorrência &amp; CommitFailedException</div>
+        <h4>Durante escritas simultâneas de pipelines de streaming (Flink/Spark) e jobs batch de compactação periódica na mesma tabela Apache Iceberg no S3, o Spark lança frequentemente CommitFailedException. Como funciona o Controle de Concorrência Otimista (OCC) do Iceberg e como mitigar estes erros em produção?</h4>
+        <p><strong>Mecanismo de Conflito de Commit:</strong> O Apache Iceberg utiliza **Controle de Concorrência Otimista (OCC)**. Quando um escritor tenta commitar um novo Snapshot, ele lê os metadados mais recentes, cria as alterações físicas no S3 e tenta atualizar o ponteiro do metadado atual (via DynamoDB lock ou Glue Catalog). Se outro escritor (ex: compactação de arquivos) commitar um snapshot antes, o escritor atual falha se houver sobreposição nos dados alterados.</p>
+        <div class="callout callout-tip">
+          <strong>Ações de Resolução de Conflitos:</strong>
+          <ul>
+            <li><strong>Isolamento de Snapshot (Snapshot Isolation):</strong> Configure a operação de compactação para rodar sem conflitar com novas inserções. Como a compactação apenas reorganiza arquivos físicos sem alterar o conteúdo lógico dos dados, ela pode ser commitada com segurança se o Iceberg souber resolver merge de arquivos de metadados concorrentes de append.</li>
+            <li><strong>Políticas de Retry Automático:</strong> Ajuste as propriedades de retry da tabela Iceberg para dar tempo aos escritores de tentarem novamente após falhas concorrentes:
+              <br>• <code>commit.retry.num-retries</code>: Aumente para 20 ou 30 tentativas.
+              <br>• <code>commit.retry.min-wait-ms</code> e <code>commit.retry.max-wait-ms</code>: Configure backoff exponencial para evitar sobrecarga no catálogo de metadados.
+            </li>
+            <li><strong>Segregação por Partições:</strong> Garanta que os fluxos concorrentes estejam escrevendo em partições físicas diferentes da tabela, permitindo que a engine resolva os commits sem conflitos lógicos diretos.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 72: AWS Glue Catalog Cross-Account Replication -->
+      <div class="card" id="q72" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 72 · Replicação Cross-Account do AWS Glue Catalog</div>
+        <h4>Em uma arquitetura Data Mesh corporativa, como permitir que analistas na conta de Consumo A consultem metadados e façam queries no Athena sobre tabelas hospedadas na conta de Produção B, sem replicar fisicamente os arquivos no S3 e mantendo controle granular de acesso?</h4>
+        <p><strong>Gargalo de Compartilhamento de Metadados:</strong> Duplicar pipelines ou arquivos S3 gera redundância, custos massivos de armazenamento e falhas de sincronismo. O acesso direto cross-account ao catálogo de metadados é a solução ideal.</p>
+        <div class="callout callout-info">
+          <strong>Fluxo e Implementação:</strong>
+          <ol>
+            <li><strong>Políticas de Recursos do Glue Catalog (Glue Resource Policy):</strong> Na conta Produtora B, configure uma política de catálogo que permita acesso de leitura (<code>glue:GetDatabase</code>, <code>glue:GetTable</code>) para o ID da conta Consumidora A ou para Roles específicos da conta A.</li>
+            <li><strong>Permissões de S3 Cross-Account:</strong> A política do bucket S3 físico na conta Produtora B deve autorizar ações de leitura (<code>s3:GetObject</code>, <code>s3:ListBucket</code>) para a Role de execução do Athena/Glue na conta Consumidora A.</li>
+            <li><strong>Uso do AWS Lake Formation Cross-Account:</strong> Configure o compartilhamento via **AWS Resource Access Manager (RAM)** gerenciado pelo Lake Formation. O administrador da conta B concede permissões LF (ex: SELECT nas tags do banco) diretamente para a conta A. O administrador da conta A aceita o convite do RAM e cria um link local no Glue Catalog (Catalog Link) apontando para o banco de dados remoto da conta B. Os analistas na conta A agora consultam a tabela localmente como se pertencesse à sua própria conta.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Case 73: EMR on EC2 VPC Integration with NLB & PrivateLink -->
+      <div class="card" id="q73" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 73 · Integração EMR, NLB e PrivateLink</div>
+        <h4>Como expor de forma segura endpoints internos de interfaces web de um cluster EMR privado (como o Spark History Server na porta 18080 ou JupyterHub) para outras VPCs ou redes parceiras de forma centralizada e sem utilizar Internet Gateways?</h4>
+        <p><strong>Desafio de Segurança Corporativa:</strong> Expor clusters de processamento analítico (EMR) diretamente na internet pública cria vetores de ataque catastróficos. Toda a comunicação deve ser puramente interna e encapsulada na rede da AWS.</p>
+        <div class="callout callout-tip">
+          <strong>Solução Arquitetural com NLB &amp; VPC Endpoint Services:</strong>
+          <ul>
+            <li><strong>Network Load Balancer (NLB) Privado:</strong> Provisione um NLB privado nas sub-redes privadas onde o cluster EMR reside. Crie Target Groups do tipo <code>ip</code> mapeando os endereços IP privados dos nós Master do EMR para a porta de interesse (ex: TCP 18080).</li>
+            <li><strong>VPC Endpoint Service (PrivateLink):</strong> Crie um VPC Endpoint Service associado ao NLB privado. Esse serviço gera um ARN de serviço que pode ser compartilhado com outras contas AWS autorizadas.</li>
+            <li><strong>Interface VPC Endpoint:</strong> Na VPC de consumo (onde estão os analistas ou parceiros), crie um Interface VPC Endpoint apontando para o Endpoint Service criado. A AWS provisionará placas de rede virtuais (ENIs) locais que resolvem o tráfego diretamente para o NLB privado e consequentemente para as portas internas do EMR de forma segura, com criptografia em trânsito e latência de sub-milissegundos.</li>
+          </ul>
+        </div>
       </div>
     </section>
   </main>
