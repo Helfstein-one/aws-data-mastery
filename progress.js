@@ -272,6 +272,30 @@
     const dashboardContainer = document.getElementById("student-dashboard");
     if (dashboardContainer) {
       renderDashboard(dashboardContainer, stats);
+      updateRoadmapNodes(stats);
+    }
+  }
+
+  // Atualiza dinamicamente as cores e status dos nós do Roadmap SVG
+  function updateRoadmapNodes(stats) {
+    for (const modId in stats.modules) {
+      const mod = stats.modules[modId];
+      const nodeEl = document.getElementById(`node-${modId}`);
+      const statusEl = document.getElementById(`status-${modId}`);
+      if (nodeEl) {
+        if (mod.percent === 100) {
+          nodeEl.classList.remove('active');
+          nodeEl.classList.add('completed');
+        } else if (mod.percent > 0) {
+          nodeEl.classList.add('active');
+          nodeEl.classList.remove('completed');
+        } else {
+          nodeEl.classList.remove('active', 'completed');
+        }
+      }
+      if (statusEl) {
+        statusEl.textContent = `${mod.percent}%`;
+      }
     }
   }
 
