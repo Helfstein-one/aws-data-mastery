@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Orquestração avançada de dados na AWS. MWAA (Apache Airflow), Step Functions, Glue Workflows, códigos práticos, gotchas operacionais, perguntas e cases.">
+  <title>Orquestração de Dados - AWS Data Specialist</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar">
+  <div class="nav-logo">
+    <div class="t">AWS Data<br>Engineering</div>
+    <div class="s">Portal de Estudos</div>
+    <div class="auth" style="font-family: 'DM Mono', monospace; font-size: 8px; color: #38bdf8; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase;">Autor: Mauricio Helfstein</div>
+  </div>
+  <div style="padding:0 12px">
+    <div class="nav-lbl">Visão Geral</div>
+    <a href="index.html" class="nav-a"><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
+    
+    <div class="nav-lbl collapsible" onclick="toggleCategory('arch-cat', this)">
+      <span>Arquitetura &amp; Padrões</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="arch-cat" class="nav-cat-content">
+      <a href="architecture.html" class="nav-a"><span class="nav-dot" style="background:var(--arch)"></span>📐 Arquitetura de Dados</a>
+      <a href="architecture.html#pilares" class="nav-sub"><span class="nav-sdot"></span>7 Pilares</a>
+      <a href="architecture.html#mensageria" class="nav-sub"><span class="nav-sdot"></span>Mensageria</a>
+      <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>Kafka/MSK ➔</a>
+      <a href="architecture.html#triggers" class="nav-sub"><span class="nav-sdot"></span>Triggers</a>
+      <a href="architecture.html#workflows" class="nav-sub"><span class="nav-sdot"></span>Workflows</a>
+      <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation ➔</a>
+      <a href="architecture.html#lambda" class="nav-sub"><span class="nav-sdot"></span>Lambda</a>
+      <a href="architecture.html#kappa" class="nav-sub"><span class="nav-sdot"></span>Kappa</a>
+      <a href="architecture.html#lakehouse" class="nav-sub"><span class="nav-sdot"></span>Lakehouse</a>
+      <a href="architecture.html#datamesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+      <a href="architecture.html#modelagem-dados" class="nav-sub"><span class="nav-sdot"></span>Modelagem Dados</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>Gestão Produtos ➔</a>
+
+      <a href="perguntas.html" class="nav-a"><span class="nav-dot" style="background:var(--spark)"></span>❓ Perguntas de Entrevista</a>
+      <a href="perguntas.html#q1" class="nav-sub"><span class="nav-sdot"></span>Spark & Kafka</a>
+      <a href="perguntas.html#q5" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="perguntas.html#q7" class="nav-sub"><span class="nav-sdot"></span>Memory & OOM</a>
+      <a href="perguntas.html#q14" class="nav-sub"><span class="nav-sdot"></span>Spark Tuning</a>
+      <a href="perguntas.html#q24" class="nav-sub"><span class="nav-sdot"></span>RAG & GenAI</a>
+
+      <a href="cases.html" class="nav-a"><span class="nav-dot" style="background:var(--ext)"></span>💼 Cases de Plataformas</a>
+      <a href="cases.html#case-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming</a>
+      <a href="cases.html#case-mesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+      <a href="cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI/RAG</a>
+      <a href="cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>GenAI Híbrido</a>
+      <a href="cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>IA Data Quality</a>
+      <a href="cases.html#case-polaris-flink" class="nav-sub"><span class="nav-sdot"></span>Mesh Polaris Flink</a>
+      <a href="cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>IoT Telemetry</a>
+      <a href="cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Reverse ETL</a>
+    </div>
+    
+    <div class="nav-lbl collapsible" onclick="toggleCategory('pipeline-cat', this)">
+      <span>Pipeline de Engenharia</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="pipeline-cat" class="nav-cat-content">
+      <a href="ingestion.html" class="nav-a"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Ingestão & Streaming</a>
+      <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
+      <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
+      <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate</a>
+      <a href="ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>DMS</a>
+      <a href="ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB</a>
+
+      <a href="storage-lakehouse.html" class="nav-a"><span class="nav-dot" style="background:var(--arch)"></span>💾 Lakehouse & Storage</a>
+      <a href="storage-lakehouse.html#s3-camadas" class="nav-sub"><span class="nav-sdot"></span>Camadas S3</a>
+      <a href="storage-lakehouse.html#s3-tiers" class="nav-sub"><span class="nav-sdot"></span>S3 Tiers & FinOps</a>
+      <a href="storage-lakehouse.html#formatos" class="nav-sub"><span class="nav-sdot"></span>Formatos</a>
+      <a href="storage-lakehouse.html#iceberg" class="nav-sub"><span class="nav-sdot"></span>Iceberg</a>
+      <a href="storage-lakehouse.html#iceberg-vs-delta" class="nav-sub"><span class="nav-sdot"></span>Iceberg vs Delta</a>
+      <a href="storage-lakehouse.html#iceberg-rest-catalog" class="nav-sub"><span class="nav-sdot"></span>REST Catalog</a>
+
+      <a href="processing.html" class="nav-a"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Processamento Spark</a>
+      <a href="processing.html#spark-arch" class="nav-sub"><span class="nav-sdot"></span>Spark Arch</a>
+      <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
+      <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
+      <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
+      <a href="processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>EMR on EKS</a>
+      <a href="processing.html#flink-streaming" class="nav-sub"><span class="nav-sdot"></span>Flink Streaming</a>
+
+      <a href="serving.html" class="nav-a"><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics & Serving</a>
+      <a href="serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Athena</a>
+      <a href="serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Avançado</a>
+      <a href="serving.html#iceberg-manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção Iceberg</a>
+      <a href="serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Redshift</a>
+      <a href="serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>SQL Tuning</a>
+    </div>
+    
+    <div class="nav-lbl collapsible" onclick="toggleCategory('ai-genai-cat', this)">
+      <span>Inteligência Artificial &amp; GenAI</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="ai-genai-cat" class="nav-cat-content">
+      <a href="genai.html" class="nav-a"><span class="nav-dot" style="background:#a78bfa"></span>🤖 GenAI &amp; Dados</a>
+      <a href="genai.html#genai-teoria" class="nav-sub"><span class="nav-sdot"></span>IA Teoria</a>
+      <a href="genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG &amp; Agentes</a>
+      <a href="genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>pgvector SQL</a>
+      <a href="genai.html#prompt-engineering" class="nav-sub"><span class="nav-sdot"></span>Prompt Engineering</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('ops-dev-cat', this)">
+      <span>Operações &amp; Desenvolvimento</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="ops-dev-cat" class="nav-cat-content open">
+      <a href="dataops-mlops.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>⚙️ DataOps &amp; MLOps</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>DataOps</a>
+      <a href="dataops-mlops.html#mlops-core" class="nav-sub"><span class="nav-sdot"></span>MLOps</a>
+      <a href="dataops-mlops.html#git-data" class="nav-sub"><span class="nav-sdot"></span>Git &amp; Gitflow</a>
+      <a href="dataops-mlops.html#github-actions" class="nav-sub"><span class="nav-sdot"></span>GitHub Actions</a>
+      <a href="dataops-mlops.html#dpm-okr" class="nav-sub"><span class="nav-sdot"></span>DPM &amp; OKRs</a>
+      <a href="dataops-mlops.html#git-flow" class="nav-sub"><span class="nav-sdot"></span>Git Flow & CI/CD</a>
+
+      <a href="data-engineering-oop.html" class="nav-a"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ OOP &amp; Python para Dados</a>
+      <a href="data-engineering-oop.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>PEP8/Tipagem</a>
+      <a href="data-engineering-oop.html#oop-dados" class="nav-sub"><span class="nav-sdot"></span>4 Pilares OOP</a>
+      <a href="data-engineering-oop.html#design-patterns" class="nav-sub"><span class="nav-sdot"></span>Design Patterns</a>
+      <a href="data-engineering-oop.html#oop-cases-perguntas" class="nav-sub"><span class="nav-sdot"></span>Cases & Perguntas</a>
+
+      <a href="playbook-crises.html" class="nav-a"><span class="nav-dot" style="background:var(--warn)"></span>🚒 Playbook de Crises</a>
+      <a href="playbook-crises.html#introducao" class="nav-sub"><span class="nav-sdot"></span>Framework</a>
+      <a href="playbook-crises.html#crise-streaming" class="nav-sub"><span class="nav-sdot"></span>Streaming OOM</a>
+      <a href="playbook-crises.html#crise-kms" class="nav-sub"><span class="nav-sdot"></span>KMS Lockout</a>
+      <a href="playbook-crises.html#crise-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI Cost/Lat</a>
+      <a href="playbook-crises.html#crise-fechamento" class="nav-sub"><span class="nav-sdot"></span>Balanço Bancário</a>
+      <a href="playbook-crises.html#crise-duplicacao" class="nav-sub"><span class="nav-sdot"></span>Deduplicação API</a>
+      <a href="playbook-crises.html#crise-nulos" class="nav-sub"><span class="nav-sdot"></span>Dados Nulos / Drift</a>
+      <a href="playbook-crises.html#crise-sla" class="nav-sub"><span class="nav-sdot"></span>Atraso SLA Mesh</a>
+
+      <a href="plataforma-dados.html" class="nav-a"><span class="nav-dot" style="background:var(--accent)"></span>🏗️ Plataforma de Dados</a>
+      <a href="plataforma-dados.html#estrategico" class="nav-sub"><span class="nav-sdot"></span>Da Necessidade ao Plano</a>
+      <a href="plataforma-dados.html#topologia" class="nav-sub"><span class="nav-sdot"></span>Topologia & Roadmap</a>
+      <a href="plataforma-dados.html#arquitetura" class="nav-sub"><span class="nav-sdot"></span>Arquitetura & APIs</a>
+      <a href="plataforma-dados.html#alinhamento" class="nav-sub"><span class="nav-sdot"></span>Pitch & Alinhamento</a>
+      <a href="plataforma-dados.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas & Cases</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('sec-net-fin-cat', this)">
+      <span>Segurança, Redes &amp; FinOps</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="sec-net-fin-cat" class="nav-cat-content open">
+      <a href="governance-security.html" class="nav-a"><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança &amp; IaC</a>
+      <a href="governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>Lake Formation</a>
+      <a href="governance-security.html#iam-kms" class="nav-sub"><span class="nav-sdot"></span>IAM &amp; KMS</a>
+      <a href="governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>Secrets Manager</a>
+      <a href="governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>Data Quality ➔</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>Contratos de Dados ➔</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>Linhagem Dados ➔</a>
+      <a href="dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>Plataforma Testes ➔</a>
+
+      <a href="networking-ingress.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
+      <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
+      <a href="networking-ingress.html#api-alb" class="nav-sub"><span class="nav-sdot"></span>API &amp; ALB</a>
+      <a href="networking-ingress.html#vpc-endpoints" class="nav-sub"><span class="nav-sdot"></span>VPC Endpoints</a>
+
+      <a href="computacao-bancos.html" class="nav-a"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
+      <a href="computacao-bancos.html#ecs" class="nav-sub"><span class="nav-sdot"></span>Containers ECS</a>
+      <a href="computacao-bancos.html#load-balancers" class="nav-sub"><span class="nav-sdot"></span>Load Balancers</a>
+      <a href="computacao-bancos.html#rds-aurora" class="nav-sub"><span class="nav-sdot"></span>RDS &amp; Aurora</a>
+      <a href="computacao-bancos.html#operacao" class="nav-sub"><span class="nav-sdot"></span>Guia de Operação</a>
+
+      <a href="orquestracao-dados.html" class="nav-a active"><span class="nav-dot" style="background:#a78bfa"></span>⛓️ Orquestração de Dados</a>
+      <a href="orquestracao-dados.html#teoria" class="nav-sub"><span class="nav-sdot"></span>Teoria Orquestração</a>
+      <a href="orquestracao-dados.html#step-functions" class="nav-sub"><span class="nav-sdot"></span>Step Functions</a>
+      <a href="orquestracao-dados.html#mwaa-airflow" class="nav-sub"><span class="nav-sdot"></span>MWAA (Airflow)</a>
+      <a href="orquestracao-dados.html#operacional" class="nav-sub"><span class="nav-sdot"></span>Cases &amp; Perguntas</a>
+
+      <a href="finops.html" class="nav-a"><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
+      <a href="finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>FinOps Fundamentos</a>
+      <a href="finops.html#finops-boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas</a>
+      <a href="finops.html#finops-analise" class="nav-sub"><span class="nav-sdot"></span>Análise de Custos</a>
+      <a href="finops.html#finops-terraform" class="nav-sub"><span class="nav-sdot"></span>Terraform &amp; Cost Explorer</a>
+    </div>
+  </div>
+</nav>
+
+<div id="main">
+  <div class="hero" style="background-color: var(--navy)">
+    <div class="hero-ey">Orquestração de Pipelines de Dados</div>
+    <h1>Orquestração Avançada: MWAA, Step Functions &amp; Glue Workflows</h1>
+    <p class="hero-d">Design de pipelines de dados resilientes, DAGs complexas, máquinas de estado serverless e tratamento corporativo de falhas em lote.</p>
+  </div>
+
+  <main class="main-content">
+    
+    <!-- SECTION 1: TEORIA -->
+    <section class="section" id="teoria">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#a78bfa">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#a78bfa"></div>
+          <h2>Os Três Pilares de Orquestração da AWS</h2>
+          <p>Diferenças arquiteturais entre MWAA (Airflow), Step Functions e Glue Workflows</p>
+        </div>
+      </div>
+
+      <p>A orquestração de dados garante a execução lógica, ordenada e segura de tarefas de engenharia de dados (extração, carga, validação de qualidade e transformação). A tabela abaixo fornece o comparativo de tradeoffs essenciais para escolha de arquitetura:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Critério</th>
+              <th>Amazon MWAA (Airflow)</th>
+              <th>AWS Step Functions</th>
+              <th>AWS Glue Workflows</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Modelo Mental</strong></td>
+              <td>Baseado em tempo/agendamento (Time-driven) e DAGs complexas.</td>
+              <td>Baseado em eventos (Event-driven) e transições de Estado.</td>
+              <td>Orquestrador nativo e simples para recursos Glue.</td>
+            </tr>
+            <tr>
+              <td><strong>Custo base</strong></td>
+              <td>Fixo por ambiente ativo (~$350/mês mínimo para MWAA).</td>
+              <td>Por transição de estado (Serverless total - $0 se ocioso).</td>
+              <td>Gratuito (cobra apenas o consumo das DPUs do Glue rodando).</td>
+            </tr>
+            <tr>
+              <td><strong>Escalabilidade</strong></td>
+              <td>Escala horizontal de workers Fargate (demora minutos).</td>
+              <td>Escala instantaneamente até milhares de execuções concorrentes.</td>
+              <td>Limitada ao escopo do Glue Catalog e recursos nativos.</td>
+            </tr>
+            <tr>
+              <td><strong>Limitações</strong></td>
+              <td>Overhead operacional de pacotes Python e latência de scheduler.</td>
+              <td>Payload máximo de entrada/saída limitado a 256 KB.</td>
+              <td>Incapaz de orquestrar recursos de fora do ecossistema Glue/S3.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="abox note">
+        <strong>Pontos de Atenção (Gotchas de Custo Silencioso):</strong>
+        <br>• <strong>MWAA NAT Gateway Costs:</strong> O MWAA exige subredes privadas com NAT Gateway para baixar pacotes do PyPI e comunicar com o control plane da AWS. Se a sua DAG exporta gigabytes de dados pela internet pública através de conexões não otimizadas, a taxa de tráfego de dados do NAT Gateway pode superar o custo de processamento do Airflow. Habilite obrigatoriamente **VPC Endpoints** (S3, Glue, Athena, KMS) na VPC do MWAA.
+        <br>• <strong>State Machine Loop Limits:</strong> Rodar loops infinitos ou processamento de milhares de itens um a um no Step Functions Standard pode inflar drasticamente o custo por transição de estado. Use o modo **Express State Machines** para fluxos rápidos orientados a eventos, e o modo **Standard** exclusivamente para fluxos de longa duração com dependência de aprovações humanas.
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 2: STEP FUNCTIONS -->
+    <section class="section" id="step-functions">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#a78bfa">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#a78bfa"></div>
+          <h2>AWS Step Functions: State Machines para Pipelines</h2>
+          <p>ASL (Amazon States Language), tratamento de erro ativo com Retry/Catch e IaC Terraform</p>
+        </div>
+      </div>
+
+      <p>O <strong>AWS Step Functions</strong> orquestra workflows serverless distribuídos. Sua grande vantagem reside no suporte nativo ao padrão **SDK Integration**, permitindo chamar serviços (como Glue, ECS, Athena) de forma direta e assíncrona usando o sufixo <code>.sync</code>, fazendo a State Machine aguardar a conclusão do Job de forma transparente e resiliente.</p>
+
+      <h3>Visual do Fluxo de Orquestração de ETL</h3>
+      <div class="dw">
+        <svg viewBox="0 0 760 280" width="100%" height="280" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="280" fill="#0f172a" rx="14"/>
+          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">FLOW DESIGN: STEP FUNCTION STATE MACHINE</text>
+
+          <!-- Start (Left) -->
+          <circle cx="60" cy="140" r="20" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="60" y="143" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">START</text>
+
+          <line x1="80" y1="140" x2="130" y2="140" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+          <!-- Step 1: Glue Job -->
+          <rect x="140" y="100" width="160" height="80" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+          <text x="220" y="125" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="700">Submeter Glue Job</text>
+          <text x="220" y="145" text-anchor="middle" fill="#cbd5e1" font-size="8">AWS Glue (Spark)</text>
+          <text x="220" y="160" text-anchor="middle" fill="#fbbf24" font-size="7.5">Ação: glue:startJobRun.sync</text>
+
+          <!-- Choice logic (forking) -->
+          <line x1="300" y1="140" x2="350" y2="140" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+          
+          <polygon points="390,100 430,140 390,180 350,140" fill="#1e293b" stroke="#ea580c" stroke-width="1.5"/>
+          <text x="390" y="143" text-anchor="middle" fill="#ea580c" font-size="8.5" font-weight="700">Choice</text>
+
+          <!-- Success Path (Top Right) -->
+          <path d="M 390 100 L 390 80 L 480 80" stroke="#10b981" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+          <text x="440" y="72" fill="#10b981" font-size="8" font-weight="700">Sucesso</text>
+
+          <rect x="490" y="40" width="180" height="60" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="580" y="70" text-anchor="middle" fill="#10b981" font-size="9.5" font-weight="700">Notificar Sucesso (SNS)</text>
+          <text x="580" y="85" text-anchor="middle" fill="#cbd5e1" font-size="8">Status = COMPLETED</text>
+
+          <!-- Failure Path (Bottom Right) -->
+          <path d="M 390 180 L 390 200 L 480 200" stroke="#ef4444" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+          <text x="440" y="215" fill="#ef4444" font-size="8" font-weight="700">Falha / Retry Limit</text>
+
+          <rect x="490" y="170" width="180" height="60" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="580" y="195" text-anchor="middle" fill="#ef4444" font-size="9.5" font-weight="700">Disparar Alerta (Slack)</text>
+          <text x="580" y="210" text-anchor="middle" fill="#cbd5e1" font-size="8">Ação: Lambda Notify</text>
+
+          <!-- End points -->
+          <line x1="670" y1="70" x2="710" y2="70" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <circle cx="720" cy="70" r="10" fill="#10b981"/>
+          
+          <line x1="670" y1="200" x2="710" y2="200" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <circle cx="720" cy="200" r="10" fill="#ef4444"/>
+
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <h3>Código JSON ASL (Amazon States Language)</h3>
+      <p>Definição declarativa da State Machine com tratamento de erros integrado. Ela tenta reexecutar o Glue Job até 3 vezes caso ocorra falha de rede antes de enviar a execução para o estado de erro:</p>
+      <pre style="background:#0b0f19; color:#f8fafc;">{
+  <span class="s">"Comment"</span>: <span class="s">"Orquestração de ETL com AWS Glue e tratamento de erros"</span>,
+  <span class="s">"StartAt"</span>: <span class="s">"SubmeterGlueJob"</span>,
+  <span class="s">"States"</span>: {
+    <span class="s">"SubmeterGlueJob"</span>: {
+      <span class="s">"Type"</span>: <span class="s">"Task"</span>,
+      <span class="s">"Resource"</span>: <span class="s">"arn:aws:states:::glue:startJobRun.sync"</span>,
+      <span class="s">"Parameters"</span>: {
+        <span class="s">"JobName"</span>: <span class="s">"prod-processamento-vendas-job"</span>
+      },
+      <span class="s">"Retry"</span>: [
+        {
+          <span class="s">"ErrorEquals"</span>: [
+            <span class="s">"Glue.ConcurrentRunsExceededException"</span>,
+            <span class="s">"Glue.InternalServiceException"</span>
+          ],
+          <span class="s">"IntervalSeconds"</span>: 15,
+          <span class="s">"MaxAttempts"</span>: 3,
+          <span class="s">"BackoffRate"</span>: 2.0
+        }
+      ],
+      <span class="s">"Catch"</span>: [
+        {
+          <span class="s">"ErrorEquals"</span>: [<span class="s">"States.ALL"</span>],
+          <span class="s">"Next"</span>: <span class="s">"NotificarFalha"</span>
+        }
+      ],
+      <span class="s">"Next"</span>: <span class="s">"NotificarSucesso"</span>
+    },
+    <span class="s">"NotificarSucesso"</span>: {
+      <span class="s">"Type"</span>: <span class="s">"Task"</span>,
+      <span class="s">"Resource"</span>: <span class="s">"arn:aws:states:::sns:publish"</span>,
+      <span class="s">"Parameters"</span>: {
+        <span class="s">"TopicArn"</span>: <span class="s">"arn:aws:sns:us-east-1:123456789012:notificacoes-etl"</span>,
+        <span class="s">"Message"</span>: <span class="s">"Pipeline de ETL executado com sucesso!"</span>
+      },
+      <span class="s">"End"</span>: <span class="k">true</span>
+    },
+    <span class="s">"NotificarFalha"</span>: {
+      <span class="s">"Type"</span>: <span class="s">"Task"</span>,
+      <span class="s">"Resource"</span>: <span class="s">"arn:aws:states:::sns:publish"</span>,
+      <span class="s">"Parameters"</span>: {
+        <span class="s">"TopicArn"</span>: <span class="s">"arn:aws:sns:us-east-1:123456789012:alertas-falhas"</span>,
+        <span class="s">"Message.$"</span>: <span class="s">"$.Error"</span>
+      },
+      <span class="s">"End"</span>: <span class="k">true</span>
+    }
+  }
+}</pre>
+
+      <h3>IaC Completo: Terraform de Step Functions</h3>
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Role IAM para a State Machine</span>
+resource <span class="s">"aws_iam_role"</span> <span class="s">"sfn_role"</span> {
+  name = <span class="s">"step-functions-orchestrator-role"</span>
+
+  assume_role_policy = jsonencode({
+    Version = <span class="s">"2012-10-17"</span>
+    Statement = [{ Action = <span class="s">"sts:AssumeRole"</span>, Effect = <span class="s">"Allow"</span>, Principal = { Service = <span class="s">"states.amazonaws.com"</span> } }]
+  })
+}
+
+<span class="c"># 2. Política de permissões autorizando SFN a chamar o Glue e publicar no SNS</span>
+resource <span class="s">"aws_iam_role_policy"</span> <span class="s">"sfn_policy"</span> {
+  name = <span class="s">"sfn-etl-permissions"</span>
+  role = aws_iam_role.sfn_role.id
+
+  policy = jsonencode({
+    Version = <span class="s">"2012-10-17"</span>
+    Statement = [
+      {
+        Action   = [<span class="s">"glue:startJobRun"</span>, <span class="s">"glue:getJobRun"</span>, <span class="s">"glue:getJobRuns"</span>, <span class="s">"glue:batchStopJobRun"</span>]
+        Effect   = <span class="s">"Allow"</span>
+        Resource = <span class="s">"arn:aws:glue:us-east-1:123456789012:job/prod-processamento-vendas-job"</span>
+      },
+      {
+        Action   = [<span class="s">"sns:Publish"</span>]
+        Effect   = <span class="s">"Allow"</span>
+        Resource = [<span class="s">"arn:aws:sns:us-east-1:123456789012:notificacoes-etl"</span>, <span class="s">"arn:aws:sns:us-east-1:123456789012:alertas-falhas"</span>]
+      }
+    ]
+  })
+}
+
+<span class="c"># 3. Provisionamento da State Machine</span>
+resource <span class="s">"aws_sfn_state_machine"</span> <span class="s">"sfn_state_machine"</span> {
+  name     = <span class="s">"pipeline-data-orchestrator"</span>
+  role_arn = aws_iam_role.sfn_role.arn
+
+  definition = <<EOF
+{
+  "Comment": "Orquestração de ETL com AWS Glue e tratamento de erros",
+  "StartAt": "SubmeterGlueJob",
+  "States": {
+    "SubmeterGlueJob": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "prod-processamento-vendas-job"
+      },
+      "Next": "NotificarSucesso"
+    },
+    "NotificarSucesso": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:notificacoes-etl",
+        "Message": "Pipeline de ETL executado com sucesso!"
+      },
+      "End": true
+    }
+  }
+}
+EOF
+}</pre>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 3: MWAA AIRFLOW -->
+    <section class="section" id="mwaa-airflow">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#a78bfa">03</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#a78bfa"></div>
+          <h2>Amazon MWAA: Apache Airflow em Escala Corporativa</h2>
+          <p>Design de arquitetura distribuída, gerenciamento de estado das tarefas e orquestração de DAGs complexas</p>
+        </div>
+      </div>
+
+      <p>O <strong>Amazon MWAA (Managed Workflows for Apache Airflow)</strong> elimina a dor de cabeça de configurar clusters do Kubernetes, bancos Postgres externos (Metastore) e servidores web para rodar o Airflow. A AWS gerencia o autoscaling horizontal dos workers baseando-se no número de tarefas na fila (usando Celery Executor e Fargate Tasks).</p>
+
+      <h3>Código Prático: DAG Python para Ingestão e Processamento (Athena &amp; Glue)</h3>
+      <p>O script abaixo demonstra uma DAG Airflow completa utilizando operadores modernos que disparam tarefas e aguardam ativamente sua conclusão, incluindo regras de ramificação e callbacks de falha:</p>
+
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c">from</span> datetime <span class="c">import</span> datetime, timedelta
+<span class="c">from</span> airflow <span class="c">import</span> DAG
+<span class="c">from</span> airflow.providers.amazon.aws.operators.glue <span class="c">import</span> GlueJobOperator
+<span class="c">from</span> airflow.providers.amazon.aws.operators.athena <span class="c">import</span> AthenaOperator
+<span class="c">from</span> airflow.operators.empty <span class="c">import</span> EmptyOperator
+
+default_args = {
+    <span class="s">'owner'</span>: <span class="s">'data-platform-team'</span>,
+    <span class="s">'depends_on_past'</span>: False,
+    <span class="s">'start_date'</span>: datetime(<span class="v">2026</span>, <span class="v">1</span>, <span class="v">1</span>),
+    <span class="s">'retries'</span>: <span class="v">2</span>,
+    <span class="s">'retry_delay'</span>: timedelta(minutes=<span class="v">5</span>),
+}
+
+<span class="c"># Definição do escopo da DAG</span>
+with DAG(
+    dag_id=<span class="s">'mwaa_etl_orchestration_flow'</span>,
+    default_args=default_args,
+    description=<span class="s">'DAG corporativa para rodar carga Glue e atualizacao Athena'</span>,
+    schedule_interval=<span class="s">'0 6 * * *'</span>, <span class="c"># Todos os dias às 6h da manhã</span>
+    catchup=False,
+    max_active_runs=<span class="v">1</span>, <span class="c"># Evita concorrência e race condition em escritas S3</span>
+) <span class="c">as</span> dag:
+
+    start = EmptyOperator(task_id=<span class="s">'start_pipeline'</span>)
+
+    <span class="c"># Task 1: Dispara o Job PySpark no AWS Glue e aguarda (wait_for_completion=True)</span>
+    run_glue_pyspark = GlueJobOperator(
+        task_id=<span class="s">'run_glue_pyspark_job'</span>,
+        job_name=<span class="s">'prod-processamento-vendas-job'</span>,
+        script_args={
+            <span class="s">'--env'</span>: <span class="s">'production'</span>,
+            <span class="s">'--exec_date'</span>: <span class="s">'{{ ds }}'</span>
+        },
+        aws_conn_id=<span class="s">'aws_default'</span>,
+        wait_for_completion=True,
+    )
+
+    <span class="c"># Task 2: Executa query de otimização analítica no Athena (Compaction/Vacuum)</span>
+    run_athena_optimize = AthenaOperator(
+        task_id=<span class="s">'optimize_iceberg_table'</span>,
+        query=<span class="s">"OPTIMIZE iceberg_db.tb_vendas REWRITE DATA ('bin-pack')"</span>,
+        database=<span class="s">'iceberg_db'</span>,
+        output_location=<span class="s">'s3://prod-athena-query-results-bucket-xyz/output/'</span>,
+        aws_conn_id=<span class="s">'aws_default'</span>,
+    )
+
+    end = EmptyOperator(task_id=<span class="s">'end_pipeline'</span>)
+
+    <span class="c"># Cadeia de dependências lógicas</span>
+    start >> run_glue_pyspark >> run_athena_optimize >> end</pre>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 4: CASES & PERGUNTAS -->
+    <section class="section" id="operacional">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#a78bfa">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#a78bfa"></div>
+          <h2>Cases Reais, Diagnósticos &amp; Perguntas de Entrevista</h2>
+          <p>Resolução de problemas de concorrência, recuperação de falhas em lote e simulação avançada de entrevistas</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid var(--accent)">
+          <div class="cc-tag">Case 1 · Integração Cross-Account</div>
+          <div class="cc-title">Disparos de Pipelines Baseados em Eventos Multi-Conta</div>
+          <div class="cc-body">
+            <strong>Desafio:</strong> O time de ingestão na Conta A carrega arquivos no S3. O pipeline de transformação reside na Conta B (Step Functions + EMR). Como iniciar o processamento na Conta B instantaneamente após a gravação na Conta A sem polling constante?<br>
+            <strong>Solução:</strong> Configuração de uma regra de **Amazon EventBridge** na Conta A que intercepta eventos do S3 (via CloudTrail/S3 Event Notifications) e despacha o JSON do evento diretamente para um Barramento de Eventos (Event Bus) customizado na Conta B. Na Conta B, uma regra do EventBridge escuta o barramento e dispara o Step Functions com o payload do arquivo recebido, garantindo orquestração 100% orientada a eventos em milissegundos de latência.
+          </div>
+        </div>
+
+        <div class="concept-card" style="border-top: 4px solid var(--ok)">
+          <div class="cc-tag">Case 2 · Reprocessamento em Massa</div>
+          <div class="cc-title">Recuperação de Falhas de Partição em Lote (Backfill)</div>
+          <div class="cc-body">
+            <strong>Desafio:</strong> Uma regra incorreta corrompeu as partições analíticas da camada Silver dos últimos 30 dias. O reprocessamento sequencial manual demoraria 24 horas e correria risco de race conditions (múltiplas execuções gravando ao mesmo tempo no mesmo diretório S3).<br>
+            <strong>Solução:</strong> Utilização da Step Functions configurando o estado **Map State em modo Distribuído (Distributed Map)**. A State Machine lê a lista dos 30 diretórios corrompidos a partir de um JSON no S3 e lança sub-execuções paralelas isoladas com limite de concorrência fixado em 5 runs simultâneos (para não estourar o limite de CPU do cluster EMR). O backfill é executado de forma segura e paralela, reduzindo o tempo de recuperação de 24 horas para 1.5 horas.
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Perguntas de Entrevista Técnica Avançadas</h3>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Pergunta 1: Como mitigar gargalos de latência de agendamento (Scheduling Overhead) ao rodar milhares de micro-tarefas rápidas no Airflow?</div>
+        <div class="abox-body">
+          <p><strong>Resposta Esperada:</strong> O Apache Airflow não foi projetado para tarefas com latência de milissegundos devido à frequência de varredura do Scheduler (loop de parse das DAGs). Rodar milhares de micro-tarefas rápidas satura a CPU do banco de dados metastore e gera latência acumulada insustentável. A melhor prática de design é delegar as micro-tarefas rápidas e sequenciais para uma **State Machine no AWS Step Functions (Express Mode)** e usar o Airflow apenas para disparar e monitorar a State Machine como um único bloco lógico. Isso reduz a carga no scheduler do Airflow e diminui os custos de infraestrutura.</p>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Pergunta 2: O que acontece com a execução de uma State Machine do Step Functions se o payload de dados lidos exceder o limite físico de 256 KB?</div>
+        <div class="abox-body">
+          <p><strong>Resposta Esperada:</strong> A execução falhará imediatamente com um erro do tipo <code>States.DataLimitExceeded</code>. Para contornar essa limitação física de payload em pipelines que processam grandes listas de dados, a arquitetura deve utilizar o padrão **Claim Check**: a tarefa grava o payload volumoso temporariamente em um arquivo JSON no Amazon S3 e passa apenas a URI do S3 (o ponteiro) como string no payload da State Machine. As tarefas downstream leem a URI, buscam o arquivo do S3, realizam o processamento e salvam as saídas atualizadas no S3, preservando a State Machine limpa e abaixo do limite de 256KB.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Guia CLI: Diagnóstico e Operação via Linha de Comando</h3>
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Iniciar execução de uma State Machine passando payload JSON de input</span>
+aws stepfunctions start-execution \
+  --state-machine-arn arn:aws:states:us-east-1:123456789012:stateMachine:pipeline-data-orchestrator \
+  --input <span class="s">'{"execution_date": "2026-06-07"}'</span>
+
+<span class="c"># 2. Descrever o status de uma execução específica do Step Functions</span>
+aws stepfunctions describe-execution \
+  --execution-arn arn:aws:states:us-east-1:123456789012:execution:pipeline-data-orchestrator:99b66a-12a
+
+<span class="c"># 3. Listar execuções falhas de um workflow para diagnóstico</span>
+aws stepfunctions list-executions \
+  --state-machine-arn arn:aws:states:us-east-1:123456789012:stateMachine:pipeline-data-orchestrator \
+  --status-filter FAILED
+
+<span class="c"># 4. Trigger manual de uma DAG no Airflow (MWAA) via CLI do AWS SSM (Executar comando no container do Airflow)</span>
+aws mwaa create-cli-token --name prod-airflow-environment \
+  | jq -r .CliToken \
+  | xargs -I {} curl -s -X POST https://prod-airflow-env.c2.us-east-1.amazonaws.com/aws.local/action \
+      -H <span class="s">"Authorization: Bearer {}"</span> \
+      -d <span class="s">'{"action": "dags trigger mwaa_etl_orchestration_flow"}'</span></pre>
+    </section>
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+<script src="progress.js"></script>
+</body>
+</html>

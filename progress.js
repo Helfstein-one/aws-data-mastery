@@ -213,6 +213,17 @@
         "computacao-bancos.html#rds-aurora",
         "computacao-bancos.html#operacao"
       ]
+    },
+    orquestracao: {
+      name: "⛓️ Orquestração de Dados",
+      badge: "Mestre da Orquestração",
+      color: "#a78bfa",
+      items: [
+        "orquestracao-dados.html#teoria",
+        "orquestracao-dados.html#step-functions",
+        "orquestracao-dados.html#mwaa-airflow",
+        "orquestracao-dados.html#operacional"
+      ]
     }
   };
 
