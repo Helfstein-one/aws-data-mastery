@@ -134,6 +134,9 @@
       <a href="playbook-crises.html#crise-kms" class="nav-sub"><span class="nav-sdot"></span>KMS Lockout</a>
       <a href="playbook-crises.html#crise-genai" class="nav-sub"><span class="nav-sdot"></span>GenAI Cost/Lat</a>
       <a href="playbook-crises.html#crise-fechamento" class="nav-sub"><span class="nav-sdot"></span>Balanço Bancário</a>
+      <a href="playbook-crises.html#crise-duplicacao" class="nav-sub"><span class="nav-sdot"></span>Deduplicação API</a>
+      <a href="playbook-crises.html#crise-nulos" class="nav-sub"><span class="nav-sdot"></span>Dados Nulos / Drift</a>
+      <a href="playbook-crises.html#crise-sla" class="nav-sub"><span class="nav-sdot"></span>Atraso SLA Mesh</a>
     </div>
 
     <div class="nav-lbl collapsible" onclick="toggleCategory('sec-net-fin-cat', this)">
@@ -174,28 +177,54 @@
 
   <main class="main-content">
     
-    <!-- INTRODUÇÃO -->
+    <!-- INTRODUÇÃO & FRAMEWORK -->
     <section class="section" id="introducao">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--warn)">00</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--warn)"></div>
-          <h2>Framework de Resolução e Alinhamento</h2>
-          <p>Como estruturar o diagnóstico técnico e a comunicação corporativa em momentos de falha crítica</p>
+          <h2>Framework de Resolução de Crises (RCA-M)</h2>
+          <p>Passo a passo padronizado e estruturado para gerenciamento e mitigação de incidentes de alta prioridade</p>
         </div>
       </div>
-      <p>Em cargos de liderança técnica (Staff/Principal Architect), a habilidade de resolver o problema de código/infraestrutura é apenas metade do trabalho. A outra metade consiste em gerenciar a crise politicamente: traduzir impactos complexos em números financeiros e comunicar as ações nas linguagens corretas para gerentes de produtos e diretores executivos.</p>
+      <p>Em momentos de falha crítica (Incident P1/P0), a equipe precisa agir sob um protocolo metodológico estrito. O framework abaixo guiará a tomada de decisão do Arquiteto de Dados desde o primeiro alerta de erro até a imunização do pipeline.</p>
       
+      <div class="abox info">
+        <div class="abox-hdr" style="background:var(--navy)">Os 5 Passos do Framework de Resolução</div>
+        <div class="abox-body">
+          <ol style="margin-left: 20px;">
+            <li style="margin-bottom: 12px;"><strong>Passo 1: Contenção Imediata (Triage &amp; Isolation):</strong>
+              <br>• Parar a ingestão na ponta ou desviar o tráfego corrompido para uma fila de quarentena.
+              <br>• Se o incidente ocorreu pós-deploy, realizar o rollback imediato do código para preservar a integridade do estado existente.
+            </li>
+            <li style="margin-bottom: 12px;"><strong>Passo 2: Diagnóstico (Root Cause Analysis - RCA):</strong>
+              <br>• Avaliar logs em tempo de execução (Spark Drivers, AWS CloudWatch, Datadog traces) e analisar métricas do KMS/S3/DB.
+              <br>• Isolar o componente falho (ex: esgotamento de conexões JDBC, schema drift, estouro de CPU, throttling).
+            </li>
+            <li style="margin-bottom: 12px;"><strong>Passo 3: Mitigação e Resolução (Idempotent Recovery):</strong>
+              <br>• Aplicar o hotfix técnico (ex: rate limiting, ajuste de particionamento, indexação, schemas adicionais).
+              <br>• Executar o reprocessamento de forma estritamente idempotente (dynamic overwrite no Iceberg, Aurora transacional replay).
+            </li>
+            <li style="margin-bottom: 12px;"><strong>Passo 4: Auditoria e Validação (Reconciliation):</strong>
+              <br>• Rodar queries de reconciliação analítica no Athena/RDS (contagem de registros origem vs destino, auditoria de nulos, contagem de duplicados).
+            </li>
+            <li style="margin-bottom: 12px;"><strong>Passo 5: Post-Mortem &amp; Hardening (Prevenção):</strong>
+              <br>• Atualizar as regras de alertas (CloudWatch Alarms, Datadog Monitors) e implementar barreiras físicas (DLQs, contratos de dados rigorosos).
+            </li>
+          </ol>
+        </div>
+      </div>
+
       <div class="grid-2">
         <div class="card" style="border-top: 4px solid var(--accent)">
-          <h4>Nível Gerencial (Product Owners / Managers)</h4>
+          <h4>Alinhamento Gerencial (Managers / POs)</h4>
           <p>O foco é a <strong>operação diária</strong>, prazos de entrega e satisfação do cliente. Evite termos obscuros de infraestrutura. Prefira falar de SLAs de negócio, tempo de entrega de dados, estabilidade e riscos de produto.</p>
           <p><em>Palavras-chave: SLA, Churn de clientes, Riscos Operacionais, Ciclo de Entrega, Qualidade de Dados.</em></p>
         </div>
         <div class="card" style="border-top: 4px solid var(--spark)">
-          <h4>Nível C-Level (CIO / CTO / CFO)</h4>
+          <h4>Alinhamento C-Level (CIO / CTO / CFO)</h4>
           <p>O foco é o <strong>impacto macro no negócio</strong>, ROI, CAPEX/OPEX, segurança corporativa (compliance) e Unit Economics. O CIO quer saber o prejuízo evitado e o ganho em TCO.</p>
-          <p><em>Palavras-chave: TCO (Total Cost of Ownership), OPEX, FinOps, Risk Mitigation, Escalabilidade Linear.</em></p>
+          <p><em>Palavras-chave: TCO, OPEX Optimization, FinOps Framework, Risk Mitigation, Escalabilidade Linear.</em></p>
         </div>
       </div>
     </section>
@@ -236,7 +265,6 @@
       <ol>
         <li><strong>Configuração de Rate Limiting:</strong> Injeção da diretiva <code>spark.streaming.kafka.maxRatePerPartition</code> no Spark para limitar o número de mensagens por partição em cada micro-batch, estabilizando o uso de memória Heap dos Workers.</li>
         <li><strong>Orquestração Spot com Karpenter:</strong> Substituição dos nós estáticos por um mix dinâmico de instâncias Spot baseadas em arquitetura Graviton da AWS (r6g/m6g), garantindo performance por um terço do custo.</li>
-        <li><strong>Dynamic Partition Pruning:</strong> Otimização da gravação final no S3 Silver para evitar partições vazias e tráfego inútil na rede interna.</li>
       </ol>
 
       <div class="abox note">
@@ -418,9 +446,8 @@
 
       <h3>A Resolução Técnica</h3>
       <ol>
-        <li><strong>Idempotência no Apache Iceberg:</strong> Migração da escrita simples no S3 para a instrução transacional <code>MERGE INTO</code> no Iceberg. A gravação valida a chave primária física (ID da transação) e faz um update/insert de forma ACID. Se o job cair no meio da escrita, o Iceberg faz rollback automático do snapshot, impedindo que dados parciais ou duplicados contaminem a camada de negócios.</li>
-        <li><strong>Habilitação de Adaptive Query Execution (AQE):</strong> Ativação de AQE no Spark para coalescer partições dinamicamente no shuffle e alterar planos de Join em runtime (ex: convertendo SortMergeJoin para BroadcastHashJoin dinamicamente ao detectar dados menores), resolvendo o gargalo de OOM nos Workers.</li>
-        <li><strong>EMR Transiente com Spot Graviton3:</strong> Alteramos o cluster fixo e sob demanda para um cluster efêmero. O Airflow dispara a criação de nós específicos contendo processadores **Graviton3** que custam 60% menos que x86 convencionais e destroem-se imediatamente após o término do fechamento contábil.</li>
+        <li><strong>Idempotência no Apache Iceberg:</strong> Migração da escrita simples no S3 para a instrução transacional <code>MERGE INTO</code> no Iceberg. Se o job cair no meio da escrita, o Iceberg faz rollback automático do snapshot, impedindo que dados parciais ou duplicados contaminem a camada de negócios.</li>
+        <li><strong>Habilitação de Adaptive Query Execution (AQE):</strong> Ativação de AQE no Spark para coalescer partições dinamicamente no shuffle e alterar planos de Join em runtime, resolvendo o gargalo de OOM nos Workers.</li>
       </ol>
 
       <div class="abox note">
@@ -428,6 +455,147 @@
         <div class="abox-body">
           <p><strong>Linguagem Gerencial:</strong> <em>"Identificamos uma quebra na esteira de fechamento contábil devido ao volume excessivo de dados, o que causou duplicações manuais no banco de dados e a discrepância gerencial dos saldos. Corrigimos a falha implementando uma camada de transação ACID no nosso lago de dados, o que impede duplicações em caso de novas tentativas. Reduzimos o tempo de reprocessamento do balanço de 18 horas para apenas 45 minutos, zerando a divergência contábil e garantindo o envio do relatório regulatório dentro do prazo."</em></p>
           <p><strong>Linguagem CIO (C-Level):</strong> <em>"Durante a crise do fechamento contábil, eliminamos uma ineficiência que custava $32.000 por tentativa de reprocessamento e ameaçava nossa conformidade regulatória. Migramos o pipeline de conciliação para Apache Iceberg transacional, garantindo idempotência absoluta e zerando a divergência contábil/financeira. Com otimizações de Spark AQE e clusters efêmeros baseados em instâncias Spot Graviton3, derrubamos o custo por execução de $32.000 para $2.900 e o tempo de processamento de 18 horas para 45 minutos. Mitigamos riscos de multas regulatórias e otimizamos o OPEX computacional."</em></p>
+        </div>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CENÁRIO 5 -->
+    <section class="section" id="crise-duplicacao">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Crise 5: Divergência por Ingestão de API Duplicada (Deduplicação)</h2>
+          <p>Mitigação de duplicidades geradas por retries de rede na integração com parceiros externos no banco Aurora e Data Mesh</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid var(--spark);">
+          <div class="cc-tag">A Crise Operacional</div>
+          <div class="cc-body">
+            Uma API REST de parceiro externo repetiu o envio de payloads transacionais devido a timeouts de rede na resposta HTTP. Sem um validador na borda, o banco relacional **Amazon Aurora PostgreSQL** aceitou as duplicidades lógicas. A sujeira propagou-se para as tabelas do Data Mesh, gerando discrepâncias severas nos dashboards gerenciais de receita, com duplicidade acumulada de **4.2% das transações diárias**.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid var(--ok);">
+          <div class="cc-tag">Impacto Estratégico &amp; FinOps</div>
+          <div class="cc-body">
+            <ul>
+              <li><strong>Antes:</strong> Taxa de duplicação de 4.2% distorcendo a receita reportada. Alto processamento inútil no downstream.</li>
+              <li><strong>Depois:</strong> Taxa de duplicação reduzida para **0%**. Redução de 40% no overhead de processamento do Spark.</li>
+              <li><strong>Valor:</strong> Relatórios financeiros e de auditoria 100% fidedignos e conformes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h3>A Resolução Técnica</h3>
+      <ol>
+        <li><strong>De-duplicate na Borda (Aurora upsert):</strong> Implementação de restrições exclusivas (Unique Constraints) baseadas no hash da transação e uso do mecanismo <code>INSERT ON CONFLICT DO UPDATE</code> (Upsert) direto nas conexões de ingestão do banco Aurora.</li>
+        <li><strong>Janelamento de Deduplicação no Spark:</strong> Injeção de uma rotina analítica utilizando a função de janela <code>row_number() over (partition by id_transacao order by data_atualizacao desc)</code> no job de ETL da Landing Zone (Bronze para Silver), mantendo estritamente a última versão de cada registro.</li>
+      </ol>
+
+      <div class="abox note">
+        <div class="abox-hdr">Discursos de Alinhamento (C-Level vs Gerência)</div>
+        <div class="abox-body">
+          <p><strong>Linguagem Gerencial:</strong> <em>"Identificamos que timeouts de rede na integração com parceiros faziam com que eles nos reenviassem a mesma transação, duplicando dados de faturamento em nosso painel analítico. Implementamos filtros de deduplicação automática tanto no banco de entrada quanto no processamento. A nossa taxa de duplicados caiu para zero, garantindo que o time gerencial tome decisões com dados de vendas 100% corretos."</em></p>
+          <p><strong>Linguagem CIO (C-Level):</strong> <em>"Solucionamos um vazamento de integridade lógica que inflava a receita no Data Mesh em 4.2% devido a retries de rede de APIs parceiras. Implantamos restrições exclusivas de chaves no Aurora e deduplicação analítica via PySpark. Reduzimos o overhead de processamento do Spark em 40%, barateando o processamento do pipeline, e mitigamos os riscos de compliance ao alinhar e blindar as informações financeiras da marca."</em></p>
+        </div>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CENÁRIO 6 -->
+    <section class="section" id="crise-nulos">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--muted)">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--muted)"></div>
+          <h2>Crise 6: Perda Silenciosa de Dados por Inconsistência de Nulos</h2>
+          <p>Implementação de Data Quality Circuit Breakers e Quarentenas automatizadas para conter quebras de esquemas e dados nulos críticos</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid var(--muted);">
+          <div class="cc-tag">A Crise Operacional</div>
+          <div class="cc-body">
+            Uma atualização no sistema de CRM (Salesforce) alterou a saída da API, enviando campos de identificadores de clientes e valores monetários como **nulos** em vez de strings/numéricos (Schema Drift). Os jobs do Spark no Glue que possuíam conversão forçada estouraram e derrubaram o pipeline. Para manter os fluxos rodando, a equipe anterior havia colocado um tratamento de erro que simplesmente ignorava (dropava) registros nulos, resultando em uma perda silenciosa de **120.000 transações de faturamento por dia**.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid var(--ok);">
+          <div class="cc-tag">Impacto Estratégico &amp; FinOps</div>
+          <div class="cc-body">
+            <ul>
+              <li><strong>Antes:</strong> Perda silenciosa de 120k registros diários. Diferença de faturamento inexplicável de **$65.000/mês**.</li>
+              <li><strong>Depois:</strong> Registros ignorados reduzidos para **0**. Integridade absoluta do faturamento.</li>
+              <li><strong>Valor:</strong> Blindagem ativa contra erros de cobrança e estabelecimento de um isolador lógico de erros.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h3>A Resolução Técnica</h3>
+      <ol>
+        <li><strong>AWS Glue Schema Registry:</strong> Bloqueio na ingestão configurando o Schema Registry na esteira de mensageria da API para rejeitar alterações não homologadas de tipos (Backward Compatibility).</li>
+        <li><strong>Filtro de Desvio para Quarentena (S3 Quarantine):</strong> Em vez de descartar registros defeituosos, implementamos um *Data Quality Circuit Breaker* no PySpark. Registros contendo nulos em chaves primárias são direcionados para uma partição temporária isolada no S3 para análise e reprocessamento posterior, enquanto dados limpos continuam fluindo normalmente.</li>
+      </ol>
+
+      <div class="abox note">
+        <div class="abox-hdr">Discursos de Alinhamento (C-Level vs Gerência)</div>
+        <div class="abox-body">
+          <p><strong>Linguagem Gerencial:</strong> <em>"Descobrimos que mudanças silenciosas nos campos enviados pelo CRM causavam o descarte incorreto de transações, resultando em um sumiço de 120.000 vendas diárias em nossos relatórios de faturamento. Implementamos uma área de quarentena automática que isola apenas os registros quebrados para correção, mantendo a integridade absoluta dos relatórios e eliminando a perda inexplicada de dados."</em></p>
+          <p><strong>Linguagem CIO (C-Level):</strong> <em>"Ajustamos uma quebra severa de Schema Drift no CRM que resultava em perda silenciosa de 120.000 transações/dia, equivalente a uma lacuna de faturamento de $65.000/mês. Implementamos o AWS Schema Registry e um circuito isolador que envia os registros defeituosos para uma quarentena no S3. Estabilizamos as perdas a zero e garantimos auditoria total das inconsistências de dados, protegendo o fluxo de receitas corporativo."</em></p>
+        </div>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CENÁRIO 7 -->
+    <section class="section" id="crise-sla">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--accent)">07</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--accent)"></div>
+          <h2>Crise 7: Atraso de SLA por Desalinhamento em Tabelas Mesh (Cross-Account)</h2>
+          <p>Automação e governança cross-account para sanar quebras de catálogo de metadados no Data Mesh</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid var(--accent);">
+          <div class="cc-tag">A Crise Operacional</div>
+          <div class="cc-body">
+            Na topologia Data Mesh da empresa, a Conta AWS Produtora atualizou a partição da tabela de vendas e efetuou deploy de modificações físicas de colunas de metadados. Como a atualização do catálogo cross-account com a Conta Consumidora era feita via scripts manuais desatualizados, a Conta Consumidora analítica ficou bloqueada de ler os dados por **6 horas**. O atraso violou o SLA de entrega de dados diários exigidos pela presidência.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid var(--ok);">
+          <div class="cc-tag">Impacto Estratégico &amp; FinOps</div>
+          <div class="cc-body">
+            <ul>
+              <li><strong>Antes:</strong> SLA de dados quebrado por 6 horas devido a atualizações manuais ineficientes de metadados.</li>
+              <li><strong>Depois:</strong> Tempo de sincronização e liberação do metadado reduzido de **6 horas para 2 minutos**.</li>
+              <li><strong>Valor:</strong> Resiliência total e autonomia operacional das pontas consumidoras em arquiteturas Data Mesh cross-account.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h3>A Resolução Técnica</h3>
+      <ol>
+        <li><strong>Automação de Schema updates com EventBridge:</strong> Configuração de regras no Amazon EventBridge na conta produtora para escutar a modificação de tabelas no Glue Catalog. O evento aciona dinamicamente uma função Lambda cross-account que automatiza a atualização correspondente dos recursos compartilhados no AWS Lake Formation da conta analítica.</li>
+        <li><strong>AWS Lake Formation Resource Links:</strong> Substituição das permissões manuais de banco por links lógicos automatizados (Resource Links), garantindo que modificações feitas no metadado da tabela origem se reflitam dinamicamente na conta consumidora em tempo real.</li>
+      </ol>
+
+      <div class="abox note">
+        <div class="abox-hdr">Discursos de Alinhamento (C-Level vs Gerência)</div>
+        <div class="abox-body">
+          <p><strong>Linguagem Gerencial:</strong> <em>"O atraso de 6 horas na entrega dos relatórios diários de vendas ocorreu porque o time de desenvolvimento do banco parceiro atualizou a estrutura da tabela deles e o nosso sistema não ficou sabendo automaticamente, travando a consulta. Criamos um sistema de alerta e compartilhamento automático de tabelas. Agora, qualquer alteração estrutural no parceiro se reflete nas nossas análises em menos de 2 minutos, estabilizando nosso SLA de relatórios."</em></p>
+          <p><strong>Linguagem CIO (C-Level):</strong> <em>"Sanamos uma quebra de SLA cross-account que deixava os dados desatualizados por 6 horas. Automatizamos o sincronismo de catálogo de metadados por meio de links lógicos lincados no AWS Lake Formation e regras baseadas em eventos no EventBridge. O tempo de resposta para qualquer modificação do mesh de dados caiu de 6 horas para 2 minutos, blindando o nosso SLO analítico e eliminando custos com suporte emergencial."</em></p>
         </div>
       </div>
     </section>
