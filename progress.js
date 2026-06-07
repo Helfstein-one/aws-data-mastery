@@ -181,7 +181,10 @@
         "playbook-crises.html#crise-streaming",
         "playbook-crises.html#crise-kms",
         "playbook-crises.html#crise-genai",
-        "playbook-crises.html#crise-fechamento"
+        "playbook-crises.html#crise-fechamento",
+        "playbook-crises.html#crise-duplicacao",
+        "playbook-crises.html#crise-nulos",
+        "playbook-crises.html#crise-sla"
       ]
     }
   };
