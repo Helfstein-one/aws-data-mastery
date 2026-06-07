@@ -525,6 +525,62 @@
     }
   }
 
+  // Helper to generate dynamic premium SVG icons for academic badges
+  function getBadgeSVG(modId, hasCompleted) {
+    const configs = {
+      architecture: { colors: ["#38bdf8", "#818cf8"], icon: `<path d="M22 28 l10 -5 l10 5 l-10 5 z M22 28 v10 l10 5 v-10 z M42 28 v10 l-10 5 v-10 z" fill="none" stroke="url(#grad-architecture)" stroke-width="2" stroke-linejoin="round"/>` },
+      perguntas: { colors: ["#fbbf24", "#f59e0b"], icon: `<path d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas)" stroke-width="3" stroke-linecap="round"/><path d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas)" stroke-width="1.8" stroke-linecap="round"/>` },
+      cases: { colors: ["#34d399", "#059669"], icon: `<path d="M32 16 L38 28 L38 38 L32 44 L26 38 L26 28 z M26 38 L22 42 M38 38 L42 42 M32 44 L32 48" fill="none" stroke="url(#grad-cases)" stroke-width="2" stroke-linejoin="round"/>` },
+      ingestion: { colors: ["#ec4899", "#f43f5e"], icon: `<path d="M34 14 L24 30 L32 30 L30 46 L40 30 L32 30 z" fill="url(#grad-ingestion)"/>` },
+      storage: { colors: ["#6366f1", "#4f46e5"], icon: `<path d="M20 22 C20 18, 44 18, 44 22 V28 C44 32, 20 32, 20 28 z M20 30 C20 26, 44 26, 44 30 V36 C44 40, 20 40, 20 36 z M20 38 C20 34, 44 34, 44 38 V44 C44 48, 20 48, 20 44 z" fill="none" stroke="url(#grad-storage)" stroke-width="2"/>` },
+      processing: { colors: ["#0ea5e9", "#0284c7"], icon: `<ellipse cx="32" cy="32" rx="20" ry="6" transform="rotate(30,32,32)" fill="none" stroke="url(#grad-processing)" stroke-width="1.8"/><ellipse cx="32" cy="32" rx="20" ry="6" transform="rotate(-30,32,32)" fill="none" stroke="url(#grad-processing)" stroke-width="1.8"/><circle cx="32" cy="32" r="4" fill="url(#grad-processing)"/>` },
+      serving: { colors: ["#f43f5e", "#be123c"], icon: `<rect x="20" y="32" width="4" height="12" rx="1" fill="url(#grad-serving)"/><rect x="27" y="26" width="4" height="18" rx="1" fill="url(#grad-serving)"/><rect x="34" y="20" width="4" height="24" rx="1" fill="url(#grad-serving)"/><circle cx="44" cy="24" r="4" fill="none" stroke="url(#grad-serving)" stroke-width="1.8"/><line x1="47" y1="27" x2="51" y2="31" stroke="url(#grad-serving)" stroke-width="1.8"/>` },
+      genai: { colors: ["#a78bfa", "#8b5cf6"], icon: `<path d="M32 14 L34 20 L40 22 L34 24 L32 30 L30 24 L24 22 L30 20 z" fill="url(#grad-genai)"/><circle cx="20" cy="38" r="2" fill="url(#grad-genai)"/><circle cx="44" cy="38" r="2" fill="url(#grad-genai)"/><circle cx="32" cy="42" r="2.5" fill="url(#grad-genai)"/><line x1="20" y1="38" x2="32" y2="30" stroke="url(#grad-genai)" stroke-width="1" stroke-dasharray="2 2"/><line x1="44" y1="38" x2="32" y2="30" stroke="url(#grad-genai)" stroke-width="1" stroke-dasharray="2 2"/><line x1="32" y1="42" x2="32" y2="30" stroke="url(#grad-genai)" stroke-width="1" stroke-dasharray="2 2"/>` },
+      dataops: { colors: ["#14b8a6", "#0d9488"], icon: `<path d="M22 32 C22 26, 30 26, 32 32 C34 38, 42 38, 42 32 C42 26, 34 26, 32 32 C30 38, 22 38, 22 32 z" fill="none" stroke="url(#grad-dataops)" stroke-width="2.5" stroke-linecap="round"/>` },
+      networking: { colors: ["#38bdf8", "#0284c7"], icon: `<circle cx="32" cy="20" r="3" fill="url(#grad-networking)"/><circle cx="20" cy="38" r="3" fill="url(#grad-networking)"/><circle cx="44" cy="38" r="3" fill="url(#grad-networking)"/><line x1="32" y1="20" x2="20" y2="38" stroke="url(#grad-networking)" stroke-width="1.8"/><line x1="32" y1="20" x2="44" y2="38" stroke="url(#grad-networking)" stroke-width="1.8"/><line x1="20" y1="38" x2="44" y2="38" stroke="url(#grad-networking)" stroke-width="1.8"/>` },
+      security: { colors: ["#64748b", "#475569"], icon: `<path d="M20 20 V32 C20 40, 32 46, 32 46 C32 46, 44 40, 44 32 V20 z" fill="none" stroke="url(#grad-security)" stroke-width="2" stroke-linejoin="round"/><circle cx="32" cy="28" r="3" fill="url(#grad-security)"/><path d="M31 31 L33 31 L34 35 L30 35 z" fill="url(#grad-security)"/>` },
+      finops: { colors: ["#fbbf24", "#f59e0b"], icon: `<circle cx="32" cy="32" r="13" fill="none" stroke="url(#grad-finops)" stroke-width="2"/><text x="32" y="37" font-size="14" font-weight="900" font-family="'DM Sans', sans-serif" text-anchor="middle" fill="url(#grad-finops)">$</text>` },
+      oop: { colors: ["#38bdf8", "#fbbf24"], icon: `<path d="M24 24 L18 32 L24 40 M40 24 L46 32 L40 40" fill="none" stroke="url(#grad-oop)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="34" y1="20" x2="30" y2="44" stroke="url(#grad-oop)" stroke-width="2" stroke-linecap="round"/>` },
+      playbook: { colors: ["#ef4444", "#b91c1c"], icon: `<path d="M22 42 L42 42 L38 26 C38 20, 26 20, 26 26 z" fill="url(#grad-playbook)"/><rect x="18" y="42" width="28" height="4" rx="1.5" fill="url(#grad-playbook)"/>` },
+      platform: { colors: ["#6366f1", "#a78bfa"], icon: `<path d="M16 24 L32 16 L48 24 L32 32 z M16 34 L32 26 L48 34 L32 42 z" fill="none" stroke="url(#grad-platform)" stroke-width="2" stroke-linejoin="round"/>` }
+    };
+
+    const cfg = configs[modId] || { colors: ["#cbd5e1", "#94a3b8"], icon: "" };
+    
+    // Determine colors based on status (grayscale if locked)
+    const strokeColor = hasCompleted ? "url(#grad-" + modId + ")" : "#cbd5e1";
+    const opacityVal = hasCompleted ? "1" : "0.35";
+    const borderDash = hasCompleted ? "none" : "3,3";
+
+    let lockMarkup = "";
+    if (!hasCompleted) {
+      lockMarkup = `
+        <circle cx="32" cy="32" r="10" fill="white" opacity="0.9" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+        <path d="M29 32 V29 C29 27.3, 30.3 26, 32 26 C33.7 26, 35 27.3, 35 29 V32 M27.5 32 H36.5 V39 H27.5 z" fill="#64748b" stroke="#64748b" stroke-width="1" stroke-linejoin="round" />
+      `;
+    }
+
+    return `
+      <svg viewBox="0 0 64 64" width="48" height="48" style="transition: all 0.3s ease; display: inline-block; opacity: ${opacityVal};">
+        <defs>
+          <linearGradient id="grad-${modId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${cfg.colors[0]}" />
+            <stop offset="100%" stop-color="${cfg.colors[1]}" />
+          </linearGradient>
+        </defs>
+        <!-- Background Circle Outer -->
+        <circle cx="32" cy="32" r="28" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-dasharray="${borderDash}" />
+        <circle cx="32" cy="32" r="25" fill="${hasCompleted ? cfg.colors[0] : 'transparent'}" opacity="${hasCompleted ? '0.05' : '0'}" />
+        <!-- Graphics -->
+        <g style="${hasCompleted ? '' : 'filter: grayscale(100%);'}">
+          ${cfg.icon}
+        </g>
+        <!-- Lock Overlay -->
+        ${lockMarkup}
+      </svg>
+    `;
+  }
+
   // Micro animação visual de sucesso
   function triggerGlowEffect(el) {
     el.style.transform = "scale(1.3)";
@@ -541,11 +597,11 @@
       const mod = stats.modules[modId];
       const hasCompleted = mod.percent === 100;
       badgesHTML += `
-        <div class="dashboard-badge-card" style="opacity: ${hasCompleted ? '1' : '0.45'}; text-align: center; padding: 14px; background: ${hasCompleted ? 'rgba(16, 185, 129, 0.08)' : 'rgba(15, 23, 42, 0.02)'}; border: 1px solid ${hasCompleted ? 'rgba(16, 185, 129, 0.25)' : 'var(--border)'}; border-radius: 12px; transition: all 0.3s ease;">
-          <div style="font-size: 2.2rem; margin-bottom: 6px; filter: ${hasCompleted ? 'none' : 'grayscale(100%)'};">
-            ${hasCompleted ? "🏆" : "🔒"}
+        <div class="dashboard-badge-card" style="text-align: center; padding: 14px; background: ${hasCompleted ? 'rgba(16, 185, 129, 0.04)' : 'rgba(15, 23, 42, 0.01)'}; border: 1px solid ${hasCompleted ? 'rgba(16, 185, 129, 0.18)' : 'var(--border)'}; border-radius: 12px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default; position: relative; overflow: hidden;">
+          <div style="margin-bottom: 8px; height: 52px; display: flex; align-items: center; justify-content: center;">
+            ${getBadgeSVG(modId, hasCompleted)}
           </div>
-          <div style="font-size: 11px; font-weight: bold; color: ${hasCompleted ? 'var(--ok)' : 'var(--muted)'}; font-family: 'DM Mono', monospace; text-transform: uppercase;">
+          <div style="font-size: 11px; font-weight: bold; color: ${hasCompleted ? 'var(--navy)' : 'var(--muted)'}; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.02em;">
             ${mod.badge}
           </div>
           <div style="font-size: 9px; color: var(--muted); margin-top: 4px;">
@@ -655,6 +711,19 @@
         background-color: rgba(16, 185, 129, 0.02) !important;
         border-color: var(--ok) !important;
         transition: all 0.3s ease;
+      }
+      .dashboard-badge-card {
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
+      }
+      .dashboard-badge-card:hover {
+        transform: translateY(-3px);
+        background: rgba(16, 185, 129, 0.08) !important;
+        border-color: rgba(16, 185, 129, 0.3) !important;
+        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
+      }
+      .dashboard-badge-card:hover svg {
+        transform: scale(1.1);
+        filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.2));
       }
     `;
     document.head.appendChild(styleEl);
