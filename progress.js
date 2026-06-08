@@ -525,6 +525,107 @@
     }
   }
 
+  // Helper to generate dynamic premium SVG icons for academic badges
+  function getBadgeSVG(modId, hasCompleted) {
+    const configs = {
+      architecture: { 
+        colors: ["#38bdf8", "#818cf8"], 
+        icon: `<path class="badge-arch-path" d="M22 28 l10 -5 l10 5 l-10 5 z M22 28 v10 l10 5 v-10 z M42 28 v10 l-10 5 v-10 z" fill="none" stroke="url(#grad-architecture)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      perguntas: { 
+        colors: ["#fbbf24", "#f59e0b"], 
+        icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas)" stroke-width="1.8" stroke-linecap="round"/>` 
+      },
+      cases: { 
+        colors: ["#34d399", "#059669"], 
+        icon: `<path class="badge-case-rocket" d="M32 16 L38 28 L38 38 L32 44 L26 38 L26 28 z M26 38 L22 42 M38 38 L42 42 M32 44 L32 48" fill="none" stroke="url(#grad-cases)" stroke-width="2" stroke-linejoin="round"/><path class="badge-case-fire" d="M30 45 L32 51 L34 45 Z" fill="#ef4444" opacity="0"/>` 
+      },
+      ingestion: { 
+        colors: ["#ec4899", "#f43f5e"], 
+        icon: `<path class="badge-ingest-bolt" d="M34 14 L24 30 L32 30 L30 46 L40 30 L32 30 z" fill="url(#grad-ingestion)"/>` 
+      },
+      storage: { 
+        colors: ["#6366f1", "#4f46e5"], 
+        icon: `<path class="badge-store-cyl" d="M20 22 C20 18, 44 18, 44 22 V28 C44 32, 20 32, 20 28 z M20 30 C20 26, 44 26, 44 30 V36 C44 40, 20 40, 20 36 z M20 38 C20 34, 44 34, 44 38 V44 C44 48, 20 48, 20 44 z" fill="none" stroke="url(#grad-storage)" stroke-width="2"/>` 
+      },
+      processing: { 
+        colors: ["#0ea5e9", "#0284c7"], 
+        icon: `<ellipse class="badge-proc-orbit1" cx="32" cy="32" rx="20" ry="6" transform="rotate(30,32,32)" fill="none" stroke="url(#grad-processing)" stroke-width="1.8"/><ellipse class="badge-proc-orbit2" cx="32" cy="32" rx="20" ry="6" transform="rotate(-30,32,32)" fill="none" stroke="url(#grad-processing)" stroke-width="1.8"/><circle class="badge-proc-gear" cx="32" cy="32" r="4" fill="url(#grad-processing)"/>` 
+      },
+      serving: { 
+        colors: ["#f43f5e", "#be123c"], 
+        icon: `<rect class="badge-serve-bar" x="20" y="32" width="4" height="12" rx="1" fill="url(#grad-serving)"/><rect class="badge-serve-bar" x="27" y="26" width="4" height="18" rx="1" fill="url(#grad-serving)"/><rect class="badge-serve-bar" x="34" y="20" width="4" height="24" rx="1" fill="url(#grad-serving)"/><circle class="badge-serve-lens" cx="44" cy="24" r="4" fill="none" stroke="url(#grad-serving)" stroke-width="1.8"/><line class="badge-serve-lens" x1="47" y1="27" x2="51" y2="31" stroke="url(#grad-serving)" stroke-width="1.8"/>` 
+      },
+      genai: { 
+        colors: ["#a78bfa", "#8b5cf6"], 
+        icon: `<path class="badge-gen-sparkle" d="M32 14 L34 20 L40 22 L34 24 L32 30 L30 24 L24 22 L30 20 z" fill="url(#grad-genai)"/><circle class="badge-gen-node" cx="20" cy="38" r="2" fill="url(#grad-genai)"/><circle class="badge-gen-node" cx="44" cy="38" r="2" fill="url(#grad-genai)"/><circle class="badge-gen-node" cx="32" cy="42" r="2.5" fill="url(#grad-genai)"/><line class="badge-gen-line" x1="20" y1="38" x2="32" y2="30" stroke="url(#grad-genai)" stroke-width="1" stroke-dasharray="2 2"/><line class="badge-gen-line" x1="44" y1="38" x2="32" y2="30" stroke="url(#grad-genai)" stroke-width="1" stroke-dasharray="2 2"/><line class="badge-gen-line" x1="32" y1="42" x2="32" y2="30" stroke="url(#grad-genai)" stroke-width="1" stroke-dasharray="2 2"/>` 
+      },
+      dataops: { 
+        colors: ["#14b8a6", "#0d9488"], 
+        icon: `<path class="badge-ops-loop" d="M22 32 C22 26, 30 26, 32 32 C34 38, 42 38, 42 32 C42 26, 34 26, 32 32 C30 38, 22 38, 22 32 z" fill="none" stroke="url(#grad-dataops)" stroke-width="2.5" stroke-linecap="round"/>` 
+      },
+      networking: { 
+        colors: ["#38bdf8", "#0284c7"], 
+        icon: `<circle class="badge-net-node" cx="32" cy="20" r="3" fill="url(#grad-networking)"/><circle class="badge-net-node" cx="20" cy="38" r="3" fill="url(#grad-networking)"/><circle class="badge-net-node" cx="44" cy="38" r="3" fill="url(#grad-networking)"/><line class="badge-net-line" x1="32" y1="20" x2="20" y2="38" stroke="url(#grad-networking)" stroke-width="1.8"/><line class="badge-net-line" x1="32" y1="20" x2="44" y2="38" stroke="url(#grad-networking)" stroke-width="1.8"/><line class="badge-net-line" x1="20" y1="38" x2="44" y2="38" stroke="url(#grad-networking)" stroke-width="1.8"/>` 
+      },
+      security: { 
+        colors: ["#64748b", "#475569"], 
+        icon: `<path class="badge-sec-shield" d="M20 20 V32 C20 40, 32 46, 32 46 C32 46, 44 40, 44 32 V20 z" fill="none" stroke="url(#grad-security)" stroke-width="2" stroke-linejoin="round"/><circle class="badge-sec-core" cx="32" cy="28" r="3" fill="url(#grad-security)"/><path class="badge-sec-core" d="M31 31 L33 31 L34 35 L30 35 z" fill="url(#grad-security)"/>` 
+      },
+      finops: { 
+        colors: ["#fbbf24", "#f59e0b"], 
+        icon: `<circle class="badge-fin-coin" cx="32" cy="32" r="13" fill="none" stroke="url(#grad-finops)" stroke-width="2"/><text class="badge-fin-text" x="32" y="37" font-size="14" font-weight="900" font-family="'DM Sans', sans-serif" text-anchor="middle" fill="url(#grad-finops)">$</text>` 
+      },
+      oop: { 
+        colors: ["#38bdf8", "#fbbf24"], 
+        icon: `<path class="badge-oop-bracket" d="M24 24 L18 32 L24 40 M40 24 L46 32 L40 40" fill="none" stroke="url(#grad-oop)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line class="badge-oop-slash" x1="34" y1="20" x2="30" y2="44" stroke="url(#grad-oop)" stroke-width="2" stroke-linecap="round"/>` 
+      },
+      playbook: { 
+        colors: ["#ef4444", "#b91c1c"], 
+        icon: `<path class="badge-play-siren" d="M22 42 L42 42 L38 26 C38 20, 26 20, 26 26 z" fill="url(#grad-playbook)"/><rect class="badge-play-base" x="18" y="42" width="28" height="4" rx="1.5" fill="url(#grad-playbook)"/>` 
+      },
+      platform: { 
+        colors: ["#6366f1", "#a78bfa"], 
+        icon: `<path class="badge-plat-layer" d="M16 24 L32 16 L48 24 L32 32 z M16 34 L32 26 L48 34 L32 42 z" fill="none" stroke="url(#grad-platform)" stroke-width="2" stroke-linejoin="round"/>` 
+      }
+    };
+
+    const cfg = configs[modId] || { colors: ["#cbd5e1", "#94a3b8"], icon: "" };
+    
+    // Determine colors based on status (grayscale if locked)
+    const strokeColor = hasCompleted ? "url(#grad-" + modId + ")" : "#cbd5e1";
+    const opacityVal = hasCompleted ? "1" : "0.35";
+    const borderDash = hasCompleted ? "none" : "3,3";
+
+    let lockMarkup = "";
+    if (!hasCompleted) {
+      lockMarkup = `
+        <circle cx="32" cy="32" r="10" fill="white" opacity="0.9" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));" />
+        <path d="M29 32 V29 C29 27.3, 30.3 26, 32 26 C33.7 26, 35 27.3, 35 29 V32 M27.5 32 H36.5 V39 H27.5 z" fill="#64748b" stroke="#64748b" stroke-width="1" stroke-linejoin="round" />
+      `;
+    }
+
+    return `
+      <svg viewBox="0 0 64 64" width="48" height="48" style="transition: all 0.3s ease; display: inline-block; opacity: ${opacityVal};">
+        <defs>
+          <linearGradient id="grad-${modId}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${cfg.colors[0]}" />
+            <stop offset="100%" stop-color="${cfg.colors[1]}" />
+          </linearGradient>
+        </defs>
+        <!-- Background Circle Outer -->
+        <circle cx="32" cy="32" r="28" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-dasharray="${borderDash}" />
+        <circle cx="32" cy="32" r="25" fill="${hasCompleted ? cfg.colors[0] : 'transparent'}" opacity="${hasCompleted ? '0.05' : '0'}" />
+        <!-- Graphics -->
+        <g style="${hasCompleted ? '' : 'filter: grayscale(100%);'}">
+          ${cfg.icon}
+        </g>
+        <!-- Lock Overlay -->
+        ${lockMarkup}
+      </svg>
+    `;
+  }
+
   // Micro animação visual de sucesso
   function triggerGlowEffect(el) {
     el.style.transform = "scale(1.3)";
@@ -541,11 +642,11 @@
       const mod = stats.modules[modId];
       const hasCompleted = mod.percent === 100;
       badgesHTML += `
-        <div class="dashboard-badge-card" style="opacity: ${hasCompleted ? '1' : '0.45'}; text-align: center; padding: 14px; background: ${hasCompleted ? 'rgba(16, 185, 129, 0.08)' : 'rgba(15, 23, 42, 0.02)'}; border: 1px solid ${hasCompleted ? 'rgba(16, 185, 129, 0.25)' : 'var(--border)'}; border-radius: 12px; transition: all 0.3s ease;">
-          <div style="font-size: 2.2rem; margin-bottom: 6px; filter: ${hasCompleted ? 'none' : 'grayscale(100%)'};">
-            ${hasCompleted ? "🏆" : "🔒"}
+        <div class="dashboard-badge-card" style="text-align: center; padding: 14px; background: ${hasCompleted ? 'rgba(16, 185, 129, 0.04)' : 'rgba(15, 23, 42, 0.01)'}; border: 1px solid ${hasCompleted ? 'rgba(16, 185, 129, 0.18)' : 'var(--border)'}; border-radius: 12px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default; position: relative; overflow: hidden;">
+          <div style="margin-bottom: 8px; height: 52px; display: flex; align-items: center; justify-content: center;">
+            ${getBadgeSVG(modId, hasCompleted)}
           </div>
-          <div style="font-size: 11px; font-weight: bold; color: ${hasCompleted ? 'var(--ok)' : 'var(--muted)'}; font-family: 'DM Mono', monospace; text-transform: uppercase;">
+          <div style="font-size: 11px; font-weight: bold; color: ${hasCompleted ? 'var(--navy)' : 'var(--muted)'}; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.02em;">
             ${mod.badge}
           </div>
           <div style="font-size: 9px; color: var(--muted); margin-top: 4px;">
@@ -655,6 +756,174 @@
         background-color: rgba(16, 185, 129, 0.02) !important;
         border-color: var(--ok) !important;
         transition: all 0.3s ease;
+      }
+      .dashboard-badge-card {
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
+      }
+      .dashboard-badge-card:hover {
+        transform: translateY(-3px);
+        background: rgba(16, 185, 129, 0.08) !important;
+        border-color: rgba(16, 185, 129, 0.3) !important;
+        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
+      }
+      .dashboard-badge-card:hover svg {
+        transform: scale(1.05);
+      }
+
+      /* Custom Badge Inner Animations */
+      .dashboard-badge-card:hover .badge-arch-path {
+        stroke-dasharray: 100;
+        animation: arch-dash 2s linear infinite;
+      }
+      @keyframes arch-dash {
+        to { stroke-dashoffset: -200; }
+      }
+      
+      .dashboard-badge-card:hover .badge-preg-crown {
+        transform-origin: 32px 32px;
+        animation: crown-glow 1s ease-in-out infinite alternate;
+      }
+      @keyframes crown-glow {
+        from { transform: translateY(0); filter: drop-shadow(0 0 2px rgba(251,191,36,0.4)); }
+        to { transform: translateY(-2px); filter: drop-shadow(0 0 6px rgba(251,191,36,0.8)); }
+      }
+      
+      .dashboard-badge-card:hover .badge-case-rocket {
+        transform-origin: 32px 32px;
+        animation: rocket-sway 0.8s ease-in-out infinite alternate;
+      }
+      .dashboard-badge-card:hover .badge-case-fire {
+        transform-origin: 32px 32px;
+        opacity: 1;
+        animation: fire-flicker 0.15s ease-in-out infinite alternate;
+      }
+      @keyframes rocket-sway {
+        from { transform: rotate(-2deg); }
+        to { transform: rotate(2deg); }
+      }
+      @keyframes fire-flicker {
+        from { transform: scaleY(0.8); opacity: 0.7; }
+        to { transform: scaleY(1.2); opacity: 1; }
+      }
+
+      .dashboard-badge-card:hover .badge-ingest-bolt {
+        transform-origin: 32px 32px;
+        animation: bolt-vibe 0.3s linear infinite;
+      }
+      @keyframes bolt-vibe {
+        0%, 100% { transform: translate(0, 0); opacity: 0.9; }
+        50% { transform: translate(-1px, 1px); opacity: 1; }
+      }
+
+      .dashboard-badge-card:hover .badge-store-cyl {
+        animation: store-bounce 1.2s ease-in-out infinite alternate;
+      }
+      @keyframes store-bounce {
+        from { transform: translateY(0); }
+        to { transform: translateY(-3px); }
+      }
+
+      .dashboard-badge-card:hover .badge-proc-orbit1 {
+        transform-origin: 32px 32px;
+        animation: spin-clockwise 3s linear infinite;
+      }
+      .dashboard-badge-card:hover .badge-proc-orbit2 {
+        transform-origin: 32px 32px;
+        animation: spin-counter 3s linear infinite;
+      }
+      @keyframes spin-clockwise {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes spin-counter {
+        to { transform: rotate(-360deg); }
+      }
+
+      .dashboard-badge-card:hover .badge-serve-bar {
+        transform-origin: bottom;
+        animation: bar-grow 0.8s ease-in-out infinite alternate;
+      }
+      @keyframes bar-grow {
+        from { transform: scaleY(0.8); }
+        to { transform: scaleY(1.2); }
+      }
+      .dashboard-badge-card:hover .badge-serve-lens {
+        animation: lens-float 1.5s ease-in-out infinite alternate;
+      }
+      @keyframes lens-float {
+        from { transform: translate(0, 0); }
+        to { transform: translate(-2px, -2px); }
+      }
+
+      .dashboard-badge-card:hover .badge-gen-sparkle {
+        transform-origin: 32px 32px;
+        animation: sparkle-rotate 2s linear infinite;
+      }
+      .dashboard-badge-card:hover .badge-gen-node {
+        animation: node-blink 1s ease-in-out infinite alternate;
+      }
+      @keyframes sparkle-rotate {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes node-blink {
+        from { opacity: 0.4; }
+        to { opacity: 1; }
+      }
+
+      .dashboard-badge-card:hover .badge-ops-loop {
+        stroke-dasharray: 20 5;
+        animation: loop-flow 1.5s linear infinite;
+      }
+      @keyframes loop-flow {
+        to { stroke-dashoffset: -25; }
+      }
+
+      .dashboard-badge-card:hover .badge-net-line {
+        stroke-dasharray: 5 3;
+        animation: net-flow 1s linear infinite;
+      }
+      @keyframes net-flow {
+        to { stroke-dashoffset: -8; }
+      }
+
+      .dashboard-badge-card:hover .badge-sec-shield {
+        animation: shield-pulse 1s ease-in-out infinite alternate;
+      }
+      @keyframes shield-pulse {
+        from { filter: drop-shadow(0 0 2px rgba(100,116,139,0.3)); }
+        to { filter: drop-shadow(0 0 8px rgba(100,116,139,0.7)); }
+      }
+
+      .dashboard-badge-card:hover .badge-fin-coin {
+        transform-origin: 32px 32px;
+        animation: coin-spin 1.5s ease-in-out infinite alternate;
+      }
+      @keyframes coin-spin {
+        from { transform: scaleX(1); }
+        to { transform: scaleX(-1); }
+      }
+
+      .dashboard-badge-card:hover .badge-oop-bracket {
+        animation: bracket-shake 0.8s ease-in-out infinite alternate;
+      }
+      @keyframes bracket-shake {
+        from { transform: translateX(-1px); }
+        to { transform: translateX(1px); }
+      }
+
+      .dashboard-badge-card:hover .badge-play-siren {
+        animation: siren-alert 0.4s linear infinite alternate;
+      }
+      @keyframes siren-alert {
+        from { fill: #ef4444; filter: drop-shadow(0 0 1px #ef4444); }
+        to { fill: #3b82f6; filter: drop-shadow(0 0 8px #3b82f6); }
+      }
+
+      .dashboard-badge-card:hover .badge-plat-layer {
+        animation: layer-lift 1.2s ease-in-out infinite alternate;
+      }
+      @keyframes layer-lift {
+        from { transform: translateY(0); }
+        to { transform: translateY(-4px); }
       }
     `;
     document.head.appendChild(styleEl);
