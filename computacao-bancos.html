@@ -606,6 +606,208 @@ aws elbv2 describe-target-health \
         </div>
       </div>
     </section>
+
+    <!-- SECTION 5: GUIA E COMPARAÇÃO DE BANCOS DE DADOS AWS -->
+    <section class="section" id="aws-databases-guide">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Tipos de Bancos de Dados AWS: Guia de Tomada de Decisão</h2>
+          <p>Mapeamento completo de engines de banco, tipos de dados e quando usar</p>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Banco AWS</th>
+              <th>Modelo / Engine</th>
+              <th>Vantagem Crítica</th>
+              <th>trade-offs / Limites</th>
+              <th>Caso de Uso Recomendado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Amazon RDS</strong></td>
+              <td>Relacional (OLTP) - Postgres, MySQL, Oracle, SQL Server</td>
+              <td>Compatibilidade total com drivers e bibliotecas tradicionais.</td>
+              <td>Replicação Multi-AZ lenta baseada em EBS. Dificuldade de escalar escritas globalmente.</td>
+              <td>Sistemas transacionais legados, ERPs clássicos, CRMs com relações complexas de chaves estrangeiras.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Aurora</strong></td>
+              <td>Relacional (OLTP compatível) - Postgres/MySQL</td>
+              <td>Armazenamento compartilhado atômico de log, auto-healing, failover em 3s, até 15 réplicas sem lag de leitura.</td>
+              <td>Custo superior ao RDS tradicional para instâncias muito pequenas (não analíticas).</td>
+              <td>**Sistemas transacionais modernos de altíssima concorrência** e APIs corporativas escaláveis.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon DynamoDB</strong></td>
+              <td>NoSQL (Chave-Valor / Documento)</td>
+              <td>Serverless, escala infinita com latência estável inferior a 10ms (single-digit). Latência global via Global Tables.</td>
+              <td>Não suporta joins relacionais natively. Exige modelagem rigorosa de acesso (Single-Table Design).</td>
+              <td>Carrinhos de compras, catálogo de produtos, sessão de usuários e logs de auditoria rápida.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon DocumentDB</strong></td>
+              <td>NoSQL (Documento compatível com MongoDB)</td>
+              <td>Totalmente gerenciado, escala para milhões de leituras por segundo integrando JSON nativo.</td>
+              <td>Não suporta queries de joins analíticos complexos de forma performática.</td>
+              <td>Gerenciadores de conteúdo (CMS), catálogos com atributos altamente dinâmicos e variáveis.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon ElastiCache</strong></td>
+              <td>Em Memória (Redis / Memcached)</td>
+              <td>Latência sub-milissegundo para queries repetidas e processamento de pub/sub rápido.</td>
+              <td>Dados voláteis na RAM (mesmo com persistência ligada, o custo de RAM por GB é altíssimo).</td>
+              <td>Caching de sessões HTTP, tabelas de classificação em tempo real e buffers de mensagens de alta vazão.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Neptune</strong></td>
+              <td>Grafo (RDF / Property Graph)</td>
+              <td>Armazena e navega em relacionamentos altamente interconectados com velocidade milissegunda.</td>
+              <td>Linguagens de query específicas (Gremlin, SPARQL).</td>
+              <td>Sistemas de detecção de fraude, motores de recomendação de amigos/produtos e redes sociais.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Timestream</strong></td>
+              <td>Séries Temporais (Time-Series)</td>
+              <td>Auto-scaling nativo para bilhões de métricas de IoT diárias, ciclo de vida automático (in-memory para magnetic storage).</td>
+              <td>Restrito a dados ordenados por timestamp imutáveis.</td>
+              <td>Telemetria IoT de sensores industriais, métricas de aplicações de infraestrutura, logs de cliques.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Redshift</strong></td>
+              <td>MPP Data Warehouse (OLAP)</td>
+              <td>Armazenamento colunar com processamento massivo em paralelo para petabytes de dados analíticos.</td>
+              <td>Latência de gravação linha a linha péssima. Não deve ser usado como banco de API de microsserviços.</td>
+              <td>**Data Warehousing corporativo centralizado**, agregação histórica pesada e queries de BI corporativo.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 6: COMPARATIVO SQL VS NOSQL VS SQS -->
+    <section class="section" id="sql-nosql-sqs">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Comparativo e Matriz de Decisão: SQL vs. NoSQL vs. SQS</h2>
+          <p> trade-offs arquiteturais entre persistência transacional, escalabilidade e desacoplamento assíncrono</p>
+        </div>
+      </div>
+
+      <p>Um erro de design comum em arquiteturas distribuídas na AWS é tentar usar a mesma tecnologia para objetivos computacionais opostos. Abaixo detalhamos a comparação física e lógica das soluções:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Característica</th>
+              <th>SQL (ex: Aurora Postgres)</th>
+              <th>NoSQL (ex: DynamoDB)</th>
+              <th>SQS (Simple Queue Service)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Natureza do Serviço</strong></td>
+              <td>Banco de Dados Relacional estruturado (Tabelas/Esquemas rígidos).</td>
+              <td>Banco de Dados Não-Relacional distribuído (Chave-Valor/Documento).</td>
+              <td>Mensageria / Fila de Mensagens distribuída (Fila FIFO ou Standard).</td>
+              </tr>
+            <tr>
+              <td><strong>Garantias de Consistência</strong></td>
+              <td>Transações ACID estritas (isolação serializável, chaves estrangeiras, consistência forte imediata).</td>
+              <td>Eventualmente consistente (consistência forte sob demanda pagando taxa adicional). Sem ACID nativo multi-tabelas clássico.</td>
+              <td>Exactly-Once (em filas FIFO) ou At-Least-Once (filas Standard). Desacoplamento temporal.</td>
+            </tr>
+            <tr>
+              <td><strong>Escalabilidade de Escrita</strong></td>
+              <td>Vertical (Writer único no Aurora, escala até limites da máquina). Réplicas apenas lêem.</td>
+              <td>Horizontal infinita (auto-scaling automático adicionando partições baseadas nas PKs).</td>
+              <td>Praticamente infinita (escala automaticamente sem provisionamento prévio).</td>
+            </tr>
+            <tr>
+              <td><strong>Padrão de Consulta</strong></td>
+              <td>Queries ad-hoc altamente complexas, joins multi-tabelas, agregações arbitrárias (<code>GROUP BY</code>).</td>
+              <td>Apenas por chaves primárias e índices secundários conhecidos (GSI/LSI). Sem joins.</td>
+              <td>Apenas leitura destrutiva sequencial (consumidor lê a mensagem da fila e a deleta após processar).</td>
+            </tr>
+            <tr>
+              <td><strong>Decisão de Uso (Quando Escolher?)</strong></td>
+              <td>**Quando a integridade relacional é lei** e as queries são imprevisíveis (ex: fechamento contábil, BI flexível).</td>
+              <td>**Quando o padrão de acesso é conhecido** e você exige escala linear infinita com latência estável milissegunda.</td>
+              <td>**Para desacoplar microsserviços**, amortecer picos de carga de escrita (Buffer/Throttling) e garantir resiliência assíncrona.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 30px;">Qual a Melhor Decisão de Quando Usar? (Arquitetura de Ingress Segura)</h3>
+      <p>Em sistemas produtivos resilientes, o design de ingress combina os três serviços em um fluxo cooperativo:</p>
+
+      <div class="dw" style="text-align: center; margin: 24px 0;">
+        <svg viewBox="0 0 760 220" width="760" height="220" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="220" fill="#0f172a" rx="14"/>
+          <text x="380" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="700" letter-spacing="1">ARQUITETURA DE INGRESS COOPERATIVA: SQS + NOSQL + SQL</text>
+          
+          <!-- Client -->
+          <rect x="20" y="80" width="110" height="60" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="75" y="115" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="700">Client / API</text>
+          
+          <path d="M 130 110 L 200 110" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="165" y="100" text-anchor="middle" fill="#cbd5e1" font-size="7">1. Envia Carga</text>
+
+          <!-- SQS (Buffer) -->
+          <rect x="200" y="80" width="130" height="60" rx="6" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="265" y="110" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Amazon SQS</text>
+          <text x="265" y="125" text-anchor="middle" fill="#94a3b8" font-size="7">(Buffer Assíncrono)</text>
+
+          <!-- Lambda Consumer -->
+          <path d="M 330 110 L 400 110" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="365" y="100" text-anchor="middle" fill="#cbd5e1" font-size="7">2. Consome Batch</text>
+
+          <rect x="400" y="80" width="130" height="60" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="465" y="110" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="700">Lambda Worker</text>
+
+          <!-- Splits to DBs -->
+          <!-- To DynamoDB -->
+          <path d="M 530 100 L 590 70" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="560" y="70" text-anchor="middle" fill="#10b981" font-size="7">3A. Persiste Chave</text>
+
+          <rect x="590" y="40" width="140" height="50" rx="6" fill="#1e293b" stroke="#10b981"/>
+          <text x="660" y="65" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700">DynamoDB (NoSQL)</text>
+          <text x="660" y="77" text-anchor="middle" fill="#94a3b8" font-size="6.5">Buscas de Estado Rápidas</text>
+
+          <!-- To Aurora -->
+          <path d="M 530 120 L 590 150" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="560" y="145" text-anchor="middle" fill="#ef4444" font-size="7">3B. Transação ACID</text>
+
+          <rect x="590" y="130" width="140" height="50" rx="6" fill="#1e293b" stroke="#ef4444"/>
+          <text x="660" y="155" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="700">Aurora DB (SQL)</text>
+          <text x="660" y="167" text-anchor="middle" fill="#94a3b8" font-size="6.5">Consistência Financeira</text>
+
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="callout callout-info" style="margin-top:20px;">
+        <strong>Regra de Ouro da Arquitetura Decisória:</strong>
+        <br>1. Use **SQS** na borda (Ingress) sempre que receber dados de sensores ou eventos externos massivos de e-commerce. A fila garante que a sua API responda "202 Accepted" em milissegundos, impedindo que picos de tráfego derrubem ou gerem exaustão de conexões físicas no banco de dados.
+        <br>2. Use o **NoSQL (DynamoDB)** para dados operacionais desestruturados ou rastreamento rápido de estado de curta duração (ex: se o pagamento foi processado ou não).
+        <br>3. Use o **SQL (Aurora)** apenas quando a mensagem for validada e precisar de consistência relacional estrita (ex: alterar balanço de contas bancárias ou gerar a fatura consolidada final do cliente).
+      </div>
+    </section>
   </main>
 </div>
 
