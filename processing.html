@@ -291,51 +291,111 @@
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
           <h2>Arquitetura e Ciclo de Execução Spark</h2>
-          <p>Orquestração distribuída entre Driver, Cluster Manager e Executors</p>
+          <p>Orquestração distribuída profunda: Driver, Cluster Manager e Workers/Executors</p>
         </div>
       </div>
 
-      <div class="dw">
-        <svg viewBox="0 0 820 440" width="820" height="440" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="820" height="440" fill="#0f172a"/>
-          <!-- CLIENT -->
-          <rect x="16" y="170" width="108" height="80" rx="10" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-          <text x="70" y="204" text-anchor="middle" fill="#38bdf8" font-size="9" letter-spacing="1">CLIENT</text>
-          <text x="70" y="220" text-anchor="middle" fill="#f8fafc" font-size="9" font-weight="500">spark-submit</text>
-          <line x1="124" y1="210" x2="168" y2="210" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4,2"/>
-          <polygon points="168,205 178,210 168,215" fill="#cbd5e1"/>
+      <p>A execução física de uma aplicação Spark segue um modelo mestre-escravo coordenado de forma centralizada pelo **Driver Node** e escalado horizontalmente através de **Workers (Executors)** controlados por um **Cluster Manager** (como YARN, Kubernetes ou o mestre do EMR). Compreender os componentes lógicos abaixo é essencial:</p>
 
-          <!-- DRIVER -->
-          <rect x="178" y="128" width="158" height="168" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
-          <text x="257" y="147" text-anchor="middle" fill="#f8fafc" font-size="9" font-weight="700">DRIVER NODE</text>
-          <rect x="192" y="180" width="130" height="20" rx="5" fill="#0f172a" stroke="#cbd5e1"/>
-          <text x="257" y="193" text-anchor="middle" fill="#38bdf8" font-size="8">DAG Scheduler</text>
-          <rect x="192" y="210" width="130" height="20" rx="5" fill="#0f172a" stroke="#cbd5e1"/>
-          <text x="257" y="223" text-anchor="middle" fill="#38bdf8" font-size="8">Task Scheduler</text>
-          <line x1="336" y1="210" x2="382" y2="210" stroke="#cbd5e1" stroke-width="1.5"/>
-          <polygon points="382,205 392,210 382,215" fill="#cbd5e1"/>
+      <ul>
+        <li><strong>Driver (Mestre):</strong> O processo que executa o <code>main()</code> do usuário, inicia o <code>SparkSession</code>, constrói a DAG (Directed Acyclic Graph), coordena o planejamento lógico e físico das consultas com o Catalyst Optimizer e agenda tarefas físicas através do Task Scheduler.</li>
+        <li><strong>Cluster Manager:</strong> O enforcer externo (ex: ResourceManager do YARN ou K8s Control Plane) que aloca contêineres e recursos de máquina física sob demanda ao cluster.</li>
+        <li><strong>Worker Node / Executor JVM:</strong> Processos isolados em execução nas máquinas do cluster que executam as tarefas individuais de dados (Tasks), armazenam dados em cache (Storage Memory) e gravam logs e dados intermediários de rede (Shuffle Files). Cada Executor possui vCPUs alocadas (cores) e memória RAM Heap/Off-Heap.</li>
+      </ul>
+
+      <div class="dw" style="text-align: center; margin: 24px 0;">
+        <svg viewBox="0 0 840 500" width="840" height="500" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="840" height="500" fill="#0f172a" rx="14"/>
+          <text x="420" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA DE CLUSTER E EXECUÇÃO DO APACHE SPARK</text>
+          
+          <!-- DRIVER BOX -->
+          <rect x="20" y="60" width="220" height="300" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+          <text x="130" y="85" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="700">DRIVER (SparkSession)</text>
+          
+          <rect x="35" y="110" width="190" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="130" y="128" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">User Main Code</text>
+          <text x="130" y="142" text-anchor="middle" fill="#64748b" font-size="7">(PySpark/Scala Application)</text>
+
+          <rect x="35" y="165" width="190" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="130" y="183" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">DAG Scheduler</text>
+          <text x="130" y="197" text-anchor="middle" fill="#64748b" font-size="7">(Jobs -> Stages por Shuffle)</text>
+
+          <rect x="35" y="220" width="190" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="130" y="238" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">Task Scheduler</text>
+          <text x="130" y="252" text-anchor="middle" fill="#64748b" font-size="7">(Despacha Tasks para Executores)</text>
+
+          <rect x="35" y="275" width="190" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="130" y="293" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">Scheduler Backend</text>
+          <text x="130" y="307" text-anchor="middle" fill="#64748b" font-size="7">(Interage c/ Cluster Manager)</text>
+
+          <rect x="35" y="325" width="190" height="25" rx="4" fill="#0f172a" stroke="#a78bfa"/>
+          <text x="130" y="341" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Block Manager Master</text>
 
           <!-- CLUSTER MANAGER -->
-          <rect x="392" y="168" width="128" height="84" rx="10" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-          <text x="456" y="200" text-anchor="middle" fill="#cbd5e1" font-size="9" letter-spacing="1">YARN / K8S</text>
-          <line x1="520" y1="210" x2="566" y2="150" stroke="#2563eb" stroke-width="1.5"/>
+          <rect x="270" y="160" width="180" height="100" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="360" y="185" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="700">CLUSTER MANAGER</text>
+          <text x="360" y="205" text-anchor="middle" fill="#cbd5e1" font-size="9">(YARN / K8S / EMR)</text>
+          <text x="360" y="230" text-anchor="middle" fill="#64748b" font-size="8">Aloca contêineres e vCPUs</text>
+          <text x="360" y="245" text-anchor="middle" fill="#64748b" font-size="8">durante o ciclo de vida</text>
 
-          <!-- WORKER -->
-          <rect x="566" y="44" width="240" height="132" rx="10" fill="#1e293b" stroke="#2563eb" stroke-width="1.5"/>
-          <text x="686" y="66" text-anchor="middle" fill="#2563eb" font-size="9" letter-spacing="1">WORKER NODE</text>
-          <rect x="578" y="76" width="100" height="88" rx="8" fill="#0f172a" stroke="#cbd5e1"/>
-          <text x="628" y="94" text-anchor="middle" fill="#38bdf8" font-size="8">EXECUTOR</text>
-          <rect x="584" y="100" width="36" height="20" rx="4" fill="#1e293b" stroke="#2563eb"/>
-          <text x="602" y="113" text-anchor="middle" fill="#f8fafc" font-size="7">Core 1</text>
-          <rect x="624" y="100" width="36" height="20" rx="4" fill="#1e293b" stroke="#2563eb"/>
-          <text x="642" y="113" text-anchor="middle" fill="#f8fafc" font-size="7">Core 2</text>
+          <!-- WORKER BOX 1 -->
+          <rect x="480" y="60" width="340" height="185" rx="8" fill="#1e293b" stroke="#2563eb" stroke-width="1.5"/>
+          <text x="650" y="80" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">WORKER NODE 1 (Executor JVM)</text>
+          
+          <rect x="495" y="95" width="145" height="135" rx="6" fill="#0f172a" stroke="#10b981"/>
+          <text x="567" y="112" text-anchor="middle" fill="#10b981" font-size="8.5" font-weight="700">Executor Heap Memory</text>
+          <text x="567" y="125" text-anchor="middle" fill="#64748b" font-size="7">(Storage &amp; Execution)</text>
+          <rect x="505" y="135" width="55" height="40" rx="4" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="532" y="153" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">Task 1</text>
+          <text x="532" y="165" text-anchor="middle" fill="#cbd5e1" font-size="6.5">Core 1</text>
+          <rect x="575" y="135" width="55" height="40" rx="4" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="602" y="153" text-anchor="middle" fill="#38bdf8" font-size="8" font-weight="700">Task 2</text>
+          <text x="602" y="165" text-anchor="middle" fill="#cbd5e1" font-size="6.5">Core 2</text>
+          <rect x="505" y="185" width="125" height="35" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="567" y="200" text-anchor="middle" fill="#cbd5e1" font-size="7.5" font-weight="700">Block Manager Local</text>
 
-          <!-- HIERARQUIA -->
-          <rect x="16" y="350" width="540" height="72" rx="10" fill="#1e293b" stroke="#cbd5e1"/>
-          <text x="280" y="365" text-anchor="middle" fill="#cbd5e1" font-size="8.5">HIERARQUIA DE EXECUÇÃO</text>
-          <text x="280" y="395" text-anchor="middle" fill="#f8fafc" font-size="9.5">JOBS ➔ STAGES (separados por shuffle) ➔ TASKS (1 por partição)</text>
+          <rect x="655" y="95" width="150" height="135" rx="6" fill="#0f172a" stroke="#ef4444"/>
+          <text x="730" y="112" text-anchor="middle" fill="#ef4444" font-size="8.5" font-weight="700">Off-Heap (Tungsten)</text>
+          <text x="730" y="128" text-anchor="middle" fill="#64748b" font-size="7">Dados Binários sem GC</text>
+          <rect x="665" y="145" width="130" height="70" rx="4" fill="#1e293b" stroke="#ef4444"/>
+          <text x="730" y="165" text-anchor="middle" fill="#f8fafc" font-size="8">Shuffle Buffers</text>
+          <text x="730" y="180" text-anchor="middle" fill="#f8fafc" font-size="8">Sort-Merge Workspace</text>
+          <text x="730" y="195" text-anchor="middle" fill="#f8fafc" font-size="8">Hash Maps em Bytes</text>
+
+          <!-- WORKER BOX 2 -->
+          <rect x="480" y="260" width="340" height="110" rx="8" fill="#1e293b" stroke="#2563eb" stroke-width="1.5"/>
+          <text x="650" y="280" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">WORKER NODE 2 (Executor JVM)</text>
+          <rect x="495" y="295" width="310" height="65" rx="6" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="650" y="315" text-anchor="middle" fill="#cbd5e1" font-size="9" font-weight="700">Tasks Executivas ... (Cores do Sistema)</text>
+          <text x="650" y="335" text-anchor="middle" fill="#64748b" font-size="8">Consome RAM e executa a lineage de transformações de RDD</text>
+
+          <!-- CONNECTING ARROWS -->
+          <!-- Driver to Cluster Manager -->
+          <path d="M 240 180 L 270 180" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <path d="M 270 200 L 240 200" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <!-- Cluster Manager to Workers -->
+          <path d="M 450 180 L 480 140" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <path d="M 450 220 L 480 280" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <!-- Driver to Workers (Tasks Launch & Heartbeat) -->
+          <path d="M 130 360 L 130 430 L 650 430 L 650 370" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrow)"/>
+          <text x="390" y="420" text-anchor="middle" fill="#10b981" font-size="8.5">Comunicação Bidirecional: Lançamento de Tasks, Resultados e Heartbeats de Saúde</text>
+
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b"/>
+            </marker>
+          </defs>
         </svg>
       </div>
+
+      <h3 style="margin-top:20px;">Ciclo de Execução: Do Código da Aplicação à Computação no Cluster</h3>
+      <p>Quando uma ação (Action) é chamada na aplicação PySpark:</p>
+      <ol>
+        <li><strong>Criação do Plano Lógico:</strong> O Spark compila o código em uma DAG de transformações lógicas lazy.</li>
+        <li><strong>Divisão em Jobs:</strong> Cada Action dispara exatamente um **Job** no Spark.</li>
+        <li><strong>Fatiamento em Stages:</strong> O DAG Scheduler analisa as dependências lógicas. Se houver dependência estreita (Narrow Dependency, ex: <code>select</code>, <code>filter</code>), as operações rodam juntas no mesmo estágio. Se houver dependência larga (Wide Dependency, ex: <code>groupBy</code>, <code>join</code>), o Spark quebra a execução em um novo **Stage**, pois exige troca de registros pela rede (**Shuffle**).</li>
+        <li><strong>Despacho de Tasks:</strong> Cada Stage é dividido em **Tasks** físicas (exatamente uma task para cada partição de dados do DataFrame). O Task Scheduler despacha as tasks para os executores com capacidade ociosa de cores.</li>
+      </ol>
     </section>
 
     <section class="section" id="spark-math">
@@ -1311,8 +1371,8 @@ df_stream.writeStream \
         <div class="sec-num" style="color:var(--emr)">16</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Comparativo: Glue vs EMR EC2 vs EMR Serverless</h2>
-          <p>Guia de decisão para escolha da tecnologia de processamento ideal</p>
+          <h2>Comparativo e Guia de Decisão: Glue vs EMR EC2 vs EMR Serverless vs EMR on EKS</h2>
+          <p> Tradeoffs avançados de governança, infraestrutura e custos para pipelines Spark corporativos</p>
         </div>
       </div>
 
@@ -1321,50 +1381,127 @@ df_stream.writeStream \
           <thead>
             <tr>
               <th>Critério</th>
-              <th>AWS Glue</th>
-              <th>EMR on EC2</th>
-              <th>EMR Serverless</th>
-              <th>EMR on EKS</th>
+              <th>AWS Glue (Spark ETL)</th>
+              <th>Amazon EMR on EC2</th>
+              <th>Amazon EMR Serverless</th>
+              <th>Amazon EMR on EKS</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>Gerenciamento</strong></td>
-              <td>Serverless (Total)</td>
-              <td>Manual (Clusters)</td>
-              <td>Serverless (App)</td>
-              <td>K8s (Containerizado)</td>
+              <td><strong>Gerenciamento de Infra</strong></td>
+              <td>Serverless absoluto (zero controle de S.O. ou rede física de nós).</td>
+              <td>Manual e completo (gerenciamento de patches, VMs, YARN e armazenamento local HDFS/EBS).</td>
+              <td>Serverless de aplicação (você define vCPU/RAM por Worker, a AWS gerencia os servidores de execução).</td>
+              <td>Baseado em contêineres K8s (você gerencia o cluster EKS, Karpenter escala os nós de forma independente).</td>
             </tr>
             <tr>
-              <td><strong>Tempo de Inicialização</strong></td>
-              <td>1-3 min (Cold start)</td>
-              <td>5-10 min</td>
-              <td>Segundos (Pre-init)</td>
-              <td>Médio/Rápido (Karpenter)</td>
+              <td><strong>Tempo de Boot / Inicialização</strong></td>
+              <td>1 a 3 minutos (tempo de inicialização frio do container AWS).</td>
+              <td>5 a 12 minutos (provisionamento físico de instâncias EC2, bootstrap scripts e boot do YARN).</td>
+              <td>Segundos (quando usando capacidade pré-inicializada quente). Cold start padrão de 1-2 min.</td>
+              <td>Rápido (se o nó EKS já estiver quente) ou médio (Karpenter subindo novas máquinas em 1-2 min).</td>
             </tr>
             <tr>
-              <td><strong>Controle de Versão</strong></td>
-              <td>Limitado (AWS versions)</td>
-              <td>Total (Custom AMIs)</td>
-              <td>Médio (EMR Releases)</td>
-              <td>Total (Docker Images)</td>
+              <td><strong>Modelo de Precificação</strong></td>
+              <td>Cobrado por DPU (Data Processing Unit) ativa por hora, faturado ao segundo. Mais caro por hora de computação pura.</td>
+              <td>Custo padrão da instância EC2 + taxa adicional de software EMR (~25%). Suporta Spot e instâncias reservadas.</td>
+              <td>Cobrado por vCPU/hora e GB RAM/hora consumidos pelos Workers. 10% de prêmio sobre EC2 puro.</td>
+              <td>Custo da computação EC2/EKS pura + taxa EMR por DPU/Hora de execução do job Spark.</td>
             </tr>
             <tr>
-              <td><strong>Escalabilidade</strong></td>
-              <td>Automática (DPUs)</td>
-              <td>Manual / Autoscaling</td>
-              <td>Automática Inteligente</td>
-              <td>K8s HPA / Karpenter</td>
+              <td><strong>Customização do Sistema e Bibliotecas</strong></td>
+              <td>Baixa. Suporta apenas scripts Python extra e pacotes `.whl` / `.egg` via parâmetros de Job.</td>
+              <td>Total. Permite criar imagens AMIs customizadas do S.O., bootstrap scripts arbitrários no boot do nó.</td>
+              <td>Média-Alta. Permite registrar e usar imagens de contêiner customizadas do ECR para runtime próprio.</td>
+              <td>Total. Você cria o Dockerfile completo com bibliotecas compiladas C++/Fortran e pacotes customizados.</td>
             </tr>
             <tr>
-              <td><strong>Custo / FinOps</strong></td>
-              <td>Caro para 24/7</td>
-              <td>Mais barato (Spot/RI)</td>
-              <td>Equilibrado (Pay-per-use)</td>
-              <td>Melhor p/ Densidade/Spot</td>
+              <td><strong>Escalabilidade Distribuída</strong></td>
+              <td>Autoscaling nativo baseado no backlog de execução de tasks na fila do Spark.</td>
+              <td>Autoscaling do EMR (gerenciado via métricas do CloudWatch e YARN memory).</td>
+              <td>Autoscaling nativo ultra veloz que ajusta dinamicamente a contagem de workers ativos por job.</td>
+              <td>Agendamento K8s com Karpenter escalando nós físicos do cluster sob demanda.</td>
+            </tr>
+            <tr>
+              <td><strong>Cenário de Uso Ideal</strong></td>
+              <td>ETLs recorrentes simples, catalogação automática de dados e integrações serverless rápidas.</td>
+              <td>Trabalhos massivos 24/7 com cargas constantes, processamento tradicional HDFS ou clusters compartilhados de analistas.</td>
+              <td>Pipelines de produção de larga escala com cargas sazonais voláteis onde a equipe não quer gerenciar clusters.</td>
+              <td>Empresas com infraestrutura K8s consolidada, precisando de alta densidade e isolamento estrito via IRSA.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <h3 style="margin-top: 30px;">Famílias de Instâncias EC2 e Dimensionamento de Hardware</h3>
+      <p>Em ambientes EMR baseados em EC2 (ou EKS), a seleção da família de instâncias afeta drasticamente a performance física do Spark:</p>
+      <ul>
+        <li><strong>Memory-Optimized (Família R - ex: r5, r6g):</strong> Oferecem alta densidade de RAM por vCPU (8 GB de RAM por core). <strong>Padrão ouro para Spark</strong>, reduzindo o estouro de Heap JVM e minimizando a necessidade de <em>Spill to Disk</em> em joins Sort-Merge e operações de agregação pesadas.</li>
+        <li><strong>Compute-Optimized (Família C - ex: c5, c6g):</strong> Fornecem processamento bruto (2 GB de RAM por core). Indicado apenas para jobs de modelagem leve ou transformações semânticas pesadas (ex: cálculo de embeddings, criptografia de campos, geoprocessamento complexo) onde a RAM não é o gargalo.</li>
+        <li><strong>General Purpose (Família M - ex: m5, m6g):</strong> Proporção balanceada (4 GB de RAM por core). Boa opção para nós de Driver ou clusters pequenos de desenvolvimento compartilhado.</li>
+        <li><strong>Storage-Optimized (Família I - ex: i3, i3en):</strong> Equipados com discos físicos NVMe locais de altíssimo throughput. Indispensável para jobs massivos que exigem gravações monstruosas de <em>Shuffle</em>, servindo como área temporária extremamente veloz em substituição ao EBS tradicional.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="spark-ui-deepdive">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">16.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Guia Prático da Interface Spark UI</h2>
+          <p>Como ler métricas e depurar gargalos de memória e rede nas principais abas da interface</p>
+        </div>
+      </div>
+
+      <p>A <strong>Spark UI</strong> é a ferramenta de monitoramento em tempo real padrão do ecossistema. Engenheiros de dados seniores utilizam as abas lógicas abaixo para caçar gargalos de desempenho físico:</p>
+
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>1. Jobs Tab</h4>
+          <p>Fornece uma linha do tempo macro de todas as ações de dados executadas no código da aplicação. Cada Action de escrita, agrupamento ou contagem gera uma entrada de Job.</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>O que buscar:</strong> Padrões de execução em paralelo e o tempo total decorrido de processamento de ponta a ponta.</li>
+            <li><strong>Alerta vermelho:</strong> Múltiplos jobs sequenciais pequenos executados um após o outro, indicando que o desenvolvedor inseriu ações desnecessárias como <code>.count()</code> ou <code>.show()</code> no meio do pipeline de produção, forçando a quebra de lazy evaluation.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>2. Stages Tab</h4>
+          <p>Detalhamento de cada estágio isolado separado por Shuffles físicos. Fornece uma tabela descritiva das Tasks executadas.</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>Métrica Chave - GC Time (Tempo de Coleta de Lixo):</strong> Indica quanto tempo os executores Java passaram congelados para limpar objetos obsoletos da Heap. <strong>Se o GC Time ultrapassar 10% do tempo do Stage</strong>, aumente a Heap ou ative o Garbage Collector G1.</li>
+            <li><strong>Métrica Chave - Spill (Memory) / Spill (Disk):</strong> Ocorre quando os dados de uma partição não cabem na Execution Memory reservada. O Spark serializa os registros excedentes e grava no disco local. Isso <strong>degrada a performance em até 10x</strong>. Solução: aumente o paralelismo de partições ou mude para instâncias de maior RAM.</li>
+            <li><strong>Métrica Chave - Shuffle Read Blocked Time:</strong> Tempo que uma Task passou esperando dados chegarem via rede de outros executores. Valores altos indicam congestionamento de rede ou saturação física dos nós do cluster.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 15px;">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>3. Storage Tab</h4>
+          <p>Exibe os DataFrames ou RDDs que foram explicitamente colocados na memória do cluster por meio de comandos de cache (<code>.cache()</code> ou <code>.persist()</code>).</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>O que analisar:</strong> A fração do conjunto de dados que de fato reside na RAM do cluster (Fraction Cached). Se estiver abaixo de 100%, significa que o cluster sofreu eviction e está recalculando partições direto da fonte S3 durante as ações, gerando lentidão severa.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>4. Executors Tab</h4>
+          <p>Visão física de hardware de cada executor em execução na JVM dos workers.</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>O que monitorar:</strong> O volume total de dados gravados fisicamente em disco por executor e a contagem de tarefas ativas por core. É a melhor aba para identificar desvios bruscos de desbalanceamento de processamento por nó.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="border-left: 3px solid var(--spark); margin-top:15px;">
+        <h4>5. SQL Tab (Execution Plan Visualization)</h4>
+        <p>Desenha graficamente o plano físico compilado e otimizado pelo Catalyst Optimizer. É a aba mais importante para entender o comportamento computacional das queries.</p>
+        <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+          <li><strong>Whole-Stage CodeGen Inspection:</strong> Elementos e operadores agrupados em caixas azul-escuras marcadas com um asterisco (ex: <code>*(1) Sort</code> ou <code>*(2) HashAggregate</code>) representam trechos de código que foram compilados em um único loop em Java físico nativo, otimizados para velocidade.</li>
+          <li><strong>Join Selection Validation:</strong> Verifique se a query utilizou um <code>BroadcastHashJoin</code> ou se realizou um dispendioso <code>SortMergeJoin</code> com troca massiva de dados (Exchange). Isso valida se as regras de tamanho dinâmico do AQE funcionaram.</li>
+        </ul>
       </div>
     </section>
 

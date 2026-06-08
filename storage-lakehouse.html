@@ -300,41 +300,103 @@
         <div class="sec-num" style="color:var(--arch)">03</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--arch)"></div>
-          <h2>Formatos de Dados e Compressões</h2>
-          <p>Tradeoffs de desempenho e I/O de disco para armazenamento no S3</p>
+          <h2>Formatos de Dados e Compressões: Row-Based vs Columnar</h2>
+          <p>Tradeoffs de desempenho, taxas de compressão física e I/O de disco para armazenamento no Data Lake</p>
         </div>
       </div>
 
-      <p>Diferentes tipos de armazenamento analítico atendem a necessidades de I/O específicas de CPU e rede:</p>
+      <p>A forma como os dados são organizados fisicamente nos blocos de armazenamento (disco rígido ou S3) define a eficiência de leitura e escrita das aplicações de Big Data. Dividimos os formatos em duas categorias de layout lógico e físico:</p>
 
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--arch);">
+          <h4>Layout Baseado em Linha (Row-Based)</h4>
+          <p>Os dados são gravados no disco sequencialmente linha após linha (ex: Registro 1 [id, nome, valor], Registro 2 [id, nome, valor]).</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px; line-height:1.4;">
+            <li><strong>Modelos:</strong> CSV, JSON, XML, Apache Avro.</li>
+            <li><strong>Vantagem:</strong> Excelente throughput para **escritas rápidas**. Adicionar uma nova linha é apenas uma operação de append no final do arquivo.</li>
+            <li><strong>Desvantagem analítica:</strong> Se você rodar uma consulta que calcula a média do campo <code>valor</code> em 1 bilhão de registros, a CPU é forçada a ler todo o schema (id, nome) e carregar dados irrelevantes para a RAM, gerando gargalo massivo de I/O.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--arch);">
+          <h4>Layout Baseado em Coluna (Columnar)</h4>
+          <p>Os dados de uma coluna específica são agrupados e armazenados sequencialmente em blocos contíguos do disco.</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px; line-height:1.4;">
+            <li><strong>Modelos:</strong> Apache Parquet, Apache ORC.</li>
+            <li><strong>Vantagem:</strong> Ideal para **consultas analíticas (OLAP)**. O motor (Athena/Spark) executa o <em>Column Pruning</em>, lendo fisicamente apenas os offsets de bytes correspondentes às colunas consultadas e ignorando o restante do arquivo.</li>
+            <li><strong>Alta Taxa de Compressão:</strong> Como dados do mesmo tipo e domínio estão juntos (ex: sequência de números ou datas), algoritmos de compressão (como ZSTD ou Snappy) alcançam taxas muito maiores via codificação por dicionário ou Run-Length Encoding.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Tabela Comparativa Exaustiva de Formatos de Arquivo</h3>
       <div class="tbl-wrap">
         <table>
           <thead>
             <tr>
               <th>Formato</th>
-              <th>Layout de Disco</th>
-              <th>Dicionário &amp; Estatísticas</th>
-              <th>Vantagem Operacional</th>
+              <th>Layout Físico</th>
+              <th>Velocidade Escrita</th>
+              <th>Velocidade Leitura</th>
+              <th>Suporte a Schema Evolution</th>
+              <th>Eficiência de Compressão</th>
+              <th>Caso de Uso Recomendado</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><strong>Apache Parquet</strong></td>
               <td>Colunar</td>
-              <td>Sim. Armazena Min/Max e contagem de nulos por Row Group.</td>
-              <td>Permite ler colunas isoladas ignorando o restante (Column Pruning).</td>
+              <td>Baixa (exige bufferizar em RAM para ordenar em colunas antes de gravar)</td>
+              <td>Extremamente Alta (OLAP, Athena, Redshift Spectrum, Spark)</td>
+              <td>Excelente (suporta adição, remoção e reordenação de colunas)</td>
+              <td>Excelente (ZSTD, Snappy, codificação por dicionário)</td>
+              <td>**Camadas Silver e Gold do Data Lakehouse** para consultas de Business Intelligence e Analytics.</td>
             </tr>
             <tr>
               <td><strong>Apache Avro</strong></td>
-              <td>Orientado a Linha</td>
-              <td>Não. Esquema é embutido em formato JSON binário.</td>
-              <td>Excelente para escritas rápidas em massa em streaming (MSK/Kafka).</td>
+              <td>Baseado em Linha</td>
+              <td>Extremamente Alta (ideal para escrita rápida)</td>
+              <td>Média (precisa desserializar o registro completo para ler)</td>
+              <td>Excelente (esquema JSON robusto embutido no header)</td>
+              <td>Boa (compressão em blocos de registros)</td>
+              <td>**Ingestão de dados em Streaming** (MSK/Kafka, Event logs) onde a latência de gravação é prioridade.</td>
             </tr>
             <tr>
               <td><strong>ORC</strong></td>
               <td>Colunar</td>
-              <td>Sim. Estatísticas similares ao Parquet.</td>
-              <td>Alta eficiência em ambientes integrados ao ecossistema Hadoop/Hive.</td>
+              <td>Baixa</td>
+              <td>Extremamente Alta</td>
+              <td>Muito Boa</td>
+              <td>Excelente (geralmente mais compacto que o Parquet)</td>
+              <td>workloads analíticos integrados fortemente ao ecossistema Hive/Hadoop.</td>
+            </tr>
+            <tr>
+              <td><strong>JSON</strong></td>
+              <td>Baseado em Linha</td>
+              <td>Média</td>
+              <td>Baixa (exige parser de texto complexo de string para cada linha)</td>
+              <td>Excelente (altamente flexível, schema dinâmico)</td>
+              <td>Ruim (chaves de string repetidas em todas as linhas gastam muito espaço)</td>
+              <td>Intercâmbio de APIs de microsserviços e payloads de eventos brutos (landing zone Bronze).</td>
+            </tr>
+            <tr>
+              <td><strong>CSV</strong></td>
+              <td>Baseado em Linha</td>
+              <td>Alta</td>
+              <td>Muito Baixa (sem tipos, exige conversão de texto e scan de delimitadores)</td>
+              <td>Péssima (qualquer quebra de coluna ou quebra de linha em texto quebra o parser)</td>
+              <td>Ruim (apenas compressões simples como Gzip sobre texto)</td>
+              <td>Exportações pontuais simples para planilhas humanas ou relatórios temporários.</td>
+            </tr>
+            <tr>
+              <td><strong>XML</strong></td>
+              <td>Baseado em Linha</td>
+              <td>Baixa</td>
+              <td>Péssima (tags de marcação repetidas consomem muita CPU para parsear)</td>
+              <td>Regular</td>
+              <td>Péssima</td>
+              <td>Legados industriais, integrações de APIs de serviços governamentais antigos (ex: NFe).</td>
             </tr>
           </tbody>
         </table>

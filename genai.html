@@ -331,15 +331,36 @@
         </table>
       </div>
 
-      <h3 style="margin-top: 30px;">O papel do System Design Document (SDD) em Projetos de IA</h3>
-      <p>Em ambientes de Engenharia de Dados corporativos, a introdução de LLMs não deve ser feita de forma ad-hoc. O desenvolvimento exige um <strong>System Design Document (SDD)</strong> formal detalhando os seguintes limites operacionais:</p>
-      <ul>
-        <li><strong>SLAs de Performance e Latência:</strong> Estabelecer timeouts rígidos para chamadas de LLM (ex: falhar em 5s e usar fallback) e mecanismos de buffering e streaming de respostas para o usuário.</li>
-        <li><strong>Estratégias de Fallback (Redundância de Modelo):</strong> Se o Bedrock Sonnet retornar erro de limite de requisições por minuto (Throttling), o orquestrador deve redirecionar a query transparentemente para o Claude Haiku ou Llama 3 local/SageMaker.</li>
-        <li><strong>Caching Semântico:</strong> Uso de Redis para evitar reprocessar queries semanticamente idênticas, reduzindo custos de API em até 80%.</li>
-        <li><strong>Métricas de Avaliação Semântica (Evolutiva):</strong> Rastreamento contínuo de assertividade usando frameworks como **Ragas** (avaliando *Faithfulness* - fidelidade da resposta, e *Answer Relevance* - relevância da resposta ao prompt) e **G-Eval** (uso de LLMs potentes como juízes).</li>
-        <li><strong>Políticas de Consentimento e Privacidade (Guardrails):</strong> Bloqueio sistêmico na entrada de prompts e na saída de respostas de quaisquer PIIs (nomes, CPFs, cartões), protegendo a empresa contra vazamentos sob a LGPD/GDPR.</li>
-      </ul>
+      <h3 style="margin-top: 30px;">O papel e Ciclo de Vida do System Design Document (SDD) em Projetos de Engenharia de Dados e IA</h3>
+      <p>Em ambientes de Engenharia de Dados corporativos de larga escala, a introdução de modelos de linguagem e pipelines de dados inteligentes não deve ser feita de forma ad-hoc ou experimental. O desenvolvimento exige a elaboração de um <strong>System Design Document (SDD)</strong> formal. O SDD atua como o blueprint definitivo que traduz requisitos de negócio em especificações físicas e lógicas de arquitetura na nuvem.</p>
+
+      <h4>Os 5 Pilares Fundamentais do Ciclo de Vida de um SDD:</h4>
+      <ol>
+        <li><strong>Fase 1: Concepção, Alinhamento &amp; Escopo (Requisitos):</strong>
+          <br>Definição explícita de objetivos de negócio, limites operacionais e métricas de sucesso (KPIs). É nesta fase que se define os SLAs de latência (ex: tempo máximo de inferência de 2s), orçamentos de custo de API (FinOps) e politicas de consentimento/PII sob regulamentações de dados (LGPD).
+        </li>
+        <li><strong>Fase 2: Arquitetura Lógica e Fluxos de Integração:</strong>
+          <br>Desenho do fluxo lógico do dado (data flow). Especificação de como as queries fluirão do cliente para a orquestração do LLM e como o contexto do Data Lake será injetado. Define as regras de processamento (chunking semantic, busca híbrida k-NN + BM25, e algoritmos de Re-ranking).
+        </li>
+        <li><strong>Fase 3: Arquitetura Física, Infraestrutura e Segurança (AWS Stack):</strong>
+          <br>Mapeamento físico de recursos e serviços AWS. Definição do uso de instâncias, clusters OpenSearch, tabelas DynamoDB para cache e execução de Lambdas. Estabelece a segurança estrita de privilégio mínimo: Roles de execução IAM com boundaries, criptografia envelope via KMS CMKs e isolamento de rede através de VPC Endpoints e VPC PrivateLink.
+        </li>
+        <li><strong>Fase 4: Homologação, Testes e Avaliação Semântica (Evolutiva):</strong>
+          <br>Estabelecimento de benchmarks automatizados para avaliar o comportamento do modelo. Uso de frameworks de testes semânticos (como **Ragas** ou **TruLens**) avaliando métricas como *Faithfulness* (se o LLM usou apenas as informações do contexto do Data Lake), *Answer Relevance* (relevância da resposta à pergunta) e detecção de regressão em prompts novos.
+        </li>
+        <li><strong>Fase 5: Operação Ativa, Observabilidade e Feedback Loop:</strong>
+          <br>Monitoramento proativo em produção. Captura de tempos de processamento da JVM/Spark e taxas de erro HTTP nas APIs de inferência. Envio de métricas JMX e telemetria estruturada ao **DataDog** e CloudWatch, integrando alertas preditivos de desvio de custo e latência.
+        </li>
+      </ol>
+
+      <div class="abox note" style="margin-top:20px;">
+        <strong>Estrutura Padrão (Template) Recomendada para um SDD corporativo:</strong>
+        <br>• <strong>1. Visão Geral &amp; Contexto:</strong> Qual problema de dados estamos resolvendo e os objetivos finais.
+        <br>• <strong>2. Arquitetura Lógica:</strong> Diagrama de blocos de processamento do pipeline, chunking e estratégias de busca semântica.
+        <br>• <strong>3. Arquitetura Física &amp; IaC:</strong> Recursos AWS provisionados via Terraform, VPCs, conexões de rede e chaves KMS.
+        <br>• <strong>4. Segurança &amp; Governança:</strong> Boundaries IAM, sanitização de PIIs, LGPD Guardrails e logs de auditoria de chamadas.
+        <br>• <strong>5. Plano de Validação &amp; Monitoramento:</strong> Data Quality checks, TruLens/Ragas evaluations e dashboards no DataDog.
+      </div>
     </section>
 
     <section class="section" id="genai-pilares">
@@ -709,34 +730,37 @@ bedrock = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<sp
         <div class="sec-num" style="color:var(--genai)">04.5</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--genai)"></div>
-          <h2>Prompt Engineering, Personas &amp; Mitigação de Alucinações</h2>
-          <p>Técnicas de estruturação de personas com XML, grounding estrito e sintonia de hiperparâmetros determinísticos</p>
+          <h2>Prompt Engineering Avançado, Personas &amp; Mitigação de Alucinações</h2>
+          <p>Técnicas de estruturação de personas, Few-Shot, CoT, ReAct e a modularização de Agent Skills (SKILL)</p>
         </div>
       </div>
 
-      <p>Para obter saídas consistentes, reproduzíveis e estruturadas em pipelines de dados analíticos na AWS, a engenharia de prompt deve ir além de instruções vagas. Em produção, adotamos a definição formal de <strong>Personas</strong> especializadas e regras estritas de <strong>Grounding</strong> para eliminar alucinações.</p>
+      <p>Para obter saídas consistentes, estruturadas e reproduzíveis em pipelines de dados analíticos e inteligência artificial generativa na AWS, a engenharia de prompt deve seguir técnicas estruturadas de design de instrução. Adotamos as seguintes metodologias em produção:</p>
 
       <div class="concept-grid">
         <div class="concept-card genai-card">
-          <div class="cc-tag">Arquitetura</div>
-          <div class="cc-title">Definição de Personas Estritas</div>
-          <div class="cc-body">Formatamos o system prompt para blindar o papel do LLM. Ex: "Você atua estritamente como um compilador de regras SQL Athena. Se for perguntado algo fora deste escopo, recuse-se a responder." Isso reduz o desvio de contexto operacional.</div>
+          <div class="cc-tag">Instrução</div>
+          <div class="cc-title">Few-Shot Prompting</div>
+          <div class="cc-body">Injetar exemplos explícitos de entrada/saída estruturada no prompt (ex: envolvidos em tags XML <code>&lt;exemplo&gt;</code>) para ensinar o modelo a responder no formato exato desejado sem a necessidade de re-treinamento (fine-tuning).</div>
         </div>
 
         <div class="concept-card genai-card">
-          <div class="cc-tag">Hiperparâmetros</div>
-          <div class="cc-title">Tuning de Parâmetros</div>
-          <div class="cc-body">Para pipelines estruturados, configure <code>Temperature = 0.0</code> (máxima reproducibilidade), <code>Top_P = 0.1</code> e <code>Top_K = 1</code>. Isso força o modelo a selecionar apenas os tokens com maior probabilidade matemática, eliminando a criatividade geradora de alucinações.</div>
+          <div class="cc-tag">Raciocínio</div>
+          <div class="cc-title">Chain-of-Thought (CoT)</div>
+          <div class="cc-body">Forçar o modelo a construir o raciocínio passo a passo antes de emitir a resposta definitiva (ex: instruir a usar a tag XML <code>&lt;thinking&gt;</code>). Isso melhora drasticamente a taxa de sucesso de tarefas lógicas e matemáticas complexas.</div>
         </div>
 
         <div class="concept-card genai-card">
-          <div class="cc-tag">Segurança</div>
-          <div class="cc-title">Grounding &amp; Tags XML</div>
-          <div class="cc-body">Estruturar o prompt delimitando variáveis com tags XML (ex: <code>&lt;contexto&gt;</code>). Instruir explicitamente: "Qualquer afirmação fora do escopo delimitado por <code>&lt;contexto&gt;</code> deve ser respondida com 'NÃO ENCONTRADO'."</div>
+          <div class="cc-tag">Agentes</div>
+          <div class="cc-title">ReAct (Reason + Action)</div>
+          <div class="cc-body">Ciclo sequencial iterativo onde o Agente verbaliza seu pensamento (Thought), toma uma ação baseada em ferramentas do mundo real (Action - ex: invocar uma API via AWS Lambda), e avalia a resposta física (Observation) antes do próximo passo.</div>
         </div>
       </div>
 
-      <h3>Exemplo Prático: Persona de Auditor de Qualidade de Dados (Prompts com XML &amp; CoT)</h3>
+      <h3 style="margin-top: 30px;">O Conceito de Agent Skills (SKILL)</h3>
+      <p>Diferente de prompts estáticos ou pontuais, a arquitetura de **Agent Skills** (Habilidades de Agente) baseia-se em definir e expor blocos modulares e reutilizáveis de instruções, documentação ou scripts auxiliares dentro de arquivos estruturados no diretório de trabalho do agente (ex: sob uma pasta `skills/`). Isso estende a capacidade cognitiva do modelo de forma persistente, permitindo que ele aprenda regras de domínio complexas (como padrões SQL específicos, regras de migração da empresa ou de qualidade) sem encher o prompt de sistema.</p>
+
+      <h3>Exemplo Prático: Persona de Auditor de Qualidade de Dados (Prompts com XML, Few-Shot &amp; CoT)</h3>
       <p>O prompt abaixo instrui o modelo a agir como um Auditor de Schemas de Data Lakehouse, usando Chain of Thought para raciocínio lógico antes da tomada de decisão:</p>
 
       <pre style="background:#0f172a; color:#f8fafc;">&lt;system&gt;
