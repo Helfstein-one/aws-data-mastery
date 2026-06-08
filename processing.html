@@ -235,26 +235,26 @@
 
         <div class="concept-card spark-card">
           <div class="cc-tag">Compartilhamento</div>
-          <div class="cc-title">Shared Variables (Broadcast &amp; Accumulators)</div>
-          <div class="cc-body"><strong>Broadcast:</strong> Variáveis read-only distribuídas uma vez por nó (não por task). <strong>Accumulators:</strong> Variáveis write-only para contadores agregados de forma associativa e comutativa no Driver.</div>
+          <div class="cc-title">Variáveis Compartilhadas (Shared Variables)</div>
+          <div class="cc-body"><strong>Broadcast Variables:</strong> Distribuição read-only de tabelas lookup, cacheadas em cada nó (não por task). <strong>Accumulators:</strong> Contadores write-only agregados de forma associativa e comutativa no Driver (ex: contagem de erros lógicos).</div>
         </div>
 
         <div class="concept-card spark-card">
           <div class="cc-tag">Metadados</div>
           <div class="cc-title">Spark Catalog &amp; Hive Metastore</div>
-          <div class="cc-body">Interface de abstração para gerenciar metadados de tabelas, databases, funções e views. No EMR, geralmente integra-se ao <strong>AWS Glue Data Catalog</strong> para persistência global.</div>
+          <div class="cc-body">Interface de metadados relacionais para tabelas Spark SQL. O papel do Metastore é centralizar informações estruturais, apontamentos de S3 e partições. No EMR, integra-se via AWS Glue Data Catalog.</div>
         </div>
 
         <div class="concept-card spark-card">
           <div class="cc-tag">Performance</div>
           <div class="cc-title">Protocolos de Serialização</div>
-          <div class="cc-body">O Spark usa <strong>Java Serialization</strong> por padrão, mas o <strong>Kryo Serialization</strong> é recomendado por ser 10x mais compacto e veloz, reduzindo o uso de rede durante Shuffles.</div>
+          <div class="cc-body">A serialização é crucial na movimentação de rede. O Spark usa <strong>Java Serialization</strong> por padrão (lenta e pesada), mas <strong>Kryo Serialization</strong> é uma serialização compacta 10x mais veloz, ideal para representação binária interna e redução do gargalo de Shuffle.</div>
         </div>
 
         <div class="concept-card spark-card">
           <div class="cc-tag">Recurso</div>
-          <div class="cc-title">Spill to Disk</div>
-          <div class="cc-body">Mecanismo de segurança onde dados transbordam da RAM para o disco local (EBS/Instance Store). Causa lentidão massiva (I/O Wait), mas evita o travamento total do cluster por OOM.</div>
+          <div class="cc-title">Mecânica de Spill to Disk</div>
+          <div class="cc-body">O que acontece quando os dados transbordam da RAM (Execution Memory)? O Spark inicia o Spill, movendo as sobras para o disco local. Ocorre severa penalidade de I/O, multiplicando o tempo de processamento devido à contenção do EBS.</div>
         </div>
       </div>
 
@@ -430,7 +430,7 @@
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
           <h2>Hadoop, YARN e a Pirâmide de Execução do Spark</h2>
-          <p>A base física infraestrutural e a hierarquia lógica de comando</p>
+          <p>Aprofundamento na arquitetura base do EMR: Hadoop e YARN de baixo nível</p>
         </div>
       </div>
 
@@ -438,71 +438,78 @@
 
       <div class="grid-2">
         <div>
-          <h4>Componentes do YARN</h4>
+          <h4>Arquitetura Hadoop</h4>
           <ul>
-            <li><strong>ResourceManager (RM):</strong> O mestre global (no Master Node). Ele decide quem ganha recursos no cluster.</li>
-            <li><strong>NodeManager (NM):</strong> O agente local em cada Worker. Monitora o consumo de recursos do nó e reporta ao RM.</li>
-            <li><strong>ApplicationMaster (AM):</strong> Um container especial (um por aplicação Spark) que negocia recursos com o RM e coordena os Executors. No Spark, o Driver pode atuar como AM ou lançar um AM separado (modo cluster).</li>
+            <li><strong>HDFS (Hadoop Distributed File System):</strong> O sistema de arquivos distribuído baseado em blocos. Possui um <em>NameNode</em> (mestre que guarda a árvore de diretórios/metadados na RAM) e vários <em>DataNodes</em> (workers que guardam os blocos físicos de dados).</li>
+            <li><strong>Replicação Física:</strong> Por padrão, o HDFS replica cada bloco de dados 3 vezes em nós distintos, garantindo altíssima tolerância a falhas físicas de hardware.</li>
+            <li><strong>Spark vs MapReduce:</strong> O antigo MapReduce gravava os resultados intermediários sempre no disco HDFS após cada fase, tornando-o extremamente lento. O Spark mantém os dados transitórios na RAM, sendo até 100x mais rápido.</li>
           </ul>
         </div>
         <div>
-          <h4>A Pirâmide de Execução Spark</h4>
-          <p>Existe uma hierarquia rigorosa de como o código se transforma em processamento:</p>
-          <ol>
-            <li><strong>Application:</strong> O programa completo (ex: seu script PySpark).</li>
-            <li><strong>Job:</strong> Disparado por uma <em>Action</em> (ex: <code>.save()</code>, <code>.collect()</code>).</li>
-            <li><strong>Stage:</strong> Conjunto de tasks que podem rodar sem mover dados pela rede. Quebrado por <em>Shuffles</em>.</li>
-            <li><strong>Task:</strong> A menor unidade de trabalho. Processa <strong>uma única partição física</strong> de dados em <strong>um único core</strong> de CPU.</li>
-          </ol>
+          <h4>Funcionamento do YARN</h4>
+          <ul>
+            <li><strong>ResourceManager (RM):</strong> O mestre global (no Master Node). Ele é o árbitro supremo que decide quem ganha recursos no cluster.</li>
+            <li><strong>NodeManager (NM):</strong> O daemon rodando em cada nó Worker. Monitora o consumo de CPU/RAM local e reporta a saúde ao RM.</li>
+            <li><strong>ApplicationMaster (AM):</strong> Um container especial iniciado para cada aplicação (ex: um job Spark). Ele negocia ativamente recursos com o RM e coordena a execução das tasks distribuídas.</li>
+            <li><strong>Containers:</strong> Fatias isoladas de CPU (vCores) e RAM alocadas fisicamente nos Workers para rodar os Executors.</li>
+          </ul>
         </div>
       </div>
 
-      <!-- DIAGRAMA: PIRÂMIDE SPARK SOBRE YARN -->
+      <h3 style="margin-top: 30px;">A Pirâmide de Execução Spark (Hierarquia Lógica e Comandos)</h3>
+      <p>Existe uma hierarquia rigorosa de como o código se transforma em processamento distribuído:</p>
+      <ul>
+        <li><strong>Application:</strong> O programa completo (ex: seu script PySpark). Gerencia o ApplicationMaster no YARN.</li>
+        <li><strong>Job:</strong> Uma computação paralela disparada sempre que você chama uma <em>Action</em> (ex: <code>.save()</code>, <code>.collect()</code>, <code>.show()</code>).</li>
+        <li><strong>Stage:</strong> Cada Job é quebrado em Stages sempre que ocorre uma dependência larga (<em>Wide Dependency</em>), que força a troca de dados pela rede (<strong>Shuffle</strong>). Dentro de um Stage, todas as computações são pipelineadas na memória.</li>
+        <li><strong>Task:</strong> A menor e mais básica unidade de trabalho. Processa exatamente <strong>uma única partição física</strong> de dados sendo executada em <strong>um único core</strong> de CPU.</li>
+      </ul>
+
+      <!-- NOVO DIAGRAMA: PIRÂMIDE SPARK SOBRE YARN -->
       <div class="dw" style="text-align: center; margin: 30px 0;">
         <svg viewBox="0 0 800 450" width="800" height="450" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
           <rect width="800" height="450" fill="#0f172a" rx="14"/>
-          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700">MAPEAMENTO: HIERARQUIA LOGÍCA SPARK vs INFRAESTRUTURA YARN</text>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700">MAPEAMENTO: PIRÂMIDE DE EXECUÇÃO SPARK vs INFRAESTRUTURA YARN</text>
 
           <!-- Camada Aplicação -->
           <rect x="50" y="60" width="700" height="60" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
           <text x="60" y="85" fill="#38bdf8" font-size="12" font-weight="700">1. APPLICATION (Contexto PySpark)</text>
-          <text x="60" y="105" fill="#94a3b8" font-size="9">Escopo total do script. Gerencia o ApplicationMaster no YARN.</text>
+          <text x="60" y="105" fill="#94a3b8" font-size="9">Escopo total do script. Gerencia o ApplicationMaster negociando com o ResourceManager do YARN.</text>
 
           <!-- Camada Job -->
           <rect x="100" y="130" width="600" height="60" rx="6" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5"/>
           <text x="110" y="155" fill="#fbbf24" font-size="11" font-weight="700">2. JOBS (Disparados por Actions)</text>
-          <text x="110" y="175" fill="#94a3b8" font-size="9">df.write.parquet() -> Gera 1 Job. Contém 1 ou mais Stages.</text>
+          <text x="110" y="175" fill="#94a3b8" font-size="9">df.write.parquet() -> Action dispara 1 Job. Contém 1 ou mais Stages baseados na DAG.</text>
 
           <!-- Camada Stage -->
           <rect x="150" y="200" width="500" height="80" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
           <text x="160" y="225" fill="#f43f5e" font-size="11" font-weight="700">3. STAGES (Fronteiras de Shuffle)</text>
-          <text x="160" y="245" fill="#94a3b8" font-size="9">Stage 0: Leitura + Map. (Shuffle Write)</text>
-          <text x="160" y="265" fill="#94a3b8" font-size="9">Stage 1: Agregação. (Shuffle Read)</text>
+          <text x="160" y="245" fill="#94a3b8" font-size="9">Stage 0: Leitura de dados + Map + Filter. (Termina com Shuffle Write na rede)</text>
+          <text x="160" y="265" fill="#94a3b8" font-size="9">Stage 1: Join ou Agregação. (Inicia com Shuffle Read da rede)</text>
 
           <!-- Camada Task/Container -->
           <g>
             <rect x="200" y="290" width="180" height="120" rx="4" fill="#0f172a" stroke="#10b981"/>
-            <text x="290" y="310" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">YARN CONTAINER A</text>
+            <text x="290" y="310" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">YARN CONTAINER A (NM)</text>
             <rect x="210" y="320" width="160" height="30" rx="2" fill="#1e293b" stroke="#cbd5e1"/>
-            <text x="290" y="340" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 1 (Partição 0)</text>
+            <text x="290" y="340" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 1 (Core 1 + Partição 0)</text>
             <rect x="210" y="360" width="160" height="30" rx="2" fill="#1e293b" stroke="#cbd5e1"/>
-            <text x="290" y="380" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 2 (Partição 1)</text>
+            <text x="290" y="380" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 2 (Core 2 + Partição 1)</text>
           </g>
 
           <g>
             <rect x="420" y="290" width="180" height="120" rx="4" fill="#0f172a" stroke="#10b981"/>
-            <text x="510" y="310" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">YARN CONTAINER B</text>
+            <text x="510" y="310" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">YARN CONTAINER B (NM)</text>
             <rect x="430" y="320" width="160" height="30" rx="2" fill="#1e293b" stroke="#cbd5e1"/>
-            <text x="510" y="340" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 3 (Partição 2)</text>
+            <text x="510" y="340" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 3 (Core 1 + Partição 2)</text>
             <rect x="430" y="360" width="160" height="30" rx="2" fill="#1e293b" stroke="#cbd5e1"/>
-            <text x="510" y="380" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 4 (Partição 3)</text>
+            <text x="510" y="380" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 4 (Core 2 + Partição 3)</text>
           </g>
 
-          <text x="400" y="435" text-anchor="middle" fill="#64748b" font-size="8">Mapeamento físico: 1 Task = 1 CPU Core + 1 Partição de Dados</text>
+          <text x="400" y="435" text-anchor="middle" fill="#64748b" font-size="8">Mapeamento físico infraestrutural: 1 Task = 1 CPU Core isolado no Container YARN + 1 Partição física de Dados na RAM</text>
         </svg>
       </div>
     </section>
-
     <section class="section" id="spark-math">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--spark)">03</div>
@@ -1260,6 +1267,8 @@ df_stream.writeStream \
             <br><strong>spark.sql.adaptive.coalescePartitions.enabled = true:</strong> Junta partições pequenas pós-shuffle automaticamente para evitar overhead de agendamento de tasks minúsculas (small files na memória).
             <br><strong>spark.sql.adaptive.advisoryPartitionSizeInBytes = 134217728:</strong> Define o tamanho ideal de partição lida pós-shuffle como 128 MB (ótimo para vazão de I/O).
             <br><strong>spark.sql.adaptive.skewJoin.enabled = true:</strong> Detecta automaticamente desvios bruscos (skew) em chaves de join e divide partições gigantes em sub-tasks menores para processamento paralelo uniforme.
+            <br><strong>spark.sql.shuffle.partitions = "dinâmico":</strong> Em vez de usar o padrão de 200 (frequentemente incorreto), atrelar ao AQE permite a aglutinação automática pós-shuffle.
+            <br><strong>spark.storage.memoryMapThreshold = 2m:</strong> Ajusta o limite de mapeamento de memória em disco. Reduz o I/O drástico para arquivos parciais de shuffle se o executor tiver boa RAM livre.
           </div>
         </div>
 
@@ -1390,6 +1399,125 @@ df_stream.writeStream \
       </div>
     </section>
 
+    <section class="section" id="spark-e2e-integrations">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">21.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Integrações Fim a Fim &amp; Segurança (End-to-End)</h2>
+          <p>Fluxo operacional completo de dados e arquitetura de governança profunda no AWS Lakehouse</p>
+        </div>
+      </div>
+
+      <p>Em um ambiente Enterprise moderno de Data Engineering na AWS, o Spark não opera isoladamente. Abaixo mapeamos uma arquitetura comum de ingestão, processamento e serving, blindada sob os padrões de segurança do AWS Lake Formation e KMS.</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Fluxo Lógico de Dados</h4>
+          <ol>
+            <li><strong>Ingestão (MSK):</strong> Eventos brutos são enfileirados no Amazon MSK (Managed Kafka) em tempo real.</li>
+            <li><strong>Streaming (AWS Glue Streaming):</strong> Um job contínuo consome os tópicos do Kafka, aplica transformações e salva no S3 utilizando o formato transacional Delta Lake ou Apache Iceberg.</li>
+            <li><strong>Processamento Analítico (EMR Serverless):</strong> Jobs Batch programados ou event-driven processam as tabelas Delta gerando tabelas refinadas (Gold/Aggregates), explorando processamento distribuído massivo.</li>
+            <li><strong>Serving (Amazon Athena):</strong> Analistas consomem as tabelas prontas via queries SQL ad-hoc no Athena, sem necessidade de provisão de servidores.</li>
+          </ol>
+        </div>
+        <div>
+          <h4>Camada de Segurança e Governança</h4>
+          <ul style="font-size: 13px;">
+            <li><strong>AWS Lake Formation:</strong> Atua como um firewall centralizado de dados. Todo o acesso a nível de banco de dados, tabela e até mesmo coluna/linha é imposto uniformemente sobre o Glue, EMR e Athena.</li>
+            <li><strong>IAM IRSA (EMR on EKS):</strong> Delega identidades de forma atômica para cada Job do Spark. Se o Job A for comprometido, ele não terá acesso aos buckets do S3 do Job B.</li>
+            <li><strong>Criptografia (AWS KMS):</strong> Os dados são criptografados em repouso (SSE-KMS usando chaves Customer Managed Keys) nos buckets S3 e em trânsito (TLS) usando certificados gerados pelo ACM (AWS Certificate Manager) nos clusters.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="dw" style="text-align: center; margin: 30px 0;">
+        <svg viewBox="0 0 900 350" width="900" height="350" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+          <rect width="900" height="350" fill="#0f172a" rx="14" stroke="#334155" stroke-width="1.5"/>
+          <text x="450" y="30" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700" letter-spacing="1">ARQUITETURA DE INTEGRAÇÃO &amp; SEGURANÇA E2E</text>
+
+          <!-- Governance & Security Layer (Top) -->
+          <rect x="40" y="55" width="820" height="60" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4,4"/>
+          <text x="450" y="75" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">CAMADA DE SEGURANÇA GLOBAL &amp; GOVERNANÇA</text>
+
+          <rect x="150" y="85" width="180" height="20" rx="4" fill="#0f172a" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="240" y="99" text-anchor="middle" fill="#cbd5e1" font-size="9">AWS KMS (CMK Encryption)</text>
+
+          <rect x="360" y="85" width="180" height="20" rx="4" fill="#0f172a" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="450" y="99" text-anchor="middle" fill="#cbd5e1" font-size="9">AWS Lake Formation (RBAC)</text>
+
+          <rect x="570" y="85" width="180" height="20" rx="4" fill="#0f172a" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="660" y="99" text-anchor="middle" fill="#cbd5e1" font-size="9">AWS IAM (Roles/IRSA)</text>
+
+          <!-- Componentes (Middle) -->
+          <!-- Kafka / MSK -->
+          <rect x="40" y="160" width="140" height="110" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="110" y="185" text-anchor="middle" fill="#f43f5e" font-size="11" font-weight="700">1. Amazon MSK</text>
+          <text x="110" y="205" text-anchor="middle" fill="#cbd5e1" font-size="9">Ingestão de</text>
+          <text x="110" y="218" text-anchor="middle" fill="#cbd5e1" font-size="9">Eventos (Kafka)</text>
+          <text x="110" y="245" text-anchor="middle" fill="#64748b" font-size="8">TLS em Trânsito</text>
+
+          <!-- Glue Streaming -->
+          <rect x="230" y="160" width="140" height="110" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="300" y="185" text-anchor="middle" fill="#f59e0b" font-size="11" font-weight="700">2. Glue Streaming</text>
+          <text x="300" y="205" text-anchor="middle" fill="#cbd5e1" font-size="9">Processamento</text>
+          <text x="300" y="218" text-anchor="middle" fill="#cbd5e1" font-size="9">Contínuo (Spark)</text>
+          <text x="300" y="245" text-anchor="middle" fill="#64748b" font-size="8">Grava Delta/Iceberg</text>
+
+          <!-- Amazon S3 Lakehouse -->
+          <rect x="420" y="140" width="160" height="150" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2" stroke-dasharray="5,2"/>
+          <text x="500" y="165" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="700">3. Amazon S3</text>
+          <text x="500" y="180" text-anchor="middle" fill="#38bdf8" font-size="8">(Lakehouse Base)</text>
+          <rect x="440" y="195" width="120" height="30" rx="4" fill="#1e293b" stroke="#10b981"/>
+          <text x="500" y="213" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700">Silver (Delta)</text>
+          <rect x="440" y="235" width="120" height="30" rx="4" fill="#1e293b" stroke="#fbbf24"/>
+          <text x="500" y="253" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="700">Gold (Delta)</text>
+
+          <!-- EMR Serverless -->
+          <rect x="630" y="160" width="110" height="110" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="685" y="185" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700">EMR Serverless</text>
+          <text x="685" y="205" text-anchor="middle" fill="#cbd5e1" font-size="9">Batch Analytics</text>
+          <text x="685" y="245" text-anchor="middle" fill="#64748b" font-size="8">Lê Silver / Grava Gold</text>
+
+          <!-- Amazon Athena -->
+          <rect x="780" y="160" width="90" height="110" rx="8" fill="#1e293b" stroke="#0ea5e9" stroke-width="1.5"/>
+          <text x="825" y="185" text-anchor="middle" fill="#0ea5e9" font-size="11" font-weight="700">4. Athena</text>
+          <text x="825" y="205" text-anchor="middle" fill="#cbd5e1" font-size="9">SQL Serving</text>
+          <text x="825" y="245" text-anchor="middle" fill="#64748b" font-size="8">Ad-hoc Queries</text>
+
+          <!-- Setas de Fluxo -->
+          <!-- MSK to Glue -->
+          <path d="M 180 210 L 220 210" stroke="#cbd5e1" stroke-width="2" marker-end="url(#arrowGen)"/>
+          <!-- Glue to S3 Silver -->
+          <path d="M 370 210 L 430 210" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGen)"/>
+          <!-- S3 to EMR -->
+          <path d="M 580 200 L 620 200" stroke="#cbd5e1" stroke-width="2" marker-end="url(#arrowGen)"/>
+          <!-- EMR back to S3 Gold -->
+          <path d="M 620 220 L 580 220" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowGen)"/>
+          <!-- S3 Gold to Athena -->
+          <path d="M 580 250 L 735 250 L 735 210 L 770 210" stroke="#0ea5e9" stroke-width="2" fill="none" marker-end="url(#arrowGen)"/>
+
+          <!-- Ligações de Governança (Cima pra baixo) -->
+          <path d="M 110 115 L 110 150" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrowGov)"/>
+          <path d="M 300 115 L 300 150" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrowGov)"/>
+          <path d="M 500 115 L 500 135" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrowGov)"/>
+          <path d="M 685 115 L 685 150" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrowGov)"/>
+          <path d="M 825 115 L 825 150" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrowGov)"/>
+
+          <text x="450" y="325" text-anchor="middle" fill="#64748b" font-size="9">O Data Catalog é a fonte de metadados centralizada, e o Lake Formation intercepta todas as chamadas de IAM garantindo Zero-Trust.</text>
+
+          <defs>
+            <marker id="arrowGen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#cbd5e1"/>
+            </marker>
+            <marker id="arrowGov" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#8b5cf6"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </section>
+
     <section class="section" id="spark-erros">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--spark)">12</div>
@@ -1506,15 +1634,15 @@ df_stream.writeStream \
       <div class="grid-2">
         <div class="card" style="border-top: 3px solid var(--err);">
           <h4>🧵 Thread Dumps (Caça a Deadlocks)</h4>
-          <p>Se o job estiver <strong>BLOCKED</strong> mas a CPU estiver em 0%, você tem um Deadlock ou contenção de recurso externo.</p>
+          <p>Se o job estiver <strong>BLOCKED</strong> mas a CPU estiver em 0%, você tem um Deadlock ou contenção de recurso externo. Gere o Thread Dump via interface do YARN ou localmente nos Workers e busque por threads "WAITING (on object monitor)" para caçar o ponto exato de travamento no código.</p>
           <ul style="font-size: 12px; line-height: 1.4;">
             <li><strong>Como gerar:</strong> Use <code>jstack &lt;pid&gt;</code> no nó worker ou veja pela Spark UI (Executors -> Thread Dump).</li>
             <li><strong>O que buscar:</strong> Threads no estado <code>WAITING (on object monitor)</code> apontando para a mesma referência de memória.</li>
           </ul>
         </div>
         <div class="card" style="border-top: 3px solid var(--err);">
-          <h4>🧠 Heap Dumps sob OOM</h4>
-          <p>Para descobrir vazamentos de memória (Memory Leaks) em bibliotecas customizadas.</p>
+          <h4>🧠 Heap Dumps sob OOM (Memory Leaks)</h4>
+          <p>OOM provocado por código customizado mal escrito não se resolve aumentando a RAM. Configure <code>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/</code> para forçar a JVM a ejetar o estado completo da Heap. Extraia esse arquivo `.hprof` e abra-o no <strong>Eclipse Memory Analyzer (MAT)</strong> para apontar exatamente a linha de código Python/Scala que está retendo milhões de instâncias de objetos na memória desnecessariamente.</p>
           <ul style="font-size: 12px; line-height: 1.4;">
             <li><strong>Configuração:</strong> Adicione <code>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/spark-heapdump.hprof</code> nas <code>extraJavaOptions</code>.</li>
             <li><strong>Análise:</strong> Abra o arquivo <code>.hprof</code> no <strong>Eclipse Memory Analyzer (MAT)</strong> para ver quais objetos estão retendo a Heap.</li>
@@ -1523,8 +1651,8 @@ df_stream.writeStream \
       </div>
 
       <div class="abox note" style="margin-top: 15px;">
-        <strong>Análise Proativa de Garbage Collection:</strong>
-        <br>Habilite <code>-XX:+PrintGCDetails -XX:+PrintGCTimeStamps</code>. Se você observar "Full GC" frequentes seguidos de pouca liberação de memória, sua <strong>Old Generation</strong> está saturada. Aumentar a <code>spark.memory.fraction</code> pode piorar a situação; o fix real é aumentar a memória física do nó ou reduzir o paralelismo local.
+        <strong>Análise Proativa e Log de Garbage Collection:</strong>
+        <br>Habilite <code>-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps</code> nas `extraJavaOptions`. Entender os logs de GC revela se os objetos estão sobrevivendo à Eden Space muito rápido. Se observar "Full GC" frequentes seguidos de pouca liberação de memória (a <strong>Old Generation</strong> está saturada), não aumente a <code>spark.memory.fraction</code>! Isso apenas dá mais espaço para o vazamento de memória e agrava os congelamentos "Stop-The-World" da JVM. O fix real é reescrever a query para usar Pandas UDF vetorizados ou calibrar a taxa de sobrevivência do G1GC (InitiatingHeapOccupancyPercent).
       </div>
     </section>
 
@@ -1622,6 +1750,10 @@ df_stream.writeStream \
           <ul style="margin-top:15px;">
             <li><strong>Worker Auto Scaling:</strong> Disponível no Glue 3.0+, escala dinamicamente o número de workers conforme a carga do job, reduzindo custos em shuffles ou processamentos variáveis.</li>
             <li><strong>Regra Prática de Tuning para OOM no Glue:</strong> Se o seu Job do Glue falhar por falta de memória física (OOM) no Worker, alterar de G.1X para G.2X <strong>dobra a memória disponível para o executor Spark (de 10GB para 24GB)</strong> mantendo o mesmo número de tarefas paralelas por nó, eliminando o estouro do contêiner JVM.</li>
+            <li><strong>Glue Flex:</strong> Parâmetro de submissão (<code>spark.glue.flex</code>) para workloads não críticos que economiza até 35% nos custos utilizando capacidade ociosa computacional da AWS (similar a Spot).</li>
+            <li><strong>Auto Scaling Dinâmico:</strong> Configuração <code>--enable-auto-scaling = true</code> (no Glue 3.0+) escala transparentemente o número de Workers de acordo com os estágios do job, ótimo para shuffles em bursts.</li>
+            <li><strong>S3 Grouping (Small Files):</strong> Para melhorar a velocidade de leitura de dados massivos, habilite <code>spark.sql.sources.useGroupId</code>, permitindo que o Glue agrupe leituras de dezenas de pequenos arquivos do S3 em uma única task do executor, diminuindo o overhead de I/O.</li>
+
           </ul>
         </div>
       </div>
@@ -1807,6 +1939,7 @@ df_stream.writeStream \
             <li><strong>EMR Runtime:</strong> Ativado por padrão nas versões 6.x+, traz otimizações de query e melhor integração com S3 (EMRFS).</li>
             <li><strong>Configuração via JSON:</strong> Permite tunar o `spark-defaults`, `yarn-site` e `capacity-scheduler` diretamente no provisionamento.</li>
             <li><strong>Graceful Decommissioning:</strong> Vital para clusters que utilizam Spot nos Task Nodes. O YARN gerencia o desligamento da instância transferindo dados locais de shuffle antes do nó ser removido, mitigando erros de <code>FetchFailedException</code>.</li>
+            <li><strong>YARN Tuning de Baixo Nível:</strong> Configure <code>yarn.nodemanager.resource.memory-mb</code> (define o teto absoluto de RAM que o YARN NodeManager pode gerenciar localmente no nó EC2 físico) e <code>yarn.scheduler.maximum-allocation-mb</code> (restringe o limite de tamanho máximo para um único Container YARN alocado, útil para evitar que um job rogue aloque toda a máquina).</li>
             <li><strong>Ajuste de YARN Queues:</strong> Utilizando o <code>CapacityScheduler</code>, você pode criar filas lógicas que particionam os recursos do cluster EC2 entre múltiplos pipelines concorrentes.</li>
           </ul>
 
@@ -1866,8 +1999,8 @@ df_stream.writeStream \
               <br><code>Custo = (vCPU_total * Tempo_sec * $/vCPU-hora) + (RAM_total_GB * Tempo_sec * $/GB-hora)</code>
               <br><em>Boas Práticas de Sizing:</em> Para jobs I/O intensive ou de processamento de texto pesado (ex: parsing JSON complexo), utilize mais vCPU por worker (ex: 4 vCPU e 16 GB RAM). Para Joins e agregações analíticas pesadas (onde ocorre muito spill), utilize mais memória por worker (ex: 2 vCPU e 32 GB RAM).
             </li>
-            <li><strong>Customização de Disco:</strong> É possível configurar o armazenamento efêmero por worker (de 20GB a 200GB), crucial para shuffles pesados.</li>
-            <li><strong>Custom Docker Images:</strong> Você pode empacotar bibliotecas Python/C++ complexas no Amazon ECR em uma imagem base customizada, acelerando a inicialização e garantindo isolamento total (multi-tenant).</li>
+            <li><strong>Customização de Disco Efêmero:</strong> O parâmetro oculto <code>spark.emr-serverless.executor.disk</code> permite escalar o armazenamento efêmero anexado por worker (padrão é baixo, mas expansível até 200GB), fundamental para evitar <em>No space left on device</em> em Shuffles e Spills massivos.</li>
+            <li><strong>Custom Docker Images:</strong> Utilize imagens base do ECR personalizadas para empacotar bibliotecas Python/C++ complexas no contêiner base (evitando os gargalos pesados e de timeout do bootstrap convencional via <code>--conf spark.archives</code>).</li>
           </ul>
         </div>
       </div>
@@ -2005,26 +2138,30 @@ df_stream.writeStream \
           <thead>
             <tr>
               <th>Cenário de Workload</th>
-              <th>Dimensionamento</th>
-              <th>Tempo de Execução</th>
-              <th>Custo Estimado (Diário)</th>
-              <th>Veredito FinOps</th>
+              <th>Dimensionamento Físico</th>
+              <th>Cálculo Matemático Real (Diário)</th>
+              <th>Veredito FinOps Justificado</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>Cenário A: ETL Sazonal Curto</strong> (Ingestão de 10GB, 1x ao dia)</td>
-              <td>10 DPUs (Glue) ou Equivalente ACU</td>
-              <td>20 Minutos</td>
-              <td><strong>$1.46 (Glue)</strong> vs $2.10 (EMR EC2)*</td>
-              <td><strong>Glue/EMR Serverless:</strong> Vence por não ter custo de "Warm-up" de 10 min de cluster EC2.</td>
+              <td><strong>Cenário A: Job Curto &amp; Sazonal</strong><br><span style="font-size: 10px; color: var(--muted);">Execução de 20 minutos por dia.</span></td>
+              <td>10 DPUs (Glue v4) / Equivalente 40 vCPUs (EMR Serverless)</td>
+              <td style="font-size: 12px; line-height: 1.4;">
+                <strong>Glue:</strong> 10 DPUs * (20/60h) * $0.44 = <strong>~$1.46/dia</strong><br>
+                <strong>EMR Serverless:</strong> [40 vCPU * (20/60) * $0.052624] + [160GB * (20/60) * $0.0057785] = <strong>~$1.01/dia</strong><br>
+                <strong>EMR EC2 (r5.4xlarge):</strong> Tempo de boot de 10 min (cobrado) + 20 min execução = 30 min. 1 Nó Master + 2 Cores: 3 * 0.5h * $1.278 = <strong>~$1.91/dia</strong>
+              </td>
+              <td><strong>Glue / EMR Serverless são Imbatíveis.</strong><br>A isenção do custo e lentidão do bootstrap ("Warm-up" de 10 min do EC2) torna o provisionamento serverless financeiramente superior e mais ágil para cronjobs curtos.</td>
             </tr>
             <tr>
-              <td><strong>Cenário B: Processamento 24/7</strong> (Streaming constante de Logs)</td>
-              <td>Cluster de 5 nós (80 vCPUs / 640GB RAM)</td>
-              <td>24 Horas</td>
-              <td>$352 (EMR Serverless) vs <strong>$153 (EMR EC2 Spot)</strong></td>
-              <td><strong>EMR on EC2 (Spot):</strong> Vence massivamente. O desconto de 70-90% do Spot no EC2 compensa o gerenciamento.</td>
+              <td><strong>Cenário B: Processamento Contínuo 24/7</strong><br><span style="font-size: 10px; color: var(--muted);">Ingestão de logs constante.</span></td>
+              <td>Cluster contínuo de 5 Nós (80 vCPUs) / Equivalente ACU.</td>
+              <td style="font-size: 12px; line-height: 1.4;">
+                <strong>EMR Serverless:</strong> [80 vCPU * 24h * $0.0526] + [320GB * 24h * $0.0057] = <strong>~$144.80/dia</strong><br>
+                <strong>EMR EC2 (Spot):</strong> 1 Master r5.4x (On-Demand: $30.67/dia) + 4 Task r5.4x (Spot com ~70% desconto: $7.34 * 4 = $29.36/dia) = <strong>~$60.03/dia</strong>
+              </td>
+              <td><strong>EMR on EC2 com Spot Vence a Longo Prazo.</strong><br>Para cargas 24/7 massivas, o EMR Clássico utilizando Reserved Instances no Master/Core e 100% EC2 Spot Instances nos Task Nodes reduz a fatura em mais de 60% comparado ao modelo On-Demand serverless.</td>
             </tr>
           </tbody>
         </table>
