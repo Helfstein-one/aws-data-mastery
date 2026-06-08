@@ -992,36 +992,64 @@ df_stream.writeStream \
         <div class="sec-num" style="color:var(--spark)">10</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Tuning do Spark — Guia Completo</h2>
-          <p>Receitas de configurações de performance para otimização em lote</p>
+          <h2>Tuning do Spark — Guia Completo de Produção</h2>
+          <p>Receitas de configurações de performance detalhadas e seguras para workloads analíticos corporativos</p>
         </div>
       </div>
 
       <div class="tuning-recipe">
-        <div class="tuning-recipe-title">🔧 Receitas de Configurações Base de Alta Performance</div>
+        <div class="tuning-recipe-title">🔧 Receitas de Configurações Base de Alta Performance (spark-defaults.conf)</div>
+        
+        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">1. Otimização Adaptativa (Adaptive Query Execution - AQE)</h4>
         <div class="recipe-row">
           <div class="recipe-icon">⚙️</div>
-          <div class="recipe-text"><strong>Adaptive Query Execution:</strong> Ative sempre com <code>spark.sql.adaptive.enabled = true</code>. Permite ao Spark mudar de Sort-Merge para Broadcast dinamicamente em runtime.</div>
+          <div class="recipe-text">
+            <strong>spark.sql.adaptive.enabled = true:</strong> Ativa o AQE, permitindo otimizações em tempo de execução.
+            <br><strong>spark.sql.adaptive.coalescePartitions.enabled = true:</strong> Junta partições pequenas pós-shuffle automaticamente para evitar overhead de agendamento de tasks minúsculas (small files na memória).
+            <br><strong>spark.sql.adaptive.advisoryPartitionSizeInBytes = 134217728:</strong> Define o tamanho ideal de partição lida pós-shuffle como 128 MB (ótimo para vazão de I/O).
+            <br><strong>spark.sql.adaptive.skewJoin.enabled = true:</strong> Detecta automaticamente desvios bruscos (skew) em chaves de join e divide partições gigantes em sub-tasks menores para processamento paralelo uniforme.
+          </div>
         </div>
-        <div class="recipe-row">
-          <div class="recipe-icon">🗜️</div>
-          <div class="recipe-text"><strong>Compressão colunar:</strong> Use o codec ZSTD no Parquet <code>spark.sql.parquet.compression.codec = zstd</code> para o melhor equilíbrio entre consumo de CPU e compressão física no S3.</div>
-        </div>
-        <div class="recipe-row">
-          <div class="recipe-icon">🧠</div>
-          <div class="recipe-text"><strong>Fração de Memória (Memory Fraction):</strong> <code>spark.memory.fraction = 0.8</code> em workloads intensos de join. Ajuste o <code>spark.memory.storageFraction</code> (padrão 0.5) para valores mais baixos (ex: 0.2) se o job realizar pouco cache e exigir muita memória livre na etapa de Execution.</div>
-        </div>
+
+        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">2. Tuning de Rede &amp; Timeouts de Shuffle</h4>
         <div class="recipe-row">
           <div class="recipe-icon">🌐</div>
-          <div class="recipe-text"><strong>Rede e Shuffle Fetch:</strong> Para falhas de timeout em grandes Shuffles, aumente <code>spark.reducer.maxSizeInFlight = 96m</code> (padrão 48m) em instâncias potentes, reduzindo os round-trips de rede. Ajuste também <code>spark.shuffle.file.buffer = 1mb</code> (padrão 32k) para otimizar gravações de shuffle no disco.</div>
+          <div class="recipe-text">
+            <strong>spark.network.timeout = 800s:</strong> Limite máximo de tempo que o Spark espera por pacotes de rede entre nós (default 120s). Evita erros de executor perdido por oscilações na rede AWS ou pausas longas de GC.
+            <br><strong>spark.core.connection.ack.wait.timeout = 600s:</strong> Aumenta o tempo limite de aceno de conexões TCP físicas.
+            <br><strong>spark.shuffle.file.buffer = 1m:</strong> Buffer em RAM (default 32 KB) usado antes de escrever blocos de shuffle temporários no disco local, reduzindo a concorrência e o tempo de busca de cabeçote do EBS.
+            <br><strong>spark.reducer.maxSizeInFlight = 128m:</strong> Tamanho máximo de dados requisitados simultaneamente de outros executores de forma assíncrona, acelerando o throughput do shuffle read.
+          </div>
         </div>
+
+        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">3. Gerenciamento de Memória &amp; Project Tungsten</h4>
+        <div class="recipe-row">
+          <div class="recipe-icon">🧠</div>
+          <div class="recipe-text">
+            <strong>spark.memory.fraction = 0.8:</strong> Eleva o espaço do Spark Memory para 80% da Heap da JVM em instâncias r5 de grande porte, deixando menos área ociosa na User Memory para jobs puramente SQL/DataFrame.
+            <br><strong>spark.memory.storageFraction = 0.2:</strong> Limita a área imune de Storage a 20% do pool Spark. Excelente para ETLs que não usam cache/persistência de dados, liberando espaço máximo imune para a Execution Memory resolver Shuffles e Joins complexos.
+            <br><strong>spark.memory.offHeap.enabled = true:</strong> Ativa a alocação de dados Off-Heap.
+            <br><strong>spark.memory.offHeap.size = 4294967296:</strong> Reserva 4 GB de memória do sistema operacional (Off-Heap) por executor para o Project Tungsten ordenar dados em formato binário sem poluição de GC.
+          </div>
+        </div>
+
+        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">4. Serialização e Compressão</h4>
         <div class="recipe-row">
           <div class="recipe-icon">📦</div>
-          <div class="recipe-text"><strong>Serialização Avançada:</strong> Evite o serializador nativo do Java usando Kryo. Configure <code>spark.serializer = org.apache.spark.serializer.KryoSerializer</code>. A serialização via Kryo chega a ser 10x mais veloz, essencial em RDDs e Broadcasting gigante.</div>
+          <div class="recipe-text">
+            <strong>spark.serializer = org.apache.spark.serializer.KryoSerializer:</strong> Substitui a serialização Java padrão pela Kryo, que é até 10x mais rápida e gera representações de objetos muito menores.
+            <br><strong>spark.kryoserializer.buffer.max = 1024m:</strong> Define o tamanho máximo de buffer do Kryo para lidar com registros extremamente grandes de forma segura.
+            <br><strong>spark.io.compression.codec = zstd:</strong> Utiliza compressão ZSTD para dados internos temporários de shuffle, reduzindo I/O e uso de rede no cluster com baixo consumo de CPU.
+          </div>
         </div>
+
+        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">5. Escrita no Data Lake (Evitando Small Files)</h4>
         <div class="recipe-row">
-          <div class="recipe-icon">⚖️</div>
-          <div class="recipe-text"><strong>AQE Skew Join Optimization:</strong> Assegure-se de ativar <code>spark.sql.adaptive.skewJoin.enabled = true</code>. O AQE detecta assimetrias extremas e divide dinamicamente tarefas superlotadas em sub-tarefas menores durante o runtime, mitigando OOMs sem alterar código SQL.</div>
+          <div class="recipe-icon">💾</div>
+          <div class="recipe-text">
+            <strong>spark.sql.sources.commitProtocolClass = org.apache.spark.internal.io.cloud.PathOutputCommitProtocol:</strong> Utiliza protocolo otimizado de commmit para S3 que elimina operações de rename demoradas.
+            <br><strong>spark.sql.parquet.compression.codec = zstd:</strong> Força arquivos finais Parquet a serem compactados com ZSTD no S3.
+          </div>
         </div>
       </div>
     </section>
@@ -1247,12 +1275,76 @@ df_stream.writeStream \
         <div class="sec-num" style="color:var(--emr)">14.5</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Guia de Instâncias Master/Core/Task</h2>
-          <p>Estratégia física de nós de processamento distribuído</p>
+          <h2>Arquitetura do Cluster EMR &amp; Guia de Instâncias Master/Core/Task</h2>
+          <p>Topologia física do cluster e tradeoffs entre armazenamento HDFS local vs S3 (EMRFS)</p>
         </div>
       </div>
 
-        <div class="grid-2">
+      <!-- DIAGRAMA SVG DE ARQUITETURA DE CLUSTER EMR -->
+      <div class="dw" style="text-align: center; margin: 24px 0;">
+        <svg viewBox="0 0 820 400" width="820" height="400" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="820" height="400" fill="#0f172a" rx="14"/>
+          <text x="410" y="25" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA DE HIERARQUIA E TOPOLOGIA DE CLUSTER AMAZON EMR</text>
+
+          <!-- MASTER NODE -->
+          <rect x="30" y="60" width="220" height="150" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+          <text x="140" y="85" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">MASTER NODE (Coordenação)</text>
+          <rect x="45" y="105" width="190" height="35" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="140" y="120" text-anchor="middle" fill="#f8fafc" font-size="8.5">YARN ResourceManager</text>
+          <rect x="45" y="150" width="190" height="35" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="140" y="165" text-anchor="middle" fill="#f8fafc" font-size="8.5">HDFS NameNode (Metadata)</text>
+          <text x="140" y="200" text-anchor="middle" fill="#64748b" font-size="7.5">Instance Group: On-Demand (m5)</text>
+
+          <!-- CORE NODES (DATA + CPU) -->
+          <rect x="290" y="60" width="240" height="180" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+          <text x="410" y="85" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">CORE NODES (Dados &amp; CPU)</text>
+          
+          <rect x="305" y="105" width="210" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="410" y="122" text-anchor="middle" fill="#cbd5e1" font-size="8.5">YARN NodeManager (Task Runner)</text>
+          <text x="410" y="134" text-anchor="middle" fill="#64748b" font-size="7">Executors Spark</text>
+
+          <rect x="305" y="155" width="210" height="40" rx="4" fill="#0f172a" stroke="#f59e0b"/>
+          <text x="410" y="172" text-anchor="middle" fill="#f59e0b" font-size="8.5">HDFS DataNode (Armazenamento)</text>
+          <text x="410" y="184" text-anchor="middle" fill="#64748b" font-size="7">Armazena dados locais HDFS</text>
+          
+          <text x="410" y="225" text-anchor="middle" fill="#64748b" font-size="7.5">Instance Group/Fleet: On-Demand (r5d/i3)</text>
+
+          <!-- TASK NODES (CPU ONLY) -->
+          <rect x="570" y="60" width="220" height="150" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="2"/>
+          <text x="680" y="85" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="700">TASK NODES (CPU Pura)</text>
+          <rect x="585" y="105" width="190" height="40" rx="4" fill="#0f172a" stroke="#cbd5e1"/>
+          <text x="680" y="122" text-anchor="middle" fill="#cbd5e1" font-size="8.5">YARN NodeManager</text>
+          <text x="680" y="134" text-anchor="middle" fill="#64748b" font-size="7">Apenas Executors Spark</text>
+          
+          <rect x="585" y="155" width="190" height="25" rx="4" fill="#ef4444" stroke="#fca5a5" stroke-dasharray="2,2"/>
+          <text x="680" y="171" text-anchor="middle" fill="#f8fafc" font-size="8" font-weight="700">SEM DATANODE (Sem HDFS)</text>
+          
+          <text x="680" y="200" text-anchor="middle" fill="#10b981" font-size="7.5">Instance Fleet: 100% Spot (c5/r5)</text>
+
+          <!-- STORAGE LAYER (S3 / EMRFS) -->
+          <rect x="230" y="300" width="360" height="70" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="410" y="325" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="700">AWS S3 - DATALAKE (Acessado via EMRFS)</text>
+          <text x="410" y="345" text-anchor="middle" fill="#cbd5e1" font-size="8.5">Armazenamento desacoplado de alta durabilidade e baixo custo</text>
+          
+          <!-- FLOW LINES -->
+          <!-- Master instructs Core and Task -->
+          <path d="M 140 210 L 140 270 L 410 270 L 410 240" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="2,2"/>
+          <path d="M 410 270 L 680 270 L 680 210" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="2,2"/>
+          
+          <!-- Core reads/writes S3 -->
+          <path d="M 350 240 L 350 300" stroke="#10b981" stroke-width="1.5"/>
+          <polygon points="350,300 346,295 354,295" fill="#10b981"/>
+          
+          <!-- Task reads/writes S3 -->
+          <path d="M 600 210 L 600 320 L 590 320" stroke="#ef4444" stroke-width="1.5"/>
+          <polygon points="590,320 595,316 595,324" fill="#ef4444"/>
+
+          <!-- HDFS read/write local only on Core -->
+          <path d="M 470 145 A 20 20 0 0 1 470 155" stroke="#f59e0b" stroke-width="1.5" fill="none"/>
+        </svg>
+      </div>
+
+      <div class="grid-2">
         <div>
           <h4>Como Funciona &amp; Arquitetura (Guia de Instâncias Master/Core/Task)</h4>
           <p>O EMR on EC2 permite rodar o ecossistema Hadoop completo. A separação física dos nós permite otimização de custos e performance:</p>
