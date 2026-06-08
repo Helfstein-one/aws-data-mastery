@@ -403,12 +403,22 @@
         <div class="sec-num" style="color:var(--spark)">03</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Cálculo Exaustivo de Alocação de Memória e Cores</h2>
-          <p>Fórmulas práticas e dimensionamento matemático para servidores r5.4xlarge e c5.9xlarge</p>
+          <h2>Cálculo de Alocação de Memória, Cores &amp; Particionamento</h2>
+          <p>Fórmulas práticas de dimensionamento físico para instâncias EC2 e regras de ouro de paralelismo</p>
         </div>
       </div>
 
-      <p>Dimensionar incorretamente as configurações de submissão do Spark gera instabilidade ou desperdício severo de custos de infraestrutura analítica no EMR. Abaixo estão descritas as contas detalhadas para duas famílias de instâncias EC2 de hardware distintos:</p>
+      <p>Dimensionar incorretamente as configurações de submissão do Spark gera instabilidade ou desperdício severo de custos de infraestrutura analítica no EMR. Abaixo estão descritas as contas detalhadas para duas famílias de instâncias EC2 de hardware distintos, seguidas do passo a passo matemático prático para dimensionar qualquer cluster:</p>
+
+      <div class="abox info">
+        <strong>Fórmula de Dimensionamento Físico de Executores (Passo a Passo):</strong>
+        <ol>
+          <li><strong>Passo 1 (Recursos Disponíveis para o YARN):</strong> Deixe sempre 1 core físico e cerca de 4 GB a 8 GB de RAM por nó reservados estritamente para o funcionamento do sistema operacional e do Daemon do YARN NodeManager. O restante é o pool disponível de fato para o Spark.</li>
+          <li><strong>Passo 2 (Cores por Executor):</strong> Defina <code>spark.executor.cores = 5</code> por padrão. Este é o número ideal testado na indústria: acima de 5 cores, o processamento sofre com contenção de escrita concorrente em disco de shuffle e gargalos na coleta de rede da JVM; abaixo de 5, perde-se a localidade local de leitura multithread.</li>
+          <li><strong>Passo 3 (Executores por Nó):</strong> Divida a quantidade de cores restantes no nó (Passo 1) por 5 (Passo 2). Exemplo: Se sobram 15 cores, teremos <code>15 / 5 = 3</code> executores por nó.</li>
+          <li><strong>Passo 4 (Memória por Executor &amp; Overhead):</strong> Divida a RAM disponível por nó pelo número de executores calculados no Passo 3. Do resultado, deduza cerca de 10% a 15% para a memória de Overhead do Spark (<code>spark.executor.memoryOverhead</code>, com mínimo absoluto de 384 MB). O restante é a Heap do Executor.</li>
+        </ol>
+      </div>
 
       <div class="grid-2">
         <div>
@@ -416,7 +426,7 @@
           <ul>
             <li><strong>Hardware Físico:</strong> 16 vCPUs (cores) e 128 GB RAM.</li>
             <li><strong>Reserva do S.O. &amp; YARN:</strong> 1 core e 4 GB RAM. Sobram 15 cores e 124 GB RAM.</li>
-            <li><strong>Cores por Executor:</strong> Fixado em 5 cores (limite ótimo de vazão I/O).</li>
+            <li><strong>Cores por Executor:</strong> Fixado em 5 cores.</li>
             <li><strong>Quantidade de Executores por nó:</strong> 15 / 5 = 3 executores por nó.</li>
             <li><strong>Memória total disponível por executor:</strong> 124 GB / 3 = 41.3 GB.</li>
             <li><strong>Ajuste do Overhead (10%):</strong>
@@ -445,30 +455,88 @@
         </div>
       </div>
 
-      <h3>Alocação Estática vs Alocação Dinâmica (Dynamic Allocation)</h3>
-      <p>Em ambientes de produção na AWS, a escolha entre alocação de recursos estática ou dinâmica afeta diretamente o custo e a resiliência dos jobs Spark:</p>
-      
-      <ul>
-        <li><strong>Alocação Estática:</strong> 
-          Define um número fixo de executores que permanecem ativos e reservados durante todo o ciclo de vida da aplicação (ex: <code>spark.executor.instances = 20</code>).
-          <br><em>Uso recomendado:</em> Jobs críticos de ETL em lote recorrentes onde o volume de dados é previsível e o job necessita de recursos estáveis constantes do início ao fim para bater o SLA.
-        </li>
-        <li><strong>Alocação Dinâmica (Dynamic Allocation):</strong>
-          Permite que o Spark aloque executores sob demanda de acordo com a carga de trabalho de cada Task na fila (Stage/Job), devolvendo executores ociosos ao cluster (YARN/K8s/EMR).
-          <br><em>Configuração Recomendada no EMR:</em>
-          <pre><code class="language-properties">spark.dynamicAllocation.enabled = true
+      <h3>Parâmetros de Recursos — Referência Rápida</h3>
+      <div class="tbl-wrap" style="margin-top: 10px; margin-bottom: 25px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Parâmetro do Spark</th>
+              <th>Valor Recomendado</th>
+              <th>O que Controla Físicamente</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>spark.executor.cores</code></td>
+              <td>4 ou 5</td>
+              <td>Número de threads paralelas rodando simultaneamente por executor.</td>
+            </tr>
+            <tr>
+              <td><code>spark.executor.memory</code></td>
+              <td>16g a 48g (depende da instância)</td>
+              <td>Quantidade máxima de RAM alocada para a Heap da JVM por executor.</td>
+            </tr>
+            <tr>
+              <td><code>spark.executor.memoryOverhead</code></td>
+              <td>2g a 6g (10% a 15% da executor.memory)</td>
+              <td>Memória Off-heap para buffers nativos, Python, PyArrow e overheads de rede.</td>
+            </tr>
+            <tr>
+              <td><code>spark.driver.memory</code></td>
+              <td>4g a 16g</td>
+              <td>Memória reservada para o Driver planejar e compilar o grafo lógico (DAG).</td>
+            </tr>
+            <tr>
+              <td><code>spark.driver.maxResultSize</code></td>
+              <td>2g a 4g</td>
+              <td>Limite de dados que os executores podem retornar para o Driver via <code>.collect()</code>.</td>
+            </tr>
+            <tr>
+              <td><code>spark.memory.fraction</code></td>
+              <td>0.6 a 0.8</td>
+              <td>Porcentagem da Heap JVM do Executor dedicada para execução direta de tarefas e caching.</td>
+            </tr>
+            <tr>
+              <td><code>spark.memory.storageFraction</code></td>
+              <td>0.2 a 0.5</td>
+              <td>Porcentagem do espaço pool (fraction) reservada e protegida exclusivamente para cache.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="abox note" style="margin-bottom: 25px;">
+        <strong>⚠️ Armadilha Frequente: Dynamic Allocation sem Limites Claros</strong>
+        <br>Habilitar alocação dinâmica (<code>spark.dynamicAllocation.enabled = true</code>) sem definir tetos restritos pode esgotar toda a capacidade do seu cluster YARN e gerar concorrência excessiva de I/O em disco. Configure sempre com limites rígidos em produção:
+        <pre><code class="language-properties">spark.dynamicAllocation.enabled = true
 spark.dynamicAllocation.minExecutors = 1
 spark.dynamicAllocation.maxExecutors = 100
+spark.dynamicAllocation.initialExecutors = 5
 spark.dynamicAllocation.executorIdleTimeout = 60s
 spark.dynamicAllocation.schedulerBacklogTimeout = 1s</code></pre>
-          <br><em>Parâmetros de Tuning:</em>
-          <ul>
-            <li><code>schedulerBacklogTimeout:</code> Tempo que o Spark aguarda (padrão 1s) com tarefas pendentes na fila antes de solicitar novos executores.</li>
-            <li><code>executorIdleTimeout:</code> Tempo de inatividade do executor (padrão 60s) antes que ele seja desligado e devolvido ao pool.</li>
-            <li><strong>External Shuffle Service &amp; Shuffle Tracking:</strong> Para ativar a alocação dinâmica com segurança sem perder resultados intermediários de shuffle de executores desalocados, configure <code>spark.shuffle.service.enabled = true</code>. No Spark 3.x+ rodando em Kubernetes, utilize a opção moderna de **Shuffle Tracking** (<code>spark.dynamicAllocation.shuffleTracking.enabled = true</code>) para reter os dados de shuffle ativamente sem depender do External Shuffle Service.</li>
+        No EMR EC2, prefira o <strong>Managed Scaling</strong> no nível de infraestrutura do cluster em vez de configurações desreguladas de Dynamic Allocation puras de aplicação para melhor controle de FinOps.
+      </div>
+
+      <h3>Regras de Ouro de Particionamento &amp; Paralelismo</h3>
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>📏 Tamanho Ideal de Partição</h4>
+          <p>O tamanho ótimo de partição física na RAM e no disco deve residir entre <strong>128 MB e 512 MB</strong>.</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>Partições Pequenas (&lt;10 MB):</strong> Geram um overhead monstruoso de agendamento de tarefas na CPU (Task Scheduling Overhead) no Driver.</li>
+            <li><strong>Partições Gigantes (&gt;2 GB):</strong> Geram estouro de Heap na JVM do executor (Java Heap Space OOM) e forçam spillage ineficiente para o disco local.</li>
           </ul>
-        </li>
-      </ul>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🔄 shuffle.partitions vs default.parallelism</h4>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong><code>spark.sql.shuffle.partitions</code> (Padrão: 200):</strong> Controla estritamente o número de partições criadas após operações físicas de Shuffle em APIs SQL e DataFrames (ex: Joins, GroupBy).</li>
+            <li><strong><code>spark.default.parallelism</code>:</strong> Controla o número padrão de partições geradas após transformações de RDDs de baixo nível se o usuário não especificar.</li>
+            <li><strong>Ação do AQE:</strong> Se o Adaptive Query Execution (AQE) estiver ativado, o Spark junta partições pequenas pós-shuffle em runtime automaticamente, mitigando configurações estáticas incorretas.</li>
+          </ul>
+        </div>
+      </div>
     </section>
 
     <section class="section" id="tungsten">
@@ -558,24 +626,43 @@ spark.dynamicAllocation.schedulerBacklogTimeout = 1s</code></pre>
 
       <p>O <strong>Data Skew</strong> (desvio de dados) ocorre quando uma chave específica acumula mais de 80% do volume físico dos dados (ex: chaves nulas ou registros de auditoria padrão). O executor encarregado por processar essa chave demorará muito mais tempo que os demais, deixando os cores ociosos e estendendo a duração do estágio.</p>
 
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark); padding: 15px; margin-bottom: 15px;">
+          <h4>🔍 Como Diagnosticar Skew no Spark UI</h4>
+          <p>Navegue até a aba <strong>Stages</strong>, selecione o estágio problemático lento e abra a seção <strong>Task Metrics (Stage Details)</strong>:</p>
+          <ul style="padding-left: 15px; font-size: 12px; margin-top: 5px;">
+            <li><strong>Métrica Duration:</strong> Ordene as tarefas pela coluna <em>Duration</em>. Se o tempo da task no <strong>P95 / Max</strong> for superior a <strong>5x a mediana</strong>, há indicativo claro de desvio (Skew).</li>
+            <li><strong>Shuffle Read Size:</strong> Verifique a distribuição do tamanho de leitura de shuffle por task. Task com leitura muito maior que a média aponta skew na chave de junção.</li>
+          </ul>
+        </div>
+        
+        <div class="card" style="border-left: 3px solid var(--spark); padding: 15px; margin-bottom: 15px;">
+          <h4>⚙️ Otimização Automática: AQE (Spark 3.x+)</h4>
+          <p>Configure os parâmetros abaixo no `spark-defaults` para permitir que o Catalyst divida dinamicamente partições assimétricas:</p>
+          <pre><code class="language-properties">spark.sql.adaptive.enabled = true
+spark.sql.adaptive.skewJoin.enabled = true
+spark.sql.adaptive.coalescePartitions.enabled = true</code></pre>
+        </div>
+      </div>
+
       <h3>1. Otimização via Salting (Distribuição de Chave no Join)</h3>
       <p>A técnica de **Salting** resolve o skew adicionando um sufixo numérico aleatório (o "sal") às chaves da tabela gigante e explodindo a tabela menor correspondente para conter todas as combinações desse sal, distribuindo os registros de forma uniforme pelos executores durante o shuffle:</p>
 
-      <pre><span class="k">import</span> pyspark.sql.functions <span class="k">as</span> F
-n_salts = <span class="v">30</span>
+      <pre><code class="language-python">import pyspark.sql.functions as F
+n_salts = 50  # Fator de salting (número de partições paralelas para dividir o skew)
 
-<span class="c"># Tabela principal com skew: adiciona salt aleatório</span>
+# Tabela principal com skew: adiciona salt aleatório (0 a n_salts-1)
 df_large_salted = df_large.withColumn(
-    <span class="s">"salt"</span>, (F.rand() * n_salts).cast(<span class="s">"int"</span>)
-).withColumn(<span class="s">"salted_key"</span>, F.concat(F.col(<span class="s">"key"</span>), F.lit(<span class="s">"_"</span>), F.col(<span class="s">"salt"</span>)))
+    "salt", (F.rand() * n_salts).cast("int")
+).withColumn("salted_key", F.concat(F.col("key"), F.lit("_"), F.col("salt")))
 
-<span class="c"># Tabela de lookup (pequena): explode gerando todas as chaves salgadas possíveis</span>
+# Tabela de lookup (pequena): explode gerando todas as chaves salgadas possíveis
 df_small_exploded = df_small.withColumn(
-    <span class="s">"salt"</span>, F.explode(F.array([F.lit(i) <span class="k">for</span> i <span class="k">in</span> range(n_salts)]))
-).withColumn(<span class="s">"salted_key"</span>, F.concat(F.col(<span class="s">"key"</span>), F.lit(<span class="s">"_"</span>), F.col(<span class="s">"salt"</span>)))
+    "salt", F.explode(F.array([F.lit(i) for i in range(n_salts)]))
+).withColumn("salted_key", F.concat(F.col("key"), F.lit("_"), F.col("salt")))
 
-<span class="c"># Executa o join distribuído sem sobrecarregar um único nó (No skew bottleneck)</span>
-df_joined = df_large_salted.join(df_small_exploded, <span class="s">"salted_key"</span>).drop(<span class="s">"salt"</span>, <span class="s">"salted_key"</span>)</pre>
+# Executa o join distribuído sem sobrecarregar um único nó (No skew bottleneck)
+df_joined = df_large_salted.join(df_small_exploded, "salted_key").drop("salt", "salted_key")</code></pre>
 
       <h3>2. Otimização de UDFs com Pandas UDF (Vectorized Arrow)</h3>
       <p>As UDFs (User Defined Functions) comuns do PySpark forçam a JVM a serializar os dados linha a linha para enviá-los ao interpretador Python, gerando uma sobrecarga severa e possíveis OOMs na **User Memory**. As **Pandas UDFs** otimizam esse processo transferindo dados em blocos (batches) usando o **Apache Arrow** diretamente na memória:</p>
@@ -862,103 +949,163 @@ print(f"Skew Ratio (Max / Avg): {max_count / avg_count:.2f}x (Valores > 1.5x ind
         </div>
       </section>
 
-      <section class="section" id="spark-joins">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--spark)">07</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Estratégias de Join no Spark</h2>
-          <p>Mapeamento de cruzamentos analíticos em nível de rede e disco</p>
-        </div>
+  <section class="section" id="spark-joins">
+    <div class="sec-hdr">
+      <div class="sec-num" style="color:var(--spark)">07</div>
+      <div class="sec-meta">
+        <div class="sec-acc" style="background:var(--spark)"></div>
+        <h2>Estratégias de Join no Spark</h2>
+        <p>Mapeamento de cruzamentos analíticos em nível de rede e disco</p>
       </div>
+    </div>
 
-      <div class="join-grid">
-        <div class="jc">
-          <div class="jc-name">Broadcast Hash Join (BHJ)</div>
-          <span class="jtag ns">✓ Sem Shuffle</span>
-          <div class="jc-desc">Copia e envia a tabela pequena inteira para todos os executores na memória. Elimina totalmente a movimentação de rede. Indicado para tabelas de dimensões pequenas.</div>
-        </div>
-        <div class="jc">
-          <div class="jc-name">Sort-Merge Join (SMJ)</div>
-          <span class="jtag sh">Shuffle</span>
-          <div class="jc-desc">Ordena dados de ambas as tabelas após redistribuir partições pela chave. Extremamente robusto e seguro para conjuntos massivos que excedem a RAM do executor.</div>
-        </div>
-        <div class="jc">
-          <div class="jc-name">Shuffle Hash Join (SHJ)</div>
-          <span class="jtag sh">Shuffle</span>
-          <div class="jc-desc">Distribui as chaves em hash maps locais. Consome muita RAM no executor para manter o mapeamento ativo durante a fase de busca.</div>
-        </div>
+    <div class="join-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+      <div class="jc">
+        <div class="jc-name">Broadcast Hash Join (BHJ)</div>
+        <span class="jtag ns">✓ Sem Shuffle</span>
+        <div class="jc-desc">Copia e envia a tabela pequena inteira para todos os executores na memória. Elimina totalmente a movimentação de rede. Indicado para tabelas de dimensões pequenas.</div>
       </div>
-
-      <h3>Tradeoffs Físicos de Execução de Joins no Spark</h3>
-      <p>Abaixo estão descritos os comportamentos de rede, memória e processamento para cada algoritmo de join disponível no motor Catalyst:</p>
-
-      <div class="tbl-wrap" style="margin-top: 15px;">
-        <table>
-          <thead>
-            <tr>
-              <th>Algoritmo de Join</th>
-              <th>Requisito de Memória</th>
-              <th>Custo de Shuffle de Rede</th>
-              <th>Sensibilidade a Data Skew (Assimetria)</th>
-              <th>Quando Usar / Limitações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Broadcast Hash Join (BHJ)</strong></td>
-              <td>Alto no Driver (coleta) e em todos os Executors (RAM local para hash table da tabela copiada).</td>
-              <td>Baixo (apenas envio inicial do Driver para os executores; sem shuffle de re-particionamento).</td>
-              <td>Nenhuma (não reagrupa pela chave de join).</td>
-              <td>Uso ideal quando uma das tabelas é pequena (padrão &lt; 10 MB, configurado em <code>spark.sql.autoBroadcastJoinThreshold</code>). *Perigo:* Se a tabela exceder a RAM do Driver, ocorre Java Heap Space OOM no Driver.</td>
-            </tr>
-            <tr>
-              <td><strong>Sort-Merge Join (SMJ)</strong></td>
-              <td>Baixo e Previsível (apenas buffers de leitura das páginas ordenadas em disco/RAM).</td>
-              <td>Muito Alto (força um shuffle de redistribuição completa pela chave de join em ambas as tabelas).</td>
-              <td>Altíssima (se houverem muitas chaves nulas ou repetidas, o executor que receber essa chave sofrerá Spill to Disk e OOM).</td>
-              <td>Algoritmo padrão do Spark para joins entre tabelas grandes e gigantescas. É o mais robusto contra estouro de memória física.</td>
-            </tr>
-            <tr>
-              <td><strong>Shuffle Hash Join (SHJ)</strong></td>
-              <td>Médio-Alto (exige espaço em RAM para construir uma hash table em memória para uma das partições da tabela).</td>
-              <td>Muito Alto (força um shuffle de redistribuição completa em rede de ambas as tabelas).</td>
-              <td>Alta (partições muito grandes da tabela menor que entra no hash map podem estourar a RAM do executor).</td>
-              <td>Usado quando as tabelas são grandes, mas as partições geradas após o shuffle são pequenas o suficiente para caberem em um hash map local de forma estável.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="jc">
+        <div class="jc-name">Sort-Merge Join (SMJ)</div>
+        <span class="jtag sh">Shuffle</span>
+        <div class="jc-desc">Ordena dados de ambas as tabelas após redistribuir partições pela chave. Extremamente robusto e seguro para conjuntos massivos que excedem a RAM do executor.</div>
       </div>
-    </section>
+      <div class="jc">
+        <div class="jc-name">Shuffle Hash Join (SHJ)</div>
+        <span class="jtag sh">Shuffle</span>
+        <div class="jc-desc">Distribui as chaves em hash maps locais. Consome muita RAM no executor para manter o mapeamento ativo durante a fase de busca.</div>
+      </div>
+      <div class="jc">
+        <div class="jc-name">Broadcast Nested Loop (BNLJ)</div>
+        <span class="jtag lt" style="background: var(--warn); color: #000;">⚠️ Muito Lento</span>
+        <div class="jc-desc">Fallback automático do Spark para joins sem condição de igualdade (non-equality joins como <code style="color: #000;">&lt;</code>, <code style="color: #000;">&gt;</code> ou <code style="color: #000;">BETWEEN</code>). Faz broadcast de uma tabela e varre a outra em loop completo.</div>
+      </div>
+      <div class="jc">
+        <div class="jc-name">Cartesian (Cross) Join</div>
+        <span class="jtag lt" style="background: var(--err); color: #fff;">❌ Perigoso</span>
+        <div class="jc-desc">CROSS JOIN explícito. Multiplica cada linha da Tabela A por todas as linhas da Tabela B (M x N). Altíssimo potencial de travamento de cluster para tabelas grandes.</div>
+      </div>
+    </div>
+
+    <h3>Tradeoffs Físicos de Execução de Joins no Spark</h3>
+    <p>Abaixo estão descritos os comportamentos de rede, memória e processamento para cada algoritmo de join disponível no motor Catalyst:</p>
+
+    <div class="tbl-wrap" style="margin-top: 15px; margin-bottom: 25px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Algoritmo de Join</th>
+            <th>Requisito de Memória</th>
+            <th>Custo de Shuffle de Rede</th>
+            <th>Sensibilidade a Data Skew (Assimetria)</th>
+            <th>Quando Usar / Limitações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Broadcast Hash Join (BHJ)</strong></td>
+            <td>Alto no Driver (coleta) e em todos os Executors (RAM local para hash table da tabela copiada).</td>
+            <td>Baixo (apenas envio inicial do Driver para os executores; sem shuffle de re-particionamento).</td>
+            <td>Nenhuma (não reagrupa pela chave de join).</td>
+            <td>Uso ideal quando uma das tabelas é pequena (padrão &lt; 10 MB, configurado em <code>spark.sql.autoBroadcastJoinThreshold</code>). *Perigo:* Se a tabela exceder a RAM do Driver, ocorre Java Heap Space OOM no Driver.</td>
+          </tr>
+          <tr>
+            <td><strong>Sort-Merge Join (SMJ)</strong></td>
+            <td>Baixo e Previsível (apenas buffers de leitura das páginas ordenadas em disco/RAM).</td>
+            <td>Muito Alto (força um shuffle de redistribuição completa pela chave de join em ambas as tabelas).</td>
+            <td>Altíssima (se houverem muitas chaves nulas ou repetidas, o executor que receber essa chave sofrerá Spill to Disk e OOM).</td>
+            <td>Algoritmo padrão do Spark para joins entre tabelas grandes e gigantescas. É o mais robusto contra estouro de memória física.</td>
+          </tr>
+          <tr>
+            <td><strong>Shuffle Hash Join (SHJ)</strong></td>
+            <td>Médio-Alto (exige espaço em RAM para construir uma hash table em memória para uma das partições da tabela).</td>
+            <td>Muito Alto (força um shuffle de redistribuição completa em rede de ambas as tabelas).</td>
+            <td>Alta (partições muito grandes da tabela menor que entra no hash map podem estourar a RAM do executor).</td>
+            <td>Usado quando as tabelas são grandes, mas as partições geradas após o shuffle são pequenas o suficiente para caberem em um hash map local de forma estável.</td>
+          </tr>
+          <tr>
+            <td><strong>Broadcast Nested Loop (BNLJ)</strong></td>
+            <td>Altíssimo (broadcast de uma tabela inteira e leitura repetitiva de blocos em loop aninhado).</td>
+            <td>Baixo (apenas envio inicial da tabela transmitida).</td>
+            <td>Nenhuma (não executa redistribuição baseada em chaves).</td>
+            <td>Executado como último recurso pelo Catalyst em junções de desigualdade. Deve ser evitado em produção remodelando a lógica ou pré-filtrando agressivamente.</td>
+          </tr>
+          <tr>
+            <td><strong>Cartesian (Cross) Join</strong></td>
+            <td>Altíssimo (produz M x N linhas intermediárias).</td>
+            <td>Extremo se houver shuffle; caso contrário, satura totalmente a CPU gerando trilhões de combinações.</td>
+            <td>Nenhuma.</td>
+            <td> CROSS JOINs devem ser habilitados explicitamente com <code>spark.sql.crossJoin.enabled = true</code>. *Perigo:* Junções cartesianas acidentais de tabelas de 1M de linhas geram 1 trilhão de registros, causando OOM fatal instantâneo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="abox note" style="margin-bottom: 25px;">
+      <strong>💡 Bucketing: Eliminando Shuffles em Joins Recorrentes</strong>
+      <br>Se você realiza Joins diários pesados entre as mesmas tabelas gigantes com a mesma chave (ex: <code>user_id</code>), pode salvar as tabelas já ordenadas e pré-particionadas no S3 usando <strong>Bucketing</strong>. O Spark lê diretamente os buckets correspondentes sem necessidade de fazer qualquer Shuffle na rede:
+      <pre><code class="language-python"># Salva a tabela particionada e ordenada fisicamente no disco/S3
+df_large.write \
+    .bucketBy(200, "user_id") \
+    .sortBy("user_id") \
+    .format("parquet") \
+    .saveAsTable("tabela_gigante_bucketed")
+
+# Joins futuros com outra tabela bucketada com o mesmo número de buckets (200) 
+# e mesma chave eliminam o estágio de shuffle (Zero Shuffle Join!)
+df_bucket1 = spark.table("tabela_gigante_bucketed")
+df_bucket2 = spark.table("outra_tabela_bucketed")
+
+df_final = df_bucket1.join(df_bucket2, "user_id") # Executa instantaneamente!</code></pre>
+    </div>
+  </section>
 
     <section class="section" id="spark-cache">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--spark)">08</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Níveis de Persistência de Dados</h2>
-          <p>Comparativo físico de cacheamento e reutilização de memória</p>
+          <h2>Níveis de Persistência de Dados (Cache &amp; Persist)</h2>
+          <p>Comparativo físico de cacheamento e níveis de persistência para reutilização de DataFrames</p>
         </div>
       </div>
 
-      <div class="pgrid">
+      <div class="pgrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;">
         <div class="pc">
           <div class="lv">MEMORY_ONLY</div>
           <div class="pbar" style="background: linear-gradient(90deg, var(--spark) 100%, #ccc 0%);"></div>
-          <div class="ppro">Acesso veloz em RAM.</div>
-          <div class="pcon">Recalcula se faltar memória.</div>
+          <div class="ppro">Acesso veloz direto em RAM (deserializado).</div>
+          <div class="pcon">Recalcula se faltar memória (alto risco de GC se o DF for gigante).</div>
         </div>
         <div class="pc">
           <div class="lv">MEMORY_AND_DISK</div>
           <div class="pbar" style="background: linear-gradient(90deg, var(--spark) 70%, var(--emr) 30%);"></div>
-          <div class="ppro">Sem perda de dados.</div>
-          <div class="pcon">Escrita lenta em disco.</div>
+          <div class="ppro">Resiliente. Sem perda ou recálculo de dados.</div>
+          <div class="pcon">Escrita lenta em disco quando os dados transbordam da RAM.</div>
         </div>
         <div class="pc">
           <div class="lv">MEMORY_ONLY_SER</div>
           <div class="pbar" style="background: linear-gradient(90deg, var(--arch) 90%, #ccc 10%);"></div>
-          <div class="ppro">Extremamente compacto.</div>
-          <div class="pcon">Exige processamento de CPU.</div>
+          <div class="ppro">Extremamente compacto (salva como array de bytes na RAM).</div>
+          <div class="pcon">Exige processamento de CPU extra para serializar/deserializar.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">DISK_ONLY</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--emr) 100%, #ccc 0%);"></div>
+          <div class="ppro">Sem qualquer pressão sobre a RAM da Heap JVM.</div>
+          <div class="pcon">Acesso muito lento devido ao I/O físico de leitura do disco.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">MEMORY_AND_DISK_SER</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--arch) 60%, var(--emr) 40%);"></div>
+          <div class="ppro">Melhor balanço para produção de larga escala.</div>
+          <div class="pcon">Custo médio de processamento de CPU para serializar.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">OFF_HEAP</div>
+          <div class="pbar" style="background: linear-gradient(90deg, #10b981 90%, #ccc 10%);"></div>
+          <div class="ppro">Bypass de GC. Gerenciado diretamente pelo Tungsten na RAM do S.O.</div>
+          <div class="pcon">Requer habilitar <code>spark.memory.offHeap.enabled = true</code> e alocação prévia.</div>
         </div>
       </div>
     </section>
@@ -1143,21 +1290,100 @@ df_stream.writeStream \
         <div class="sec-num" style="color:var(--spark)">12</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Erros Comuns no Apache Spark</h2>
-          <p>Troubleshooting e erros clássicos de JVM</p>
+          <h2>Guia de Resolução de Erros &amp; Troubleshooting</h2>
+          <p>Receitas e diagnósticos para os 10 problemas e exceções clássicos da JVM e do Spark em produção</p>
         </div>
       </div>
 
-      <div class="errors-grid">
+      <div class="errors-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
         <div class="err-card">
-          <div class="err-tag">Out of Memory (OOM)</div>
-          <div class="err-title">Java heap space / GC overhead limit exceeded</div>
-          <div class="err-body"><strong>Causa:</strong> Driver ou executores esgotaram a RAM devido a partições excessivamente volumosas (&gt;2 GB) ou chamadas brutas de `.collect()`. <br><br><strong>Fix:</strong> Aumente o número de partições no shuffle ou aloque mais memória física no Spark Submit.</div>
+          <div class="err-tag" style="background: var(--err); color: #fff;">OOM / JVM</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">java.lang.OutOfMemoryError: Java heap space</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> Os executores ou o Driver esgotaram a memória Heap física devido a partições excessivamente grandes (Data Skew), processamento de registros gigantes de texto (JSON/XML) ou chamadas abusivas de <code>.collect()</code> de DataFrames volumosos para a memória do Driver.
+            <br><br><strong>Fix:</strong> Aumente a quantidade de partições lidas, ative o AQE (<code>spark.sql.adaptive.skewJoin.enabled</code>) ou reduza o número de cores por executor (liberando mais RAM por tarefa). Evite UDFs tradicionais que acumulam referências.
+          </div>
         </div>
+
         <div class="err-card">
-          <div class="err-tag">Dynamic Allocation</div>
-          <div class="err-title">ExecutorLostFailure (heartbeat timeout)</div>
-          <div class="err-body"><strong>Causa:</strong> Executor ocupado demais com Garbage Collection pesado, paralisando threads e perdendo comunicação com o Driver.<br><br><strong>Fix:</strong> Ajuste as opções do GC para utilizar o G1GC e aumente o timeout de conexões.</div>
+          <div class="err-tag" style="background: var(--err); color: #fff;">YARN / OS</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Container killed by YARN for exceeding memory limits</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> A memória total do container (Heap + Off-Heap) excedeu o limite provisionado no ResourceManager. Ocorre frequentemente em jobs PySpark com uso pesado de Pandas/PyArrow (vetorização) ou bibliotecas C++ nativas.
+            <br><br><strong>Fix:</strong> Eleve a memória de overhead configurando <code>spark.executor.memoryOverhead</code>. Como regra prática, defina entre 15% a 20% do valor total de <code>spark.executor.memory</code> (mínimo de 384 MB).
+          </div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag" style="background: var(--warn); color: #000;">PERFORMANCE</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Straggler Tasks (Job travado em 99%)</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> Severo desbalanceamento de partições (Data Skew). Uma única partição contém a maior parte dos dados e é direcionada a um único executor, mantendo-o ocupado por horas enquanto os demais ficam ociosos.
+            <br><br><strong>Fix:</strong> Ative a partição automática de skew join do AQE ou aplique a técnica manual de **Salting** adicionando um prefixo aleatório às chaves de junção para distribuí-las horizontalmente pelo cluster.
+          </div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag" style="background: var(--warn); color: #000;">PERFORMANCE</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Too many small files (Overhead de metadados)</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> Milhares de pequenos arquivos gravados no S3/HDFS. Isso gera milhões de chamadas I/O HTTP `GET`/`LIST` para leitura no Driver do Spark, travando a compilação de metadados e o planejamento do job.
+            <br><br><strong>Fix:</strong> Utilize <code>df.coalesce(N)</code> antes da escrita final para arquivos em lote ou configure <code>spark.sql.files.maxPartitionBytes</code> (padrão 128 MB) para juntar arquivos menores durante a leitura.
+          </div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag" style="background: var(--err); color: #fff;">SERIALIZAÇÃO</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">SparkException: Task not serializable</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> O Spark tenta serializar o código de uma transformação para despachar para os executores, mas encontra referências a objetos do Driver não serializáveis (ex: conexões de banco de dados HTTP, loggers, ou a própria SparkSession).
+            <br><br><strong>Fix:</strong> Instancie e feche conexões JDBC/HTTP dentro de um escopo local na task usando <code>foreachPartition</code>, evitando referenciar variáveis globais criadas fora do loop executor.
+          </div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag" style="background: var(--err); color: #fff;">SHUFFLE / REDE</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">FetchFailedException - shuffle data lost</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> Um executor morreu no meio do pipeline (por OOM ou encerramento de nó Spot da AWS) e os arquivos intermediários de shuffle gerados por ele foram perdidos, fazendo com que as tarefas dependentes falhem.
+            <br><br><strong>Fix:</strong> Se estiver no EKS/Kubernetes, ative o **Shuffle Tracking** do Spark 3.x+; se estiver no YARN, habilite o **External Shuffle Service** (<code>spark.shuffle.service.enabled = true</code>) para desacoplar e salvar arquivos locais.
+          </div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag" style="background: var(--err); color: #fff;">SCHEMA / COMPILAÇÃO</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">AnalysisException: cannot resolve column</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> Erro ortográfico ou conflito de namespace de colunas ao referenciar colunas em estruturas de junção de DataFrames de nomes idênticos sem apelidos (aliases) explícitos.
+            <br><br><strong>Fix:</strong> Utilize namespaces claros, renomeie colunas duplicadas usando <code>withColumnRenamed</code> antes da junção e execute diagnósticos prévios imprimindo o schema lógicos com <code>df.printSchema()</code>.
+          </div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag" style="background: var(--err); color: #fff;">STREAMING</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">StreamingQueryException: checkpoint incompatível</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> O schema dos dados de origem ou a estrutura lógica da query de streaming (ex: novos operadores de janela) foram alterados, tornando incompatíveis os estados e offsets persistidos no diretório de checkpoint.
+            <br><br><strong>Fix:</strong> Delete o diretório antigo de metadados de checkpoint do S3 ou crie e aponte para um novo diretório exclusivo de versionamento de checkpoint antes do deploy do novo código em produção.
+          </div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag" style="background: var(--err); color: #fff;">GC / TIMEOUT</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Executor heartbeat timed out</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> Pausa de Garbage Collection extremamente longa da JVM Heap (Stop-the-world). O executor congela todas as threads para liberar espaço e falha em responder as mensagens de heartbeat de saúde do Driver.
+            <br><br><strong>Fix:</strong> Altere o Garbage Collector padrão para o **G1GC** (<code>-XX:+UseG1GC</code>), configure tamanhos maiores de Heap ou aumente o timeout limite de rede configurando <code>spark.network.timeout = 800s</code>.
+          </div>
+        </div>
+
+        <div class="err-card">
+          <div class="err-tag" style="background: var(--warn); color: #000;">I/O / STORAGE</div>
+          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Full scan desnecessário em tabelas Parquet</div>
+          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+            <strong>Causa:</strong> Consultas lentas em tabelas Parquet/Delta devido à ausência de filtros baseados nas colunas físicas de partição estruturadas na gravação, forçando o Spark a ler e deserializar arquivos inteiros.
+            <br><br><strong>Fix:</strong> Certifique-se de salvar os arquivos usando <code>.partitionBy("ano", "mes")</code> nas colunas mais acessadas e verifique se as queries analíticas de leitura utilizam ativamente esses mesmos campos de partição nos filtros.
+          </div>
         </div>
       </div>
     </section>
