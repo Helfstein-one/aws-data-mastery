@@ -86,6 +86,7 @@
       items: [
         "processing.html#spark-conceitos",
         "processing.html#spark-arch",
+        "processing.html#spark-yarn-pyramid",
         "processing.html#spark-math",
         "processing.html#tungsten",
         "processing.html#spark-gc",
@@ -97,13 +98,16 @@
         "processing.html#spark-tuning",
         "processing.html#spark-debug",
         "processing.html#spark-erros",
+        "processing.html#spark-specialist-debug",
         "processing.html#glue-jobs",
         "processing.html#emr-ec2",
         "processing.html#emr-serverless",
         "processing.html#emr-eks",
         "processing.html#emr-comparativo",
+        "processing.html#spark-finops-costs",
         "processing.html#spark-ui-deepdive",
-        "processing.html#flink-streaming"
+        "processing.html#flink-streaming",
+        "processing.html#spark-e2e-integrations"
       ]
     },
     serving: {

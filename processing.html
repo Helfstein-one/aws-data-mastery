@@ -66,6 +66,7 @@
 
       <a href="processing.html" class="nav-a active"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Processamento Spark</a>
       <a href="processing.html#spark-arch" class="nav-sub"><span class="nav-sdot"></span>Spark Arch</a>
+      <a href="processing.html#spark-yarn-pyramid" class="nav-sub"><span class="nav-sdot"></span>YARN &amp; Pirâmide</a>
       <a href="processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue &amp; Dynamic Frames</a>
       <a href="processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR on EC2 (Master/Core)</a>
       <a href="processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless</a>
@@ -230,6 +231,30 @@
           <div class="cc-tag">Execução</div>
           <div class="cc-title">Lazy Evaluation &amp; DAG</div>
           <div class="cc-body">Operações no Spark apenas constroem um grafo acíclico direcionado (DAG) que é otimizado e compilado. A execução real só é acionada após a chamada de uma Action.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Compartilhamento</div>
+          <div class="cc-title">Shared Variables (Broadcast &amp; Accumulators)</div>
+          <div class="cc-body"><strong>Broadcast:</strong> Variáveis read-only distribuídas uma vez por nó (não por task). <strong>Accumulators:</strong> Variáveis write-only para contadores agregados de forma associativa e comutativa no Driver.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Metadados</div>
+          <div class="cc-title">Spark Catalog &amp; Hive Metastore</div>
+          <div class="cc-body">Interface de abstração para gerenciar metadados de tabelas, databases, funções e views. No EMR, geralmente integra-se ao <strong>AWS Glue Data Catalog</strong> para persistência global.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Performance</div>
+          <div class="cc-title">Protocolos de Serialização</div>
+          <div class="cc-body">O Spark usa <strong>Java Serialization</strong> por padrão, mas o <strong>Kryo Serialization</strong> é recomendado por ser 10x mais compacto e veloz, reduzindo o uso de rede durante Shuffles.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Recurso</div>
+          <div class="cc-title">Spill to Disk</div>
+          <div class="cc-body">Mecanismo de segurança onde dados transbordam da RAM para o disco local (EBS/Instance Store). Causa lentidão massiva (I/O Wait), mas evita o travamento total do cluster por OOM.</div>
         </div>
       </div>
 
@@ -396,6 +421,86 @@
         <li><strong>Fatiamento em Stages:</strong> O DAG Scheduler analisa as dependências lógicas. Se houver dependência estreita (Narrow Dependency, ex: <code>select</code>, <code>filter</code>), as operações rodam juntas no mesmo estágio. Se houver dependência larga (Wide Dependency, ex: <code>groupBy</code>, <code>join</code>), o Spark quebra a execução em um novo **Stage**, pois exige troca de registros pela rede (**Shuffle**).</li>
         <li><strong>Despacho de Tasks:</strong> Cada Stage é dividido em **Tasks** físicas (exatamente uma task para cada partição de dados do DataFrame). O Task Scheduler despacha as tasks para os executores com capacidade ociosa de cores.</li>
       </ol>
+    </section>
+
+    <!-- ── NOVO: HADOOP, YARN E PIRÂMIDE DE EXECUÇÃO ── -->
+    <section class="section" id="spark-yarn-pyramid">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">02.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Hadoop, YARN e a Pirâmide de Execução do Spark</h2>
+          <p>A base física infraestrutural e a hierarquia lógica de comando</p>
+        </div>
+      </div>
+
+      <p>Para dominar o Spark no EMR, é preciso entender que ele não roda no vácuo. O Spark utiliza o <strong>Hadoop YARN (Yet Another Resource Negotiator)</strong> como seu Cluster Manager padrão. O YARN é o "sistema operacional" do cluster, responsável por fatiar o hardware físico (CPU/RAM) em unidades isoladas chamadas <strong>Containers</strong>.</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Componentes do YARN</h4>
+          <ul>
+            <li><strong>ResourceManager (RM):</strong> O mestre global (no Master Node). Ele decide quem ganha recursos no cluster.</li>
+            <li><strong>NodeManager (NM):</strong> O agente local em cada Worker. Monitora o consumo de recursos do nó e reporta ao RM.</li>
+            <li><strong>ApplicationMaster (AM):</strong> Um container especial (um por aplicação Spark) que negocia recursos com o RM e coordena os Executors. No Spark, o Driver pode atuar como AM ou lançar um AM separado (modo cluster).</li>
+          </ul>
+        </div>
+        <div>
+          <h4>A Pirâmide de Execução Spark</h4>
+          <p>Existe uma hierarquia rigorosa de como o código se transforma em processamento:</p>
+          <ol>
+            <li><strong>Application:</strong> O programa completo (ex: seu script PySpark).</li>
+            <li><strong>Job:</strong> Disparado por uma <em>Action</em> (ex: <code>.save()</code>, <code>.collect()</code>).</li>
+            <li><strong>Stage:</strong> Conjunto de tasks que podem rodar sem mover dados pela rede. Quebrado por <em>Shuffles</em>.</li>
+            <li><strong>Task:</strong> A menor unidade de trabalho. Processa <strong>uma única partição física</strong> de dados em <strong>um único core</strong> de CPU.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- DIAGRAMA: PIRÂMIDE SPARK SOBRE YARN -->
+      <div class="dw" style="text-align: center; margin: 30px 0;">
+        <svg viewBox="0 0 800 450" width="800" height="450" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="800" height="450" fill="#0f172a" rx="14"/>
+          <text x="400" y="30" text-anchor="middle" fill="white" font-size="14" font-weight="700">MAPEAMENTO: HIERARQUIA LOGÍCA SPARK vs INFRAESTRUTURA YARN</text>
+
+          <!-- Camada Aplicação -->
+          <rect x="50" y="60" width="700" height="60" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+          <text x="60" y="85" fill="#38bdf8" font-size="12" font-weight="700">1. APPLICATION (Contexto PySpark)</text>
+          <text x="60" y="105" fill="#94a3b8" font-size="9">Escopo total do script. Gerencia o ApplicationMaster no YARN.</text>
+
+          <!-- Camada Job -->
+          <rect x="100" y="130" width="600" height="60" rx="6" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="110" y="155" fill="#fbbf24" font-size="11" font-weight="700">2. JOBS (Disparados por Actions)</text>
+          <text x="110" y="175" fill="#94a3b8" font-size="9">df.write.parquet() -> Gera 1 Job. Contém 1 ou mais Stages.</text>
+
+          <!-- Camada Stage -->
+          <rect x="150" y="200" width="500" height="80" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="160" y="225" fill="#f43f5e" font-size="11" font-weight="700">3. STAGES (Fronteiras de Shuffle)</text>
+          <text x="160" y="245" fill="#94a3b8" font-size="9">Stage 0: Leitura + Map. (Shuffle Write)</text>
+          <text x="160" y="265" fill="#94a3b8" font-size="9">Stage 1: Agregação. (Shuffle Read)</text>
+
+          <!-- Camada Task/Container -->
+          <g>
+            <rect x="200" y="290" width="180" height="120" rx="4" fill="#0f172a" stroke="#10b981"/>
+            <text x="290" y="310" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">YARN CONTAINER A</text>
+            <rect x="210" y="320" width="160" height="30" rx="2" fill="#1e293b" stroke="#cbd5e1"/>
+            <text x="290" y="340" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 1 (Partição 0)</text>
+            <rect x="210" y="360" width="160" height="30" rx="2" fill="#1e293b" stroke="#cbd5e1"/>
+            <text x="290" y="380" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 2 (Partição 1)</text>
+          </g>
+
+          <g>
+            <rect x="420" y="290" width="180" height="120" rx="4" fill="#0f172a" stroke="#10b981"/>
+            <text x="510" y="310" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">YARN CONTAINER B</text>
+            <rect x="430" y="320" width="160" height="30" rx="2" fill="#1e293b" stroke="#cbd5e1"/>
+            <text x="510" y="340" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 3 (Partição 2)</text>
+            <rect x="430" y="360" width="160" height="30" rx="2" fill="#1e293b" stroke="#cbd5e1"/>
+            <text x="510" y="380" text-anchor="middle" fill="#cbd5e1" font-size="8">Task 4 (Partição 3)</text>
+          </g>
+
+          <text x="400" y="435" text-anchor="middle" fill="#64748b" font-size="8">Mapeamento físico: 1 Task = 1 CPU Core + 1 Partição de Dados</text>
+        </svg>
+      </div>
     </section>
 
     <section class="section" id="spark-math">
@@ -1388,6 +1493,41 @@ df_stream.writeStream \
       </div>
     </section>
 
+    <section class="section" id="spark-specialist-debug">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">12.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Estratégias de Diagnóstico Especialista</h2>
+          <p>Mecanismos profundos de inspeção: Thread Dumps, Heap Dumps e Log de GC</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card" style="border-top: 3px solid var(--err);">
+          <h4>🧵 Thread Dumps (Caça a Deadlocks)</h4>
+          <p>Se o job estiver <strong>BLOCKED</strong> mas a CPU estiver em 0%, você tem um Deadlock ou contenção de recurso externo.</p>
+          <ul style="font-size: 12px; line-height: 1.4;">
+            <li><strong>Como gerar:</strong> Use <code>jstack &lt;pid&gt;</code> no nó worker ou veja pela Spark UI (Executors -> Thread Dump).</li>
+            <li><strong>O que buscar:</strong> Threads no estado <code>WAITING (on object monitor)</code> apontando para a mesma referência de memória.</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--err);">
+          <h4>🧠 Heap Dumps sob OOM</h4>
+          <p>Para descobrir vazamentos de memória (Memory Leaks) em bibliotecas customizadas.</p>
+          <ul style="font-size: 12px; line-height: 1.4;">
+            <li><strong>Configuração:</strong> Adicione <code>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/spark-heapdump.hprof</code> nas <code>extraJavaOptions</code>.</li>
+            <li><strong>Análise:</strong> Abra o arquivo <code>.hprof</code> no <strong>Eclipse Memory Analyzer (MAT)</strong> para ver quais objetos estão retendo a Heap.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="abox note" style="margin-top: 15px;">
+        <strong>Análise Proativa de Garbage Collection:</strong>
+        <br>Habilite <code>-XX:+PrintGCDetails -XX:+PrintGCTimeStamps</code>. Se você observar "Full GC" frequentes seguidos de pouca liberação de memória, sua <strong>Old Generation</strong> está saturada. Aumentar a <code>spark.memory.fraction</code> pode piorar a situação; o fix real é aumentar a memória física do nó ou reduzir o paralelismo local.
+      </div>
+    </section>
+
     <!-- ── AWS GLUE SECTION ── -->
     <section class="section" id="glue-jobs">
       <div class="sec-hdr">
@@ -1839,6 +1979,57 @@ df_stream.writeStream \
         <li><strong>General Purpose (Família M - ex: m5, m6g):</strong> Proporção balanceada (4 GB de RAM por core). Boa opção para nós de Driver ou clusters pequenos de desenvolvimento compartilhado.</li>
         <li><strong>Storage-Optimized (Família I - ex: i3, i3en):</strong> Equipados com discos físicos NVMe locais de altíssimo throughput. Indispensável para jobs massivos que exigem gravações monstruosas de <em>Shuffle</em>, servindo como área temporária extremamente veloz em substituição ao EBS tradicional.</li>
       </ul>
+    </section>
+
+    <section class="section" id="spark-finops-costs">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--ok)">16.6</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--ok)"></div>
+          <h2>FinOps: Simulação Matemática de Custos Reais</h2>
+          <p>Cálculos de TCO (Total Cost of Ownership) para tomada de decisão arquitetural</p>
+        </div>
+      </div>
+
+      <div class="abox info">
+        <strong>Tabela de Preços Base (us-east-1 / Virginia):</strong>
+        <ul>
+          <li><strong>AWS Glue v4.0:</strong> $0.44 por DPU/Hora (cobrado ao segundo).</li>
+          <li><strong>EMR Serverless:</strong> $0.0526 por vCPU/Hora + $0.0057 por GB/Hora.</li>
+          <li><strong>EMR EC2 (r5.4xlarge):</strong> $1.008 (EC2) + $0.27 (EMR Tax) = $1.278/hora por nó.</li>
+        </ul>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cenário de Workload</th>
+              <th>Dimensionamento</th>
+              <th>Tempo de Execução</th>
+              <th>Custo Estimado (Diário)</th>
+              <th>Veredito FinOps</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Cenário A: ETL Sazonal Curto</strong> (Ingestão de 10GB, 1x ao dia)</td>
+              <td>10 DPUs (Glue) ou Equivalente ACU</td>
+              <td>20 Minutos</td>
+              <td><strong>$1.46 (Glue)</strong> vs $2.10 (EMR EC2)*</td>
+              <td><strong>Glue/EMR Serverless:</strong> Vence por não ter custo de "Warm-up" de 10 min de cluster EC2.</td>
+            </tr>
+            <tr>
+              <td><strong>Cenário B: Processamento 24/7</strong> (Streaming constante de Logs)</td>
+              <td>Cluster de 5 nós (80 vCPUs / 640GB RAM)</td>
+              <td>24 Horas</td>
+              <td>$352 (EMR Serverless) vs <strong>$153 (EMR EC2 Spot)</strong></td>
+              <td><strong>EMR on EC2 (Spot):</strong> Vence massivamente. O desconto de 70-90% do Spot no EC2 compensa o gerenciamento.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size: 11px; color: var(--muted);">*Considerando boot de 10 minutos do cluster EC2 cobrado integralmente.</p>
     </section>
 
     <section class="section" id="spark-ui-deepdive">
