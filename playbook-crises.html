@@ -187,6 +187,7 @@
       <a href="playbook-crises.html#crise-duplicacao" class="nav-sub"><span class="nav-sdot"></span>Deduplicação API</a>
       <a href="playbook-crises.html#crise-nulos" class="nav-sub"><span class="nav-sdot"></span>Dados Nulos / Drift</a>
       <a href="playbook-crises.html#crise-sla" class="nav-sub"><span class="nav-sdot"></span>Atraso SLA Mesh</a>
+      <a href="playbook-crises.html#crise-schema-drift" class="nav-sub"><span class="nav-sdot"></span>Schema Drift SLA</a>
     </div>
   </div>
 </nav>
@@ -619,6 +620,87 @@
         <div class="abox-body">
           <p><strong>Linguagem Gerencial:</strong> <em>"O atraso de 6 horas na entrega dos relatórios diários de vendas ocorreu porque o time de desenvolvimento do banco parceiro atualizou a estrutura da tabela deles e o nosso sistema não ficou sabendo automaticamente, travando a consulta. Criamos um sistema de alerta e compartilhamento automático de tabelas. Agora, qualquer alteração estrutural no parceiro se reflete nas nossas análises em menos de 2 minutos, estabilizando nosso SLA de relatórios."</em></p>
           <p><strong>Linguagem CIO (C-Level):</strong> <em>"Sanamos uma quebra de SLA cross-account que deixava os dados desatualizados por 6 horas. Automatizamos o sincronismo de catálogo de metadados por meio de links lógicos lincados no AWS Lake Formation e regras baseadas em eventos no EventBridge. O tempo de resposta para qualquer modificação do mesh de dados caiu de 6 horas para 2 minutos, blindando o nosso SLO analítico e eliminando custos com suporte emergencial."</em></p>
+        </div>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CENÁRIO 8 (Especialista I) -->
+    <section class="section" id="crise-schema-drift">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--warn)">08</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--warn)"></div>
+          <h2>Crise 8: Schema Drift Silencioso e Queda de SLA</h2>
+          <p>Liderança Especialista e a reconstrução da confiança após uma mudança estrutural não comunicada</p>
+        </div>
+      </div>
+
+      <div class="case-box">
+        <div class="cb-hdr">1. O Cenário Técnico e o Conflito</div>
+        <div class="cb-body">
+          <p><strong>Incidente Técnico:</strong> O pipeline analítico core (responsável por alimentar os dashboards de faturamento) falhou durante a madrugada. A causa raiz foi um "Schema Drift": a equipe de engenharia de software do microsserviço de vendas origem alterou o tipo de dado da coluna de <code>amount</code> (de <code>INT</code> para <code>STRING</code> formatado) e removeu o campo <code>transaction_date</code>, substituindo-o por <code>created_at</code>. O pipeline Spark (Lakehouse) quebrou no momento do cast de leitura e o SLA crítico de entrega das 08h00 foi rompido.</p>
+          <p><strong>Conflito Humano:</strong> O time de análise de negócios está furioso devido aos relatórios em branco. Dentro da engenharia, instalou-se o "finger-pointing" (jogo da culpa). A squad de dados acusa a squad de origem de amadorismo por quebrar a retrocompatibilidade. A squad de origem defende que a mudança era vital para uma nova funcionalidade do front-end e que não pode ser freada por "relatórios legados". Os desenvolvedores estão desmotivados e o clima é de tensão bélica.</p>
+        </div>
+      </div>
+
+      <div class="case-box">
+        <div class="cb-hdr">2. A Ação do Especialista (Resolução Comportamental)</div>
+        <div class="cb-body">
+          <ul class="crisis-steps">
+            <li>
+              <span class="step-num">Liderança</span>
+              <div>
+                <strong>Desarmando a trincheira:</strong> O Especialista I assume o controle do war room. Em vez de alimentar a culpa, ele blinda o time de dados da pressão de negócios e chama o Tech Lead da origem para uma call 1:1. Ele alinha que o objetivo não é punir a mudança, mas reestabelecer o serviço. O especialista promove a visão de "um único time corporativo", reduzindo a postura defensiva e engajando ambas as squads na mitigação.
+              </div>
+            </li>
+            <li>
+              <span class="step-num">Solução de Problemas</span>
+              <div>
+                <strong>Visão 360 e Ação Rápida:</strong> Ele orienta a criação imediata de uma branch de hotfix. A solução tática é injetar uma camada de compatibilidade temporária (um parsing condicional no Spark) que lê o schema novo e o mapeia para o formato antigo, salvando o fechamento do dia.
+              </div>
+            </li>
+            <li>
+              <span class="step-num">Orientação a Resultados</span>
+              <div>
+                <strong>Conciliando Prazos:</strong> Com o dashboard no ar, ele prioriza a estabilidade. Negocia com a gerência a alocação de 3 dias do sprint atual para construir testes de validação de schema estritos no pipeline de ingestão.
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="matrix-grid">
+        <div class="matrix-card">
+          <div class="mc-role">Equipe Técnica (Squad)</div>
+          <div class="mc-focus">Causa Raiz &amp; Arquitetura</div>
+          <div class="mc-speech">"Tivemos um schema evolution que quebrou nosso DAG por incompatibilidade de tipos no campo de amount. Vamos implementar um hotfix usando um cast defensivo no Spark e aplicar a função coalesce() para tratar a data. A longo prazo, implementaremos o Great Expectations na ingestão."</div>
+        </div>
+
+        <div class="matrix-card">
+          <div class="mc-role">Equipe de Negócios (Produto)</div>
+          <div class="mc-focus">SLA &amp; Impacto no Usuário</div>
+          <div class="mc-speech">"Nossos relatórios matinais atrasaram devido a uma mudança não mapeada no formato como as vendas chegam até nós. Já estabilizamos a leitura e os painéis estarão 100% atualizados até às 11h. Pedimos desculpas pelo impacto na operação."</div>
+        </div>
+
+        <div class="matrix-card">
+          <div class="mc-role">Nível Gerencial (Coordenação)</div>
+          <div class="mc-focus">Riscos &amp; OKRs da Squad</div>
+          <div class="mc-speech">"O atraso de hoje expôs uma fragilidade de acoplamento entre os sistemas transacionais e nosso Lake. Fizemos a contenção, mas para proteger o OKR de confiabilidade, realocarei parte da capacidade desta sprint para criar barreiras automáticas de bloqueio contra dados mal formatados."</div>
+        </div>
+
+        <div class="matrix-card">
+          <div class="mc-role">C-Level / Superintendência</div>
+          <div class="mc-focus">Opex, Risco &amp; Estratégia</div>
+          <div class="mc-speech">"O incidente operacional de hoje demonstra o risco de operarmos em silos. O custo de recuperação manual é alto (OPEX) e afeta a tomada de decisão. A estratégia mitigadora definitiva será a governança via Contratos de Dados (Data Contracts) exigida antes de qualquer release."</div>
+        </div>
+      </div>
+
+      <div class="case-box" style="margin-top: 24px; border-left: 4px solid var(--ok);">
+        <div class="cb-hdr" style="color: var(--ok);">4. Lições Aprendidas (Hardening &amp; Prevenção)</div>
+        <div class="cb-body">
+          <p>O Especialista I transforma a crise em oportunidade arquitetural estabelecendo <strong>Contratos de Dados (Data Contracts)</strong> corporativos. Fica documentado (produção de documentação interna) que a squad de origem assinará um schema estrito no registro (Schema Registry). Qualquer quebra de compatibilidade falhará a esteira de CI/CD do microsserviço (Shift-Left), impedindo que o erro de tipagem alcance o ambiente analítico. A comunicação flui de reativa para preventiva.</p>
         </div>
       </div>
     </section>

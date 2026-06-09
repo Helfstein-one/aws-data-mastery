@@ -202,7 +202,8 @@
         "playbook-crises.html#crise-fechamento",
         "playbook-crises.html#crise-duplicacao",
         "playbook-crises.html#crise-nulos",
-        "playbook-crises.html#crise-sla"
+        "playbook-crises.html#crise-sla",
+        "playbook-crises.html#crise-schema-drift"
       ]
     },
     platform: {
