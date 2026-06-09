@@ -655,12 +655,14 @@ spark.dynamicAllocation.schedulerBacklogTimeout = 1s</code></pre>
         <div class="sec-num" style="color:var(--spark)">04</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Tungsten: Engine de Execução Física</h2>
+          <h2>Tungsten &amp; JIT: Engine de Execução Física</h2>
           <p>Aceleração física em nível de hardware, alocação de memória direta e Whole-Stage CodeGen</p>
         </div>
       </div>
 
-      <div class="dw">
+      <p>O <strong>Project Tungsten</strong> e o compilador <strong>Just-In-Time (JIT)</strong> formam a base da performance moderna do Spark. A premissa central é que a barreira para o processamento distribuído mudou do I/O (Disco/Rede) para a CPU e memória. O Tungsten otimiza agressivamente o modo como as instruções são dadas aos registradores da CPU e como os bytes são alocados na memória, escapando das abstrações pesadas da Java Virtual Machine (JVM).</p>
+
+      <div class="dw" style="margin-top: 15px;">
         <svg viewBox="0 0 760 250" width="760" height="250" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
           <rect width="760" height="250" fill="#0f172a"/>
           <!-- Pilar 1 -->
@@ -686,14 +688,32 @@ spark.dynamicAllocation.schedulerBacklogTimeout = 1s</code></pre>
         </svg>
       </div>
 
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>⚙️ Deep Dive: Whole-Stage CodeGen e Eliminação de Funções Virtuais</h4>
+          <p>No processamento SQL tradicional (Modelo Vulcano), cada operador na query (ex: <code>Filter</code> -> <code>Project</code> -> <code>Aggregate</code>) chama um método <code>.next()</code> para buscar a próxima linha. Essas <strong>chamadas de funções virtuais</strong> têm alto custo na CPU, causando falhas nos preditores de branch de hardware e quebrando o pipeline da CPU.</p>
+          <p><strong>A Solução:</strong> O Tungsten gera um código Java único que colapsa toda a árvore de operações em uma única função otimizada com um loop "for". O Janino compiler compila esse Java em tempo de execução para bytecode, e a JVM aplica o <strong>JIT (Just-In-Time) compilation</strong> para gerar as instruções de máquina da CPU host.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🔍 Prática: Encontrando o JIT na Spark UI</h4>
+          <p>Como saber se o seu código foi acelerado? Abra a aba <strong>SQL/DataFrame</strong> na Spark UI. Operadores marcados com um asterisco (ex: <code>*(1) Filter</code> ou <code>*(2) HashAggregate</code>) significam que múltiplas etapas foram compiladas dinamicamente em uma única função nativa.</p>
+          <p>Você também pode usar <code>df.explain(True)</code> no console. O plano físico mostrará "WholeStageCodegen" envolvendo os operadores que foram fundidos para rodar na CPU como código nativo otimizado.</p>
+        </div>
+      </div>
+
       <h3>Catalyst Optimizer: O Coração Estruturado do Spark</h3>
       <p>O <strong>Catalyst Optimizer</strong> é um otimizador extensível baseado em regras escrito em Scala que gerencia todo o ciclo de compilação lógica de consultas DataFrame/SQL:</p>
       <ol>
         <li><strong>Análise (Analysis):</strong> O Spark analisa a sintaxe da query e consulta o Catalog (ex: Glue Data Catalog) para resolver nomes de colunas, tabelas e tipos lógicos. Retorna um <em>Analyzed Logical Plan</em>.</li>
         <li><strong>Otimização Lógica (Logical Optimization):</strong> Aplica regras de transformação clássicas como **Constant Folding** (calcula valores constantes estáticos em tempo de otimização) e **Predicate Pushdown** (empurra filtros para a leitura do arquivo no S3, evitando carregar dados indesejados).</li>
         <li><strong>Planejamento Físico (Physical Planning):</strong> Gera múltiplos planos físicos reais baseado nas estatísticas da tabela (Custo Físico). O Spark calcula o custo computacional de cada plano (ex: escolher entre Sort-Merge Join ou Broadcast Hash Join) e seleciona o mais barato.</li>
-        <li><strong>Geração de Código (Code Generation):</strong> Compila o plano físico escolhido em bytecode Java (através do Janino compiler) rodando nativamente na JVM dos executores. O <strong>Whole-Stage CodeGen</strong> colapsa várias operações (como filtros e projeções) em um único loop em Java, eliminando chamadas virtuais repetitivas na pilha da JVM e acelerando a execução.</li>
+        <li><strong>Geração de Código (Code Generation):</strong> Compila o plano físico escolhido em bytecode Java (através do Janino compiler) rodando nativamente na JVM dos executores. O <strong>Whole-Stage CodeGen</strong> colapsa várias operações em um único loop em Java.</li>
       </ol>
+
+      <div class="abox info">
+        <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
+        <p>Ao modernizar os pipelines para aproveitar plenamente a API de DataFrame em vez de RDDs ou UDFs complexos, habilitamos o Tungsten e o JIT para atingir <strong>Time-to-Market de dados em frações do tempo original</strong>. Do ponto de vista de <strong>EBITDA e FinOps</strong>, a geração dinâmica de código e alocação eficiente da CPU L1/L2 significa que os jobs executam até 10x mais rápido. Isso reduz diretamente as horas/máquina faturadas (OPEX) no cluster AWS, melhorando margens de lucro operacionais e destravando recursos para outras iniciativas de análise de dados sem aumento do TCO.</p>
+      </div>
     </section>
 
     <section class="section" id="spark-gc">
@@ -1231,18 +1251,49 @@ df_final = df_bucket1.join(df_bucket2, "user_id") # Executa instantaneamente!</c
         </div>
       </div>
 
-      <pre><span class="c"># Processamento incremental com escrita Delta idempotente</span>
-df_stream = spark.readStream \
-    .format(<span class="s">"kafka"</span>) \
-    .option(<span class="s">"kafka.bootstrap.servers"</span>, <span class="s">"broker:9092"</span>) \
-    .option(<span class="s">"subscribe"</span>, <span class="s">"telemetria"</span>) \
-    .load()
+      <p>Diferente de sistemas como o Flink, o <strong>Spark Structured Streaming</strong> opera sob o modelo de <strong>Micro-Batching</strong>. A engine aguarda um intervalo de trigger configurável (ex: 10 segundos), coleta as mensagens que chegaram no Kafka/Kinesis nesse intervalo, e as processa usando o mesmo motor otimizado do Spark SQL (Catalyst/Tungsten) como se fossem um DataFrame estático convencional.</p>
 
-df_stream.writeStream \
-    .format(<span class="s">"delta"</span>) \
-    .option(<span class="s">"checkpointLocation"</span>, <span class="s">"s3://bucket/checkpoints/"</span>) \
-    .trigger(processingTime=<span class="s">"10 seconds"</span>) \
-    .start(<span class="s">"s3://bucket/tabela_delta/"</span>)</pre>
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>💧 Gerenciamento de Estado e Watermarks</h4>
+          <p>Em processamentos stateful (como contagem de usuários ativos em uma janela de 5 minutos), o Spark precisa manter na memória (ou no RocksDB State Backend) os eventos que já chegaram. O <strong>Watermark</strong> define o tempo limite de tolerância para a chegada de dados atrasados.</p>
+          <p>Exemplo: Um watermark de "10 minutes" instrui a engine a descartar do estado da memória qualquer registro pertencente a uma janela de tempo que já expirou há mais de 10 minutos, evitando vazamento de memória (OOM).</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🔄 Tolerância a Falhas e Checkpoints</h4>
+          <p>Garantir semântica <strong>Exactly-Once</strong> exige um diretório de Checkpoint no S3 ou HDFS. O Spark salva os <em>offsets</em> consumidos do Kafka e o estado das agregações. Se um executor ou nó falhar, o job reinicia lendo exatamente do último <em>offset</em> validado, sem duplicar dados.</p>
+        </div>
+      </div>
+
+      <h3>Arquitetura End-to-End: Kafka para Delta Lake</h3>
+      <p>Abaixo, um pipeline prático arquitetural que consome de um tópico de mensageria escalável e grava num formato Lakehouse garantindo atomicidade:</p>
+
+      <pre><code class="language-python"># 1. Leitura: Processamento incremental com backpressure controlado
+df_stream = spark.readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "broker:9092") \
+    .option("subscribe", "telemetria") \
+    .option("startingOffsets", "earliest") \
+    .option("maxOffsetsPerTrigger", "50000") \
+    .load() # maxOffsetsPerTrigger evita OOM limitando a vazão por batch
+
+# 2. Transformação e Watermark
+df_parsed = df_stream.selectExpr("CAST(value AS STRING) as json_data") \
+    ... # lógicas de transformação
+    .withWatermark("event_time", "10 minutes")
+
+# 3. Escrita: Gravação Delta idempotente
+df_parsed.writeStream \
+    .format("delta") \
+    .outputMode("append") \
+    .option("checkpointLocation", "s3://bucket/checkpoints/telemetria/") \
+    .trigger(processingTime="10 seconds") \
+    .start("s3://bucket/tabela_delta/")</code></pre>
+
+      <div class="abox info">
+        <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
+        <p>A adoção do Spark Structured Streaming reduz o risco de fraude e atraso operacional entregando insights em "near real-time" (Time-to-Market imediato). A integração direta com o Delta Lake e garantias de "Exactly-Once" via checkpoints eliminam a necessidade de caros processos noturnos de reconciliação de dados (redução de OPEX) e evitam perdas financeiras geradas por duplicação de métricas.</p>
+      </div>
     </section>
 
     <section class="section" id="spark-tuning">
@@ -1642,6 +1693,12 @@ df_stream.writeStream \
           <p>Arquitetura física, controle de custos com Spot/Fleets e gerenciamento de filas de execução YARN</p>
         </div>
       </div>
+      <p>O Amazon EMR (Elastic MapReduce) na versão EC2 é a implantação mais poderosa e flexível do ecossistema Hadoop. Aqui, o usuário possui controle total sobre a infraestrutura física (Sistema Operacional, rede, discos e instâncias AWS), assumindo também o custo operacional de gerenciamento.</p>
+
+      <div class="abox info">
+        <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
+        <p>Utilizar o EMR em EC2 com a estratégia agressiva de "Task Nodes" em instâncias <strong>Spot</strong> e uso do "Managed Scaling" permite reduzir a conta de OPEX da nuvem em até <strong>80% comparado a clusters Hadoop On-Premise ou clusters puramente On-Demand</strong>. Isso transforma custos fixos ociosos em despesas elásticas precisas e destrava o orçamento (FinOps) para inovar em novos produtos de dados.</p>
+      </div>
 
       <div class="sec-hdr" style="margin-top: 30px;">
         <div class="sec-num" style="color:var(--emr)">14.5</div>
@@ -1857,7 +1914,7 @@ df_stream.writeStream \
       <div class="grid-2">
         <div>
           <h4>Como Funciona</h4>
-          <p>O EMR Serverless desacopla o gerenciamento de instâncias da execução do job. Você cria uma "Application" (Spark ou Hive) e submete "Job Runs".</p>
+          <p>O EMR Serverless desacopla o gerenciamento de instâncias da execução do job. Você cria uma "Application" (Spark ou Hive) e submete "Job Runs". Não há S.O. para atualizar e nem instâncias para gerenciar.</p>
           <ul>
             <li><strong>Pre-initialized Capacity:</strong> Mantém um pool de workers "quentes" prontos para processar. Elimina o tempo de boot de 5-10 min do EC2, iniciando o processamento em segundos.</li>
             <li><strong>Isolamento:</strong> Cada Job Run roda em um ambiente isolado, evitando conflitos de bibliotecas ou competição de recursos entre diferentes pipelines.</li>
@@ -1876,6 +1933,11 @@ df_stream.writeStream \
             <li><strong>Custom Docker Images:</strong> Você pode empacotar bibliotecas Python/C++ complexas no Amazon ECR em uma imagem base customizada, acelerando a inicialização e garantindo isolamento total (multi-tenant).</li>
           </ul>
         </div>
+      </div>
+
+      <div class="abox info">
+        <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
+        <p>O EMR Serverless remove inteiramente o atrito do <strong>"Capacity Planning"</strong> e do gerenciamento de patches do ciclo de vida da infraestrutura. A equipe técnica foca 100% no desenvolvimento de pipelines de dados (aumento da produtividade). Com a cobrança precisa por segundo de execução baseada na memória consumida e sem a necessidade de pagar por horas ociosas de clusters ligados 24x7, observamos redução de OPEX imediata para workloads de picos instáveis e sazonais.</p>
       </div>
     </section>
 
@@ -1906,6 +1968,11 @@ df_stream.writeStream \
             <li><strong>Shuffle Tracking:</strong> No EKS, o <em>Spark Shuffle Tracking</em> evita a perda de dados cruciais quando pods em nós Spot são interrompidos pelo Auto Scaler.</li>
           </ul>
         </div>
+      </div>
+
+      <div class="abox info">
+        <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
+        <p>A adoção de EMR on EKS capitaliza sobre a estratégia de <strong>Infraestrutura Convergente</strong>. Ao unificar equipes de DevOps, Engenharia de Software e Engenharia de Dados em um único orquestrador de contêineres (Kubernetes), reduzimos o Custo Total de Propriedade (TCO) ao compartilhar hardware de maneira extremamente densa (utilização de CPU L1/L2 na casa dos 85%+). A governança de segurança também é simplificada pelo IAM Role for Service Accounts, eliminando riscos de compliance e vazamento de dados corporativos.</p>
       </div>
     </section>
 
@@ -2381,9 +2448,38 @@ GROUP BY
     user_id, window_start, window_end;</code></pre>
     </section>
 
+    <section class="section" id="spark-e2e-integrations">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">22</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Integrações End-to-End no Ecossistema AWS</h2>
+          <p>Visão arquitetural conectando ingestão, processamento e serving no Data Lake AWS</p>
+        </div>
+      </div>
+
+      <p>Um pipeline de dados de ponta a ponta na AWS quase nunca existe isolado apenas com o Spark. Ele opera dentro de uma malha arquitetural composta por serviços complementares.</p>
+
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--arch);">
+          <h4>🔗 Ingestão &gt; Spark &gt; DW</h4>
+          <p><strong>Caminho Crítico:</strong> Kinesis Data Firehose entrega JSONs brutos no S3 (Bronze). Um job EMR Spark (Agendado via Airflow/MWAA) lê esses JSONs, faz a limpeza, aplica regras de negócio (Silver) e realiza as agregações OLAP salvando em formato Parquet/Iceberg (Gold). Finalmente, o Amazon Redshift Spectrum lê os dados Delta/Iceberg do S3 para disponibilização aos analistas de BI.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--arch);">
+          <h4>🛡️ Governança &amp; Segurança E2E</h4>
+          <p><strong>Caminho Crítico:</strong> Ao rodar o EMR Serverless, os dados sensíveis no S3 estão criptografados via AWS KMS (SSE-KMS). O Spark no EMR utiliza o AWS Glue Data Catalog como Metastore central. As permissões de acesso em nível de coluna/linha (Fine-Grained Access Control) são aplicadas pelo <strong>AWS Lake Formation</strong>, garantindo que o Cientista de Dados usando o Athena só enxergue as colunas permitidas da tabela Iceberg.</p>
+        </div>
+      </div>
+
+      <div class="abox info">
+        <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
+        <p>Adoção de uma arquitetura Data Lakehouse unificada (Kinesis + EMR + Iceberg + Athena) desagrega os custos de armazenamento e computação (Storage and Compute Decoupling). Isso resolve o problema clássico de Lock-in e altos custos fixos de licenciamento de Data Warehouses monolíticos. O valor para o negócio está em pagar apenas pelos bytes lidos via Athena (modelo Pay-per-Query) ou pela hora computacional exata do EMR, maximizando o EBITDA enquanto habilita uma plataforma flexível para múltiplos casos de uso (BI, Machine Learning e GenAI) em um único lago de dados seguro.</p>
+      </div>
+    </section>
+
     <section class="section" id="emr-erros">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--emr)">22</div>
+        <div class="sec-num" style="color:var(--emr)">23</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
           <h2>Erros Comuns no AWS EMR</h2>

@@ -116,8 +116,14 @@
         "processing.html#emr-comparativo",
         "processing.html#spark-finops-costs",
         "processing.html#spark-ui-deepdive",
+        "processing.html#spark-performance-callout",
+        "processing.html#emr-bootstrap",
+        "processing.html#emr-instancias",
+        "processing.html#emr-configs",
+        "processing.html#emr-arch",
         "processing.html#flink-streaming",
-        "processing.html#spark-e2e-integrations"
+        "processing.html#spark-e2e-integrations",
+        "processing.html#emr-erros"
       ]
     },
     serving: {
