@@ -213,7 +213,9 @@
         "playbook-crises.html#crise-duplicacao",
         "playbook-crises.html#crise-nulos",
         "playbook-crises.html#crise-sla",
-        "playbook-crises.html#crise-schema-drift"
+        "playbook-crises.html#crise-schema-drift",
+        "playbook-crises.html#crise-lgpd",
+        "playbook-crises.html#crise-corrupcao"
       ]
     },
     platform: {
