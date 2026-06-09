@@ -26,6 +26,16 @@
         "architecture.html#data-product-management"
       ]
     },
+    softskills: {
+      name: "🧠 Soft Skills",
+      badge: "Especialista Tático",
+      color: "var(--spark)",
+      items: [
+        "soft-skills.html#personas",
+        "soft-skills.html#pilares",
+        "soft-skills.html#implementacao"
+      ]
+    },
     perguntas: {
       name: "❓ Perguntas de Entrevista",
       badge: "Mestre das Perguntas",
@@ -798,6 +808,16 @@
         to { stroke-dashoffset: -200; }
       }
       
+
+      .dashboard-badge-card:hover .badge-soft-brain {
+        transform-origin: 32px 32px;
+        animation: brain-pulse 1s ease-in-out infinite alternate;
+      }
+      @keyframes brain-pulse {
+        from { transform: scale(1); filter: drop-shadow(0 0 2px rgba(59,130,246,0.4)); }
+        to { transform: scale(1.05); filter: drop-shadow(0 0 6px rgba(59,130,246,0.8)); }
+      }
+
       .dashboard-badge-card:hover .badge-preg-crown {
         transform-origin: 32px 32px;
         animation: crown-glow 1s ease-in-out infinite alternate;
