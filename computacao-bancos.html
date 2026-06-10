@@ -557,20 +557,186 @@ resource <span class="s">"aws_ecs_service"</span> <span class="s">"service"</spa
         </div>
       </div>
 
-      <h3>Escrita em Quorum (Write Quorum) no Aurora</h3>
-      <p>Para otimizar escritas, o Aurora utiliza um sistema de quórum distribuído. Cada bloco de dados é segmentado e gravado em 6 instâncias de storage (2 por AZ). Uma escrita é considerada um commit válido assim que <strong>4 das 6 instâncias confirmam a gravação física (4/6 Write Quorum)</strong>. Leituras de blocos requerem a confirmação de <strong>3 de 6 cópias (3/6 Read Quorum)</strong> para reconstruir dados de forma consistente caso ocorram falhas parciais em storage pools.</p>
+      <!-- DIAGRAMA: RDS vs AURORA STORAGE -->
+      <div class="dw" style="margin-top: 20px; margin-bottom: 25px;">
+        <svg viewBox="0 0 760 300" width="100%" height="300" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+          <rect width="760" height="300" fill="#0f172a" rx="14"/>
+          <text x="380" y="25" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700">ARQUITETURA DE ARMAZENAMENTO: RDS MULTI-AZ VS AMAZON AURORA</text>
+          
+          <!-- Lado Esquerdo: RDS Tradicional -->
+          <rect x="40" y="50" width="300" height="220" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="190" y="75" text-anchor="middle" fill="#3b82f6" font-size="12" font-weight="700">Amazon RDS (Blocos Síncronos)</text>
+          
+          <rect x="70" y="100" width="100" height="40" rx="4" fill="#0b0f19" stroke="#10b981" stroke-width="1.5"/>
+          <text x="120" y="125" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">DB Master</text>
+          
+          <rect x="210" y="100" width="100" height="40" rx="4" fill="#0b0f19" stroke="#94a3b8" stroke-width="1.5"/>
+          <text x="260" y="125" text-anchor="middle" fill="#94a3b8" font-size="10">Standby DB</text>
 
-      <h3>Aurora Read Replicas (Zero-Copy Storage Link)</h3>
-      <p>Em um banco RDS tradicional, cada Réplica de Leitura tem seu próprio volume EBS individual, gerando atrasos (Replica Lag) sob fluxos intensos de escrita. No Aurora, <strong>todas as réplicas de leitura (até 15) enxergam e compartilham o mesmo volume virtual lógico do Writer</strong>. Como não há replicação física de disco, o Replica Lag é insignificante (&lt; 10ms), servindo como barreira contra dados desatualizados em queries analíticas.</p>
+          <rect x="70" y="180" width="100" height="40" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+          <text x="120" y="205" text-anchor="middle" fill="#cbd5e1" font-size="10">EBS Volume (A)</text>
 
-      <h3>Amazon RDS Proxy: Connection Pooling &amp; Multiplexing</h3>
-      <p>Microsserviços serverless (como lambdas disparadas por eventos rápidos) ou dezenas de tarefas ECS podem subir centenas de conexões TCP de banco de dados concorrentes em segundos. Isso esgota rapidamente a memória da instância RDS (que consome cerca de 10MB por conexão inativa do Postgres).
-      O **RDS Proxy** atua como uma barreira transparente:</p>
+          <rect x="210" y="180" width="100" height="40" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+          <text x="260" y="205" text-anchor="middle" fill="#cbd5e1" font-size="10">EBS Volume (B)</text>
+
+          <!-- EBS Link síncrono -->
+          <path d="M 120 140 L 120 180" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow-white)"/>
+          <path d="M 170 190 L 210 190" stroke="#ef4444" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrow-red)"/>
+          <text x="190" y="185" text-anchor="middle" fill="#ef4444" font-size="8">Replicação Síncrona de Bloco</text>
+          
+          <!-- Lado Direito: Aurora -->
+          <rect x="380" y="50" width="340" height="220" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="550" y="75" text-anchor="middle" fill="#8b5cf6" font-size="12" font-weight="700">Amazon Aurora (Shared Log Storage)</text>
+
+          <rect x="420" y="100" width="80" height="40" rx="4" fill="#0b0f19" stroke="#10b981" stroke-width="1.5"/>
+          <text x="460" y="125" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">Writer</text>
+
+          <rect x="530" y="100" width="80" height="40" rx="4" fill="#0b0f19" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="570" y="125" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">Reader 1</text>
+
+          <rect x="620" y="100" width="80" height="40" rx="4" fill="#0b0f19" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="660" y="125" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">Reader 2</text>
+
+          <!-- Aurora Storage Virtual -->
+          <rect x="420" y="180" width="280" height="60" rx="6" fill="#0b0f19" stroke="#f59e0b" stroke-width="2"/>
+          <text x="560" y="200" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">Aurora Distributed Storage Fleet (6 Cópias / 3 AZs)</text>
+          <text x="560" y="215" text-anchor="middle" fill="#cbd5e1" font-size="8">Storage estruturado em Log (SSD) sem replicação de CPU</text>
+
+          <!-- Links Aurora -->
+          <path d="M 460 140 L 460 180" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+          <path d="M 570 140 L 570 180" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+          <path d="M 660 140 L 660 180" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+
+          <text x="440" y="165" fill="#f59e0b" font-size="8">Redo Logs</text>
+          
+          <defs>
+            <marker id="arrow-white" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#cbd5e1"/></marker>
+            <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444"/></marker>
+            <marker id="arrow-orange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/></marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Escrita em Quorum (Write Quorum) no Aurora</h4>
+          <p>Para otimizar escritas, o Aurora utiliza um sistema de quórum distribuído. Cada bloco de dados é segmentado e gravado em 6 instâncias de storage (2 por AZ). Uma escrita é considerada um commit válido assim que <strong>4 das 6 instâncias confirmam a gravação física (4/6 Write Quorum)</strong>. Leituras de blocos requerem a confirmação de <strong>3 de 6 cópias (3/6 Read Quorum)</strong> para reconstruir dados consistentes caso ocorram falhas parciais em storage pools.</p>
+        </div>
+        <div>
+          <h4>Multi-AZ DB Instance vs DB Cluster (RDS Tradicional)</h4>
+          <p>Se você não utiliza Aurora, a AWS oferece dois modelos de alta disponibilidade no RDS PostgreSQL/MySQL: <strong>Multi-AZ DB Instance</strong>, onde o Standby é fisicamente idêntico mas bloqueado para leitura (failover de ~60-120s); e o novo <strong>Multi-AZ DB Cluster</strong>, que usa três instâncias ativas (2 Readers e 1 Writer) e acelera commits escrevendo simultaneamente nos SSDs locais de duas réplicas legíveis, diminuindo o failover para ~35s.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Estratégias de Snapshots, Backups e RTO/RPO</h3>
       <ul>
-        <li><strong>Connection Pooling:</strong> Mantém um pool de conexões físicas estabelecidas abertas com o banco de dados.</li>
-        <li><strong>Multiplexing (Multiplexação):</strong> Permite que dezenas de conexões de clientes compartilhem a mesma conexão física ativa do banco caso não estejam executando transações simultâneas.</li>
-        <li><strong>Failover Acelerado:</strong> Em caso de failover (Writer principal cair), o RDS Proxy redireciona as conexões automaticamente para a nova réplica promovida a Writer sem forçar o cliente a renegociar handshakes TCP demorados, reduzindo o tempo de interrupção de 30s para menos de 3s.</li>
+        <li><strong>Automated Backups (RDS Tradicional):</strong> A AWS tira um snapshot diário do disco EBS inteiro e arquiva os <em>Transaction Logs (WAL)</em> a cada 5 minutos no S3. O RPO (Recovery Point Objective) máximo é de ~5 minutos para Point-in-Time Recovery (PiTR). Restaurações demoram o tempo necessário para provisionar e "esquentar" (hydrate) os blocos do S3 para um novo disco EBS.</li>
+        <li><strong>Continuous Backups (Aurora):</strong> No Aurora, o backup é completamente contínuo e streaming. Como a camada de storage é baseada em logs, o storage engine transfere micro-blocos para o S3 em tempo real de forma assíncrona, sem impactar a CPU do banco, atingindo impacto nulo de I/O em backups pesados.</li>
       </ul>
+
+      <div class="grid-2" style="margin-top: 20px;">
+        <div>
+          <h4>Amazon RDS Proxy: Connection Pooling</h4>
+          <p>Microsserviços serverless esgotam rapidamente a memória (RAM) da instância RDS por conexões ociosas (o Postgres consome ~10MB por TCP inativa). O <strong>RDS Proxy</strong> gerencia um <em>Connection Pool</em>, multiplexando dezenas de clientes em poucas conexões físicas com o DB. Além disso, em caso de failover do Aurora, ele redireciona instantaneamente as chamadas HTTP para o novo Writer, mascarando a interrupção da aplicação (sem timeouts de DNS).</p>
+        </div>
+        <div>
+          <h4>Migração e CDC com AWS DMS e SCT</h4>
+          <p>Para migrar de bancos legados (ex: Oracle local ou RDS Monolítico) para Aurora sem downtime, utiliza-se o <strong>AWS Database Migration Service (DMS)</strong> acompanhado do <strong>SCT (Schema Conversion Tool)</strong>.</p>
+          <p>O DMS se conecta ao banco de origem, realiza o <em>Full Load</em> da base inicial e então ativa o <strong>CDC (Change Data Capture)</strong>. O CDC lê nativamente os transaction logs do banco de origem (ex: <code>wal2json</code> no Postgres) e aplica os <code>INSERT/UPDATES</code> na nova base Aurora. Quando o "Lag" do DMS se aproxima de 0s, a engenharia simplesmente "vira a chave" do tráfego na aplicação.</p>
+        </div>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 3.5: DYNAMODB DEEP DIVE -->
+    <section class="section" id="dynamodb-deep-dive">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#10b981">03.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#10b981"></div>
+          <h2>Amazon DynamoDB: Architecture &amp; Single-Table Design</h2>
+          <p>Modelagem NoSQL avançada, RCU/WCU, GSI, LSI e Hot Partitions</p>
+        </div>
+      </div>
+
+      <p>Bancos NoSQL corporativos como o DynamoDB diferem substancialmente do modelo relacional tradicional. Eles são otimizados para latência milissegunda consistente independente do tamanho da tabela, desde que as chaves de acesso sejam perfeitamente modeladas (Acesso em O(1)).</p>
+
+      <!-- DIAGRAMA DYNAMODB PARTITIONS -->
+      <div class="dw" style="margin-top: 20px; margin-bottom: 25px;">
+        <svg viewBox="0 0 760 250" width="100%" height="250" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+          <rect width="760" height="250" fill="#0f172a" rx="14"/>
+          <text x="380" y="25" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700">ARQUITETURA FÍSICA E PARTIÇÕES (DYNAMODB)</text>
+
+          <!-- Input Request -->
+          <rect x="40" y="90" width="120" height="40" rx="4" fill="#0b0f19" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="100" y="110" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">Request RouteNode</text>
+          <text x="100" y="122" text-anchor="middle" fill="#cbd5e1" font-size="8">PK: "user#123"</text>
+
+          <path d="M 160 110 L 220 110" stroke="#f8fafc" stroke-width="1.5" marker-end="url(#arrow-white-ddb)"/>
+          
+          <!-- Hashing Function -->
+          <circle cx="260" cy="110" r="35" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="260" y="107" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">MD5</text>
+          <text x="260" y="120" text-anchor="middle" fill="#10b981" font-size="9">Hash Algo</text>
+
+          <path d="M 295 100 L 360 60" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrow-orange-ddb)"/>
+          <path d="M 295 110 L 360 110" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrow-orange-ddb)"/>
+          <path d="M 295 120 L 360 160" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow-red-ddb)"/>
+          <text x="320" y="155" text-anchor="middle" fill="#ef4444" font-size="8">Hot PK (Gargalo)</text>
+
+          <!-- Physical Partitions -->
+          <rect x="380" y="40" width="160" height="40" rx="4" fill="#0b0f19" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="460" y="60" text-anchor="middle" fill="#cbd5e1" font-size="10">Partition 1 (SSD)</text>
+          <text x="460" y="72" text-anchor="middle" fill="#94a3b8" font-size="8">Hash 0x00 - 0x33</text>
+
+          <rect x="380" y="90" width="160" height="40" rx="4" fill="#0b0f19" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="460" y="110" text-anchor="middle" fill="#cbd5e1" font-size="10">Partition 2 (SSD)</text>
+          <text x="460" y="122" text-anchor="middle" fill="#94a3b8" font-size="8">Hash 0x34 - 0x66</text>
+
+          <rect x="380" y="140" width="160" height="40" rx="4" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
+          <text x="460" y="160" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="700">Partition 3 (HOT!)</text>
+          <text x="460" y="172" text-anchor="middle" fill="#fca5a5" font-size="8">Hash 0x67 - 0xFF</text>
+
+          <!-- Capacity Explain -->
+          <rect x="580" y="40" width="140" height="140" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="1"/>
+          <text x="650" y="65" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="700">Capacity Units (CU)</text>
+          <text x="650" y="90" text-anchor="middle" fill="#cbd5e1" font-size="9">Total Table: 3000 WCU</text>
+          <text x="650" y="115" text-anchor="middle" fill="#cbd5e1" font-size="9">Per Partition: ~1000 WCU</text>
+          <text x="650" y="150" text-anchor="middle" fill="#fca5a5" font-size="9">Se PK não for aleatória,</text>
+          <text x="650" y="165" text-anchor="middle" fill="#fca5a5" font-size="9">causa Throttling!</text>
+
+          <defs>
+            <marker id="arrow-white-ddb" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#f8fafc"/></marker>
+            <marker id="arrow-orange-ddb" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/></marker>
+            <marker id="arrow-red-ddb" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444"/></marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Capacity: RCU, WCU e Modo On-Demand</h4>
+          <p>Em modo Provisionado, a métrica raiz de throughput são <strong>RCUs (Read Capacity Units)</strong> e <strong>WCUs (Write Capacity Units)</strong>. 1 WCU permite gravar 1 KB por segundo. 1 RCU permite ler 4 KB/s se a consistência for eventual, ou requer 2 RCUs para garantir <em>Strong Consistency</em>.</p>
+          <p>O modo <strong>On-Demand</strong> é recomendado quando a carga é altamente imprevisível. Você paga por requisição sem estipular limites prévios, deixando o Dynamo escalonar agressivamente por debaixo dos panos.</p>
+        </div>
+        <div>
+          <h4>Balanceamento HASH e Hot Partitions</h4>
+          <p>O throughput provisionado de uma tabela (ex: 3.000 WCU) é dividido <strong>igualmente</strong> pelo número de partições físicas SSD (ex: 3 partições = 1.000 WCU por partição). Se a sua <strong>Partition Key (PK)</strong> for uma data atual (<code>2026-06-10</code>), todas as gravações do dia cairão na mesma partição (<em>Hot Partition</em>). O Dynamo estourará um <code>ProvisionedThroughputExceededException</code> ao atingir 1.000 WCU, mesmo com 2.000 WCUs sobrando na tabela. Use Hash Sharding/UUIDs para a PK.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Modelagem: Single-Table Design, GSI e LSI</h3>
+      <ul>
+        <li><strong>Single-Table Design:</strong> Diferente do modelo Relacional (Normalização 3NF com FKs), no DynamoDB a regra de ouro é colocar <em>todos os tipos de entidades em uma única tabela física</em>. Para relacionar entidades 1:N (Ex: Usuário e seus Pedidos), você agrupa os itens empilhando as <strong>Sort Keys (SK)</strong> sob a mesma Partition Key. Exemplo: <code>PK="USER#123", SK="PROFILE"</code> para dados do usuário; <code>PK="USER#123", SK="ORDER#99"</code> para seus pedidos.</li>
+        <li><strong>Global Secondary Index (GSI):</strong> Se você precisa buscar pedidos por "Data" em vez de "Usuário", você cria um GSI. O GSI é uma tabela réplica física, mantida asíncronamente pela AWS, que escolhe novos atributos para assumirem os papéis de nova PK/SK. Cuidado: GSIs possuem seu próprio pool de RCU/WCUs e podem sofrer throttling se mal dimensionados.</li>
+        <li><strong>Local Secondary Index (LSI):</strong> Compartilha a mesma PK da tabela base, mas muda a SK. Só pode ser criado no momento de criação da tabela (limite físico de 10GB por partição).</li>
+      </ul>
+
+      <div class="callout callout-tip">
+        <strong>Integração Zero-ETL do DynamoDB com Aurora/Redshift:</strong>
+        <p>A nova feature de integração AWS permite espelhar o DynamoDB para o Amazon Redshift ou S3 (usando DynamoDB Export/Kinesis Streams) sem escrever código Lambda, habilitando queries analíticas SQL complexas (com JOINs) em tempo quase real sem prejudicar o desempenho transacional da tabela NoSQL.</p>
+      </div>
     </section>
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
