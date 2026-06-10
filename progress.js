@@ -645,6 +645,22 @@
       platform: { 
         colors: ["#6366f1", "#a78bfa"], 
         icon: `<path class="badge-plat-layer" d="M16 24 L32 16 L48 24 L32 32 z M16 34 L32 26 L48 34 L32 42 z" fill="none" stroke="url(#grad-platform)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      api_gateway: { 
+        colors: ["#8b5cf6", "#c084fc"], 
+        icon: `<path class="badge-api-plug" d="M30 18 v-6 M34 18 v-6 M26 26 h12 v10 a6 6 0 0 1 -12 0 z M32 36 v10 M28 46 h8" fill="none" stroke="url(#grad-api_gateway)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` 
+      },
+      infra_operacional: { 
+        colors: ["#f43f5e", "#fb7185"], 
+        icon: `<rect class="badge-infra-rack1" x="22" y="16" width="20" height="10" rx="2" fill="none" stroke="url(#grad-infra_operacional)" stroke-width="2"/><rect class="badge-infra-rack2" x="22" y="30" width="20" height="10" rx="2" fill="none" stroke="url(#grad-infra_operacional)" stroke-width="2"/><circle class="badge-infra-led" cx="26" cy="21" r="1.5" fill="url(#grad-infra_operacional)"/><circle class="badge-infra-led" cx="26" cy="35" r="1.5" fill="url(#grad-infra_operacional)"/>` 
+      },
+      orquestracao: { 
+        colors: ["#a78bfa", "#c084fc"], 
+        icon: `<path class="badge-orq-chain" d="M24 22 a6 6 0 1 1 0 12 a6 6 0 1 1 0 -12 z M40 22 a6 6 0 1 1 0 12 a6 6 0 1 1 0 -12 z M28 28 h8" fill="none" stroke="url(#grad-orquestracao)" stroke-width="2" stroke-linecap="round"/>` 
+      },
+      softskills: { 
+        colors: ["#38bdf8", "#7dd3fc"], 
+        icon: `<path class="badge-soft-brain" d="M32 16 c-8 0 -12 6 -12 12 c0 4 2 8 6 10 c1 2 2 6 -2 8 c6 0 10 -2 12 -4 c2 2 6 4 12 4 c-4 -2 -3 -6 -2 -8 c4 -2 6 -6 6 -10 c0 -6 -4 -12 -12 -12 z" fill="none" stroke="url(#grad-softskills)" stroke-width="2" stroke-linejoin="round"/>` 
       }
     };
 
