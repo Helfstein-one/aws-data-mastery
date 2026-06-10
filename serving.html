@@ -237,7 +237,40 @@
         </div>
       </div>
 
-      <h3 style="margin-top: 30px;">Partition Projection Avançado</h3>
+            <h3 style="margin-top: 30px;">Correção, Balanceamento e Metadados de Partições</h3>
+      <p>Gerenciar partições corretamente é fundamental para a performance do Amazon Athena e o controle de custos.</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Estilo Hive vs Iceberg</h4>
+          <p>Tradicionalmente (estilo Hive), o Athena exige que você adicione explicitamente novas partições (ex: novas pastas no S3) ao Glue Catalog. Para formatas modernos como <strong>Apache Iceberg</strong>, os metadados lidam com o particionamento de forma transparente via *manifests*, tornando comandos de reparação desnecessários e otimizando a leitura.</p>
+        </div>
+        <div>
+          <h4>Correção Manual (Hive)</h4>
+          <p>Quando novos arquivos chegam ao S3 fora do fluxo de um Crawler, o Athena não os enxerga automaticamente em tabelas Hive. Usa-se o comando para varrer o S3 e atualizar o Glue:</p>
+          <pre><span class="c">-- Escaneia o S3 e adiciona partições faltantes no Glue</span>
+<span class="k">MSCK REPAIR TABLE</span> meu_db.minha_tabela;</pre>
+          <div class="callout callout-tip" style="margin-top: 10px;">
+            <strong>⚠️ Atenção:</strong> Em tabelas massivas, `MSCK REPAIR` é extremamente lento e oneroso, e pode falhar.
+          </div>
+        </div>
+      </div>
+
+      <div class="concept-card genai-card" style="margin-top: 20px;">
+        <div class="cc-tag">Performance</div>
+        <div class="cc-title">Balanceamento e Problema dos Arquivos Pequenos (Small Files Problem)</div>
+        <div class="cc-body">
+          O Athena funciona melhor lendo arquivos entre 128MB e 512MB. Particionamento excessivo (ex: por hora e minuto) ou fluxos de streaming constantes geram milhões de "arquivos pequenos" (KBs) no S3. O tempo gasto abrindo conexões de rede supera o tempo de leitura real.
+          <br><br>
+          <strong>Soluções para balanceamento:</strong>
+          <ul>
+            <li>Evite partições granulares demais. Em vez de ano/mes/dia/hora, consolide em ano/mes/dia dependendo do volume.</li>
+            <li>Agende rotinas periódicas (com AWS Glue Job ou comandos de Compaction no Iceberg) para ler arquivos pequenos e reescrevê-los em arquivos Parquet de 256MB.</li>
+          </ul>
+        </div>
+      </div>
+
+<h3 style="margin-top: 30px;">Partition Projection Avançado</h3>
       <p>Otimização de tempo e I/O de consultas via computação de caminhos baseados em metadados:</p>
 
       <div class="grid-2">
@@ -299,6 +332,41 @@
           </div>
         </div>
       </div>
+
+      <div class="grid-2" style="margin-top: 30px;">
+        <div>
+          <h4>Infraestrutura como Código (Terraform)</h4>
+          <p>Provisionamento de Workgroups para controle financeiro e Banco de Dados no Glue Catalog.</p>
+        </div>
+        <div style="grid-column: 1 / -1;">
+<pre><span class="c"># Configuração de um Athena Workgroup focado em FinOps</span>
+<span class="k">resource</span> <span class="s">"aws_athena_workgroup"</span> <span class="s">"finance_analytics"</span> {
+  <span class="k">name</span> = <span class="s">"finance-analytics-wg"</span>
+
+  <span class="k">configuration</span> {
+    <span class="k">enforce_workgroup_configuration</span>    = <span class="s">true</span>
+    <span class="k">publish_cloudwatch_metrics_enabled</span> = <span class="s">true</span>
+
+    <span class="c"># Limita queries para não processarem mais que 1TB (proteção de custo)</span>
+    <span class="k">bytes_scanned_cutoff_per_query</span>     = <span class="s">1099511627776</span>
+
+    <span class="k">result_configuration</span> {
+      <span class="k">output_location</span> = <span class="s">"s3://${aws_s3_bucket.athena_results.bucket}/finance/"</span>
+
+      <span class="k">encryption_configuration</span> {
+        <span class="k">encryption_option</span> = <span class="s">"SSE_S3"</span>
+      }
+    }
+  }
+}
+
+<span class="c"># Criação de um Banco de Dados lógico no AWS Glue Data Catalog</span>
+<span class="k">resource</span> <span class="s">"aws_glue_catalog_database"</span> <span class="s">"finance_db"</span> {
+  <span class="k">name</span> = <span class="s">"finance_db"</span>
+  <span class="k">description</span> = <span class="s">"Banco de dados contendo tabelas financeiras para uso no Athena"</span>
+}</pre>
+        </div>
+      </div>
     </section>
 
     <section class="section" id="athena-avancado">
@@ -328,6 +396,62 @@
             <li><strong>Provisioned Capacity:</strong> Para SLAs rígidos sem concorrência compartilhada, clientes alocam blocos de DPUs (Data Processing Units) dedicados. Isso blinda as queries críticas contra o enfileiramento padrão "noisy neighbor" nas regiões superlotadas da AWS.</li>
             <li><strong>Result Reuse:</strong> Para concorrência extrema (centenas de visualizações do mesmo dashboard na mesma hora), o recurso Result Reuse retorna o cache computado anteriormente da query do S3, reduzindo o tempo de resposta e zerando o custo repetido de scan analítico.</li>
           </ul>
+        </div>
+      </div>
+              <h3 style="margin-top: 30px;">Deep Dive em Consultas, Metadados e Performance</h3>
+      <p>Otimização de queries analíticas, manipulação de dados complexos e inspeção de infraestrutura via SQL.</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Consultas Simples e Avançadas</h4>
+          <p>O Athena processa JSONs aninhados e Arrays de forma nativa sem necessidade de pré-processamento. Utilize o <code>UNNEST</code> para explodir listas em linhas.</p>
+          <pre><span class="c">-- Consulta Avançada: Desaninhar array de objetos JSON e filtrar</span>
+<span class="k">SELECT</span>
+    u.id,
+    u.nome,
+    pedidos.valor
+<span class="k">FROM</span> usuarios u
+<span class="k">CROSS JOIN UNNEST</span>(u.historico_pedidos) <span class="k">AS</span> t(pedidos)
+<span class="k">WHERE</span> pedidos.valor > 1000;</pre>
+        </div>
+        <div>
+          <h4>Leitura de Metadados de Arquivo</h4>
+          <p>Muitas vezes é necessário saber <em>exatamente</em> de qual arquivo do S3 um registro veio ou qual a idade dele para debug e linhagem de dados.</p>
+          <pre><span class="c">-- Extraindo linhagem de arquivo e data de modificação física</span>
+<span class="k">SELECT</span>
+    u.id,
+    u.nome,
+    <span class="s">"$path"</span> <span class="k">AS</span> origem_s3,
+    <span class="s">"$file_modified_time"</span> <span class="k">AS</span> modificacao_s3
+<span class="k">FROM</span> usuarios u
+<span class="k">LIMIT</span> 10;</pre>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 20px;">
+        <div>
+          <h4>Otimização de JOINs e Performance</h4>
+          <ul>
+            <li><strong>Maior para a Esquerda:</strong> Coloque sempre a tabela com maior cardinalidade no lado esquerdo do <code>JOIN</code> (ou no <code>FROM</code> principal), e a menor à direita. O motor distribui as tabelas menores na memória dos workers.</li>
+            <li><strong>Predicate Pushdown:</strong> Aplique filtros (<code>WHERE</code>) nas partições antes de fazer o JOIN, reduzindo o tráfego de rede no cluster.</li>
+            <li><strong>Aproximações Rápida:</strong> Se não precisar de precisão absoluta, use <code>approx_distinct()</code> no lugar de <code>COUNT(DISTINCT)</code>. Ele é ordens de grandeza mais rápido e consome menos memória.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Consultas ao Information Schema</h4>
+          <p>Auditoria e governança baseada em SQL. O Athena expõe um catálogo em tempo real sob o schema <code>information_schema</code>.</p>
+          <pre><span class="c">-- Listar todas as views ativas no catálogo do Glue via Athena</span>
+<span class="k">SELECT</span> table_schema, table_name, view_definition
+<span class="k">FROM</span> information_schema.views
+<span class="k">WHERE</span> table_schema = <span class="s">'meu_datalake'</span>;</pre>
+        </div>
+      </div>
+
+      <div class="case-box" style="margin-top: 40px; border-left: 4px solid var(--accent);">
+        <div class="cb-hdr" style="color: var(--accent);">5. O Pitch de Business Value (Proposta de Valor)</div>
+        <div class="cb-body">
+          <p>Adotar o Amazon Athena é um movimento estratégico focado diretamente em margem de lucro (<strong>EBITDA</strong>). Ao transferir o custo computacional analítico para um modelo 100% sob demanda e alocado por carga de trabalho, nós reduzimos drasticamente o <strong>OPEX</strong> (despesas operacionais) associado à manutenção de clusters ociosos ou licenciamentos caros.</p>
+          <p>Através de uma estratégia sólida de FinOps, garantimos que os custos fiquem dentro do orçamento, com bloqueios automatizados para consultas mal otimizadas. Isso nos proporciona um <strong>Time-to-Market</strong> imbatível: a equipe de dados entrega insights valiosos instantaneamente usando ferramentas já conhecidas pelo mercado, diminuindo drasticamente os riscos operacionais (<strong>Risk Mitigation</strong>) de manutenções prolongadas e empoderando as linhas de negócios a tomarem decisões baseadas em dados com flexibilidade total.</p>
         </div>
       </div>
     </section>
