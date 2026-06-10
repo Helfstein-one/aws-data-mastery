@@ -8,6 +8,10 @@
   <title>Arquitetura de Dados - AWS Data Specialist</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
 </head>
 <body>
 
@@ -1196,6 +1200,44 @@ resource <span class="k">"aws_glue_catalog_table"</span> <span class="s">"iceber
 }</pre>
     </section>
 
+      <h3 style="margin-top: 30px;">Diagrama Arquitetural: Modern Data Lakehouse no ecossistema AWS</h3>
+      <div class="mermaid" style="background: var(--ink); padding: 20px; border-radius: 8px; margin-top: 15px;">
+        graph LR
+          subgraph Ingestão
+            S1[Amazon Kinesis]
+            S2[AWS DMS]
+          end
+          subgraph Storage / Data Lakehouse
+            DL[Amazon S3 Bronze/Silver/Gold]
+          end
+          subgraph Catálogo & Governança
+            GC[AWS Glue Data Catalog]
+            LF[AWS Lake Formation]
+          end
+          subgraph Processamento
+            EMR[Amazon EMR Serverless]
+            GL[AWS Glue Jobs]
+          end
+          subgraph Serving / Analítico
+            ATH[Amazon Athena]
+            RS[Amazon Redshift Spectrum]
+          end
+
+          S1 -->|Streaming| DL
+          S2 -->|CDC| DL
+          DL --- GC
+          GC --- LF
+          EMR -->|Lê/Grava Iceberg| DL
+          GL -->|Lê/Grava Iceberg| DL
+          DL --> ATH
+          DL --> RS
+
+          style DL fill:#1e293b,stroke:#a78bfa,stroke-width:2px
+          style GC fill:#0f172a,stroke:#38bdf8,stroke-width:1px
+          style EMR fill:#0f172a,stroke:#10b981,stroke-width:1px
+          style ATH fill:#0f172a,stroke:#f59e0b,stroke-width:1px
+      </div>
+
     <!-- 09. COMPARATIVO DE ARQUITETURAS -->
     <section class="section" id="comparativo-arquiteturas">
       <div class="sec-hdr">
@@ -1325,6 +1367,39 @@ resource <span class="k">"aws_glue_catalog_table"</span> <span class="s">"iceber
         </svg>
       </div>
     </section>
+
+      <h3 style="margin-top: 30px;">Infraestrutura como Código (Terraform) para Provisionamento Básico S3 e Glue</h3>
+      <p>Abaixo está um snippet Terraform complementar, focado em criar buckets estruturados para o Data Lake e a base no AWS Glue Catalog:</p>
+      <pre><code class="language-hcl"># Criacao de buckets separados para as camadas Bronze, Silver e Gold
+resource "aws_s3_bucket" "datalake_bronze" {
+  bucket = "company-datalake-bronze-${var.env}"
+}
+
+resource "aws_s3_bucket" "datalake_silver" {
+  bucket = "company-datalake-silver-${var.env}"
+}
+
+resource "aws_s3_bucket" "datalake_gold" {
+  bucket = "company-datalake-gold-${var.env}"
+}
+
+# Criacao do Database Central no AWS Glue Data Catalog
+resource "aws_glue_catalog_database" "datalake_db" {
+  name = "analytics_catalog_${var.env}"
+  description = "Catálogo de Metadados Central do Lakehouse"
+}
+
+# Configuracao de Encriptacao KMS para os Buckets S3
+resource "aws_s3_bucket_server_side_encryption_configuration" "bronze_encryption" {
+  bucket = aws_s3_bucket.datalake_bronze.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+# O mesmo bloco pode ser replicado para os buckets silver e gold...
+</code></pre>
 
     <!-- 10. DATA MESH -->
     <section class="section" id="datamesh">

@@ -8,6 +8,10 @@
   <title>FinOps &amp; Custos - AWS Data Specialist</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
 </head>
 <body>
 
@@ -236,6 +240,32 @@
       </div>
     </section>
 
+      <h3 style="margin-top: 30px;">Diagrama do Ciclo de Vida de Otimização de Custos em FinOps</h3>
+      <div class="mermaid" style="background: var(--ink); padding: 20px; border-radius: 8px; margin-top: 15px;">
+        graph TD
+          A[Visibilidade & Tagging] --> B[Alocação & Chargeback]
+          B --> C[Otimização de Arquitetura]
+          C --> D[Otimização de Tarifas]
+          D --> E[Monitoramento Contínuo]
+          E -.->|Retroalimentação| A
+
+          subgraph Informar
+            A
+            B
+          end
+          subgraph Otimizar
+            C
+            D
+          end
+          subgraph Operar
+            E
+          end
+
+          style A fill:#1e293b,stroke:#f59e0b,stroke-width:1px
+          style C fill:#1e293b,stroke:#10b981,stroke-width:1px
+          style E fill:#1e293b,stroke:#38bdf8,stroke-width:1px
+      </div>
+
     <section class="section" id="finops-boas-praticas">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--ok)">02</div>
@@ -408,6 +438,49 @@ ORDER BY
         </div>
       </div>
     </section>
+
+      <h3 style="margin-top: 30px;">Terraform: AWS Budgets & Alarmes Automatizados</h3>
+      <p>A configuração abaixo ilustra como provisionar um orçamento da AWS via Terraform, disparando alertas via SNS quando o custo projetado ultrapassar o limite pré-definido:</p>
+      <pre><code class="language-hcl"># Topico SNS para alertas financeiros
+resource "aws_sns_topic" "finops_alerts" {
+  name = "finops-budget-alerts"
+}
+
+# Orcamento AWS focado no Lakehouse Analytics
+resource "aws_budgets_budget" "lakehouse_budget" {
+  name              = "monthly-lakehouse-budget"
+  budget_type       = "COST"
+  limit_amount      = "5000.0"
+  limit_unit        = "USD"
+  time_unit         = "MONTHLY"
+
+  # Filtra especificamente as tags de ambiente e projeto
+  cost_filter {
+    name = "TagKeyValue"
+    values = [
+      "user:Project$Lakehouse",
+      "user:Environment$Production"
+    ]
+  }
+
+  # Alerta quando o custo projetado excede 90%
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 90
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "FORECASTED"
+    subscriber_sns_topic_arns  = [aws_sns_topic.finops_alerts.arn]
+  }
+
+  # Alerta quando o custo real excede 100%
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_sns_topic_arns  = [aws_sns_topic.finops_alerts.arn]
+  }
+}</code></pre>
 
     <section class="section" id="finops-terraform">
       <div class="sec-hdr">
