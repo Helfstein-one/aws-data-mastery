@@ -346,6 +346,42 @@
       </div>
     </section>
 
+    <section class="section" id="kinesis-avancado">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">01.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Kinesis Deep Dive: EFO, KCL State e Hot Shards</h2>
+          <p>Superando os limites físicos de throughput e controlando o estado dos consumidores em alto volume</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Enhanced Fan-Out (EFO)</h4>
+          <p>O limite padrão de leitura de um Shard é de 2 MB/s, compartilhado entre <strong>todos</strong> os consumidores. Se você tiver 5 aplicações (Spark, Lambda, Flink, etc) lendo o mesmo stream simultaneamente, cada uma receberá apenas ~400 KB/s, aumentando drasticamente a latência.</p>
+          <p>A solução é habilitar o <strong>EFO (Enhanced Fan-Out)</strong>. Ao registrar um consumidor via EFO, a AWS provisiona um canal de rede lógico dedicado via <code>HTTP/2</code> com capacidade isolada de 2 MB/s por consumidor registrado (limite de 20 por stream). O Kinesis ativamente empurra (<em>push</em>) os dados para o consumidor em vez de aguardar pesquisas (<em>polling</em>), reduzindo a latência de 200ms para cerca de 70ms.</p>
+        </div>
+        <div>
+          <h4>Hot Shards (Partition Key Skew)</h4>
+          <p>Um erro comum de design é escolher uma <em>Partition Key</em> com baixa cardinalidade ou dados assimétricos. Exemplo: Roteamento de logs por <code>client_id</code>, onde o Cliente "XPTO" gera 60% de todo o tráfego.</p>
+          <p>O algoritmo de Hash MD5 do Kinesis mapeará todos os dados desse cliente para um único Shard físico, causando <code>ProvisionedThroughputExceededException</code> crônico naquele Shard, enquanto os outros Shards ficam ociosos. <strong>Mitigação:</strong> Adicionar salting aleatório à chave (ex: <code>client_id + random(1,10)</code>) ou usar Partition Keys de altíssima cardinalidade, como <code>UUID</code> do evento.</p>
+        </div>
+      </div>
+
+      <div class="abox info" style="margin-top: 20px;">
+        <div class="abox-hdr" style="background: var(--spark)">Kinesis Client Library (KCL) e o Risco Oculto do DynamoDB</div>
+        <div class="abox-body">
+          <p>Para ler dados de um Kinesis de forma escalável sem duplicidade (Exactly-Once delivery semantics), a maioria dos consumidores nativos (incluindo conectores Kafka Connect e apps Java/Python customizados) utiliza a biblioteca <strong>KCL</strong> da AWS.</p>
+          <p>A KCL abstrai o balanceamento de carga entre os workers do consumidor rastreando quais mensagens (Offsets/Sequence Numbers) já foram lidas. O segredo perigoso: <strong>A KCL cria automaticamente uma tabela no DynamoDB</strong> para armazenar o estado de checkpoint de cada Shard.</p>
+          <ul>
+            <li><strong>O Problema:</strong> Se você escalar o Kinesis para 500 Shards, a KCL fará centenas de requisições por segundo para atualizar a tabela do DynamoDB. Se a tabela não estiver provisionada com WCU (Write Capacity Units) suficientes, o DynamoDB negará a escrita do checkpoint, fazendo com que o consumidor do Kinesis trave silenciosamente.</li>
+            <li><strong>Mitigação:</strong> Sempre defina a tabela de controle da KCL no DynamoDB para modo <em>On-Demand (Pay-per-Request)</em> em ambientes de produção intensos para evitar travamentos de pipeline por falta de capacidade no backend de controle.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="firehose">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--emr)">02</div>
@@ -370,6 +406,34 @@ s3-bucket/trusted/org=!{partitionKeyFromQuery:org}/tipo=!{partitionKeyFromQuery:
       <div class="callout callout-tip">
         <strong>✓ Redução de Custos com Athena:</strong>
         O particionamento dinâmico baseado em colunas do negócio (como ID da empresa/cliente) no Firehose evita que consultas no Athena analisem dados de outras entidades, reduzindo em até 95% os bytes escaneados no S3.
+      </div>
+    </section>
+
+    <section class="section" id="firehose-avancado">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">02.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Firehose Deep Dive: Buffering Engine e Limites AWS Lambda</h2>
+          <p>Dominando a equação de Size vs Time e as restrições físicas de transformações in-line</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Transformações In-Line via AWS Lambda</h4>
+          <p>O Firehose permite invocar uma função AWS Lambda em tempo de voo para enriquecer os dados (ex: converter IP para Geo, descriptografar PII) antes de gravar no S3. O problema é que isso esconde limites arquiteturais rígidos que causam falhas silenciosas ou gargalos:</p>
+          <ul>
+            <li><strong>Payload Máximo (6 MB):</strong> O Firehose invoca a Lambda enviando lotes síncronos com um limite máximo de 6 MB por requisição. Se os dados forem muito grandes, a Lambda pode falhar.</li>
+            <li><strong>Timeout Crítico (1-5 Minutos):</strong> A Lambda de transformação não deve fazer requisições externas demoradas (ex: chamar uma API HTTP de terceiros para cada linha). Se o processamento estourar o timeout curto da configuração do Firehose, o batch inteiro é descartado ou vai para a fila de Dead Letter Queue (DLQ) do S3. <strong>Solução:</strong> Mantenha a Lambda puramente focada em processamento in-memory e descarte HTTP calls.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>A Equação do Buffering: Size vs Time</h4>
+          <p>O Kinesis Firehose não grava registro a registro no S3. Ele possui um <em>Buffer Engine</em> configurado por dois vetores: <strong>Size (MB)</strong> e <strong>Interval (Segundos)</strong>.</p>
+          <p>Exemplo de configuração Padrão: <code>128 MB ou 900 Segundos (15 min)</code>. O Firehose enfileira mensagens na RAM até bater 128 MB. Se a ingestão for lenta, ele espera até dar 15 minutos e então descarrega (o que acontecer primeiro). </p>
+          <p><strong>Impacto de FinOps e Performance (Small Files):</strong> Se você configurar o Buffer para <code>1 MB ou 60s</code> na intenção de ter dados em tempo real, gerará 1.440 requisições PUT de S3 por dia por partição. Isso criará o pesadelo do <em>Small Files Problem</em>, destruindo a velocidade de leitura do Athena e multiplicando o custo da fatura AWS (S3 PUTs). É preferível usar intervalos de 128 MB e aceitar a latência de alguns minutos no Data Lake.</p>
+        </div>
       </div>
     </section>
 
