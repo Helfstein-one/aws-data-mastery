@@ -2540,6 +2540,105 @@
         <strong>Resultado de Negócio:</strong>
         <p>A latência ponta a ponta dos DAGs reduziu em 45% devido ao tempo de provisionamento de infraestrutura cair de 8 minutos para 40 segundos. A fatura mensal de processamento despencou mais de 70% porque o time parou de pagar as licenças caras de software do EMR e passou a faturar EC2 Spot pelo segundo exato de uso através da bin-packing extrema do Karpenter (múltiplos jobs Spark alocados perfeitamente nas mesmas instâncias até encher a RAM).</p>
       </div>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 13: MIGRAÇÃO ZERO-DOWNTIME RDS PARA DYNAMO+AURORA -->
+    <section class="section" id="case-rds-dynamo-migracao">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#10b981">13</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#10b981"></div>
+          <h2>Case 13: Desacoplamento Monolítico (RDS para DynamoDB + Aurora Serverless via AWS DMS)</h2>
+          <p>Migração de arquitetura legada (Zero-Downtime) isolando workloads massivos de leitura em NoSQL e garantindo a resiliência transacional</p>
+        </div>
+      </div>
+
+      <p>Um banco digital possuía um monolito transacional operando sobre um gigantesco <strong>Amazon RDS MySQL</strong>. O banco relacional estava estourando seus limites de IOPS (Disco EBS) e sofrendo <em>Connection Exhaustion</em> porque a tabela de "Extratos" sofria milhões de leituras diárias via app, misturadas com as atualizações de "Balanço" do Core Bancário. O tempo de resposta degradou de 20ms para 800ms. A missão era estrangular o monolito sem qualquer downtime.</p>
+
+      <!-- DIAGRAMA: CDC DMS MIGRATION -->
+      <div class="dw" style="margin-top: 20px; margin-bottom: 25px;">
+        <svg viewBox="0 0 760 350" width="100%" height="350" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+          <rect width="760" height="350" fill="#0f172a" rx="14"/>
+          <text x="380" y="25" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700">ARQUITETURA DE MIGRAÇÃO CDC (AWS DMS)</text>
+
+          <!-- Legacy Monolith -->
+          <rect x="40" y="50" width="200" height="260" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="140" y="75" text-anchor="middle" fill="#ef4444" font-size="12" font-weight="700">Origem: Legacy Monolith</text>
+          
+          <rect x="70" y="100" width="140" height="180" rx="6" fill="#0b0f19" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="140" y="130" text-anchor="middle" fill="#3b82f6" font-size="11" font-weight="700">Amazon RDS (MySQL)</text>
+          
+          <rect x="90" y="150" width="100" height="40" rx="4" fill="#1e293b"/>
+          <text x="140" y="175" text-anchor="middle" fill="#cbd5e1" font-size="9">Tabela: Balanços</text>
+
+          <rect x="90" y="210" width="100" height="40" rx="4" fill="#450a0a" stroke="#fca5a5" stroke-width="1"/>
+          <text x="140" y="235" text-anchor="middle" fill="#fca5a5" font-size="9">Tabela: Extratos (HOT!)</text>
+
+          <!-- AWS DMS -->
+          <rect x="280" y="120" width="180" height="120" rx="8" fill="#0b0f19" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="370" y="145" text-anchor="middle" fill="#8b5cf6" font-size="12" font-weight="700">AWS DMS</text>
+          <text x="370" y="160" text-anchor="middle" fill="#cbd5e1" font-size="9">(Database Migration Service)</text>
+
+          <rect x="310" y="180" width="120" height="30" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="1"/>
+          <text x="370" y="200" text-anchor="middle" fill="#10b981" font-size="9">CDC (Binlog Tracking)</text>
+
+          <!-- Links Origin to DMS -->
+          <path d="M 210 170 L 280 170" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple-dms)"/>
+          <text x="245" y="165" text-anchor="middle" fill="#cbd5e1" font-size="8">Full Load</text>
+          <path d="M 210 230 L 310 200" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-green-dms)"/>
+
+          <!-- Target Architecture -->
+          <rect x="500" y="50" width="220" height="260" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="610" y="75" text-anchor="middle" fill="#10b981" font-size="12" font-weight="700">Destino: Modern Data Stack</text>
+
+          <!-- Target Aurora -->
+          <rect x="530" y="100" width="160" height="80" rx="6" fill="#0b0f19" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="610" y="125" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">Aurora Serverless v2</text>
+          <rect x="550" y="140" width="120" height="30" rx="4" fill="#1e293b"/>
+          <text x="610" y="160" text-anchor="middle" fill="#cbd5e1" font-size="9">Balanços (ACID)</text>
+
+          <!-- Target DynamoDB -->
+          <rect x="530" y="200" width="160" height="80" rx="6" fill="#0b0f19" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="610" y="225" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">Amazon DynamoDB</text>
+          <rect x="550" y="240" width="120" height="30" rx="4" fill="#1e293b"/>
+          <text x="610" y="260" text-anchor="middle" fill="#cbd5e1" font-size="9">Extratos (O(1) NoSQL)</text>
+
+          <!-- Links DMS to Target -->
+          <path d="M 460 160 L 530 140" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-blue-dms)"/>
+          <text x="495" y="145" text-anchor="middle" fill="#38bdf8" font-size="8">Sync (SQL)</text>
+
+          <path d="M 460 200 L 530 220" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-orange-dms)"/>
+          <text x="495" y="205" text-anchor="middle" fill="#f59e0b" font-size="8">Sync (JSON)</text>
+
+          <defs>
+            <marker id="arrow-purple-dms" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#8b5cf6"/></marker>
+            <marker id="arrow-green-dms" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/></marker>
+            <marker id="arrow-blue-dms" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/></marker>
+            <marker id="arrow-orange-dms" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/></marker>
+          </defs>
+        </svg>
+      </div>
+
+      <h3>Arquitetura de Solução: AWS DMS + Single-Table Design + Aurora</h3>
+      <ol>
+        <li><strong>Isolamento com DynamoDB e Modelagem (Single-Table):</strong>
+          <br>Os engenheiros decidiram que os "Extratos", por serem dados imutáveis, sequenciais de altíssimo volume de leitura, não pertenciam a um banco relacional. Uma tabela no <strong>Amazon DynamoDB</strong> foi modelada no padrão <em>Single-Table Design</em>: <code>PK = "CONTA#123"</code> e <code>SK = "DATA#2026-06-10"</code>. Isso permitiu à API recuperar meses de extratos de um usuário específico em menos de 8ms de forma consistente.
+        </li>
+        <li><strong>Core Bancário para Aurora Serverless v2:</strong>
+          <br>A tabela de "Balanços" precisava obrigatoriamente de bloqueio de linha rigoroso (Locks ACID) para evitar fraudes em transações financeiras. Por isso, a tabela relacional foi migrada para o <strong>Amazon Aurora Serverless v2</strong>. Assim, o banco transacional pode escalar a sua CPU verticalmente (Adição de ACUs em milissegundos) durante o horário comercial e decair à noite, economizando orçamento e garantindo performance isolada do Extrato.
+        </li>
+        <li><strong>Migração Zero-Downtime usando AWS DMS (Change Data Capture):</strong>
+          <br>Para evitar queda dos serviços bancários, a migração foi feita usando o <strong>AWS Database Migration Service (DMS)</strong>. O DMS realizou o <em>Full Load</em> (cópia massiva) dos dados originais para os dois novos destinos. Em seguida, ele assumiu a função de <strong>CDC (Change Data Capture)</strong>, lendo o <em>binlog</em> do MySQL originário em tempo real e aplicando as alterações instantaneamente tanto no DynamoDB quanto no Aurora. Após o <em>Lag</em> do DMS chegar a zero, a equipe de engenharia alterou as rotas DNS na API do cliente, concluindo o <em>Cut-over</em> sem que o usuário percebesse.
+        </li>
+      </ol>
+
+      <div class="callout callout-tip">
+        <strong>Resultado de Negócio:</strong>
+        <p>A latência de leitura dos extratos no aplicativo mobile despencou de 800ms para singelos 8ms, suportando dezenas de milhares de usuários simultâneos (On-Demand Capacity). O Core Bancário no Aurora Serverless ganhou fôlego absoluto e parou de emitir alarmes de Throttling de I/O. A migração foi executada em produção sob alta carga e as rotinas de Data Analytics ficaram mais rápidas na nova arquitetura nativa da AWS.</p>
+      </div>
     </section>
   </main>
 </div>
