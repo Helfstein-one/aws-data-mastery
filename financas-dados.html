@@ -152,6 +152,7 @@
       <a href="financas-dados.html#jornada" class="nav-sub"><span class="nav-sdot"></span>KYC &amp; Risco (PD)</a>
       <a href="financas-dados.html#matematica" class="nav-sub"><span class="nav-sdot"></span>Matemática &amp; Amortização</a>
       <a href="financas-dados.html#pos-venda" class="nav-sub"><span class="nav-sdot"></span>Inadimplência (NPL)</a>
+      <a href="financas-dados.html#contabilidade" class="nav-sub"><span class="nav-sdot"></span>Contabilidade &amp; Event Sourcing</a>
     </div>
 
     <div class="nav-lbl collapsible" onclick="toggleCategory('cases-cat', this)">
@@ -409,6 +410,60 @@ calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
         <p>Um problema severo de engenharia na liquidação bancária é a assincronicidade. O cliente paga o boleto na sexta à noite. A câmara de compensação (CIP) ou o Banco Central envia o arquivo de confirmação apenas na segunda-feira pela manhã. Se o pipeline rodar na sexta à meia-noite, marcará o cliente como Inadimplente.</p>
         <p><strong>Solução:</strong> A Engenharia utiliza janelas de chegada (Watermarks) no Apache Flink ou Spark Structured Streaming para tolerar dados atrasados, além de atualizar o <code>fato_pagamentos</code> no Apache Iceberg retroativamente usando <code>MERGE INTO</code> com a data de pagamento efetiva do banco de origem, garantindo que o cálculo de Multas seja revertido analiticamente.</p>
       </div>
+
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SEÇÃO 4 -->
+    <section class="section" id="contabilidade">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--ext)">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--ext)"></div>
+          <h2>Contabilidade Bancária & Engenharia Avançada</h2>
+          <p>O coração financeiro: Stop Accrual, Write-off, Diferimentos e Razonetes baseados em Event Sourcing.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <strong>Saldo Contábil vs. Saldo Líquido (Curva)</strong>
+        <p>No banco de dados transacional, um contrato recém-criado de R$ 10.000,00 a ser pago em 12 vezes de R$ 1.000,00 possui um <strong>Saldo Contábil (ou Saldo Futuro)</strong> de R$ 12.000,00. Contudo, o <strong>Saldo Líquido (Curva/Presente)</strong> é R$ 10.000,00. O banco só pode reconhecer os R$ 2.000,00 de juros como "Lucro" à medida que os dias passam (Diferimento).</p>
+      </div>
+
+      <h3>1. Diferimento Contábil na Prática</h3>
+      <p><strong>Diferimento</strong> é o ato de "espalhar" a receita ou a despesa ao longo da vida do contrato (ex: *pro-rata die*). Na Engenharia de Dados, o pipeline noturno roda uma query massiva que calcula o juro ganho em 1 dia para cada um dos milhões de contratos ativos, alimentando a <code>fato_apropriacao_diaria</code>. É esse pipeline que garante que o demonstrativo de resultados (DRE) do banco seja fiel à realidade.</p>
+
+      <h3>2. Inadimplência Extrema: Stop Accrual & Write-off</h3>
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid var(--warn);">
+          <div class="cc-tag">Stop Accrual</div>
+          <div class="cc-body">
+            Quando um contrato atinge um atraso crítico (ex: 60 ou 90 dias), o banco <strong>para de contabilizar os juros diários como receita</strong>, pois a probabilidade de calote é altíssima. Na Engenharia, isso é tratado via regras de negócio no Apache Spark (ex: <code>IF dias_atraso >= 60 THEN juros_dia = 0</code>). O saldo do cliente continua crescendo para fins de cobrança, mas o banco não finge mais que está lucrando no balanço.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid var(--navy);">
+          <div class="cc-tag">Write-off (Baixa a Prejuízo)</div>
+          <div class="cc-body">
+            Geralmente após 180 a 360 dias de atraso, o contrato é expurgado do ativo do banco (Write-off), sendo contabilizado integralmente como prejuízo fiscal. Na arquitetura de dados, o contrato recebe uma flag <code>is_written_off = TRUE</code> no Datalake. A partir daqui, as réplicas desse dado são roteadas via Kafka para parceiros de cobrança externa (Cessionárias).
+          </div>
+        </div>
+      </div>
+
+      <h3>3. Event Sourcing e Razonete Contábil</h3>
+      <p>Na contabilidade (Partidas Dobradas), todo <strong>Crédito</strong> exige um <strong>Débito</strong> correspondente. A arquitetura de dados moderna que imita isso chama-se <strong>Event Sourcing</strong>.</p>
+      
+      <div class="abox info" style="border-color:var(--ext)">
+        <div class="abox-hdr" style="background:var(--ext)">Arquitetura de Razonete Distribuído</div>
+        <div class="abox-body">
+          Em vez de fazer `UPDATE saldo = saldo - 50`, nós inserimos um novo evento imutável de redução de saldo no Kafka/Iceberg. 
+          <br><br>
+          <strong>Cancelamento de Operação (Distrato):</strong> Se o cliente se arrepender do empréstimo em até 7 dias (CDC), o sistema NÃO apaga a linha original. Ele gera um evento reverso (Estorno) que zera o balanço. A soma (FOLD) de todos os eventos no Data Lake sempre resultará no saldo atual do Razonete Contábil, garantindo a rastreabilidade perfeita para auditorias do Banco Central.
+        </div>
+      </div>
+
+      <h3>4. Spread Bancário</h3>
+      <p>Finalmente, a métrica mais cobiçada. O <strong>Spread</strong> é a diferença entre a taxa que o banco cobra do cliente (Ex: 4% ao mês) e o custo de captação de dinheiro do próprio banco (Ex: CDI a 1% ao mês). A plataforma de dados cruza a curva da carteira contra a curva de CDI histórica consumida da B3 (Ingestão Diária), gerando o painel executivo que dita a saúde (Rentabilidade) da instituição financeira.</p>
 
     </section>
 
