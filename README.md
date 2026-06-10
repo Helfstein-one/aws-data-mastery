@@ -59,3 +59,7 @@ Este portal é uma **iniciativa colaborativa e viva**. Se você identificou um b
 
 ---
 *Desenvolvido com foco na excelência técnica e na evolução contínua da comunidade de Engenharia de Dados.*
+
+## 📸 Preview do Portal
+
+![Preview da Navegação e Dashboard do Portal AWS Data Mastery](aws-data-mastery-preview.png)
