@@ -2295,6 +2295,47 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           </ul>
         </div>
       </div>
+      <!-- Case 89: Athena CTAS vs INSERT -->
+      <div class="card" id="q89" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 89 · Athena e o Paradoxo do "Small Files Problem"</div>
+        <h4>Ao orquestrar um pipeline puramente baseado em SQL no Amazon Athena para transformar dados brutos em Parquet no Lakehouse, por que um loop de `INSERT INTO` destrói a latência de leitura, e como o `CTAS` resolve o problema arquiteturalmente?</h4>
+        <p><strong>Cenário:</strong> Um engenheiro agendou uma rotina que executa `INSERT INTO tb_gold SELECT * FROM tb_silver WHERE data = hoje` a cada 5 minutos. Após 1 semana, o dashboard do QuickSight que lia a `tb_gold` passou a demorar 40 segundos para renderizar, mesmo filtrando apenas 1 dia de dados.</p>
+        <div class="callout callout-warn">
+          <strong>Diagnóstico e Ação (Motor Trino):</strong>
+          <ul>
+            <li><strong>A Causa Física (I/O Overhead):</strong> O <code>INSERT INTO</code> no Athena anexa diretamente os resultados ao diretório S3 da tabela. Executar a query a cada 5 minutos gera 288 pequenos arquivos (alguns KBs) por dia. O motor gasta 90% do tempo negociando handshakes TLS e abrindo cabeçalhos HTTPs no S3, e apenas 10% lendo os dados.</li>
+            <li><strong>A Solução CTAS (Create Table As Select):</strong> Em cenários de consolidação, usamos o <code>CTAS</code> para ler todos os micro-arquivos da <code>tb_silver</code> e recriar a tabela particionada. A Engine Trino paraleliza a escrita na memória dos workers e unifica o resultado final em blocos gigantes de Parquet (128MB+), curando instantaneamente a performance do QuickSight.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 90: Redshift RA3 e Data Sharing -->
+      <div class="card" id="q90" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 90 · Redshift Managed Storage (RA3) e Custos Operacionais</div>
+        <h4>Qual o argumento financeiro e de governança para convencer um CTO a migrar Clusters Redshift on-premise style (DS2/DC2) para a família RA3 com Data Sharing, quando a empresa possui 5 squads diferentes consumindo e copiando dados uns dos outros?</h4>
+        <p><strong>Cenário:</strong> Equipes de Marketing, Risco, Finanças e Vendas rodam complexos pipelines (AWS Glue) toda madrugada apenas para copiar tabelas do "Cluster Core" para seus próprios "Clusters Departamentais", encarecendo a conta da AWS e gerando dessincronia (dados velhos).</p>
+        <div class="callout callout-info">
+          <strong>A Solução (Storage Desacoplado):</strong>
+          <ul>
+            <li><strong>Dissociação Paga Apenas o Necessário:</strong> Em DC2 (acoplado), escalar o disco para armazenar mais histórico obrigava a pagar por caríssimos chips de CPU adicionais ociosos. No RA3, os dados pesados moram fisicamente no S3 (preço ínfimo de centavos por GB), mantendo a CPU dimensionada apenas para a força da query.</li>
+            <li><strong>Morte do ETL de Cópia via Data Sharing:</strong> Com o RA3, o Storage reside no S3. Isso permite habilitar o <em>Data Sharing</em>. O Cluster de Marketing pode ler a tabela de Vendas <em>ao vivo</em>, utilizando apenas o próprio poder computacional de Marketing, sem que o pipeline precise mover um único byte fisicamente, eliminando a fatura do AWS Glue e a obsolescência de dados.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 91: Karpenter e EKS Spot -->
+      <div class="card" id="q91" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 91 · EMR on EKS, Instâncias Spot e Perda de Shuffle</div>
+        <h4>Ao utilizar instâncias Spot via Karpenter para orquestrar centenas de pods de Executors Spark no EKS, como evitar que o cluster perca dias de reprocessamento quando a AWS revogar as máquinas Spot (aviso de 2 minutos)?</h4>
+        <p><strong>Cenário de Desastre:</strong> Um job de 8 horas está na 7ª hora realizando um Shuffle pesado (agrupamento). A AWS exige de volta 5 instâncias Spot onde rodavam 20 Executors. Ao matá-los abruptamente, blocos essenciais de shuffle são deletados do disco local daquelas EC2. O job lança um `FetchFailedException` e reinicia do zero.</p>
+        <div class="callout callout-tip">
+          <strong>Diagnóstico e Mitigação OBRIGATÓRIA:</strong>
+          <ul>
+            <li><strong>Spot Interruption Notice:</strong> O Karpenter é configurado nativamente com o EventBridge para capturar o "AWS Spot Interruption Notice" 2 minutos antes do corte, marcando o nó Kubernetes como <em>Cordoned/Draining</em>.</li>
+            <li><strong>Graceful Decommissioning & Shuffle Tracking:</strong> No EMR on EKS, ativa-se <code>spark.decommission.enabled=true</code> e <code>spark.storage.decommission.shuffleBlocks.enabled=true</code>. Ao receber o alerta do Karpenter, o Spark trava a alocação de novas tasks naqueles 20 executors condenados e, em vez de morrer, passa os 2 minutos inteiros transmitindo freneticamente seus blocos críticos de Shuffle na memória para os Executors sobreviventes nas instâncias On-Demand. O nó morre após 2 minutos, mas o trabalho dos blocos foi salvo, o job continua normalmente sem FetchFailedException!</li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 </div>

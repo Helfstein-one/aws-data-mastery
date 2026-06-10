@@ -2129,6 +2129,52 @@ df_parsed.writeStream \
         </div>
       </div>
 
+      <h3 style="margin-top: 30px;">Deep Dive de Orquestração: Karpenter e Interrupções Spot</h3>
+      <p>A arquitetura recomendada para EMR on EKS envolve o uso massivo de instâncias AWS Spot para reduzir custos de processamento em até 80%. Para que isso funcione sem degradar severamente os SLAs, tecnologias específicas do Kubernetes são aplicadas:</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Karpenter "Just-in-Time" Provisioning</h4>
+          <p>Diferente do <em>Cluster Autoscaler</em> clássico que dependia de Auto Scaling Groups (ASG) engessados, o <strong>Karpenter</strong> fala diretamente com a API do EC2. Quando o Spark Driver pede 50 novos executors (pods), o Karpenter lê os requisitos de vCPU/RAM de cada pod pendente e liga nós EC2 no tamanho e família exata (ex: c6g.4xlarge Graviton) em menos de 1 minuto, desativando-os instantaneamente quando o job acaba (Scale to Zero).</p>
+        </div>
+        <div>
+          <h4>Graceful Decommissioning & Shuffle Tracking</h4>
+          <p>Quando a AWS reivindica uma instância Spot (aviso de 2 minutos), o Karpenter inicia o <em>draining</em> do Node. O Spark é notificado e entra em modo de <strong>Graceful Decommissioning</strong>. Ele para de agendar novas tasks para aquele executor específico e começa a migrar blocos de dados de *Shuffle* em memória para os outros pods sobreviventes, prevenindo a temida exceção de `FetchFailedException` que forçaria o recálculo de gigabytes de dados.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 20px;">
+        <div>
+          <h4>IRSA (IAM Roles for Service Accounts)</h4>
+          <p>Em ambientes multi-tenant do Kubernetes, injetar chaves AWS estáticas é um erro crítico de segurança. O EKS utiliza <strong>OIDC (OpenID Connect)</strong> acoplado ao IAM. Cada Job Spark do EMR on EKS ganha sua própria <em>ServiceAccount</em>. Assim, o Job do time de Finanças ganha acesso temporário (via token JWT trocado por STS) ao bucket de Finanças, enquanto o Job de Marketing não enxerga nada fora de seu escopo, rodando no exato mesmo nó EC2 físico.</p>
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <h4>PodTemplate do Spark (Customização de Infraestrutura)</h4>
+          <p>O EMR on EKS permite injetar Sidecars (ex: Datadog, Splunk), modificar afinidade (Taints/Tolerations) ou forçar armazenamento NVMe efêmero via <strong>PodTemplates</strong> declarativos:</p>
+<pre><span class="c"># spark-executor-template.yaml</span>
+<span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> Pod
+<span class="k">spec:</span>
+  <span class="c"># Atribui a permissão granular via IRSA ao executor</span>
+  <span class="k">serviceAccountName:</span> <span class="s">"spark-finance-sa"</span>
+  <span class="k">nodeSelector:</span>
+    <span class="c"># Força o executor a rodar apensas em Spot Instances ARM (Graviton)</span>
+    <span class="k">karpenter.sh/capacity-type:</span> <span class="s">spot</span>
+    <span class="k">kubernetes.io/arch:</span> <span class="s">arm64</span>
+  <span class="k">containers:</span>
+  - <span class="k">name:</span> spark-kubernetes-executor
+    <span class="k">volumeMounts:</span>
+    - <span class="k">name:</span> spark-local-dir-1
+      <span class="k">mountPath:</span> <span class="s">/tmp/spark-local-dir</span>
+  <span class="k">volumes:</span>
+  - <span class="k">name:</span> spark-local-dir-1
+    <span class="c"># Usa um volume NVMe efêmero acoplado para absorver Shuffles pesados</span>
+    <span class="k">hostPath:</span>
+      <span class="k">path:</span> <span class="s">/mnt/d1</span>
+</pre>
+        </div>
+      </div>
+
       <div class="abox info">
         <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
         <p>A adoção de EMR on EKS capitaliza sobre a estratégia de <strong>Infraestrutura Convergente</strong>. Ao unificar equipes de DevOps, Engenharia de Software e Engenharia de Dados em um único orquestrador de contêineres (Kubernetes), reduzimos o Custo Total de Propriedade (TCO) ao compartilhar hardware de maneira extremamente densa (utilização de CPU L1/L2 na casa dos 85%+). A governança de segurança também é simplificada pelo IAM Role for Service Accounts, eliminando riscos de compliance e vazamento de dados corporativos.</p>

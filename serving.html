@@ -445,6 +445,26 @@
 <span class="k">FROM</span> information_schema.views
 <span class="k">WHERE</span> table_schema = <span class="s">'meu_datalake'</span>;</pre>
         </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 20px;">
+        <div>
+          <h4>CTAS (Create Table As Select) vs INSERT INTO</h4>
+          <p>Em pipelines construídos inteiramente em SQL dentro do Athena, a escolha da instrução afeta violentamente a infraestrutura física de armazenamento subjacente:</p>
+          <ul>
+            <li><strong>INSERT INTO:</strong> Adiciona dados a uma tabela existente. Se você rodar 100 <code>INSERT INTO</code> de pequenas quantidades, você criará 100 arquivos pequenos no S3, desencadeando o "Small Files Problem". Ideal apenas para appends de grandes lotes.</li>
+            <li><strong>CTAS (Create Table As Select):</strong> Uma instrução monolítica que cria uma nova tabela e insere o resultado da query. O motor Trino otimiza a escrita no S3 paralelizando o job e gravando blocos maiores (chunks) nativamente em formato Parquet com compressão Snappy/ZSTD. <em>Pro Tip:</em> É a forma mais rápida de transformar 10.000 arquivos CSV brutos em alguns poucos arquivos Parquet otimizados.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Athena Engine Version 3 (Trino) e Iceberg</h4>
+          <p>Com a migração do Athena para a Engine v3, ele tornou-se um motor DML (Data Manipulation Language) maduro para o formato Apache Iceberg, não servindo apenas para leituras, mas para pipelines de engenharia ativos.</p>
+          <ul>
+            <li><strong>Operações Nativas (ACID):</strong> Você pode usar <code>UPDATE</code>, <code>DELETE FROM</code> e <code>MERGE INTO</code> diretamente na console do Athena. Isso varre as tabelas Iceberg e cria automaticamente novos arquivos delta (Copy-On-Write ou Merge-On-Read).</li>
+            <li><strong>Time Travel e Rollback:</strong> A Engine v3 lê nativamente metadados temporais. É possível recuperar o estado exato de uma tabela de ontem ou desfazer um DELETE acidental apenas com SQL: <br><code style="background:#0f172a; padding: 2px 6px; border-radius:4px; font-size: 11px;">SELECT * FROM tb_vendas FOR TIMESTAMP AS OF (current_timestamp - interval '1' day)</code></li>
+          </ul>
+        </div>
       </div>
 
       <div class="case-box" style="margin-top: 40px; border-left: 4px solid var(--accent);">
@@ -656,6 +676,105 @@ spark.sql(<span class="s">"CALL glue_catalog.system.expire_snapshots(table => 'i
       <div class="callout callout-tip">
         <strong>✓ Compressão AZ64:</strong>
         Sempre utilize a codificação colunar moderna <code>az64</code> para tipos numéricos e temporais no Redshift. Ela fornece alta compressão física em disco com performance de descompressão até 70% superior a LZO/ZSTD.
+      </div>
+
+      <h3 style="margin-top: 40px;">Evolução Arquitetural: Nós RA3 e Managed Storage</h3>
+      <p>Tradicionalmente (nós DS2 ou DC2), o Redshift possuía armazenamento e computação acoplados nativamente na mesma máquina física. Para escalar o disco, você era obrigado a adicionar mais instâncias, aumentando excessivamente os custos de CPU/RAM desnecessários.</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Nós RA3 (Desacoplamento)</h4>
+          <p>A família <strong>RA3</strong> introduziu o <strong>Redshift Managed Storage (RMS)</strong>. Os dados não ficam mais retidos obrigatoriamente no EBS local. O disco do Compute Node atua apenas como um cache SSD local de altíssima performance para "Dados Quentes" (Hot Data). Dados mais antigos ("Dados Frios") são movidos automaticamente para o S3 de forma transparente.</p>
+          <p>Isso permite escalar o armazenamento até Petabytes pagando apenas o preço do S3, enquanto a escalabilidade de CPU se mantém desacoplada focada apenas em performance de leitura.</p>
+        </div>
+        <div>
+          <h4>Redshift Data Sharing</h4>
+          <p>Graças ao armazenamento dissociado no RMS, o Redshift introduziu o <strong>Data Sharing</strong>. Diferente de pipelines ETL complexos de exportação de dados, o Data Sharing permite que o Cluster A (ex: Produtor de Vendas) compartilhe tabelas lógicas ao vivo com o Cluster B (Consumidor Analítico) ou até mesmo com Redshift Serverless.</p>
+          <ul>
+            <li><strong>Zero Cópia de Dados:</strong> O consumidor lê fisicamente o Managed Storage do produtor, sem replicação.</li>
+            <li><strong>Isolamento Físico:</strong> A query de leitura executada pela equipe B consome estritamente a CPU/RAM do Cluster B, preservando a estabilidade e performance dos jobs do Cluster A.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- DIAGRAMA: RA3 DATA SHARING -->
+      <div class="dw" style="margin-top: 20px; margin-bottom: 25px;">
+        <svg viewBox="0 0 760 300" width="760" height="300" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="300" fill="#0f172a" rx="14"/>
+          <text x="380" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="700" letter-spacing="1">ARQUITETURA RA3 &amp; REDSHIFT DATA SHARING</text>
+          
+          <!-- Cluster Produtor -->
+          <rect x="50" y="60" width="220" height="130" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="160" y="80" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="700">Cluster Produtor (RA3)</text>
+          
+          <rect x="70" y="95" width="180" height="30" rx="4" fill="#0f172a" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="160" y="113" text-anchor="middle" fill="#cbd5e1" font-size="8">ETL Jobs &amp; Ingestão Diária</text>
+
+          <rect x="70" y="140" width="85" height="35" rx="4" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="112" y="156" text-anchor="middle" fill="#f43f5e" font-size="8" font-weight="700">Compute</text>
+          <text x="112" y="167" text-anchor="middle" fill="#94a3b8" font-size="6">Queries Locais</text>
+
+          <rect x="165" y="140" width="85" height="35" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+          <text x="207" y="156" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">Local SSD</text>
+          <text x="207" y="167" text-anchor="middle" fill="#94a3b8" font-size="6">Hot Data Cache</text>
+
+          <!-- Managed Storage -->
+          <rect x="300" y="140" width="160" height="90" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,3"/>
+          <text x="380" y="165" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">Managed Storage</text>
+          <text x="380" y="180" text-anchor="middle" fill="#cbd5e1" font-size="7">Amazon S3 Backed</text>
+          <rect x="330" y="195" width="100" height="20" rx="4" fill="#0f172a"/>
+          <text x="380" y="208" text-anchor="middle" fill="#cbd5e1" font-size="7">Tabela Fato Vendas</text>
+
+          <!-- Cluster Consumidor -->
+          <rect x="490" y="60" width="220" height="130" rx="8" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="600" y="80" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Cluster Consumidor (BI)</text>
+
+          <rect x="510" y="95" width="180" height="30" rx="4" fill="#0f172a" stroke="#cbd5e1" stroke-width="1"/>
+          <text x="600" y="113" text-anchor="middle" fill="#cbd5e1" font-size="8">Analysts &amp; QuickSight Dashboards</text>
+
+          <rect x="510" y="140" width="85" height="35" rx="4" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="552" y="156" text-anchor="middle" fill="#f43f5e" font-size="8" font-weight="700">Compute</text>
+          <text x="552" y="167" text-anchor="middle" fill="#94a3b8" font-size="6">CPU Isolada</text>
+
+          <rect x="605" y="140" width="85" height="35" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+          <text x="647" y="156" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">Local SSD</text>
+          <text x="647" y="167" text-anchor="middle" fill="#94a3b8" font-size="6">Metadata Cache</text>
+
+          <!-- Flow Arrows -->
+          <!-- Produtor to Storage -->
+          <path d="M 207 175 L 207 205 L 300 205" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-orange)" fill="none"/>
+          <text x="255" y="195" text-anchor="middle" fill="#cbd5e1" font-size="7">Evicção Fria</text>
+          
+          <!-- Storage to Consumidor -->
+          <path d="M 460 205 L 552 205 L 552 175" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-purple)" fill="none"/>
+          <text x="500" y="195" text-anchor="middle" fill="#cbd5e1" font-size="7">Data Share Read</text>
+
+          <!-- Marker Defs -->
+          <defs>
+            <marker id="arrow-orange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
+            </marker>
+            <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#a78bfa"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <h3 style="margin-top: 30px;">Gerenciamento de Workloads (WLM) e Auto Scaling</h3>
+      <p>Em ambientes com alta concorrência de usuários simultâneos, o banco tradicional bloqueia gerando enfileiramento (queueing). O Redshift lida com isso de duas maneiras estruturais:</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Workload Management (AutoWLM e SQA)</h4>
+          <p>O <strong>Automatic WLM</strong> aloca dinamicamente memória e slots de processamento para diferentes grupos de usuários. Para combater a frustração, o Redshift usa Machine Learning via <strong>SQA (Short Query Acceleration)</strong>.</p>
+          <p>Se uma query simples ("qual o total de vendas hoje?") entrar atrás de um ETL de 3 horas na fila, o SQA identifica via heurística que a query é curta e cria uma faixa expressa prioritária em um pool oculto de recursos, respondendo-a imediatamente sem que o usuário tenha que esperar o ETL finalizar.</p>
+        </div>
+        <div>
+          <h4>Concurrency Scaling (Escalonamento Elástico)</h4>
+          <p>Para picos de acessos extremos (ex: fechamento financeiro no fim do mês ou Black Friday), o <strong>Concurrency Scaling</strong> levanta cópias transparentes efêmeras do cluster RA3 original em milissegundos, com o único propósito de absorver leituras simultâneas.</p>
+          <p><strong>FinOps Alert:</strong> O Redshift provê 1 hora gratuita de Concurrency Scaling a cada 24 horas. Excedentes são cobrados por segundo. Deve-se configurar a restrição máxima de clusters provisionados para evitar "Bill Shocks" (choque de fatura).</p>
+        </div>
       </div>
     </section>
 
