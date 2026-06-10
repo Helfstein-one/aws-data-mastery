@@ -2179,6 +2179,78 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           </ul>
         </div>
       </div>
+      <!-- Case 81: Contratos de Dados no CI/CD -->
+      <div class="card" id="q81" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 81 · Contratos de Dados no CI/CD (DataOps)</div>
+        <h4>Como você garantiria, de forma automatizada, que a equipe de engenharia de software (produtores de dados) não suba para produção uma alteração de banco de dados que quebre os pipelines analíticos?</h4>
+        <p><strong>Cenário de Quebra Silenciosa:</strong> O desenvolvedor backend renomeia a coluna `id_cliente` para `customer_id` no banco transacional. O pipeline do Glue ETL falha de madrugada pois esperava o nome antigo.</p>
+        <div class="callout callout-info">
+          <strong>A Solução DataOps (Shift-Left):</strong>
+          <ul>
+            <li><strong>JSON Schema via Git:</strong> A equipe de dados e engenharia de software criam um repositório central contendo um JSON Schema que define os dados exatos esperados no Datalake (tipos de dados, nomes de colunas obrigatórias). Isso atua como um <strong>Contrato Analítico</strong>.</li>
+            <li><strong>Validação no GitHub Actions do Produtor:</strong> Quando o desenvolvedor abre um PR (Pull Request) com migrações de banco (ex: via Flyway ou Liquibase), o pipeline CI/CD invoca um linter ou script automatizado que compara a estrutura final da migração proposta com o Contrato Analítico (JSON Schema).</li>
+            <li><strong>Bloqueio Automático:</strong> Se a mudança violar o contrato (ex: excluir uma coluna requerida), o pipeline falha automaticamente o teste unitário (Red Build), impedindo o merge do código na branch principal até que a equipe de dados seja consultada para adaptar o contrato e o pipeline simultaneamente.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 82: Write-Audit-Publish (WAP) com Iceberg -->
+      <div class="card" id="q82" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 82 · Padrão Write-Audit-Publish (WAP) com Apache Iceberg</div>
+        <h4>Como o padrão Write-Audit-Publish, possibilitado por formatos de tabela como Apache Iceberg, evita que dados mal formatados poluam a camada Gold (apresentação) do Data Lake e interfiram nos dashboards?</h4>
+        <p><strong>O Problema da Gravação Suja:</strong> Historicamente, os jobs do Spark escrevem os dados diretamente na tabela final. Se o job falhar pela metade ou carregar dados nulos acidentalmente, os dashboards apontados para essa tabela apresentarão dados inconsistentes aos usuários de negócio antes que o time de dados perceba o problema.</p>
+        <div class="callout callout-tip">
+          <strong>O Pipeline Seguro (Branching Analítico):</strong>
+          <ul>
+            <li><strong>Write (Escrever):</strong> O job de ETL do Spark não escreve diretamente na branch principal. Ele cria e escreve os dados em uma ramificação oculta de auditoria no Iceberg (ex: `branch_audit_etl`). Os dashboards do QuickSight ou Tableau conectados no Athena apontam para a branch `main` e continuam lendo os dados de ontem com performance normal.</li>
+            <li><strong>Audit (Auditar):</strong> Um job secundário de Data Quality (ex: usando Great Expectations ou Glue Data Quality) é acionado para varrer apenas a `branch_audit_etl`, aplicando regras como limiares estatísticos (standard deviation) e limites nulos.</li>
+            <li><strong>Publish (Publicar):</strong> Apenas se a auditoria passar com sucesso, uma operação (stored procedure) atômica do Iceberg `fast_forward` transfere e torna os dados dessa branch visíveis na branch `main`. Toda a transição leva milissegundos e elimina a janela de inconsistência de dados.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 83: OpenLineage vs AWS Native -->
+      <div class="card" id="q83" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 83 · Linhagem Multi-Cluster com OpenLineage</div>
+        <h4>Por que utilizar o padrão aberto OpenLineage acoplado a serviços de backend como Marquez, em vez de depender exclusivamente das ferramentas nativas de linhagem do AWS Glue, em um ecossistema complexo?</h4>
+        <p><strong>A Necessidade de Linhagem Holística:</strong> Ecossistemas de dados raramente utilizam apenas um mecanismo computacional. Você pode ter Spark rodando no EMR, consultas SQL no Snowflake, jobs nativos de Glue, orquestração via Apache Airflow e transformações no dbt.</p>
+        <div class="callout callout-warn">
+          <strong>A Vantagem do OpenLineage:</strong>
+          <ul>
+            <li><strong>Padronização de Telemetria:</strong> O OpenLineage não é um software servidor, mas uma especificação JSON/API aberta. Ferramentas distintas (Airflow, Spark, dbt, Flink) instrumentadas com o client do OpenLineage emitem os eventos da mesma forma unificada.</li>
+            <li><strong>Rastreamento Cross-Platform:</strong> As soluções nativas de linhagem de nuvens (como Glue DataBrew ou Macie) mapeiam perfeitamente transformações executadas internamente por elas, mas são "cegas" caso uma tabela externa gerenciada em outra conta ou engine (Databricks, Snowflake) afete a tabela do S3. O OpenLineage centraliza todos os sinais num único DataHub (como Datahub Project ou Amundsen), propiciando um grafo de dependência e auditoria de impacto cobrindo toda a corporação.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 84: SageMaker Feature Store -->
+      <div class="card" id="q84" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 84 · MLOps e SageMaker Feature Store</div>
+        <h4>O que é "Training-Serving Skew" em Machine Learning e como o SageMaker Feature Store atua mitigando esse problema em vez de simplesmente salvar as agregações diretamente no S3 e no DynamoDB separadamente?</h4>
+        <p><strong>Dissonância Cognitiva do Modelo:</strong> O Training-Serving Skew ocorre quando o código Python em batch usado para preparar as variáveis (features) no treinamento usa dados sutilmente diferentes, ou processados com regras matemáticas divergentes da API em tempo real (ex: média de vendas calculada em pandas no notebook vs calculada no backend em Go).</p>
+        <div class="callout callout-info">
+          <strong>Solução via Repositório Unificado:</strong>
+          <ul>
+            <li><strong>Singularidade de Engenharia:</strong> O engenheiro de ML cria uma feature (ex: `score_risco`) e envia para o SageMaker Feature Store. A ferramenta encarrega-se da distribuição automática com consistência.</li>
+            <li><strong>Online vs Offline Store Integrados:</strong> O SageMaker bifurca de forma transparente a feature: armazena a versão mais recente em uma Store Online (backend DynamoDB ou ElastiCache gerenciado) para garantir leituras em menos de 10ms aos endpoints de ML ao vivo; e sincroniza periodicamente em tabelas Parquet/Iceberg em uma Store Offline no S3, guardando todo o histórico de dados (Time Travel) para permitir o treinamento retroativo exato e consistente em lote.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 85: SageMaker Model Monitor e Drift -->
+      <div class="card" id="q85" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 85 · Prevenção de Drift de Modelos em Produção</div>
+        <h4>Como identificar e alertar degradação proativa de inferência (Model Decay) de Modelos ML via SageMaker Model Monitor sem depender da realimentação retroativa (ground truth) de vendas geradas pelo negócio?</h4>
+        <p><strong>A Degradação Pós-Deploy:</strong> Após implantar um modelo (ex: aprovação de crédito) na AWS via SageMaker Endpoint, o contexto socioeconômico de longo prazo muda (ex: alta de juros ou mudança nos salários médios). Esperar semanas para constatar que o crédito aprovado estava causando inadimplência pode ser catastrófico.</p>
+        <div class="callout callout-tip">
+          <strong>Data Drift Monitoring (Monitoramento Estatístico Passivo):</strong>
+          <ul>
+            <li><strong>Geração do Baseline Estatístico:</strong> Durante a fase final do treinamento, o Data Scientist exporta um relatório (Baseline) contendo as distribuições, médias e desvios padrão exatos das colunas do dataset aprovado de treino.</li>
+            <li><strong>Captura Contínua:</strong> O SageMaker Endpoint é configurado para amostrar 100% (ou frações) das requisições JSON que recebe da rua e espelhá-las em um bucket S3 de monitoria.</li>
+            <li><strong>Comparação Kolgomorov-Smirnov Automatizada:</strong> O SageMaker Model Monitor varre as predições salvas via S3 de hora em hora. Utilizando distâncias estatísticas (como o teste de Kolmogorov-Smirnov), ele compara se a distribuição da variável que está chegando (ex: média salarial informada no payload json) sofreu <em>Data Drift</em> expressivo em relação à média treinada do Baseline. Se o desvio for violado, o CloudWatch emite um alerta para o acionamento via EventBridge do Pipeline de Retreinamento (Amazon SageMaker Pipelines).</li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 </div>

@@ -155,7 +155,13 @@
       color: "#06b6d4",
       items: [
         "dataops-mlops.html#dataops-core",
-        "dataops-mlops.html#mlops-core"
+        "dataops-mlops.html#data-quality-avancado",
+        "dataops-mlops.html#data-contracts",
+        "dataops-mlops.html#data-lineage",
+        "dataops-mlops.html#plataforma-testes",
+        "dataops-mlops.html#mlops-core",
+        "dataops-mlops.html#mlops-feature-store",
+        "dataops-mlops.html#git-flow"
       ]
     },
     networking: {
@@ -194,11 +200,7 @@
         "governance-security.html#iam-kms",
         "governance-security.html#secretsmanager",
         "governance-security.html#observabilidade",
-        "governance-security.html#data-quality",
-        "governance-security.html#data-quality-avancado",
-        "governance-security.html#data-contracts",
-        "governance-security.html#data-lineage",
-        "governance-security.html#plataforma-testes"
+        "governance-security.html#erros"
       ]
     },
     finops: {
