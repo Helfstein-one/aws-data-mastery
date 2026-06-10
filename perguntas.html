@@ -2327,6 +2327,48 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           </ul>
         </div>
       </div>
+
+      <!-- Case 94: OOMKilled no EKS -->
+      <div class="card" id="q94" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 94 · EKS & Apache Spark e Troubleshooting de OOMKilled (Staff Level)</div>
+        <h4>Durante o processamento de um DataFrame no Amazon EKS usando Spark Operator, o Pod do Executor foi abruptamente encerrado pelo Kubernetes com o status 'OOMKilled'. Curiosamente, o Spark UI não reportou falta de memória JVM (heap limit estourado). Qual é o motivo exato de um 'OOMKilled' sem esgotamento de Heap e como você estrutura os recursos de container para mitigar isso?</h4>
+        <p><strong>Cenário:</strong> O engenheiro configurou `spark.executor.memory="12g"`. O nó EC2 do K8s tinha bastante memória livre, mas o container falhou misteriosamente antes da heap JVM de 12GB encher.</p>
+        <div class="callout callout-tip">
+          <strong>Diagnóstico e Ação (Memory Overhead e Limites K8s):</strong>
+          <ul>
+            <li><strong>A Causa Física (Cgroups e Out-of-Heap Memory):</strong> O <code>OOMKilled</code> é um sinal do subsistema <em>cgroups</em> do Linux, não da JVM. Quando definimos <code>spark.executor.memory="12g"</code>, estamos restringindo apenas a Heap do Java. O Spark frequentemente exige memória adicional (Off-Heap) para operações nativas (como a serialização de PyArrow no PySpark, buffers de rede Netty, alocações diretas de ByteBuffer NIO e buffers de SO). Se o Pod no EKS recebeu um límite estrito (<code>resources.limits.memory="13g"</code>), mas o somatório da Heap + Off-Heap ultrapassar esse valor imposto pelo K8s, o OOM Killer do kernel Linux destrói brutalmente o processo (Sinal SIGKILL 139) sem que o Spark UI perceba, pois não houve OutOfMemoryError na heap Java.</li>
+            <li><strong>A Mitigação Estrutural (Ajuste do Overhead):</strong> Para clusters EKS densos, a solução é ajustar o <code>spark.executor.memoryOverhead</code> (o padrão é apenas 10% da executor memory ou 384MB). Se o Job usar muito PySpark UDFs ou buffers de shuffle em C++, deve-se aumentar explicitamente o overhead (ex: <code>spark.executor.memoryOverhead="4g"</code>). Além disso, garantir que o YAML de submissão do K8s tenha <code>limits.memory</code> grande o suficiente para acomodar o cálculo de: <em>Heap + Overhead + Off-Heap</em>, evitando guilhotina do Kernel.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 95: Athena Cost Control -->
+      <div class="card" id="q95" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 95 · Amazon Athena, Parquet e Explosão de Custos por Scans Ineficientes (Staff Level)</div>
+        <h4>Um time de BI utiliza o Amazon Athena para consultar tabelas do S3 armazenadas em Parquet (comprimidas em Snappy). Apesar do Parquet ser colunar, o custo na fatura da AWS atingiu níveis críticos, e as métricas do Athena mostram dezenas de Terabytes sendo "escaneados" diariamente para consultas simples que retornam poucas linhas. O que causa varreduras excessivas em formatos colunares e como corrigir definitivamente?</h4>
+        <p><strong>Cenário:</strong> Os engenheiros implementaram Particionamento por `ano/mes/dia`, as consultas possuem os filtros `WHERE data_particao = ...`, e as querys selecionam apenas 3 colunas em vez de `SELECT *`. Mesmo assim, os scans estão gigantescos.</p>
+        <div class="callout callout-tip">
+          <strong>Diagnóstico e Ação (Small Files, Block Sizes e Predicate Pushdown Oculto):</strong>
+          <ul>
+            <li><strong>A Causa Física (Distorção do Footer do Parquet):</strong> Se um ETL rodando em Spark (ou Kinesis Firehose) gerar 10.000 pequenos arquivos de 100KB dentro da partição de hoje, o Athena (Trino) precisa abrir a rede para ler o <em>Footer/Metadata</em> de todos esses arquivos (para encontrar onde estão os blocos das 3 colunas). O S3 e o Athena faturam baseados em um limite mínimo de cobrança por arquivo lido (10MB). Consultar 10.000 arquivos de 100KB faz o Athena faturar como se fossem lidos 100 GB (10.000 * 10MB mínimos). Outro problema: Mesmo em arquivos grandes, se a coluna da cláusula <code>WHERE cliente_id = 999</code> não estiver ordenada fisicamente antes de escrever no S3, o Athena terá que varrer todos os RowGroups do arquivo Parquet, pois o arquivo não contém estatísticas (Min/Max values) otimizadas nos blocos para um descarte rápido.</li>
+            <li><strong>A Mitigação Estrutural (Compactação e Ordenação no S3):</strong> Implementar uma rotina de <em>Compaction</em> diária (usando AWS Glue ou um <code>CTAS</code> do próprio Athena) para consolidar milhares de pequenos arquivos em grandes blocos ideais (~128MB a 512MB). Mais importante ainda: Na escrita compactada, aplicar um <code>ORDER BY (colunas_mais_filtradas)</code> no momento de gerar o Parquet. Isso otimiza os metadados do Parquet (Estatísticas de Min/Max por chunk), habilitando o motor Trino a dar um "Skip" limpo nos blocos físicos inteiros do S3 pela rede sem baixar seus dados, garantindo assim um Predicate Pushdown perfeito e estancando a sangria financeira.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 96: Redshift Concurrency -->
+      <div class="card" id="q96" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 96 · Redshift RA3, Data Sharing e Estrangulamento de Concorrência (Staff Level)</div>
+        <h4>Sua empresa consolidou dezenas de Terabytes no Amazon Redshift (família RA3) adotando o "Managed Storage". Durante a madrugada, longos processos de ETL de Ingestão saturam os Compute Nodes. Ao mesmo tempo, o time de engenharia global e analistas tentam visualizar os dashboards no QuickSight. A infraestrutura inteira sofre lentidão severa. Como isolar perfeitamente a computação mantendo "Single Source of Truth"?</h4>
+        <p><strong>Cenário:</strong> Você deseja parar as filas de "Noisy Neighbors". A diretoria descarta mover os dados lidos para bancos relacionais e exige usar o Redshift DW.</p>
+        <div class="callout callout-tip">
+          <strong>Diagnóstico e Ação (Desacoplamento Arquitetural de CPU):</strong>
+          <ul>
+            <li><strong>A Causa Física (Acoplamento de Concorrência Clássico):</strong> Embora o Redshift RA3 desacople o <em>Storage</em> (guardando dados frios no S3 RMS e caches no SSD local), as cargas de trabalho (ETLs e leituras Ad-Hoc) ainda competem violentamente pelo mesmo cluster <em>Leader</em> e pelos mesmos Slices do <em>Compute Node</em>. Mesmo com o AutoWLM ou Concurrency Scaling ativados, um volume massivo de Ingestões DML (INSERT/UPDATE/COPY) engasga o pipeline da fila, exigindo IOPS intensos no EBS local e travando a CPU que o QuickSight depende.</li>
+            <li><strong>A Mitigação Estrutural (Redshift Data Sharing Producer/Consumer):</strong> A estratégia de Staff Engineer é criar um ambiente <em>Multi-Cluster</em> sem copiar os dados. Você mantém o cluster RA3 original dedicado puramente à gravação e transformações intensas (o Cluster "Produtor"). Você então provisiona um segundo cluster Redshift (ou até um Redshift Serverless Pay-Per-Query) atuando como "Consumidor", focado em Servir Dashboards. Através da funcionalidade nativa <strong>Redshift Data Sharing</strong>, o Cluster Consumidor lê logicamente as tabelas do Produtor direto do Managed Storage via rede ultra rápida da AWS, gerando "Zero Cópias de Dados". A CPU e o Cache Local do Cluster Produtor ficam 100% livres de usuários do QuickSight, garantindo SLAs rigorosos e alta segurança.</li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 </div>
