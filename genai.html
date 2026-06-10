@@ -8,6 +8,10 @@
   <title>GenAI &amp; Dados - AWS Data Specialist</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
 </head>
 <body>
 
@@ -398,6 +402,25 @@
       </div>
     </section>
 
+      <h3 style="margin-top: 30px;">Diagrama da Arquitetura RAG (Retrieval-Augmented Generation) na AWS</h3>
+      <div class="mermaid" style="background: var(--ink); padding: 20px; border-radius: 8px; margin-top: 15px;">
+        sequenceDiagram
+          participant User as Usuário / App
+          participant Bedrock as Amazon Bedrock (LLM)
+          participant OS as OpenSearch / Vector DB
+          participant S3 as Amazon S3 (Documentos)
+
+          Note over S3,OS: Fase de Ingestão (Offline)
+          S3->>OS: Extrai Texto, Gera Embeddings e Indexa
+
+          Note over User,Bedrock: Fase de Inferência (Tempo Real)
+          User->>Bedrock: Envia Pergunta ("Qual o impacto do projeto X?")
+          Bedrock->>OS: Busca Semântica (K-Nearest Neighbors)
+          OS-->>Bedrock: Retorna trechos de documentos relevantes
+          Bedrock->>Bedrock: Constrói Prompt com Contexto + Pergunta
+          Bedrock-->>User: Retorna resposta embasada
+      </div>
+
     <section class="section" id="rag">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--genai)">02</div>
@@ -586,6 +609,46 @@
         </div>
       </div>
     </section>
+
+      <h3 style="margin-top: 30px;">Infraestrutura como Código (Terraform) para OpenSearch Serverless (Vector DB)</h3>
+      <p>O snippet abaixo demonstra como provisionar uma coleção vetorial no Amazon OpenSearch Serverless, focada em armazenar embeddings do RAG:</p>
+      <pre><code class="language-hcl"># Criação da Coleção Serverless focada em Vector Search
+resource "aws_opensearchserverless_collection" "rag_vector_db" {
+  name = "rag-knowledge-base"
+  type = "VECTORSEARCH"
+}
+
+# Política de Criptografia para a Coleção
+resource "aws_opensearchserverless_security_policy" "encryption_policy" {
+  name = "rag-encryption-policy"
+  type = "encryption"
+  policy = jsonencode({
+    Rules = [
+      {
+        ResourceType = "collection"
+        Resource     = ["collection/${aws_opensearchserverless_collection.rag_vector_db.name}"]
+      }
+    ]
+    AWSOwnedKey = true
+  })
+}
+
+# Política de Acesso de Rede (Permite acesso interno da VPC)
+resource "aws_opensearchserverless_security_policy" "network_policy" {
+  name = "rag-network-policy"
+  type = "network"
+  policy = jsonencode([
+    {
+      Rules = [
+        {
+          ResourceType = "collection"
+          Resource     = ["collection/${aws_opensearchserverless_collection.rag_vector_db.name}"]
+        }
+      ]
+      AllowFromPublic = false
+    }
+  ])
+}</code></pre>
 
     <section class="section" id="pgvector">
       <div class="sec-hdr">
