@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AWS API Gateway — Guia definitivo com CRUD REST, Terraform, integrações assíncronas, autenticação, observabilidade, boas práticas e cases reais de engenharia de dados na AWS.">
+  <title>API Gateway Deep Dive — AWS Data Specialist</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .apigw-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: #fff;
+      margin: 2px 3px 2px 0;
+    }
+    .apigw-badge.rest   { background: #7c3aed; }
+    .apigw-badge.http   { background: #0369a1; }
+    .apigw-badge.ws     { background: #0f766e; }
+    .apigw-badge.tf     { background: #5c4ee5; }
+    .apigw-badge.lambda { background: #ea580c; }
+    .apigw-badge.sqs    { background: #b45309; }
+    .apigw-badge.kinesis{ background: #be185d; }
+    .apigw-badge.sf     { background: #15803d; }
+    .apigw-badge.cog    { background: #0284c7; }
+
+    .flow-diagram {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 28px 20px;
+      margin: 24px 0;
+      overflow-x: auto;
+    }
+
+    .qa-block {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin: 16px 0;
+      overflow: hidden;
+    }
+    .qa-q {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 14px 20px;
+      font-family: 'DM Mono', monospace;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .qa-q .qtag {
+      font-size: 9px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: #1e3a8a;
+      color: #93c5fd;
+      letter-spacing: .06em;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .qa-a {
+      background: var(--paper);
+      padding: 16px 20px;
+      font-size: .9rem;
+      color: var(--ink2);
+      line-height: 1.7;
+      border-top: 1px solid var(--border);
+    }
+    .qa-a code { font-size: .82rem; }
+    .qa-a ul { margin: 10px 0 10px 20px; }
+    .qa-a li { margin-bottom: 6px; }
+    .qa-a strong { color: var(--ink); }
+
+    .case-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 24px 0;
+    }
+    .case-header {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .case-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+    .case-meta h4 {
+      margin: 0 0 4px;
+      font-family: 'Fraunces', serif;
+      font-size: 1.1rem;
+      border: none;
+      padding: 0;
+    }
+    .case-meta p { margin: 0; font-size: .85rem; }
+    .case-body { padding: 20px 24px; background: var(--paper); }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+      margin: 20px 0;
+    }
+    .metric-card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+    }
+    .metric-val {
+      font-family: 'Fraunces', serif;
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--navy);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .metric-lbl {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .comparison-table th { background: #1e3a8a; }
+    .best { background: #f0fdf4; color: #14532d; font-weight: 700; }
+    .mid  { background: #fefce8; color: #713f12; }
+    .bad  { background: #fef2f2; color: #7f1d1d; }
+
+    .track-tags { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .track-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar">
+  <div class="nav-logo">
+    <div class="t">AWS Data<br>Engineering</div>
+    <div class="s">Portal de Estudos</div>
+    <div class="auth" style="font-family: 'DM Mono', monospace; font-size: 8px; color: #38bdf8; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase;">Autor: Mauricio Helfstein</div>
+  </div>
+  <div style="padding:0 12px">
+    <div class="nav-lbl">Visão Geral</div>
+    <a href="index.html" class="nav-a"><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('arch-cat', this)">
+      <span>Arquitetura &amp; Padrões</span><span class="arrow">▶</span>
+    </div>
+    <div id="arch-cat" class="nav-cat-content">
+      <a href="architecture.html" class="nav-a"><span class="nav-dot" style="background:var(--arch)"></span>📐 Arquitetura de Dados</a>
+      <a href="architecture.html#pilares" class="nav-sub"><span class="nav-sdot"></span>7 Pilares</a>
+      <a href="architecture.html#mensageria" class="nav-sub"><span class="nav-sdot"></span>Mensageria</a>
+      <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>Kafka/MSK ➔</a>
+      <a href="architecture.html#triggers" class="nav-sub"><span class="nav-sdot"></span>Triggers</a>
+      <a href="architecture.html#workflows" class="nav-sub"><span class="nav-sdot"></span>Workflows</a>
+      <a href="architecture.html#lambda" class="nav-sub"><span class="nav-sdot"></span>Lambda</a>
+      <a href="architecture.html#lakehouse" class="nav-sub"><span class="nav-sdot"></span>Lakehouse</a>
+      <a href="architecture.html#datamesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('pipeline-cat', this)">
+      <span>Pipeline de Engenharia</span><span class="arrow">▶</span>
+    </div>
+    <div id="pipeline-cat" class="nav-cat-content">
+      <a href="ingestion.html" class="nav-a"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Ingestão &amp; Streaming</a>
+      <a href="ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Kinesis</a>
+      <a href="ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Firehose</a>
+      <a href="ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>MSK</a>
+      <a href="storage-lakehouse.html" class="nav-a"><span class="nav-dot" style="background:var(--arch)"></span>💾 Lakehouse &amp; Storage</a>
+      <a href="processing.html" class="nav-a"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Processamento Spark</a>
+      <a href="serving.html" class="nav-a"><span class="nav-dot" style="background:var(--genai)"></span>📊 Analytics &amp; Serving</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('ai-genai-cat', this)">
+      <span>Inteligência Artificial &amp; GenAI</span><span class="arrow">▶</span>
+    </div>
+    <div id="ai-genai-cat" class="nav-cat-content">
+      <a href="genai.html" class="nav-a"><span class="nav-dot" style="background:#a78bfa"></span>🤖 GenAI &amp; Dados</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('ops-dev-cat', this)">
+      <span>Operações &amp; Desenvolvimento</span><span class="arrow">▶</span>
+    </div>
+    <div id="ops-dev-cat" class="nav-cat-content">
+      <a href="dataops-mlops.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>⚙️ DataOps &amp; MLOps</a>
+      <a href="data-engineering-oop.html" class="nav-a"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ OOP &amp; Python para Dados</a>
+      <a href="plataforma-dados.html" class="nav-a"><span class="nav-dot" style="background:var(--accent)"></span>🏗️ Plataforma de Dados</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('sec-net-fin-cat', this)">
+      <span>Segurança, Redes &amp; FinOps</span><span class="arrow">▼</span>
+    </div>
+    <div id="sec-net-fin-cat" class="nav-cat-content open">
+      <a href="governance-security.html" class="nav-a"><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança &amp; IaC</a>
+      <a href="networking-ingress.html" class="nav-a"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
+      <a href="networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>DNS &amp; CDN</a>
+      <a href="networking-ingress.html#api-alb" class="nav-sub"><span class="nav-sdot"></span>API &amp; ALB</a>
+      <a href="networking-ingress.html#vpc-endpoints" class="nav-sub"><span class="nav-sdot"></span>VPC Endpoints</a>
+      <a href="api-gateway.html" class="nav-a active"><span class="nav-dot" style="background:#7c3aed"></span>🔌 API Gateway Deep Dive</a>
+      <a href="api-gateway.html#fundamentos" class="nav-sub"><span class="nav-sdot"></span>Fundamentos &amp; Tipos</a>
+      <a href="api-gateway.html#crud-rest" class="nav-sub"><span class="nav-sdot"></span>CRUD REST &amp; OpenAPI</a>
+      <a href="api-gateway.html#async" class="nav-sub"><span class="nav-sdot"></span>Chamadas Assíncronas</a>
+      <a href="api-gateway.html#terraform" class="nav-sub"><span class="nav-sdot"></span>Terraform Completo</a>
+      <a href="api-gateway.html#integracoes" class="nav-sub"><span class="nav-sdot"></span>Integrações Avançadas</a>
+      <a href="api-gateway.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas</a>
+      <a href="api-gateway.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade</a>
+      <a href="api-gateway.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas &amp; Entrevistas</a>
+      <a href="api-gateway.html#cases" class="nav-sub"><span class="nav-sdot"></span>Cases Reais</a>
+      <a href="computacao-bancos.html" class="nav-a"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
+      <a href="orquestracao-dados.html" class="nav-a"><span class="nav-dot" style="background:#a78bfa"></span>⛓️ Orquestração de Dados</a>
+      <a href="finops.html" class="nav-a"><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
+    </div>
+
+    <div class="nav-lbl collapsible" onclick="toggleCategory('prep-casos-cat', this)">
+      <span>Simulados &amp; Casos Reais</span><span class="arrow">▶</span>
+    </div>
+    <div id="prep-casos-cat" class="nav-cat-content">
+      <a href="perguntas.html" class="nav-a"><span class="nav-dot" style="background:var(--spark)"></span>❓ Perguntas de Entrevista</a>
+      <a href="soft-skills.html" class="nav-a"><span class="nav-dot" style="background:var(--spark)"></span>🧠 Soft Skills</a>
+      <a href="cases.html" class="nav-a"><span class="nav-dot" style="background:var(--ext)"></span>💼 Cases de Plataformas</a>
+      <a href="playbook-crises.html" class="nav-a"><span class="nav-dot" style="background:var(--warn)"></span>🚒 Playbook de Crises</a>
+    </div>
+  </div>
+</nav>
+
+<div id="main">
+  <div class="hero" style="background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 60%, #1a0533 100%); border-bottom: 4px solid #7c3aed;">
+    <div class="hero-ey">AWS API Gateway · Deep Dive Completo</div>
+    <h1><em>API Gateway</em> na AWS</h1>
+    <p class="hero-d">Guia definitivo de produção: REST/HTTP/WebSocket, CRUD completo, chamadas assíncronas, Terraform IaC, autenticação avançada, observabilidade, boas práticas e 5 cases reais de engenharia de dados.</p>
+    <div class="pills">
+      <span class="pill">REST API</span>
+      <span class="pill">HTTP API</span>
+      <span class="pill">WebSocket</span>
+      <span class="pill">Terraform</span>
+      <span class="pill">Lambda Proxy</span>
+      <span class="pill">SQS Async</span>
+      <span class="pill">Kinesis</span>
+      <span class="pill">Cognito Auth</span>
+      <span class="pill">X-Ray</span>
+      <span class="pill">WAF</span>
+      <span class="pill">OpenAPI</span>
+      <span class="pill">VPC Link</span>
+    </div>
+  </div>
+
+  <main class="main-content">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 01 — FUNDAMENTOS                               -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="fundamentos">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Fundamentos: REST vs HTTP vs WebSocket</h2>
+          <p>Entendendo os três tipos de API Gateway e quando usar cada um em plataformas de dados</p>
+        </div>
+      </div>
+
+      <p>O <strong>Amazon API Gateway</strong> é um serviço totalmente gerenciado que permite criar, publicar, manter, monitorar e proteger APIs em qualquer escala. Ele funciona como a <em>porta de entrada</em> para suas aplicações — recebendo todas as chamadas de API, gerenciando milhões de chamadas concorrentes, autorizando acessos e direcionando requisições para os serviços corretos.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top:4px solid #7c3aed">
+          <div class="cc-tag">REST API <span class="apigw-badge rest">REST</span></div>
+          <div class="cc-title">REST API (v1)</div>
+          <div class="cc-body">
+            O produto original e mais completo. Suporta todos os recursos: caching nativo, uso de usage plans, API keys, throttling por método, modelos de validação JSON Schema, custom domain names e integração direta com serviços AWS (SQS, Kinesis, S3, Step Functions) sem Lambda intermediário.<br><br>
+            <strong>Quando usar:</strong> APIs complexas que necessitam de validação de payload, caching, usage plans, integrações diretas com serviços AWS ou VPC Link para backends privados.
+          </div>
+        </div>
+
+        <div class="concept-card" style="border-top:4px solid #0369a1">
+          <div class="cc-tag">HTTP API <span class="apigw-badge http">HTTP</span></div>
+          <div class="cc-title">HTTP API (v2)</div>
+          <div class="cc-body">
+            API mais leve e até 70% mais barata que a REST API. Latência menor (single-digit ms). Suporta JWT authorizers nativos (sem Lambda Authorizer), CORS automático e integrações Lambda/HTTP. <em>Não suporta</em> API caching nativo, usage plans, request/response transformations via VTL.<br><br>
+            <strong>Quando usar:</strong> Microsserviços simples, backends serverless com Cognito/JWT, APIs de alto volume onde custo é crítico.
+          </div>
+        </div>
+
+        <div class="concept-card" style="border-top:4px solid #0f766e">
+          <div class="cc-tag">WebSocket API <span class="apigw-badge ws">WS</span></div>
+          <div class="cc-title">WebSocket API</div>
+          <div class="cc-body">
+            Comunicação bidirecional persistente em tempo real. O API Gateway mantém as conexões WebSocket abertas e roteia mensagens via <em>route keys</em> ($connect, $disconnect, $default, ou rotas customizadas). Ideal para notificações push, dashboards em tempo real e chats.<br><br>
+            <strong>Quando usar:</strong> Streaming de eventos ao vivo (pipeline status, alertas de data quality), dashboards analíticos com refresh em tempo real.
+          </div>
+        </div>
+      </div>
+
+      <h3>Comparativo Detalhado: REST vs HTTP vs ALB vs AppSync</h3>
+      <div class="tbl-wrap">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>REST API (v1)</th>
+              <th>HTTP API (v2)</th>
+              <th>ALB</th>
+              <th>AppSync</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Preço (por milhão req)</strong></td>
+              <td class="mid">$3.50</td>
+              <td class="best">$1.00</td>
+              <td class="best">~$0.008/LCU-h</td>
+              <td class="bad">$4.00</td>
+            </tr>
+            <tr>
+              <td><strong>Latência adicionada</strong></td>
+              <td class="mid">~10ms</td>
+              <td class="best">~5ms</td>
+              <td class="best">~1ms</td>
+              <td class="mid">~15ms</td>
+            </tr>
+            <tr>
+              <td><strong>Caching nativo</strong></td>
+              <td class="best">Sim (0.5-237GB)</td>
+              <td class="bad">Não</td>
+              <td class="bad">Não</td>
+              <td class="mid">Parcial</td>
+            </tr>
+            <tr>
+              <td><strong>Integração direta AWS</strong></td>
+              <td class="best">SQS, Kinesis, S3, SF...</td>
+              <td class="bad">Não</td>
+              <td class="bad">Não</td>
+              <td class="bad">Não</td>
+            </tr>
+            <tr>
+              <td><strong>WebSocket</strong></td>
+              <td class="bad">Separado</td>
+              <td class="bad">Não</td>
+              <td class="bad">Não</td>
+              <td class="best">Sim (subscriptions)</td>
+            </tr>
+            <tr>
+              <td><strong>Usage Plans / API Keys</strong></td>
+              <td class="best">Sim</td>
+              <td class="bad">Não</td>
+              <td class="bad">Não</td>
+              <td class="bad">Não</td>
+            </tr>
+            <tr>
+              <td><strong>VPC Link (backend privado)</strong></td>
+              <td class="best">NLB</td>
+              <td class="best">NLB / ALB</td>
+              <td class="best">Nativo</td>
+              <td class="bad">Não</td>
+            </tr>
+            <tr>
+              <td><strong>Throttling por método</strong></td>
+              <td class="best">Sim</td>
+              <td class="mid">Global</td>
+              <td class="bad">Target Group</td>
+              <td class="mid">Global</td>
+            </tr>
+            <tr>
+              <td><strong>Ideal para dados</strong></td>
+              <td class="best">Ingestão assíncrona, Data APIs</td>
+              <td class="mid">Microservices</td>
+              <td class="mid">Containers ECS</td>
+              <td class="mid">GraphQL</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Tipos de Integração do API Gateway</h3>
+      <p>O API Gateway suporta 5 tipos de integração com backends. A escolha impacta diretamente custo, latência e capacidade de transformação de payloads:</p>
+
+      <div class="concept-grid">
+        <div class="concept-card arch-card">
+          <div class="cc-tag">Tipo 1</div>
+          <div class="cc-title">AWS_PROXY (Lambda Proxy)</div>
+          <div class="cc-body">
+            O payload inteiro (headers, body, path params, query strings) é encaminhado diretamente ao Lambda em um formato JSON padronizado. A resposta do Lambda deve incluir <code>statusCode</code>, <code>headers</code> e <code>body</code>. <strong>Vantagem:</strong> zero configuração de mapeamento. <strong>Desvantagem:</strong> sem transformação pelo Gateway.
+          </div>
+        </div>
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Tipo 2</div>
+          <div class="cc-title">AWS (Service Integration)</div>
+          <div class="cc-body">
+            Integração direta com serviços AWS (SQS, Kinesis, SNS, S3, Step Functions, DynamoDB) sem passar por Lambda. Usa <em>VTL (Velocity Template Language)</em> para mapear request/response. <strong>Custo zero de compute</strong> — ideal para ingestão de alta escala.
+          </div>
+        </div>
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Tipo 3</div>
+          <div class="cc-title">HTTP / HTTP_PROXY</div>
+          <div class="cc-body">
+            Repassa a requisição para um endpoint HTTP externo (ECS, EC2, on-premise via PrivateLink). HTTP_PROXY encaminha tudo sem modificação; HTTP permite transformações VTL. Usado com <strong>VPC Link</strong> para backends privados.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">Tipo 4</div>
+          <div class="cc-title">MOCK</div>
+          <div class="cc-body">
+            Retorna uma resposta diretamente do API Gateway sem chamar backend algum. Útil para <strong>stubs de desenvolvimento</strong>, documentação interativa (Swagger UI) e testes de contrato sem infraestrutura.
+          </div>
+        </div>
+      </div>
+
+      <h3>Arquitetura Interna: Como o Request Flui</h3>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 800 200" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <defs>
+            <marker id="arrow-v" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#7c3aed"/>
+            </marker>
+            <marker id="arrow-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#64748b"/>
+            </marker>
+          </defs>
+          <!-- Steps -->
+          <rect x="10" y="70" width="100" height="60" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="60" y="96" text-anchor="middle" fill="#38bdf8" font-size="9" font-weight="700">Client</text>
+          <text x="60" y="112" text-anchor="middle" fill="#64748b" font-size="7.5">Request</text>
+
+          <path d="M 110 100 L 148 100" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+
+          <rect x="150" y="70" width="110" height="60" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="1.5"/>
+          <text x="205" y="93" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Method Request</text>
+          <text x="205" y="108" text-anchor="middle" fill="#64748b" font-size="7.5">Auth + Throttle</text>
+          <text x="205" y="122" text-anchor="middle" fill="#64748b" font-size="7.5">Validate Schema</text>
+
+          <path d="M 260 100 L 298 100" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+
+          <rect x="300" y="70" width="110" height="60" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="1.5"/>
+          <text x="355" y="93" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Integration Req</text>
+          <text x="355" y="108" text-anchor="middle" fill="#64748b" font-size="7.5">VTL Transform</text>
+          <text x="355" y="122" text-anchor="middle" fill="#64748b" font-size="7.5">Map to Backend</text>
+
+          <path d="M 410 100 L 448 100" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+
+          <rect x="450" y="55" width="110" height="90" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="505" y="82" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700">Backend</text>
+          <text x="505" y="97" text-anchor="middle" fill="#64748b" font-size="7.5">Lambda / SQS</text>
+          <text x="505" y="112" text-anchor="middle" fill="#64748b" font-size="7.5">Kinesis / HTTP</text>
+          <text x="505" y="127" text-anchor="middle" fill="#64748b" font-size="7.5">DynamoDB / S3</text>
+
+          <path d="M 560 100 L 598 100" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrow-g)"/>
+
+          <rect x="600" y="70" width="110" height="60" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+          <text x="655" y="93" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="700">Integration Resp</text>
+          <text x="655" y="108" text-anchor="middle" fill="#64748b" font-size="7.5">VTL Transform</text>
+          <text x="655" y="122" text-anchor="middle" fill="#64748b" font-size="7.5">Error Mapping</text>
+
+          <!-- Labels -->
+          <text x="400" y="175" text-anchor="middle" fill="#475569" font-size="8">← Caminho de volta: Integration Response → Method Response → Client →</text>
+          <text x="400" y="20" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="700" letter-spacing="1">FLUXO INTERNO DO API GATEWAY (REQUEST PIPELINE)</text>
+        </svg>
+      </div>
+
+      <div class="callout callout-info">
+        <strong>💡 Token Bucket Algorithm — Throttling</strong>
+        O API Gateway usa um Token Bucket para controlar throughput. O bucket tem capacidade = <code>burst limit</code> tokens. Novos tokens chegam à taxa de <code>steady-state rate</code> por segundo. Se o bucket está vazio, o request recebe <strong>429 Too Many Requests</strong>. Default por conta: <em>10.000 req/s steady, 5.000 burst</em>. Pode ser ajustado por stage e por método.
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 02 — CRUD REST                                 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="crud-rest">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>CRUD REST Completo: OpenAPI, Lambda &amp; VTL</h2>
+          <p>Implementação end-to-end de uma API de produtos com GET, POST, PUT, DELETE</p>
+        </div>
+      </div>
+
+      <h3>OpenAPI 3.0 Spec — API de Produtos</h3>
+      <p>A especificação OpenAPI é a <em>fonte da verdade</em> da sua API. O API Gateway pode importar esta spec e criar todos os recursos automaticamente:</p>
+
+      <pre><span class="c"># openapi.yaml — Spec completa da Product API</span>
+openapi: <span class="s">"3.0.1"</span>
+info:
+  title: <span class="s">"Product Data API"</span>
+  version: <span class="s">"1.0.0"</span>
+  description: <span class="s">"API de gerenciamento de produtos com integração Lambda e DynamoDB"</span>
+
+<span class="c"># x-amazon-apigateway-request-validators — Valida body e params</span>
+x-amazon-apigateway-request-validators:
+  full:
+    validateRequestBody: true
+    validateRequestParameters: true
+  params-only:
+    validateRequestBody: false
+    validateRequestParameters: true
+
+paths:
+  /products:
+    get:
+      summary: <span class="s">"Listar todos os produtos"</span>
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, maximum: 100, default: 20 }
+      <span class="c"># Extensão AWS — integração Lambda Proxy</span>
+      x-amazon-apigateway-integration:
+        type: <span class="s">"aws_proxy"</span>
+        httpMethod: <span class="s">"POST"</span>
+        uri: <span class="s">"arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${stageVariables.listProductsLambdaArn}/invocations"</span>
+        passthroughBehavior: <span class="s">"when_no_match"</span>
+
+    post:
+      summary: <span class="s">"Criar produto"</span>
+      x-amazon-apigateway-request-validator: <span class="s">"full"</span>
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: <span class="s">"#/components/schemas/ProductInput"</span>
+      x-amazon-apigateway-integration:
+        type: <span class="s">"aws_proxy"</span>
+        httpMethod: <span class="s">"POST"</span>
+        uri: <span class="s">"arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${stageVariables.createProductLambdaArn}/invocations"</span>
+
+  /products/{productId}:
+    get:
+      summary: <span class="s">"Buscar produto por ID"</span>
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-zA-Z0-9-]{8,36}$' }
+      x-amazon-apigateway-integration:
+        type: <span class="s">"aws_proxy"</span>
+        httpMethod: <span class="s">"POST"</span>
+        uri: <span class="s">"arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${stageVariables.getProductLambdaArn}/invocations"</span>
+
+    put:
+      summary: <span class="s">"Atualizar produto"</span>
+      x-amazon-apigateway-request-validator: <span class="s">"full"</span>
+      x-amazon-apigateway-integration:
+        type: <span class="s">"aws_proxy"</span>
+        httpMethod: <span class="s">"POST"</span>
+        uri: <span class="s">"arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${stageVariables.updateProductLambdaArn}/invocations"</span>
+
+    delete:
+      summary: <span class="s">"Remover produto"</span>
+      x-amazon-apigateway-integration:
+        type: <span class="s">"aws_proxy"</span>
+        httpMethod: <span class="s">"POST"</span>
+        uri: <span class="s">"arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${stageVariables.deleteProductLambdaArn}/invocations"</span>
+
+components:
+  schemas:
+    ProductInput:
+      type: object
+      required: [name, category, price]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 200
+        category:
+          type: string
+          enum: [electronics, clothing, food, books]
+        price:
+          type: number
+          minimum: 0.01
+        stock:
+          type: integer
+          minimum: 0</pre>
+
+      <h3>Lambda Handler — CRUD Completo com DynamoDB</h3>
+      <pre><span class="k">import</span> json
+<span class="k">import</span> boto3
+<span class="k">import</span> uuid
+<span class="k">from</span> datetime <span class="k">import</span> datetime, timezone
+<span class="k">from</span> typing <span class="k">import</span> Any, Dict
+<span class="k">from</span> decimal <span class="k">import</span> Decimal
+
+dynamodb = boto3.resource(<span class="s">'dynamodb'</span>)
+table = dynamodb.Table(<span class="s">'Products'</span>)
+
+
+<span class="k">def</span> <span class="nf">response</span>(status: int, body: Any, headers: Dict = {}) -> Dict:
+    <span class="s">"""Helper padronizado de resposta Lambda Proxy."""</span>
+    base_headers = {
+        <span class="s">"Content-Type"</span>: <span class="s">"application/json"</span>,
+        <span class="s">"Access-Control-Allow-Origin"</span>: <span class="s">"*"</span>,  <span class="c"># CORS</span>
+    }
+    <span class="k">return</span> {
+        <span class="s">"statusCode"</span>: status,
+        <span class="s">"headers"</span>: {**base_headers, **headers},
+        <span class="s">"body"</span>: json.dumps(body, default=str),
+    }
+
+
+<span class="k">def</span> <span class="nf">list_products</span>(event: Dict) -> Dict:
+    <span class="s">"""GET /products — Lista produtos com filtro e paginação."""</span>
+    params = event.get(<span class="s">"queryStringParameters"</span>) <span class="k">or</span> {}
+    category = params.get(<span class="s">"category"</span>)
+    limit = int(params.get(<span class="s">"limit"</span>, 20))
+    exclusive_start_key = params.get(<span class="s">"nextToken"</span>)
+
+    scan_kwargs = {<span class="s">"Limit"</span>: limit}
+    <span class="k">if</span> category:
+        scan_kwargs[<span class="s">"FilterExpression"</span>] = <span class="s">"category = :c"</span>
+        scan_kwargs[<span class="s">"ExpressionAttributeValues"</span>] = {<span class="s">":c"</span>: category}
+    <span class="k">if</span> exclusive_start_key:
+        scan_kwargs[<span class="s">"ExclusiveStartKey"</span>] = {<span class="s">"productId"</span>: exclusive_start_key}
+
+    result = table.scan(**scan_kwargs)
+    <span class="k">return</span> response(200, {
+        <span class="s">"items"</span>: result[<span class="s">"Items"</span>],
+        <span class="s">"count"</span>: result[<span class="s">"Count"</span>],
+        <span class="s">"nextToken"</span>: result.get(<span class="s">"LastEvaluatedKey"</span>, {}).get(<span class="s">"productId"</span>),
+    })
+
+
+<span class="k">def</span> <span class="nf">create_product</span>(event: Dict) -> Dict:
+    <span class="s">"""POST /products — Cria produto com idempotência via requestId."""</span>
+    body = json.loads(event[<span class="s">"body"</span>])
+    <span class="c"># Idempotência: usa clientRequestToken se fornecido</span>
+    product_id = body.get(<span class="s">"clientRequestToken"</span>) <span class="k">or</span> str(uuid.uuid4())
+
+    item = {
+        <span class="s">"productId"</span>: product_id,
+        <span class="s">"name"</span>: body[<span class="s">"name"</span>],
+        <span class="s">"category"</span>: body[<span class="s">"category"</span>],
+        <span class="s">"price"</span>: Decimal(str(body[<span class="s">"price"</span>])),
+        <span class="s">"stock"</span>: body.get(<span class="s">"stock"</span>, 0),
+        <span class="s">"createdAt"</span>: datetime.now(timezone.utc).isoformat(),
+        <span class="s">"updatedAt"</span>: datetime.now(timezone.utc).isoformat(),
+    }
+
+    <span class="c"># condition_expression garante idempotência (não sobrescreve se existe)</span>
+    <span class="k">try</span>:
+        table.put_item(Item=item, ConditionExpression=<span class="s">"attribute_not_exists(productId)"</span>)
+        <span class="k">return</span> response(201, item, {<span class="s">"Location"</span>: f<span class="s">"/products/{product_id}"</span>})
+    <span class="k">except</span> dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
+        <span class="c"># Produto já existe — retorna o existente (idempotente)</span>
+        existing = table.get_item(Key={<span class="s">"productId"</span>: product_id})[<span class="s">"Item"</span>]
+        <span class="k">return</span> response(200, existing)
+
+
+<span class="k">def</span> <span class="nf">get_product</span>(event: Dict) -> Dict:
+    <span class="s">"""GET /products/{productId} — Busca produto por ID."""</span>
+    product_id = event[<span class="s">"pathParameters"</span>][<span class="s">"productId"</span>]
+    result = table.get_item(Key={<span class="s">"productId"</span>: product_id})
+    item = result.get(<span class="s">"Item"</span>)
+    <span class="k">if not</span> item:
+        <span class="k">return</span> response(404, {<span class="s">"error"</span>: f<span class="s">"Product {product_id} not found"</span>})
+    <span class="k">return</span> response(200, item)
+
+
+<span class="k">def</span> <span class="nf">update_product</span>(event: Dict) -> Dict:
+    <span class="s">"""PUT /products/{productId} — Atualização parcial com optimistic locking."""</span>
+    product_id = event[<span class="s">"pathParameters"</span>][<span class="s">"productId"</span>]
+    body = json.loads(event[<span class="s">"body"</span>])
+    body[<span class="s">"updatedAt"</span>] = datetime.now(timezone.utc).isoformat()
+
+    update_expr = <span class="s">"SET "</span> + <span class="s">", "</span>.join(f<span class="s">"#{k} = :{k}"</span> <span class="k">for</span> k <span class="k">in</span> body)
+    expr_names  = {f<span class="s">"#{k}"</span>: k <span class="k">for</span> k <span class="k">in</span> body}
+    expr_values = {f<span class="s">":{k}"</span>: (Decimal(str(v)) <span class="k">if</span> isinstance(v, float) <span class="k">else</span> v)
+                   <span class="k">for</span> k, v <span class="k">in</span> body.items()}
+
+    result = table.update_item(
+        Key={<span class="s">"productId"</span>: product_id},
+        UpdateExpression=update_expr,
+        ExpressionAttributeNames=expr_names,
+        ExpressionAttributeValues=expr_values,
+        ConditionExpression=<span class="s">"attribute_exists(productId)"</span>,
+        ReturnValues=<span class="s">"ALL_NEW"</span>,
+    )
+    <span class="k">return</span> response(200, result[<span class="s">"Attributes"</span>])
+
+
+<span class="k">def</span> <span class="nf">delete_product</span>(event: Dict) -> Dict:
+    <span class="s">"""DELETE /products/{productId} — Remoção lógica (soft delete)."""</span>
+    product_id = event[<span class="s">"pathParameters"</span>][<span class="s">"productId"</span>]
+    table.update_item(
+        Key={<span class="s">"productId"</span>: product_id},
+        UpdateExpression=<span class="s">"SET #s = :deleted, updatedAt = :ts"</span>,
+        ExpressionAttributeNames={<span class="s">"#s"</span>: <span class="s">"status"</span>},
+        ExpressionAttributeValues={
+            <span class="s">":deleted"</span>: <span class="s">"DELETED"</span>,
+            <span class="s">":ts"</span>: datetime.now(timezone.utc).isoformat(),
+        },
+        ConditionExpression=<span class="s">"attribute_exists(productId)"</span>,
+    )
+    <span class="k">return</span> response(204, {})
+
+
+<span class="c"># Router principal — single Lambda function com roteamento por método+path</span>
+ROUTES = {
+    (<span class="s">"GET"</span>,    <span class="s">"/products"</span>):             list_products,
+    (<span class="s">"POST"</span>,   <span class="s">"/products"</span>):             create_product,
+    (<span class="s">"GET"</span>,    <span class="s">"/products/{productId}"</span>): get_product,
+    (<span class="s">"PUT"</span>,    <span class="s">"/products/{productId}"</span>): update_product,
+    (<span class="s">"DELETE"</span>, <span class="s">"/products/{productId}"</span>): delete_product,
+}
+
+<span class="k">def</span> <span class="nf">lambda_handler</span>(event: Dict, context) -> Dict:
+    method = event.get(<span class="s">"httpMethod"</span>)
+    resource = event.get(<span class="s">"resource"</span>)
+    handler = ROUTES.get((method, resource))
+    <span class="k">if not</span> handler:
+        <span class="k">return</span> response(404, {<span class="s">"error"</span>: <span class="s">"Route not found"</span>})
+    <span class="k">try</span>:
+        <span class="k">return</span> handler(event)
+    <span class="k">except</span> Exception <span class="k">as</span> e:
+        <span class="k">return</span> response(500, {<span class="s">"error"</span>: <span class="s">"Internal server error"</span>, <span class="s">"detail"</span>: str(e)})</pre>
+
+      <h3>VTL — Velocity Template Language: Transformação sem Lambda</h3>
+      <p>A VTL permite transformar requests e responses diretamente no API Gateway, eliminando o custo e latência de invocar Lambda para simples mapeamentos:</p>
+
+      <pre><span class="c">## Request mapping: converte POST /events para SQS SendMessage</span>
+<span class="c">## Integration Request Template — application/json</span>
+#<span class="k">set</span>($body = $util.escapeJavaScript($input.body))
+Action=SendMessage
+&amp;MessageBody=$body
+&amp;MessageGroupId=$input.path(<span class="s">'$.userId'</span>)
+&amp;MessageDeduplicationId=$context.requestId
+
+<span class="c">## Response mapping: transforma resposta do SQS para JSON limpo</span>
+<span class="c">## Integration Response Template — 200</span>
+{
+  <span class="s">"messageId"</span>: <span class="s">"$input.path('$.SendMessageResponse.SendMessageResult.MessageId')"</span>,
+  <span class="s">"requestId"</span>: <span class="s">"$context.requestId"</span>,
+  <span class="s">"status"</span>: <span class="s">"accepted"</span>,
+  <span class="s">"timestamp"</span>: <span class="s">"$context.requestTimeEpoch"</span>
+}</pre>
+
+      <div class="callout callout-tip">
+        <strong>✅ Boas Práticas: Validação de Schema</strong>
+        Sempre ative o <strong>Request Validator</strong> no API Gateway antes de chamar o backend. Um schema JSON inválido rejeitado no Gateway economiza uma invocação Lambda, reduz custos e retorna um 400 claro ao cliente — sem consumir quota de processamento.
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 03 — ASYNC                                     -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="async">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">03</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Chamadas Assíncronas: SQS, SNS, Kinesis &amp; Step Functions</h2>
+          <p>Padrões de fire-and-forget e polling para ingestão desacoplada de alta escala</p>
+        </div>
+      </div>
+
+      <p>Em arquiteturas de dados de produção, o padrão <em>síncrono</em> (cliente espera resposta) cria gargalos. A integração direta do API Gateway com serviços de mensageria elimina o Lambda intermediário, reduz latência e permite escalar para <strong>milhões de eventos/segundo</strong>.</p>
+
+      <div class="flow-diagram">
+        <svg viewBox="0 0 780 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <text x="390" y="22" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700" letter-spacing="1">PADRÕES DE INTEGRAÇÃO ASSÍNCRONA — API GATEWAY</text>
+
+          <!-- Pattern 1: SQS -->
+          <rect x="10" y="40" width="235" height="115" rx="8" fill="#1e293b" stroke="#b45309" stroke-width="1"/>
+          <text x="118" y="60" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="700">PADRÃO 1: API GW → SQS → Lambda</text>
+          <rect x="20" y="70" width="60" height="30" rx="5" fill="#0f172a" stroke="#b45309"/>
+          <text x="50" y="90" text-anchor="middle" fill="#fbbf24" font-size="8">Client POST</text>
+          <path d="M 80 85 L 108 85" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="110" y="70" width="55" height="30" rx="5" fill="#0f172a" stroke="#b45309"/>
+          <text x="137" y="87" text-anchor="middle" fill="#fbbf24" font-size="8">SQS Queue</text>
+          <path d="M 165 85 L 193 85" stroke="#b45309" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="195" y="70" width="42" height="30" rx="5" fill="#0f172a" stroke="#ea580c"/>
+          <text x="216" y="87" text-anchor="middle" fill="#fb923c" font-size="8">Lambda</text>
+          <text x="118" y="120" text-anchor="middle" fill="#64748b" font-size="7.5">Resposta imediata: 202 Accepted</text>
+          <text x="118" y="134" text-anchor="middle" fill="#64748b" font-size="7.5">Retry automático: DLQ integrada</text>
+          <text x="118" y="148" text-anchor="middle" fill="#64748b" font-size="7.5">Ideal: eventos de transação, pedidos</text>
+
+          <!-- Pattern 2: Kinesis -->
+          <rect x="270" y="40" width="240" height="115" rx="8" fill="#1e293b" stroke="#be185d" stroke-width="1"/>
+          <text x="390" y="60" text-anchor="middle" fill="#f9a8d4" font-size="9" font-weight="700">PADRÃO 2: API GW → Kinesis → Firehose</text>
+          <rect x="280" y="70" width="60" height="30" rx="5" fill="#0f172a" stroke="#be185d"/>
+          <text x="310" y="90" text-anchor="middle" fill="#f9a8d4" font-size="8">Client POST</text>
+          <path d="M 340 85 L 368 85" stroke="#be185d" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="370" y="70" width="60" height="30" rx="5" fill="#0f172a" stroke="#be185d"/>
+          <text x="400" y="87" text-anchor="middle" fill="#f9a8d4" font-size="8">Kinesis DS</text>
+          <path d="M 430 85 L 458 85" stroke="#be185d" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="460" y="65" width="42" height="50" rx="5" fill="#0f172a" stroke="#10b981"/>
+          <text x="481" y="83" text-anchor="middle" fill="#34d399" font-size="7.5">Fire-</text>
+          <text x="481" y="97" text-anchor="middle" fill="#34d399" font-size="7.5">hose</text>
+          <text x="481" y="111" text-anchor="middle" fill="#34d399" font-size="7.5">→ S3</text>
+          <text x="390" y="120" text-anchor="middle" fill="#64748b" font-size="7.5">Resposta imediata: 200 + SequenceNum</text>
+          <text x="390" y="134" text-anchor="middle" fill="#64748b" font-size="7.5">Throughput: até 1MB/s por shard</text>
+          <text x="390" y="148" text-anchor="middle" fill="#64748b" font-size="7.5">Ideal: telemetria IoT, clickstream</text>
+
+          <!-- Pattern 3: Step Functions -->
+          <rect x="530" y="40" width="240" height="115" rx="8" fill="#1e293b" stroke="#15803d" stroke-width="1"/>
+          <text x="650" y="60" text-anchor="middle" fill="#86efac" font-size="9" font-weight="700">PADRÃO 3: API GW → Step Functions</text>
+          <rect x="540" y="70" width="60" height="30" rx="5" fill="#0f172a" stroke="#15803d"/>
+          <text x="570" y="90" text-anchor="middle" fill="#86efac" font-size="8">Client POST</text>
+          <path d="M 600 85 L 628 85" stroke="#15803d" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="630" y="70" width="60" height="30" rx="5" fill="#0f172a" stroke="#15803d"/>
+          <text x="660" y="83" text-anchor="middle" fill="#86efac" font-size="7.5">Step Func</text>
+          <text x="660" y="96" text-anchor="middle" fill="#86efac" font-size="7.5">Execution</text>
+          <path d="M 690 85 L 718 85" stroke="#15803d" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="720" y="70" width="42" height="30" rx="5" fill="#0f172a" stroke="#0369a1"/>
+          <text x="741" y="90" text-anchor="middle" fill="#7dd3fc" font-size="7.5">Workflow</text>
+          <text x="650" y="120" text-anchor="middle" fill="#64748b" font-size="7.5">Resposta: 200 + executionArn</text>
+          <text x="650" y="134" text-anchor="middle" fill="#64748b" font-size="7.5">Polling: GET /status/{execId}</text>
+          <text x="650" y="148" text-anchor="middle" fill="#64748b" font-size="7.5">Ideal: ETL, processamento longo</text>
+
+          <!-- Polling Pattern -->
+          <rect x="10" y="175" width="760" height="115" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="1"/>
+          <text x="390" y="195" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">PADRÃO DE POLLING ASSÍNCRONO — STATUS ENDPOINT</text>
+          <rect x="30" y="208" width="80" height="35" rx="5" fill="#0f172a" stroke="#7c3aed"/>
+          <text x="70" y="228" text-anchor="middle" fill="#c4b5fd" font-size="8">POST /jobs</text>
+          <text x="70" y="240" text-anchor="middle" fill="#64748b" font-size="7">→ Start Exec</text>
+          <path d="M 110 225 L 148 225" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="150" y="208" width="100" height="35" rx="5" fill="#0f172a" stroke="#7c3aed"/>
+          <text x="200" y="223" text-anchor="middle" fill="#c4b5fd" font-size="8">API GW retorna</text>
+          <text x="200" y="237" text-anchor="middle" fill="#c4b5fd" font-size="7.5">jobId: "abc-123"</text>
+          <path d="M 250 225 L 288 225" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="290" y="208" width="100" height="35" rx="5" fill="#0f172a" stroke="#64748b"/>
+          <text x="340" y="223" text-anchor="middle" fill="#94a3b8" font-size="8">Client: GET</text>
+          <text x="340" y="237" text-anchor="middle" fill="#94a3b8" font-size="7.5">/jobs/abc-123</text>
+          <path d="M 390 225 L 428 225" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="430" y="208" width="100" height="35" rx="5" fill="#0f172a" stroke="#10b981"/>
+          <text x="480" y="223" text-anchor="middle" fill="#34d399" font-size="8">Lambda: Query</text>
+          <text x="480" y="237" text-anchor="middle" fill="#34d399" font-size="7.5">DynamoDB Status</text>
+          <path d="M 530 225 L 568 225" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-v)"/>
+          <rect x="570" y="208" width="100" height="35" rx="5" fill="#0f172a" stroke="#10b981"/>
+          <text x="620" y="220" text-anchor="middle" fill="#34d399" font-size="8">200: {status:</text>
+          <text x="620" y="232" text-anchor="middle" fill="#34d399" font-size="8">"RUNNING"|</text>
+          <text x="620" y="244" text-anchor="middle" fill="#34d399" font-size="7.5">"COMPLETED"}</text>
+          <text x="390" y="278" text-anchor="middle" fill="#475569" font-size="7.5">Retry automático pelo cliente com backoff exponencial até status terminal (COMPLETED | FAILED)</text>
+        </svg>
+      </div>
+
+      <h3>Integração Direta API Gateway → Kinesis Data Streams</h3>
+      <pre><span class="c"># Terraform: API Gateway integração direta com Kinesis — sem Lambda!</span>
+resource <span class="s">"aws_api_gateway_integration"</span> <span class="s">"kinesis_put"</span> {
+  rest_api_id             = aws_api_gateway_rest_api.data_api.id
+  resource_id             = aws_api_gateway_resource.events.id
+  http_method             = aws_api_gateway_method.post_events.http_method
+  type                    = <span class="s">"AWS"</span>
+  integration_http_method = <span class="s">"POST"</span>
+  uri = <span class="s">"arn:aws:apigateway:${var.region}:kinesis:action/PutRecord"</span>
+  credentials             = aws_iam_role.apigw_kinesis_role.arn
+
+  request_templates = {
+    <span class="s">"application/json"</span> = jsonencode({
+      StreamName    = <span class="s">"$$input.path('$.streamName')"</span>
+      Data          = <span class="s">"$$util.base64Encode($$input.body)"</span>
+      PartitionKey  = <span class="s">"$$input.path('$.userId')"</span>
+    })
+  }
+}
+
+<span class="c"># Resposta: extraindo SequenceNumber do XML do Kinesis</span>
+resource <span class="s">"aws_api_gateway_integration_response"</span> <span class="s">"kinesis_200"</span> {
+  rest_api_id = aws_api_gateway_rest_api.data_api.id
+  resource_id = aws_api_gateway_resource.events.id
+  http_method = aws_api_gateway_method.post_events.http_method
+  status_code = <span class="s">"200"</span>
+
+  response_templates = {
+    <span class="s">"application/json"</span> = <<-VTL
+      {
+        "sequenceNumber": "$$input.path('$.PutRecordResponse.SequenceNumber')",
+        "shardId": "$$input.path('$.PutRecordResponse.ShardId')",
+        "requestId": "$$context.requestId",
+        "status": "accepted"
+      }
+    VTL
+  }
+}</pre>
+
+      <h3>Integração API Gateway → Step Functions (StartExecution)</h3>
+      <pre><span class="c"># Terraform: Start de Step Functions workflow via API Gateway</span>
+resource <span class="s">"aws_api_gateway_integration"</span> <span class="s">"sf_start"</span> {
+  rest_api_id             = aws_api_gateway_rest_api.data_api.id
+  resource_id             = aws_api_gateway_resource.etl_jobs.id
+  http_method             = <span class="s">"POST"</span>
+  type                    = <span class="s">"AWS"</span>
+  integration_http_method = <span class="s">"POST"</span>
+  uri = <span class="s">"arn:aws:apigateway:${var.region}:states:action/StartExecution"</span>
+  credentials             = aws_iam_role.apigw_sf_role.arn
+
+  request_templates = {
+    <span class="s">"application/json"</span> = <<-VTL
+      {
+        "input": "$$util.escapeJavaScript($$input.json('$$'))",
+        "name": "$$context.requestId",
+        "stateMachineArn": "${aws_sfn_state_machine.etl_pipeline.arn}"
+      }
+    VTL
+  }
+}</pre>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 04 — TERRAFORM                                 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="terraform">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Terraform Completo: REST API de Produção</h2>
+          <p>IaC production-ready com WAF, CloudWatch Logs, X-Ray, Custom Domain e VPC Link</p>
+        </div>
+      </div>
+
+      <h3>Módulo Terraform Completo — Estrutura de Arquivos</h3>
+      <pre><span class="c"># Estrutura recomendada do módulo Terraform</span>
+modules/api-gateway/
+├── main.tf          <span class="c"># API, recursos, métodos, integrações</span>
+├── auth.tf          <span class="c"># Cognito + Lambda Authorizer</span>
+├── stages.tf        <span class="c"># Stages, deployment, canary</span>
+├── domain.tf        <span class="c"># Custom Domain + Route53 + ACM</span>
+├── waf.tf           <span class="c"># WAF v2 WebACL + rules</span>
+├── monitoring.tf    <span class="c"># CloudWatch Logs, Dashboards, Alarms</span>
+├── vpc_link.tf      <span class="c"># VPC Link + NLB para backends privados</span>
+├── variables.tf
+└── outputs.tf</pre>
+
+      <h3>main.tf — REST API com CRUD Completo</h3>
+      <pre><span class="c"># ─── REST API Principal ───────────────────────────────────────────────────</span>
+resource <span class="s">"aws_api_gateway_rest_api"</span> <span class="s">"main"</span> {
+  name        = <span class="s">"${var.project}-${var.environment}-api"</span>
+  description = <span class="s">"API de dados de produção com autenticação e throttling"</span>
+
+  endpoint_configuration {
+    types = [<span class="s">"REGIONAL"</span>]  <span class="c"># REGIONAL, EDGE ou PRIVATE</span>
+  }
+
+  body = file(<span class="s">"${path.module}/openapi.yaml"</span>)  <span class="c"># Importa spec OpenAPI</span>
+
+  tags = var.tags
+}
+
+<span class="c"># ─── Usage Plan — Rate Limiting por Tier de Cliente ───────────────────────</span>
+resource <span class="s">"aws_api_gateway_usage_plan"</span> <span class="s">"standard"</span> {
+  name = <span class="s">"standard-tier"</span>
+
+  api_stages {
+    api_id = aws_api_gateway_rest_api.main.id
+    stage  = aws_api_gateway_stage.prod.stage_name
+
+    <span class="c"># Throttling por método — granularidade fina</span>
+    throttle {
+      path        = <span class="s">"/products/POST"</span>
+      burst_limit = 200
+      rate_limit  = 100
+    }
+    throttle {
+      path        = <span class="s">"/products/{productId}/DELETE"</span>
+      burst_limit = 20
+      rate_limit  = 10
+    }
+  }
+
+  quota_settings {
+    limit  = 1000000  <span class="c"># 1M requests/mês por API key</span>
+    period = <span class="s">"MONTH"</span>
+  }
+
+  throttle_settings {
+    burst_limit = 500   <span class="c"># Burst máximo por cliente</span>
+    rate_limit  = 200   <span class="c"># Requests/s sustentado por cliente</span>
+  }
+}
+
+<span class="c"># ─── API Key para clientes externos ───────────────────────────────────────</span>
+resource <span class="s">"aws_api_gateway_api_key"</span> <span class="s">"partner_a"</span> {
+  name    = <span class="s">"partner-a-key"</span>
+  enabled = true
+}
+
+resource <span class="s">"aws_api_gateway_usage_plan_key"</span> <span class="s">"partner_a"</span> {
+  key_id        = aws_api_gateway_api_key.partner_a.id
+  key_type      = <span class="s">"API_KEY"</span>
+  usage_plan_id = aws_api_gateway_usage_plan.standard.id
+}</pre>
+
+      <h3>stages.tf — Deployment com Canary Release</h3>
+      <pre><span class="c"># ─── Deployment versionado — necessário para criar/atualizar stages ────────</span>
+resource <span class="s">"aws_api_gateway_deployment"</span> <span class="s">"main"</span> {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+
+  <span class="c"># Força novo deployment ao mudar a spec</span>
+  triggers = {
+    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.main.body))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+<span class="c"># ─── Stage de Produção com Caching e X-Ray ─────────────────────────────────</span>
+resource <span class="s">"aws_api_gateway_stage"</span> <span class="s">"prod"</span> {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  deployment_id = aws_api_gateway_deployment.main.id
+  stage_name    = <span class="s">"prod"</span>
+
+  <span class="c"># X-Ray Tracing distribuído</span>
+  xray_tracing_enabled = true
+
+  <span class="c"># Variáveis de stage — injetadas nos mapeamentos VTL</span>
+  variables = {
+    lambdaAlias              = <span class="s">"prod"</span>
+    listProductsLambdaArn    = aws_lambda_function.list_products.arn
+    createProductLambdaArn   = aws_lambda_function.create_product.arn
+    getProductLambdaArn      = aws_lambda_function.get_product.arn
+    updateProductLambdaArn   = aws_lambda_function.update_product.arn
+    deleteProductLambdaArn   = aws_lambda_function.delete_product.arn
+  }
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_access.arn
+    format = jsonencode({
+      requestId       = <span class="s">"$context.requestId"</span>
+      ip              = <span class="s">"$context.identity.sourceIp"</span>
+      caller          = <span class="s">"$context.identity.caller"</span>
+      user            = <span class="s">"$context.identity.user"</span>
+      requestTime     = <span class="s">"$context.requestTime"</span>
+      httpMethod      = <span class="s">"$context.httpMethod"</span>
+      resourcePath    = <span class="s">"$context.resourcePath"</span>
+      status          = <span class="s">"$context.status"</span>
+      protocol        = <span class="s">"$context.protocol"</span>
+      responseLength  = <span class="s">"$context.responseLength"</span>
+      integrationLatency = <span class="s">"$context.integrationLatency"</span>
+      responseLatency = <span class="s">"$context.responseLatency"</span>
+    })
+  }
+
+  <span class="c"># Canary Release — 10% do tráfego para nova versão</span>
+  canary_settings {
+    percent_traffic          = 10
+    deployment_id            = aws_api_gateway_deployment.canary.id
+    use_stage_cache          = false
+    stage_variable_overrides = {
+      listProductsLambdaArn = aws_lambda_function.list_products_v2.arn
+    }
+  }
+}
+
+<span class="c"># ─── Configurações de Método (caching, throttle) por recurso ───────────────</span>
+resource <span class="s">"aws_api_gateway_method_settings"</span> <span class="s">"all"</span> {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.prod.stage_name
+  method_path = <span class="s">"*/*"</span>  <span class="c"># Todos os métodos</span>
+
+  settings {
+    metrics_enabled        = true
+    logging_level          = <span class="s">"INFO"</span>   <span class="c"># ERROR | INFO | OFF</span>
+    data_trace_enabled     = false    <span class="c"># Não logar body em produção (PII)</span>
+    throttling_burst_limit = 5000
+    throttling_rate_limit  = 10000
+
+    <span class="c"># Cache por 5 minutos para GET /products</span>
+    caching_enabled      = true
+    cache_ttl_in_seconds = 300
+    require_authorization_for_cache_control = true
+  }
+}</pre>
+
+      <h3>waf.tf — Web Application Firewall</h3>
+      <pre><span class="c"># ─── WAF v2 com regras gerenciadas AWS ─────────────────────────────────────</span>
+resource <span class="s">"aws_wafv2_web_acl"</span> <span class="s">"api"</span> {
+  name  = <span class="s">"${var.project}-api-waf"</span>
+  scope = <span class="s">"REGIONAL"</span>
+
+  default_action { allow {} }
+
+  <span class="c"># Regra 1: AWS Managed Rules — Common (XSS, SQLi, etc.)</span>
+  rule {
+    name     = <span class="s">"AWSManagedRulesCommonRuleSet"</span>
+    priority = 1
+    override_action { none {} }
+    statement {
+      managed_rule_group_statement {
+        name        = <span class="s">"AWSManagedRulesCommonRuleSet"</span>
+        vendor_name = <span class="s">"AWS"</span>
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = <span class="s">"CommonRuleSet"</span>
+      sampled_requests_enabled   = true
+    }
+  }
+
+  <span class="c"># Regra 2: Rate Limiting — 2000 req/5min por IP</span>
+  rule {
+    name     = <span class="s">"RateLimitPerIP"</span>
+    priority = 2
+    action   { block {} }
+    statement {
+      rate_based_statement {
+        limit              = 2000
+        aggregate_key_type = <span class="s">"IP"</span>
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = <span class="s">"RateLimit"</span>
+      sampled_requests_enabled   = true
+    }
+  }
+
+  <span class="c"># Regra 3: Bloqueia países de alto risco (configurável)</span>
+  rule {
+    name     = <span class="s">"GeoBlock"</span>
+    priority = 3
+    action   { block {} }
+    statement {
+      geo_match_statement {
+        country_codes = var.blocked_countries  <span class="c"># ["KP", "IR", ...]</span>
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = <span class="s">"GeoBlock"</span>
+      sampled_requests_enabled   = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = <span class="s">"ApiWAF"</span>
+    sampled_requests_enabled   = true
+  }
+}
+
+<span class="c"># Associa WAF ao Stage do API Gateway</span>
+resource <span class="s">"aws_wafv2_web_acl_association"</span> <span class="s">"api"</span> {
+  resource_arn = aws_api_gateway_stage.prod.arn
+  web_acl_arn  = aws_wafv2_web_acl.api.arn
+}</pre>
+
+      <h3>domain.tf — Custom Domain com ACM e Route53</h3>
+      <pre><span class="c"># ─── Certificado TLS via ACM ───────────────────────────────────────────────</span>
+resource <span class="s">"aws_acm_certificate"</span> <span class="s">"api"</span> {
+  domain_name       = <span class="s">"api.${var.domain}"</span>  <span class="c"># ex: api.empresa.com</span>
+  validation_method = <span class="s">"DNS"</span>
+  lifecycle { create_before_destroy = true }
+}
+
+resource <span class="s">"aws_route53_record"</span> <span class="s">"cert_validation"</span> {
+  <span class="k">for_each</span> = {
+    <span class="k">for</span> dvo <span class="k">in</span> aws_acm_certificate.api.domain_validation_options : dvo.domain_name => dvo
+  }
+  zone_id = var.route53_zone_id
+  name    = each.value.resource_record_name
+  type    = each.value.resource_record_type
+  records = [each.value.resource_record_value]
+  ttl     = 60
+}
+
+resource <span class="s">"aws_acm_certificate_validation"</span> <span class="s">"api"</span> {
+  certificate_arn         = aws_acm_certificate.api.arn
+  validation_record_fqdns = [<span class="k">for</span> r <span class="k">in</span> aws_route53_record.cert_validation : r.fqdn]
+}
+
+<span class="c"># ─── Custom Domain Name no API Gateway ────────────────────────────────────</span>
+resource <span class="s">"aws_api_gateway_domain_name"</span> <span class="s">"api"</span> {
+  domain_name              = <span class="s">"api.${var.domain}"</span>
+  regional_certificate_arn = aws_acm_certificate_validation.api.certificate_arn
+  endpoint_configuration { types = [<span class="s">"REGIONAL"</span>] }
+  security_policy = <span class="s">"TLS_1_2"</span>
+}
+
+resource <span class="s">"aws_api_gateway_base_path_mapping"</span> <span class="s">"v1"</span> {
+  api_id      = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.prod.stage_name
+  domain_name = aws_api_gateway_domain_name.api.domain_name
+  base_path   = <span class="s">"v1"</span>  <span class="c"># api.empresa.com/v1/products</span>
+}
+
+<span class="c"># ─── Route53 alias apontando para API Gateway ──────────────────────────────</span>
+resource <span class="s">"aws_route53_record"</span> <span class="s">"api"</span> {
+  zone_id = var.route53_zone_id
+  name    = <span class="s">"api.${var.domain}"</span>
+  type    = <span class="s">"A"</span>
+  alias {
+    name                   = aws_api_gateway_domain_name.api.regional_domain_name
+    zone_id                = aws_api_gateway_domain_name.api.regional_zone_id
+    evaluate_target_health = true
+  }
+}</pre>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 05 — INTEGRAÇÕES AVANÇADAS                     -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="integracoes">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Integrações Avançadas: Auth &amp; VPC Link</h2>
+          <p>Cognito, Lambda Authorizer, IAM SigV4 e backends privados via VPC Link</p>
+        </div>
+      </div>
+
+      <h3>Diagrama Completo de Autenticação</h3>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 800 260" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <text x="400" y="20" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700" letter-spacing="1">MECANISMOS DE AUTENTICAÇÃO — API GATEWAY</text>
+
+          <!-- Cognito -->
+          <rect x="10" y="35" width="240" height="200" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1"/>
+          <text x="130" y="57" text-anchor="middle" fill="#7dd3fc" font-size="9" font-weight="700">COGNITO AUTHORIZER</text>
+          <text x="130" y="72" text-anchor="middle" fill="#475569" font-size="7.5">JWT Token validado nativamente</text>
+          <rect x="22" y="82" width="216" height="130" rx="6" fill="#0f172a"/>
+          <text x="130" y="103" text-anchor="middle" fill="#94a3b8" font-size="8">1. Client → POST /auth/token</text>
+          <text x="130" y="120" text-anchor="middle" fill="#94a3b8" font-size="8">2. Cognito → JWT (id_token)</text>
+          <text x="130" y="137" text-anchor="middle" fill="#94a3b8" font-size="8">3. Client → API GW + Authorization: Bearer JWT</text>
+          <text x="130" y="154" text-anchor="middle" fill="#7dd3fc" font-size="8">4. API GW valida JWT com Cognito</text>
+          <text x="130" y="171" text-anchor="middle" fill="#34d399" font-size="8">5. Claims injetados no contexto</text>
+          <text x="130" y="188" text-anchor="middle" fill="#34d399" font-size="8">6. Lambda recebe sub, email, grupos</text>
+          <text x="130" y="210" text-anchor="middle" fill="#64748b" font-size="7">Latência extra: ~2ms | TTL cache: até 3600s</text>
+          <text x="130" y="225" text-anchor="middle" fill="#0284c7" font-size="7.5">✓ Zero código de auth no backend</text>
+
+          <!-- Lambda Authorizer -->
+          <rect x="280" y="35" width="240" height="200" rx="8" fill="#1e293b" stroke="#ea580c" stroke-width="1"/>
+          <text x="400" y="57" text-anchor="middle" fill="#fb923c" font-size="9" font-weight="700">LAMBDA AUTHORIZER</text>
+          <text x="400" y="72" text-anchor="middle" fill="#475569" font-size="7.5">Lógica customizada (token ou request)</text>
+          <rect x="292" y="82" width="216" height="130" rx="6" fill="#0f172a"/>
+          <text x="400" y="103" text-anchor="middle" fill="#94a3b8" font-size="8">1. Client → API GW + custom token</text>
+          <text x="400" y="120" text-anchor="middle" fill="#94a3b8" font-size="8">2. API GW invoca Lambda Authorizer</text>
+          <text x="400" y="137" text-anchor="middle" fill="#fb923c" font-size="8">3. Lambda → valida token externo</text>
+          <text x="400" y="154" text-anchor="middle" fill="#fb923c" font-size="8">4. Retorna IAM Policy (Allow/Deny)</text>
+          <text x="400" y="171" text-anchor="middle" fill="#34d399" font-size="8">5. API GW cacheia policy (TTL 5min)</text>
+          <text x="400" y="188" text-anchor="middle" fill="#34d399" font-size="8">6. Request encaminhado ao backend</text>
+          <text x="400" y="210" text-anchor="middle" fill="#64748b" font-size="7">Latência extra: ~5-50ms | Cache: 0-3600s</text>
+          <text x="400" y="225" text-anchor="middle" fill="#ea580c" font-size="7.5">✓ OAuth2, LDAP, custom auth</text>
+
+          <!-- IAM SigV4 -->
+          <rect x="550" y="35" width="240" height="200" rx="8" fill="#1e293b" stroke="#15803d" stroke-width="1"/>
+          <text x="670" y="57" text-anchor="middle" fill="#86efac" font-size="9" font-weight="700">IAM AUTHORIZATION (SigV4)</text>
+          <text x="670" y="72" text-anchor="middle" fill="#475569" font-size="7.5">Para serviços AWS ↔ API Gateway</text>
+          <rect x="562" y="82" width="216" height="130" rx="6" fill="#0f172a"/>
+          <text x="670" y="103" text-anchor="middle" fill="#94a3b8" font-size="8">1. IAM Role/User assina request</text>
+          <text x="670" y="120" text-anchor="middle" fill="#94a3b8" font-size="8">2. Assinatura HMAC-SHA256 (SigV4)</text>
+          <text x="670" y="137" text-anchor="middle" fill="#86efac" font-size="8">3. API GW valida assinatura</text>
+          <text x="670" y="154" text-anchor="middle" fill="#86efac" font-size="8">4. Verifica IAM policy do chamador</text>
+          <text x="670" y="171" text-anchor="middle" fill="#34d399" font-size="8">5. Request autorizado sem token</text>
+          <text x="670" y="188" text-anchor="middle" fill="#34d399" font-size="8">6. Sem overhead de cache</text>
+          <text x="670" y="210" text-anchor="middle" fill="#64748b" font-size="7">Latência extra: ~0ms | Sem cache necessário</text>
+          <text x="670" y="225" text-anchor="middle" fill="#15803d" font-size="7.5">✓ Microserviços internos AWS</text>
+        </svg>
+      </div>
+
+      <h3>Lambda Authorizer — Implementação Completa</h3>
+      <pre><span class="k">import</span> json
+<span class="k">import</span> jwt  <span class="c"># pip install python-jose[cryptography]</span>
+<span class="k">import</span> boto3
+<span class="k">from</span> functools <span class="k">import</span> lru_cache
+<span class="k">from</span> typing <span class="k">import</span> Dict, Any
+
+
+secrets_client = boto3.client(<span class="s">'secretsmanager'</span>)
+
+
+@lru_cache(maxsize=1)
+<span class="k">def</span> <span class="nf">get_jwt_secret</span>() -> str:
+    <span class="s">"""Cache da chave JWT — evita chamadas repetidas ao Secrets Manager."""</span>
+    response = secrets_client.get_secret_value(SecretId=<span class="s">'prod/api/jwt-secret'</span>)
+    <span class="k">return</span> response[<span class="s">'SecretString'</span>]
+
+
+<span class="k">def</span> <span class="nf">build_policy</span>(principal_id: str, effect: str, resource: str,
+                  context: Dict = {}) -> Dict:
+    <span class="s">"""Constrói a IAM Policy Document retornada ao API Gateway."""</span>
+    <span class="k">return</span> {
+        <span class="s">"principalId"</span>: principal_id,
+        <span class="s">"policyDocument"</span>: {
+            <span class="s">"Version"</span>: <span class="s">"2012-10-17"</span>,
+            <span class="s">"Statement"</span>: [{
+                <span class="s">"Action"</span>: <span class="s">"execute-api:Invoke"</span>,
+                <span class="s">"Effect"</span>: effect,
+                <span class="s">"Resource"</span>: resource,  <span class="c"># arn:aws:execute-api:region:acct:api-id/stage/method/path</span>
+            }],
+        },
+        <span class="s">"context"</span>: context,  <span class="c"># Injetado no contexto — disponível no Lambda backend</span>
+    }
+
+
+<span class="k">def</span> <span class="nf">lambda_handler</span>(event: Dict, context: Any) -> Dict:
+    <span class="s">"""Token-based Lambda Authorizer com cache de policy."""</span>
+    token = event.get(<span class="s">"authorizationToken"</span>, <span class="s">""</span>)
+    method_arn = event[<span class="s">"methodArn"</span>]
+
+    <span class="c"># Remove prefixo "Bearer " se presente</span>
+    token = token.replace(<span class="s">"Bearer "</span>, <span class="s">""</span>).strip()
+
+    <span class="k">if not</span> token:
+        raise Exception(<span class="s">"Unauthorized"</span>)  <span class="c"># API GW retorna 401</span>
+
+    <span class="k">try</span>:
+        secret = get_jwt_secret()
+        payload = jwt.decode(token, secret, algorithms=[<span class="s">"HS256"</span>])
+
+        user_id = payload[<span class="s">"sub"</span>]
+        user_role = payload.get(<span class="s">"role"</span>, <span class="s">"reader"</span>)
+        tenant_id = payload.get(<span class="s">"tenant_id"</span>)
+
+        <span class="c"># Wildcard: permite todas as rotas da API para este usuário</span>
+        api_arn = <span class="s">"/"</span>.join(method_arn.split(<span class="s">"/"</span>)[:2]) + <span class="s">"/*"</span>
+
+        <span class="k">return</span> build_policy(
+            principal_id=user_id,
+            effect=<span class="s">"Allow"</span>,
+            resource=api_arn,
+            context={
+                <span class="s">"userId"</span>: user_id,
+                <span class="s">"role"</span>: user_role,
+                <span class="s">"tenantId"</span>: tenant_id <span class="k">or</span> <span class="s">""</span>,
+            }
+        )
+
+    <span class="k">except</span> jwt.ExpiredSignatureError:
+        raise Exception(<span class="s">"Unauthorized"</span>)  <span class="c"># 401</span>
+    <span class="k">except</span> jwt.InvalidTokenError:
+        raise Exception(<span class="s">"Unauthorized"</span>)  <span class="c"># 401</span>
+    <span class="k">except</span> Exception:
+        raise Exception(<span class="s">"Unauthorized"</span>)  <span class="c"># 401 para qualquer falha</span></pre>
+
+      <h3>vpc_link.tf — VPC Link para Backends Privados (ECS/NLB)</h3>
+      <pre><span class="c"># ─── Network Load Balancer interno (target: ECS tasks) ────────────────────</span>
+resource <span class="s">"aws_lb"</span> <span class="s">"internal_nlb"</span> {
+  name               = <span class="s">"internal-data-api-nlb"</span>
+  internal           = true
+  load_balancer_type = <span class="s">"network"</span>
+  subnets            = var.private_subnet_ids
+}
+
+resource <span class="s">"aws_lb_target_group"</span> <span class="s">"data_service"</span> {
+  name        = <span class="s">"data-service-tg"</span>
+  port        = 8080
+  protocol    = <span class="s">"TCP"</span>
+  vpc_id      = var.vpc_id
+  target_type = <span class="s">"ip"</span>
+  health_check {
+    protocol = <span class="s">"HTTP"</span>
+    path     = <span class="s">"/health"</span>
+    port     = <span class="s">"8080"</span>
+  }
+}
+
+resource <span class="s">"aws_lb_listener"</span> <span class="s">"internal_tcp"</span> {
+  load_balancer_arn = aws_lb.internal_nlb.arn
+  port              = 80
+  protocol          = <span class="s">"TCP"</span>
+  default_action {
+    type             = <span class="s">"forward"</span>
+    target_group_arn = aws_lb_target_group.data_service.arn
+  }
+}
+
+<span class="c"># ─── VPC Link REST API ─────────────────────────────────────────────────────</span>
+resource <span class="s">"aws_api_gateway_vpc_link"</span> <span class="s">"main"</span> {
+  name        = <span class="s">"data-api-vpc-link"</span>
+  target_arns = [aws_lb.internal_nlb.arn]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+<span class="c"># ─── Integração usando VPC Link ────────────────────────────────────────────</span>
+resource <span class="s">"aws_api_gateway_integration"</span> <span class="s">"vpc_link"</span> {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.data.id
+  http_method             = <span class="s">"ANY"</span>
+  type                    = <span class="s">"HTTP_PROXY"</span>
+  integration_http_method = <span class="s">"ANY"</span>
+  uri                     = <span class="s">"http://${aws_lb.internal_nlb.dns_name}/{proxy}"</span>
+  connection_type         = <span class="s">"VPC_LINK"</span>
+  connection_id           = aws_api_gateway_vpc_link.main.id
+}</pre>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 06 — BOAS PRÁTICAS                             -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="boas-praticas">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Boas Práticas de Produção</h2>
+          <p>Caching, CORS, error handling, versionamento, Blue/Green e idempotência</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top:4px solid #15803d">
+          <div class="cc-tag">Performance</div>
+          <div class="cc-title">🚀 API Caching</div>
+          <div class="cc-body">
+            Ative cache por stage (0.5 a 237 GB). Configure TTL diferente por recurso: GET /products → 300s; GET /users/{id} → 60s; POST/PUT/DELETE → cache desabilitado.<br><br>
+            <strong>Header de cache:</strong> <code>Cache-Control: max-age=300</code> na request invalida o cache do Gateway. Controle via <code>requireAuthorizationForCacheControl</code> para evitar bypass.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top:4px solid #0369a1">
+          <div class="cc-tag">Cross-Origin</div>
+          <div class="cc-title">🌐 CORS Configuration</div>
+          <div class="cc-body">
+            Configure CORS no API Gateway, não no Lambda. Crie um método OPTIONS em cada resource com resposta mock:<br><br>
+            <code>Access-Control-Allow-Origin: https://app.empresa.com</code><br>
+            <code>Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS</code><br>
+            <code>Access-Control-Allow-Headers: Content-Type,Authorization,X-Api-Key</code><br>
+            <code>Access-Control-Max-Age: 600</code>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top:4px solid #b91c1c">
+          <div class="cc-tag">Resiliência</div>
+          <div class="cc-title">🔄 Error Handling &amp; Retry</div>
+          <div class="cc-body">
+            Mapeie todos os erros possíveis via <strong>Gateway Responses</strong>:<br>
+            • 400 — Bad request (schema inválido)<br>
+            • 401 — Unauthorized (auth falhou)<br>
+            • 403 — Forbidden (sem permissão)<br>
+            • 429 — Too Many Requests (throttle)<br>
+            • 500 — Internal error (Lambda falhando)<br>
+            • 502 — Bad Gateway (resposta inválida do Lambda)<br>
+            • 503 — Service Unavailable<br>
+            Sempre retorne JSON estruturado com <code>requestId</code>.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top:4px solid #b45309">
+          <div class="cc-tag">Idempotência</div>
+          <div class="cc-title">🔁 Idempotent POST</div>
+          <div class="cc-body">
+            Use <code>clientRequestToken</code> no body ou <code>Idempotency-Key</code> no header. Armazene tokens no DynamoDB com TTL de 24h. Se o token já existe, retorne a resposta original sem reprocessar. Fundamental para evitar duplicação em retry após timeout.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top:4px solid #7c3aed">
+          <div class="cc-tag">Versionamento</div>
+          <div class="cc-title">📌 API Versioning</div>
+          <div class="cc-body">
+            Estratégias:<br>
+            • <strong>URL Path</strong>: <code>/v1/products</code> → <code>/v2/products</code> (mais explícito, cache-friendly)<br>
+            • <strong>Header</strong>: <code>Accept: application/vnd.api+json;version=2</code><br>
+            • <strong>Stage Variables</strong>: mesmo endpoint, Lambda alias diferente (v1 → Lambda:prod, v2 → Lambda:v2)<br>
+            Nunca quebre contratos de APIs existentes sem versão nova.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top:4px solid #0f766e">
+          <div class="cc-tag">Deploy</div>
+          <div class="cc-title">🟩 Blue/Green Deployment</div>
+          <div class="cc-body">
+            Use <strong>Canary Releases</strong> no Stage para controlar tráfego gradualmente:<br>
+            1. Deploy nova versão com 5% canary<br>
+            2. Monitore métricas por 15-30 min<br>
+            3. Se OK → promova para 100%<br>
+            4. Se erro → rollback automático<br>
+            Combine com Lambda Aliases (BLUE/GREEN) para rollback instantâneo.
+          </div>
+        </div>
+      </div>
+
+      <h3>Gateway Responses — Padronização de Erros</h3>
+      <pre><span class="c"># Terraform: customização das respostas de erro do API Gateway</span>
+locals {
+  gateway_responses = {
+    DEFAULT_4XX = { status = <span class="s">"400"</span>, message = <span class="s">"Bad request"</span> }
+    UNAUTHORIZED = { status = <span class="s">"401"</span>, message = <span class="s">"Unauthorized"</span> }
+    ACCESS_DENIED = { status = <span class="s">"403"</span>, message = <span class="s">"Access denied"</span> }
+    THROTTLED = { status = <span class="s">"429"</span>, message = <span class="s">"Rate limit exceeded"</span> }
+    DEFAULT_5XX = { status = <span class="s">"500"</span>, message = <span class="s">"Internal server error"</span> }
+  }
+}
+
+resource <span class="s">"aws_api_gateway_gateway_response"</span> <span class="s">"errors"</span> {
+  <span class="k">for_each</span>      = local.gateway_responses
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  response_type = each.key
+  status_code   = each.value.status
+
+  response_templates = {
+    <span class="s">"application/json"</span> = jsonencode({
+      error     = each.value.message
+      requestId = <span class="s">"$$context.requestId"</span>
+      timestamp = <span class="s">"$$context.requestTimeEpoch"</span>
+    })
+  }
+
+  response_parameters = {
+    <span class="s">"gatewayresponse.header.Access-Control-Allow-Origin"</span>  = <span class="s">"'*'"</span>
+    <span class="s">"gatewayresponse.header.Access-Control-Allow-Headers"</span> = <span class="s">"'*'"</span>
+  }
+}</pre>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 07 — OBSERVABILIDADE                           -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="observabilidade">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">07</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Observabilidade: CloudWatch, X-Ray &amp; Dashboards</h2>
+          <p>Métricas, logs de acesso, rastreamento distribuído e alertas de produção</p>
+        </div>
+      </div>
+
+      <h3>Métricas Chave do API Gateway (CloudWatch Metrics)</h3>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-val" style="color:#7c3aed">Count</div>
+          <div class="metric-lbl">Total de Requests</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" style="color:#ea580c">4XXError</div>
+          <div class="metric-lbl">Erros de Cliente</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" style="color:#b91c1c">5XXError</div>
+          <div class="metric-lbl">Erros de Servidor</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" style="color:#0369a1">Latency</div>
+          <div class="metric-lbl">Latência Total (ms)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" style="color:#0f766e">IntegLat</div>
+          <div class="metric-lbl">Latência do Backend</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" style="color:#15803d">CacheHit</div>
+          <div class="metric-lbl">Cache Hit Count</div>
+        </div>
+      </div>
+
+      <h3>Terraform: CloudWatch Alarms Críticos</h3>
+      <pre><span class="c"># ─── Alarm: Taxa de erros 5XX acima de 1% ─────────────────────────────────</span>
+resource <span class="s">"aws_cloudwatch_metric_alarm"</span> <span class="s">"5xx_rate"</span> {
+  alarm_name          = <span class="s">"api-gw-5xx-error-rate-high"</span>
+  comparison_operator = <span class="s">"GreaterThanThreshold"</span>
+  evaluation_periods  = 3
+  threshold           = 1  <span class="c"># 1% de erro já é crítico em produção</span>
+
+  metric_query {
+    id          = <span class="s">"error_rate"</span>
+    expression  = <span class="s">"m2/m1*100"</span>
+    label       = <span class="s">"5XX Error Rate %"</span>
+    return_data = true
+  }
+
+  metric_query {
+    id = <span class="s">"m1"</span>
+    metric {
+      namespace   = <span class="s">"AWS/ApiGateway"</span>
+      metric_name = <span class="s">"Count"</span>
+      period      = 60
+      stat        = <span class="s">"Sum"</span>
+      dimensions  = { ApiName = aws_api_gateway_rest_api.main.name }
+    }
+  }
+
+  metric_query {
+    id = <span class="s">"m2"</span>
+    metric {
+      namespace   = <span class="s">"AWS/ApiGateway"</span>
+      metric_name = <span class="s">"5XXError"</span>
+      period      = 60
+      stat        = <span class="s">"Sum"</span>
+      dimensions  = { ApiName = aws_api_gateway_rest_api.main.name }
+    }
+  }
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+}
+
+<span class="c"># ─── Alarm: Latência P99 acima de 3 segundos ─────────────────────────────</span>
+resource <span class="s">"aws_cloudwatch_metric_alarm"</span> <span class="s">"latency_p99"</span> {
+  alarm_name          = <span class="s">"api-gw-latency-p99-high"</span>
+  comparison_operator = <span class="s">"GreaterThanThreshold"</span>
+  evaluation_periods  = 2
+  threshold           = 3000  <span class="c"># 3 segundos</span>
+  namespace           = <span class="s">"AWS/ApiGateway"</span>
+  metric_name         = <span class="s">"Latency"</span>
+  period              = 60
+  extended_statistic  = <span class="s">"p99"</span>
+  dimensions          = { ApiName = aws_api_gateway_rest_api.main.name }
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+}
+
+<span class="c"># ─── Log Group com retenção de 90 dias ────────────────────────────────────</span>
+resource <span class="s">"aws_cloudwatch_log_group"</span> <span class="s">"api_access"</span> {
+  name              = <span class="s">"/aws/apigateway/${var.project}-access-logs"</span>
+  retention_in_days = 90
+
+  tags = merge(var.tags, { Type = <span class="s">"api-access-logs"</span> })
+}
+
+<span class="c"># ─── Dashboard CloudWatch Completo ────────────────────────────────────────</span>
+resource <span class="s">"aws_cloudwatch_dashboard"</span> <span class="s">"api"</span> {
+  dashboard_name = <span class="s">"${var.project}-api-gateway"</span>
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type = <span class="s">"metric"</span>
+        properties = {
+          title  = <span class="s">"Request Volume"</span>
+          period = 60
+          stat   = <span class="s">"Sum"</span>
+          metrics = [[<span class="s">"AWS/ApiGateway"</span>, <span class="s">"Count"</span>, <span class="s">"ApiName"</span>, aws_api_gateway_rest_api.main.name]]
+        }
+      },
+      {
+        type = <span class="s">"metric"</span>
+        properties = {
+          title  = <span class="s">"Error Rates"</span>
+          period = 60
+          metrics = [
+            [<span class="s">"AWS/ApiGateway"</span>, <span class="s">"4XXError"</span>, <span class="s">"ApiName"</span>, aws_api_gateway_rest_api.main.name],
+            [<span class="s">"AWS/ApiGateway"</span>, <span class="s">"5XXError"</span>, <span class="s">"ApiName"</span>, aws_api_gateway_rest_api.main.name],
+          ]
+        }
+      },
+      {
+        type = <span class="s">"metric"</span>
+        properties = {
+          title  = <span class="s">"Latency P50/P95/P99"</span>
+          period = 60
+          metrics = [
+            [{ expression = <span class="s">"METRICS('lat')"</span>, label = <span class="s">"Latency Percentiles"</span>, id = <span class="s">"e1"</span> }],
+            [<span class="s">"AWS/ApiGateway"</span>, <span class="s">"Latency"</span>, <span class="s">"ApiName"</span>, aws_api_gateway_rest_api.main.name, { id = <span class="s">"lat"</span>, stat = <span class="s">"p50"</span> }],
+          ]
+        }
+      }
+    ]
+  })
+}</pre>
+
+      <h3>Análise de Access Logs com CloudWatch Insights</h3>
+      <pre><span class="c"># Query CloudWatch Insights — Top 10 rotas mais lentas (P95)</span>
+fields @timestamp, httpMethod, resourcePath, status, responseLatency, integrationLatency
+| filter status != 200
+| stats pct(responseLatency, 95) as p95_latency,
+        count() as request_count
+  by httpMethod, resourcePath, status
+| sort p95_latency desc
+| limit 10
+
+<span class="c"># Query — Clientes com mais erros 429 (Throttled)</span>
+fields @timestamp, ip, httpMethod, resourcePath, status
+| filter status = 429
+| stats count() as throttled_count by ip
+| sort throttled_count desc
+| limit 20
+
+<span class="c"># Query — Taxa de erros por endpoint nas últimas 1h</span>
+fields @timestamp, httpMethod, resourcePath, status
+| filter @timestamp > ago(1h)
+| stats count(*) as total,
+        sum(status >= 500) as server_errors,
+        sum(status >= 400 AND status &lt; 500) as client_errors
+  by httpMethod, resourcePath
+| extend error_rate = (server_errors * 100.0) / total
+| sort error_rate desc</pre>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 08 — DIAGRAMAS                                 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="diagramas">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">08</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Diagramas de Arquitetura Completos</h2>
+          <p>Visões end-to-end das principais topologias de API Gateway em engenharia de dados</p>
+        </div>
+      </div>
+
+      <h3>Arquitetura Completa: API Gateway em uma Plataforma de Dados</h3>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 820 460" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <defs>
+            <marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#7c3aed"/>
+            </marker>
+            <marker id="arr-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#10b981"/>
+            </marker>
+            <marker id="arr-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#ea580c"/>
+            </marker>
+            <marker id="arr-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#475569"/>
+            </marker>
+          </defs>
+
+          <text x="410" y="20" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700" letter-spacing="1">PLATAFORMA DE DADOS — ARQUITETURA COMPLETA COM API GATEWAY</text>
+
+          <!-- Internet/Clients -->
+          <rect x="10" y="35" width="100" height="380" rx="8" fill="#0f172a" stroke="#1e293b"/>
+          <text x="60" y="55" text-anchor="middle" fill="#64748b" font-size="8" font-weight="700">CLIENTS</text>
+          <rect x="20" y="65" width="80" height="28" rx="5" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="60" y="84" text-anchor="middle" fill="#7dd3fc" font-size="7.5">Web App</text>
+          <rect x="20" y="103" width="80" height="28" rx="5" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="60" y="122" text-anchor="middle" fill="#7dd3fc" font-size="7.5">Mobile App</text>
+          <rect x="20" y="141" width="80" height="28" rx="5" fill="#1e293b" stroke="#38bdf8"/>
+          <text x="60" y="160" text-anchor="middle" fill="#7dd3fc" font-size="7.5">Partner API</text>
+          <rect x="20" y="179" width="80" height="28" rx="5" fill="#1e293b" stroke="#94a3b8"/>
+          <text x="60" y="198" text-anchor="middle" fill="#94a3b8" font-size="7.5">IoT Devices</text>
+          <rect x="20" y="217" width="80" height="28" rx="5" fill="#1e293b" stroke="#94a3b8"/>
+          <text x="60" y="236" text-anchor="middle" fill="#94a3b8" font-size="7.5">Microservices</text>
+
+          <!-- Edge Layer -->
+          <rect x="130" y="35" width="130" height="180" rx="8" fill="#0f172a" stroke="#1e293b"/>
+          <text x="195" y="55" text-anchor="middle" fill="#64748b" font-size="8" font-weight="700">EDGE LAYER</text>
+          <rect x="140" y="65" width="110" height="35" rx="5" fill="#1e293b" stroke="#06b6d4"/>
+          <text x="195" y="80" text-anchor="middle" fill="#67e8f9" font-size="8" font-weight="700">Route 53</text>
+          <text x="195" y="92" text-anchor="middle" fill="#475569" font-size="7">DNS + Health Check</text>
+          <rect x="140" y="110" width="110" height="35" rx="5" fill="#1e293b" stroke="#06b6d4"/>
+          <text x="195" y="125" text-anchor="middle" fill="#67e8f9" font-size="8" font-weight="700">CloudFront CDN</text>
+          <text x="195" y="137" text-anchor="middle" fill="#475569" font-size="7">Cache + WAF Edge</text>
+          <rect x="140" y="155" width="110" height="35" rx="5" fill="#1e293b" stroke="#b91c1c"/>
+          <text x="195" y="170" text-anchor="middle" fill="#fca5a5" font-size="8" font-weight="700">AWS WAF</text>
+          <text x="195" y="182" text-anchor="middle" fill="#475569" font-size="7">OWASP + Rate Limit</text>
+
+          <!-- Arrows clients → edge -->
+          <path d="M 110 79 L 138 79" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+          <path d="M 110 117 L 138 117" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+          <path d="M 110 155 L 138 155" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+
+          <!-- API Gateway -->
+          <rect x="280" y="35" width="155" height="380" rx="8" fill="#1a0533" stroke="#7c3aed" stroke-width="1.5"/>
+          <text x="358" y="55" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">API GATEWAY</text>
+          <rect x="290" y="65" width="135" height="50" rx="5" fill="#0f172a" stroke="#7c3aed"/>
+          <text x="358" y="82" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">Cognito/Lambda Auth</text>
+          <text x="358" y="97" text-anchor="middle" fill="#475569" font-size="7">JWT Validation + Cache</text>
+          <rect x="290" y="125" width="135" height="50" rx="5" fill="#0f172a" stroke="#7c3aed"/>
+          <text x="358" y="142" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">Throttling + Quota</text>
+          <text x="358" y="157" text-anchor="middle" fill="#475569" font-size="7">Token Bucket / Usage Plans</text>
+          <rect x="290" y="185" width="135" height="50" rx="5" fill="#0f172a" stroke="#7c3aed"/>
+          <text x="358" y="202" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">Schema Validation</text>
+          <text x="358" y="217" text-anchor="middle" fill="#475569" font-size="7">JSON Schema / OpenAPI</text>
+          <rect x="290" y="245" width="135" height="50" rx="5" fill="#0f172a" stroke="#7c3aed"/>
+          <text x="358" y="262" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">VTL Transform</text>
+          <text x="358" y="277" text-anchor="middle" fill="#475569" font-size="7">Request/Response Mapping</text>
+          <rect x="290" y="305" width="135" height="50" rx="5" fill="#0f172a" stroke="#7c3aed"/>
+          <text x="358" y="322" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">Stage + Canary</text>
+          <text x="358" y="337" text-anchor="middle" fill="#475569" font-size="7">prod / staging / dev</text>
+          <rect x="290" y="365" width="135" height="40" rx="5" fill="#0f172a" stroke="#7c3aed"/>
+          <text x="358" y="382" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">API Cache (300s)</text>
+          <text x="358" y="395" text-anchor="middle" fill="#475569" font-size="7">GET endpoints only</text>
+
+          <!-- Arrow edge → API GW -->
+          <path d="M 260 170 L 278 170" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+
+          <!-- Sync Backend -->
+          <rect x="455" y="35" width="165" height="180" rx="8" fill="#0f172a" stroke="#1e293b"/>
+          <text x="538" y="55" text-anchor="middle" fill="#64748b" font-size="8" font-weight="700">SYNC BACKENDS</text>
+          <rect x="465" y="65" width="145" height="35" rx="5" fill="#1e293b" stroke="#ea580c"/>
+          <text x="538" y="80" text-anchor="middle" fill="#fb923c" font-size="8" font-weight="700">Lambda (CRUD)</text>
+          <text x="538" y="92" text-anchor="middle" fill="#475569" font-size="7">Python / Node.js</text>
+          <rect x="465" y="110" width="145" height="35" rx="5" fill="#1e293b" stroke="#0369a1"/>
+          <text x="538" y="125" text-anchor="middle" fill="#7dd3fc" font-size="8" font-weight="700">ECS Fargate (via VPC Link)</text>
+          <text x="538" y="137" text-anchor="middle" fill="#475569" font-size="7">NLB + Private Subnet</text>
+          <rect x="465" y="155" width="145" height="35" rx="5" fill="#1e293b" stroke="#0f766e"/>
+          <text x="538" y="170" text-anchor="middle" fill="#34d399" font-size="8" font-weight="700">DynamoDB</text>
+          <text x="538" y="182" text-anchor="middle" fill="#475569" font-size="7">Online / Sub-ms Reads</text>
+
+          <!-- Async Backend -->
+          <rect x="455" y="235" width="165" height="180" rx="8" fill="#0f172a" stroke="#1e293b"/>
+          <text x="538" y="255" text-anchor="middle" fill="#64748b" font-size="8" font-weight="700">ASYNC BACKENDS</text>
+          <rect x="465" y="265" width="145" height="35" rx="5" fill="#1e293b" stroke="#b45309"/>
+          <text x="538" y="280" text-anchor="middle" fill="#fbbf24" font-size="8" font-weight="700">SQS → Lambda</text>
+          <text x="538" y="292" text-anchor="middle" fill="#475569" font-size="7">Pedidos / Transações</text>
+          <rect x="465" y="310" width="145" height="35" rx="5" fill="#1e293b" stroke="#be185d"/>
+          <text x="538" y="325" text-anchor="middle" fill="#f9a8d4" font-size="8" font-weight="700">Kinesis → Firehose → S3</text>
+          <text x="538" y="337" text-anchor="middle" fill="#475569" font-size="7">Clickstream / IoT / Eventos</text>
+          <rect x="465" y="355" width="145" height="35" rx="5" fill="#1e293b" stroke="#15803d"/>
+          <text x="538" y="370" text-anchor="middle" fill="#86efac" font-size="8" font-weight="700">Step Functions</text>
+          <text x="538" y="382" text-anchor="middle" fill="#475569" font-size="7">ETL Workflows / Batch</text>
+
+          <!-- Arrows API GW → backends -->
+          <path d="M 435 100 L 463 100" stroke="#10b981" stroke-width="1.5" marker-end="url(#arr-green)"/>
+          <path d="M 435 283 L 463 283" stroke="#ea580c" stroke-width="1.5" marker-end="url(#arr-orange)"/>
+          <path d="M 435 325 L 463 325" stroke="#ea580c" stroke-width="1.5" marker-end="url(#arr-orange)"/>
+          <path d="M 435 372 L 463 372" stroke="#ea580c" stroke-width="1.5" marker-end="url(#arr-orange)"/>
+
+          <!-- Observability -->
+          <rect x="640" y="35" width="170" height="380" rx="8" fill="#0f172a" stroke="#1e293b"/>
+          <text x="725" y="55" text-anchor="middle" fill="#64748b" font-size="8" font-weight="700">OBSERVABILIDADE</text>
+          <rect x="650" y="65" width="150" height="35" rx="5" fill="#1e293b" stroke="#7c3aed"/>
+          <text x="725" y="80" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">X-Ray Tracing</text>
+          <text x="725" y="92" text-anchor="middle" fill="#475569" font-size="7">End-to-end latency map</text>
+          <rect x="650" y="110" width="150" height="35" rx="5" fill="#1e293b" stroke="#7c3aed"/>
+          <text x="725" y="125" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">CloudWatch Metrics</text>
+          <text x="725" y="137" text-anchor="middle" fill="#475569" font-size="7">4XX, 5XX, Latency, Count</text>
+          <rect x="650" y="155" width="150" height="35" rx="5" fill="#1e293b" stroke="#7c3aed"/>
+          <text x="725" y="170" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">Access Logs (JSON)</text>
+          <text x="725" y="182" text-anchor="middle" fill="#475569" font-size="7">IP, route, latency, user</text>
+          <rect x="650" y="200" width="150" height="35" rx="5" fill="#1e293b" stroke="#7c3aed"/>
+          <text x="725" y="215" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">Alarms + SNS</text>
+          <text x="725" y="227" text-anchor="middle" fill="#475569" font-size="7">PagerDuty / Slack</text>
+          <rect x="650" y="245" width="150" height="35" rx="5" fill="#1e293b" stroke="#7c3aed"/>
+          <text x="725" y="260" text-anchor="middle" fill="#c4b5fd" font-size="8" font-weight="700">CW Insights Queries</text>
+          <text x="725" y="272" text-anchor="middle" fill="#475569" font-size="7">Ad-hoc log analysis</text>
+          <rect x="650" y="290" width="150" height="35" rx="5" fill="#1e293b" stroke="#b91c1c"/>
+          <text x="725" y="305" text-anchor="middle" fill="#fca5a5" font-size="8" font-weight="700">WAF Logs</text>
+          <text x="725" y="317" text-anchor="middle" fill="#475569" font-size="7">Blocked requests / IPs</text>
+
+          <!-- Arrows backends → observability -->
+          <path d="M 622 110 L 648 110" stroke="#475569" stroke-width="1" stroke-dasharray="3" marker-end="url(#arr-gray)"/>
+          <path d="M 435 200 L 460 200 L 460 220 L 638 220" stroke="#475569" stroke-width="1" stroke-dasharray="3" marker-end="url(#arr-gray)"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 09 — PERGUNTAS                                 -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="perguntas">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">09</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Perguntas &amp; Questões de Entrevista</h2>
+          <p>25+ questões técnicas profundas sobre API Gateway para entrevistas de Staff/Senior Engineer</p>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">1. Qual a diferença entre REST API e HTTP API no API Gateway, e quando usar cada um?<span class="qtag">FUNDAMENTOS</span></div>
+        <div class="qa-a">
+          <strong>REST API (v1)</strong> é o produto completo e maduro: suporta caching nativo, usage plans, API keys, throttling por método individual, integrações diretas com serviços AWS (SQS, Kinesis, S3, Step Functions) via tipo AWS sem Lambda, modelos de validação JSON Schema, custom authorizers com contexto rico e VPC Link via NLB. Custo: <strong>$3.50/milhão</strong>.<br><br>
+          <strong>HTTP API (v2)</strong> é mais leve e barato ($1.00/milhão, ~70% mais barato). Latência menor (~5ms vs ~10ms). Suporta JWT authorizers nativos (Cognito e qualquer IdP OAuth2), CORS automático, mas <em>não suporta</em>: API caching, usage plans, integrações AWS diretas (sem Lambda), VTL transformations, per-method throttling.<br><br>
+          <strong>Regra de ouro:</strong> Use HTTP API para microserviços simples com Lambda/JWT onde custo importa. Use REST API quando precisar de qualquer uma destas features: caching, integração direta com SQS/Kinesis, usage plans ou transformação de payload.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">2. Como o Token Bucket funciona para throttling e o que acontece quando ele está cheio?<span class="qtag">THROTTLING</span></div>
+        <div class="qa-a">
+          O API Gateway usa o algoritmo <strong>Token Bucket</strong>: o "balde" tem capacidade máxima igual ao <em>burst limit</em>. Tokens são adicionados à taxa de <em>steady-state rate</em> por segundo (ex: 10.000 tokens/s). Cada request consome 1 token.<br><br>
+          <ul>
+            <li>Se o balde tem tokens → request passa imediatamente</li>
+            <li>Se o balde está vazio → request recebe <strong>429 Too Many Requests</strong></li>
+            <li>O balde se enche até o burst limit durante períodos de baixo tráfego, permitindo picos momentâneos</li>
+          </ul>
+          <strong>Defaults por conta AWS:</strong> 10.000 req/s steady-state, 5.000 burst. Isso é um limite de conta, compartilhado entre todas as APIs. Em produção, configure throttle por stage e por método (ex: DELETE com burst=20, POST com burst=500). Clientes que excedem o limite devem implementar <strong>exponential backoff com jitter</strong>.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">3. Como implementar idempotência em uma API POST com alta disponibilidade?<span class="qtag">IDEMPOTÊNCIA</span></div>
+        <div class="qa-a">
+          O padrão recomendado em AWS usa <strong>DynamoDB como store de idempotência</strong>:<br><br>
+          <ul>
+            <li><strong>1. Client</strong> gera um <code>clientRequestToken</code> (UUID v4) e envia no header <code>Idempotency-Key</code> ou no body</li>
+            <li><strong>2. Lambda</strong> tenta inserir o token no DynamoDB com <code>ConditionExpression: attribute_not_exists(token)</code> + TTL de 24h</li>
+            <li><strong>3a. Sucesso</strong> (primeira vez): processa a operação normalmente, salva o resultado junto ao token</li>
+            <li><strong>3b. Falha ConditionCheck</strong> (token já existe): retorna o resultado salvo anteriormente sem reprocessar</li>
+          </ul>
+          <strong>Lambda Powertools for Python</strong> tem implementação pronta com decorador <code>@idempotent</code> que automatiza todo esse fluxo. TTL deve ser maior que o timeout máximo de retry do cliente.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">4. Qual a diferença entre tipo de integração AWS vs AWS_PROXY?<span class="qtag">INTEGRAÇÃO</span></div>
+        <div class="qa-a">
+          <strong>AWS_PROXY (Lambda Proxy):</strong> O API Gateway encaminha o evento inteiro ao Lambda em um formato padronizado (headers, body, pathParameters, queryStringParameters, requestContext). O Lambda é responsável por retornar uma resposta no formato correto (<code>statusCode</code>, <code>headers</code>, <code>body</code>). Não há transformação no Gateway. Mais simples de configurar.<br><br>
+          <strong>AWS (não-proxy):</strong> Permite usar <em>VTL Templates</em> para transformar o request antes de enviar ao backend e transformar a resposta antes de devolver ao cliente. Usado obrigatoriamente para integrações diretas com SQS, Kinesis, S3, DynamoDB e Step Functions — onde você precisa formatar o payload conforme a API do serviço AWS. Mais poderoso mas requer conhecimento de VTL.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">5. Como funciona o Lambda Authorizer e qual é o impacto de performance?<span class="qtag">AUTENTICAÇÃO</span></div>
+        <div class="qa-a">
+          O Lambda Authorizer é uma função Lambda invocada pelo API Gateway <em>antes</em> de processar a requisição. Existem dois tipos:<br><br>
+          <ul>
+            <li><strong>TOKEN</strong>: recebe um header (ex: Authorization Bearer) e retorna uma IAM Policy Document (Allow/Deny) + contexto</li>
+            <li><strong>REQUEST</strong>: recebe headers, query strings e path params — mais flexível para auth multi-fator</li>
+          </ul>
+          <strong>Performance:</strong> A invocação do Lambda Authorizer adiciona latência (~5-50ms de cold start até ~1ms warm). O API Gateway cacheia a política IAM resultante pelo TTL configurado (0-3600s). Com TTL=300s, o Lambda Authorizer só é invocado na primeira requisição de um token e depois fica em cache. <strong>Atenção:</strong> se o usuário for bloqueado/deletado, a política cached ainda permite acesso até o TTL expirar.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">6. Como fazer Blue/Green deployment de uma API sem downtime?<span class="qtag">DEPLOY</span></div>
+        <div class="qa-a">
+          O API Gateway suporta <strong>Canary Releases</strong> nativas no stage. O processo:<br><br>
+          <ul>
+            <li><strong>1.</strong> Crie um deployment com a nova versão</li>
+            <li><strong>2.</strong> Configure canary no stage: <code>percentTraffic=10</code> + <code>deploymentId=novo</code></li>
+            <li><strong>3.</strong> Monitore métricas de 4XX/5XX e latência P99 por 15-30 minutos</li>
+            <li><strong>4a. Sucesso:</strong> <code>aws apigateway update-stage --patch-operations op=remove,path=/canarySettings</code> (promove 100%)</li>
+            <li><strong>4b. Falha:</strong> <code>aws apigateway delete-deployment</code> (rollback imediato)</li>
+          </ul>
+          Para Lambda, combine com <strong>Lambda Aliases</strong> (BLUE/GREEN) e <em>stage variables</em> apontando para o alias correto.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">7. Quando usar VPC Link vs integração Lambda direta para backends privados?<span class="qtag">ARQUITETURA</span></div>
+        <div class="qa-a">
+          <strong>VPC Link</strong> é necessário quando o backend roda em recursos privados de VPC que <em>não são Lambda</em>: containers ECS Fargate, instâncias EC2, EKS pods. O VPC Link cria uma conexão ENI gerenciada entre o API Gateway e um NLB (REST API) ou ALB/NLB (HTTP API) dentro da VPC.<br><br>
+          <strong>Lambda direto</strong> (AWS_PROXY) é mais simples e serverless — não requer VPC nem NLB. A invocação do Lambda acontece via AWS service endpoint internamente, sem passar pela internet.<br><br>
+          <strong>Decisão:</strong> Use Lambda quando o processamento é stateless e serverless. Use VPC Link quando o backend tem estado (DB connection pool), precisa de baixa latência constante (sem cold start), é um microserviço existente em container ou quando o tempo de execução do Lambda (15min max) é insuficiente.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">8. Como evitar cold starts em Lambda quando usado com API Gateway?<span class="qtag">PERFORMANCE</span></div>
+        <div class="qa-a">
+          Estratégias em ordem de eficácia:<br><br>
+          <ul>
+            <li><strong>Lambda Snapstart (Java):</strong> Cria snapshot do estado inicializado, elimina quase 100% do cold start</li>
+            <li><strong>Provisioned Concurrency:</strong> Mantém N instâncias Lambda sempre quentes. Custo adicional mas elimina cold start para tráfego até N concurrent. Ideal para SLAs rígidos</li>
+            <li><strong>Minimizar pacote de deploy:</strong> Menos dependências = inicialização mais rápida. Use Lambda Layers para dependências compartilhadas</li>
+            <li><strong>Otimizar init code:</strong> Mova conexões DB, SDK clients e caches para fora do handler (nível de módulo)</li>
+            <li><strong>Warm-up com EventBridge:</strong> Dispare invocações de aquecimento a cada 5 minutos para manter containers ativos</li>
+            <li><strong>HTTP API:</strong> Menor overhead que REST API = menor latência percebida</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">9. Como implementar paginação eficiente em uma API GET /items?<span class="qtag">API DESIGN</span></div>
+        <div class="qa-a">
+          O padrão recomendado é <strong>cursor-based pagination</strong> (não offset/limit) para DynamoDB:<br><br>
+          <ul>
+            <li><strong>Response:</strong> <code>{ "items": [...], "nextToken": "base64EncodedLastEvaluatedKey" }</code></li>
+            <li><strong>Request seguinte:</strong> <code>GET /items?nextToken=abc&limit=20</code></li>
+            <li>O <code>nextToken</code> é o <code>LastEvaluatedKey</code> do DynamoDB encodado em base64</li>
+          </ul>
+          <strong>Vantagens vs offset:</strong> Consistente mesmo com inserções simultâneas; sem "cursor drift"; não requer COUNT(*) no banco; performance O(1) independente da página. <strong>Validação:</strong> Sempre valide e sanitize o <code>nextToken</code> para evitar injection — use criptografia simétrica (AES) para ofuscar o cursor.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">10. O que são Gateway Responses e por que são importantes?<span class="qtag">ERROR HANDLING</span></div>
+        <div class="qa-a">
+          <strong>Gateway Responses</strong> são as respostas de erro que o próprio API Gateway gera — <em>antes</em> de chegar ao backend. Isso inclui: UNAUTHORIZED (401), ACCESS_DENIED (403), DEFAULT_4XX (400), THROTTLED (429), DEFAULT_5XX (500).<br><br>
+          Por padrão, o API Gateway retorna JSON genérico e sem headers CORS. Ao customizar Gateway Responses:<br>
+          <ul>
+            <li>Você garante formato de erro consistente com o resto da API</li>
+            <li>Adiciona headers CORS (sem isso, o browser bloqueia até erros 4XX/5XX)</li>
+            <li>Inclui <code>requestId</code> para correlação de logs</li>
+            <li>Retorna mensagens de erro amigáveis ao cliente</li>
+          </ul>
+          Configure via Terraform com <code>aws_api_gateway_gateway_response</code> para cada tipo de erro.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">11. Como o API Gateway trata o payload de uma requisição para o DynamoDB sem Lambda?<span class="qtag">INTEGRAÇÃO DIRETA</span></div>
+        <div class="qa-a">
+          Usando integração do tipo <strong>AWS</strong> com VTL templates. O fluxo:<br><br>
+          <ul>
+            <li><strong>Integration Request Template:</strong> transforma o JSON da request para o formato da API DynamoDB (ex: <code>{"TableName": "...", "Item": {"pk": {"S": "..."}}})</code></li>
+            <li>API Gateway assina a chamada com credenciais IAM da role configurada</li>
+            <li>DynamoDB retorna XML (PutItem, GetItem, etc.)</li>
+            <li><strong>Integration Response Template:</strong> transforma o XML/JSON de resposta do DynamoDB para o formato desejado pelo cliente</li>
+          </ul>
+          Isso elimina completamente o Lambda da cadeia — reduz custo, latência e pontos de falha. O tradeoff é a complexidade do VTL. Para operações simples (GetItem, PutItem), a economia é significativa em alto volume.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">12. Como versionar APIs sem quebrar clientes existentes?<span class="qtag">API VERSIONING</span></div>
+        <div class="qa-a">
+          As principais estratégias com seus tradeoffs:<br><br>
+          <ul>
+            <li><strong>URL Path</strong>: <code>/v1/products</code> → <code>/v2/products</code>. Mais explícito, cache-friendly, fácil de logar/monitorar. <em>Desvantagem: prolifera URLs.</em></li>
+            <li><strong>Stage Variable</strong>: Mesma URL, stage variable altera o Lambda Alias invocado. Transparente ao cliente. <em>Desvantagem: versão invisível na URL.</em></li>
+            <li><strong>Header</strong>: <code>Accept-Version: 2</code> ou <code>Accept: application/vnd.api.v2+json</code>. Mais "puro" REST. <em>Desvantagem: difícil de testar com browser, não funciona bem com caching.</em></li>
+          </ul>
+          <strong>Regra</strong>: Use URL Path para APIs públicas. Stage variables para APIs internas. Nunca remova campos de response sem versão nova — apenas adicione campos novos (Backward Compatibility).
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">13. Como debugar um erro 502 Bad Gateway no API Gateway?<span class="qtag">TROUBLESHOOTING</span></div>
+        <div class="qa-a">
+          502 Bad Gateway significa que o API Gateway recebeu uma resposta inválida do backend. Causas comuns:<br><br>
+          <ul>
+            <li><strong>Lambda retornou formato inválido:</strong> O Lambda Proxy exige <code>{"statusCode": 200, "body": "..."}</code>. Se <code>statusCode</code> for string ao invés de int, ou se o body não for string, o API Gateway retorna 502</li>
+            <li><strong>Lambda timeout:</strong> Se o Lambda excede o Integration Timeout (29s max no API Gateway), retorna 504 (mas pode aparecer como 502)</li>
+            <li><strong>Lambda excedeu concorrência:</strong> Se Lambda atingiu o limite de concorrência reservada, retorna erro que vira 502</li>
+            <li><strong>Resposta do backend HTTP muito grande:</strong> API Gateway tem limite de 10MB para payload</li>
+          </ul>
+          <strong>Debug:</strong> Ative <code>logging_level = "INFO"</code> no método settings do stage. Verifique CloudWatch Logs do API Gateway (não do Lambda) para ver o request/response exato. Use X-Ray para ver onde a latência está.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">14. Qual é o impacto de usar API Gateway em um contexto de streaming de dados de alta frequência?<span class="qtag">DATA ENGINEERING</span></div>
+        <div class="qa-a">
+          O API Gateway tem um <strong>integration timeout máximo de 29 segundos</strong> (hardlimit) e não suporta streaming de response (chunked transfer encoding). Para ingestão de alta frequência:<br><br>
+          <ul>
+            <li><strong>Use integração direta com Kinesis</strong> (sem Lambda): API GW → PutRecord. Throughput: até 1MB/s por shard, sem overhead de Lambda</li>
+            <li><strong>Para batch ingest</strong>: use <code>PutRecords</code> (até 500 records por request) via integração direta</li>
+            <li><strong>Limite de payload</strong>: 10MB max por request. Para IoT com payloads pequenos, o batch é essencial</li>
+            <li><strong>Alternativa de alta escala</strong>: para volumes acima de 10.000 events/s, considere IoT Core (MQTT) ou MSK como alternativa ao API Gateway</li>
+            <li><strong>Throttling</strong>: configure throttle específico para o endpoint de ingestão com burst alto</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">15. Como garantir que sua API Gateway Private (VPC) não seja acessível externamente?<span class="qtag">SEGURANÇA</span></div>
+        <div class="qa-a">
+          Uma API <strong>PRIVATE</strong> no API Gateway só pode ser acessada de dentro da VPC via Interface VPC Endpoint (PrivateLink):<br><br>
+          <ul>
+            <li>Crie um VPC Endpoint do tipo Interface para <code>com.amazonaws.region.execute-api</code></li>
+            <li>Configure a <strong>Resource Policy</strong> da API para apenas permitir chamadas que venham do VPC Endpoint: <code>"Condition": {"StringEquals": {"aws:SourceVpce": "vpce-XXXX"}}</code></li>
+            <li>Configure <code>endpoint_configuration.types = ["PRIVATE"]</code> no Terraform</li>
+            <li>Use Security Groups no VPC Endpoint para limitar quais recursos internos podem chamar a API</li>
+          </ul>
+          Mesmo com PRIVATE, sem a Resource Policy correta, qualquer VPC com o endpoint poderia acessar. A combinação endpoint_type PRIVATE + Resource Policy + SG é a configuração mais segura.
+        </div>
+      </div>
+
+      <div class="qa-block">
+        <div class="qa-q">16. O que é um Usage Plan e como implementar multi-tenancy com API Keys?<span class="qtag">MULTI-TENANT</span></div>
+        <div class="qa-a">
+          <strong>Usage Plans</strong> definem limites de acesso (throttling e quota) que podem ser associados a API Keys de clientes:<br><br>
+          <ul>
+            <li>Crie tiers: Basic (1000 req/dia, 10 req/s), Standard (100k req/dia, 100 req/s), Premium (ilimitado, 1000 req/s)</li>
+            <li>Cada cliente/parceiro recebe uma API Key única</li>
+            <li>Associe cada API Key ao Usage Plan correspondente</li>
+            <li>O API Gateway aplica os limites automaticamente por API Key</li>
+            <li>Monitore consumo via CloudWatch com dimensão por API Key</li>
+          </ul>
+          <strong>Atenção:</strong> API Keys no API Gateway <em>não são mecanismo de autenticação segura</em> — são apenas identificadores para throttling/quota. Use sempre em conjunto com Cognito ou Lambda Authorizer para autenticação real.
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 10 — CASES REAIS                               -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="cases">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#7c3aed">10</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#7c3aed"></div>
+          <h2>Cases Reais de Engenharia de Dados</h2>
+          <p>5 arquiteturas reais com API Gateway em contextos de dados de alta escala</p>
+        </div>
+      </div>
+
+      <!-- Case 1 -->
+      <div class="case-card">
+        <div class="case-header" style="background: linear-gradient(135deg, #1e1b4b, #0f172a);">
+          <div class="case-icon">🛒</div>
+          <div class="case-meta">
+            <h4 style="color:#c4b5fd">Case 1: E-Commerce — API de Pedidos com Idempotência</h4>
+            <p style="color:#64748b">500k pedidos/dia, SLA 99.9%, zero duplicação</p>
+          </div>
+        </div>
+        <div class="case-body">
+          <div class="grid-2">
+            <div>
+              <h4>Desafio</h4>
+              <p>Plataforma de e-commerce com picos de Black Friday (10x tráfego normal). Clientes com conexão instável causavam retries que duplicavam pedidos. Sistema legado não suportava idempotência.</p>
+              <h4>Solução Arquitetural</h4>
+              <ul style="margin-left:18px; color:var(--ink2); font-size:.9rem;">
+                <li>API Gateway REST com Lambda Authorizer (JWT Cognito)</li>
+                <li>POST /orders com throttle: burst=2000, rate=1000/s</li>
+                <li>Lambda Powertools Idempotency com DynamoDB (TTL 24h)</li>
+                <li>API GW → SQS FIFO (MessageGroupId=orderId) → Lambda processadora</li>
+                <li>WAF com rate limit por IP: 100 req/5min</li>
+              </ul>
+            </div>
+            <div>
+              <h4>Resultados</h4>
+              <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="metric-card">
+                  <div class="metric-val" style="color:#7c3aed; font-size:1.4rem">0</div>
+                  <div class="metric-lbl">Pedidos Duplicados</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-val" style="color:#15803d; font-size:1.4rem">P99&lt;200ms</div>
+                  <div class="metric-lbl">Latência API</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-val" style="color:#0369a1; font-size:1.4rem">10M</div>
+                  <div class="metric-lbl">Pedidos/mês</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-val" style="color:#b45309; font-size:1.4rem">$220</div>
+                  <div class="metric-lbl">Custo/mês API GW</div>
+                </div>
+              </div>
+              <div class="callout callout-tip" style="margin-top:12px">
+                <strong>💡 Key Decision</strong>
+                SQS FIFO com MessageGroupId=customerId garante que pedidos do mesmo cliente sejam processados em ordem, evitando race conditions no estoque.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Case 2 -->
+      <div class="case-card">
+        <div class="case-header" style="background: linear-gradient(135deg, #14532d, #0f172a);">
+          <div class="case-icon">🏦</div>
+          <div class="case-meta">
+            <h4 style="color:#86efac">Case 2: FinTech — API de Transações com Segurança Multi-camada</h4>
+            <p style="color:#64748b">PCI-DSS Compliant, Cognito + Lambda Authorizer, audit log completo</p>
+          </div>
+        </div>
+        <div class="case-body">
+          <h4>Desafio</h4>
+          <p>Banco digital necessitava de API de transações PCI-DSS compliant. Cada request deveria ser autenticado, autorizado por perfil, logado com todos os dados do usuário, e auditável por regulação.</p>
+          <h4>Arquitetura de Segurança</h4>
+          <pre><span class="c"># Fluxo de autenticação multi-camada</span>
+Client (Mobile App)
+  → Cognito: POST /oauth2/token (client_credentials)
+  → Recebe: access_token (JWT, exp 1h)
+
+Client → API GW: POST /transactions
+  Header: Authorization: Bearer {access_token}
+  Header: X-Client-ID: {deviceId}
+  Header: X-Request-ID: {uuid}
+
+API GW:
+  1. WAF: verifica IP reputation, geo-block, SQL injection
+  2. Cognito Authorizer: valida JWT (assinatura RS256 + exp + aud)
+  3. Lambda Authorizer (Request-based):
+     - Verifica claims: role=TRANSACTION, mfa_verified=true
+     - Verifica deviceId no DynamoDB (dispositivo confiável)
+     - Verifica VelocityCheck: máx 10 transações/10min por userId
+     - Retorna contexto: {userId, accountId, role, mfa_level}
+  4. Schema Validation: valida payload (amount, currency, recipient)
+  5. Envia para Lambda de processamento com contexto completo</pre>
+          <div class="callout callout-warn">
+            <strong>⚠️ Compliance Note</strong>
+            Access logs configurados com <code>data_trace_enabled=false</code> para não logar o body das transações (dados sensíveis de pagamento). O Lambda de negócio gera audit log separado via CloudWatch com campos mascarados (últimos 4 dígitos de cartão, etc.).
+          </div>
+        </div>
+      </div>
+
+      <!-- Case 3 -->
+      <div class="case-card">
+        <div class="case-header" style="background: linear-gradient(135deg, #7c2d12, #0f172a);">
+          <div class="case-icon">📡</div>
+          <div class="case-meta">
+            <h4 style="color:#fdba74">Case 3: Data Platform — API de Ingestão de Eventos para Kinesis</h4>
+            <p style="color:#64748b">50M eventos/dia, integração direta sem Lambda, custo mínimo</p>
+          </div>
+        </div>
+        <div class="case-body">
+          <div class="grid-2">
+            <div>
+              <h4>Solução Sem Lambda</h4>
+              <p>Integração direta API Gateway → Kinesis Data Streams via tipo AWS. O API Gateway assina as chamadas com IAM e formata o payload via VTL:</p>
+              <pre style="font-size:.78rem"><span class="c">## VTL Request Template</span>
+{
+  <span class="s">"StreamName"</span>: <span class="s">"events-stream"</span>,
+  <span class="s">"Data"</span>: <span class="s">"$util.base64Encode($input.body)"</span>,
+  <span class="s">"PartitionKey"</span>: <span class="s">"$input.path('$.userId')"</span>
+}
+
+<span class="c">## Downstream: Kinesis → Firehose → S3</span>
+<span class="c">## Firehose buffer: 5MB ou 60s</span>
+<span class="c">## S3 path: s3://datalake/events/year=.../</span>
+<span class="c">## Formato: Parquet via Glue Data Catalog</span></pre>
+            </div>
+            <div>
+              <h4>Comparativo de Custo</h4>
+              <div class="tbl-wrap" style="margin-top:0">
+                <table>
+                  <thead><tr><th>Arquitetura</th><th>Custo/mês</th><th>Latência</th></tr></thead>
+                  <tbody>
+                    <tr><td>API GW → Lambda → Kinesis</td><td class="bad">$850</td><td class="mid">~80ms</td></tr>
+                    <tr><td>API GW → Kinesis (direto)</td><td class="best">$180</td><td class="best">~25ms</td></tr>
+                    <tr><td>ALB → ECS → Kinesis</td><td class="mid">$420</td><td class="best">~15ms</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p style="font-size:.82rem; color:var(--muted); margin-top:8px">Estimativa para 50M eventos/dia, 1KB médio/evento, us-east-1.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Case 4 -->
+      <div class="case-card">
+        <div class="case-header" style="background: linear-gradient(135deg, #064e3b, #0f172a);">
+          <div class="case-icon">🌡️</div>
+          <div class="case-meta">
+            <h4 style="color:#6ee7b7">Case 4: IoT — Telemetria de Alta Frequência com Throttling Inteligente</h4>
+            <p style="color:#64748b">100k dispositivos, 1M leituras/min, throttling por device group</p>
+          </div>
+        </div>
+        <div class="case-body">
+          <h4>Desafio Técnico</h4>
+          <p>Rede de sensores industriais enviando dados de temperatura/pressão a cada segundo. Dispositivos em zonas de conectividade instável fazem retry agressivo. Sem throttling, um "storm" de retries pode derrubar o sistema.</p>
+          <h4>Solução</h4>
+          <pre><span class="c"># Throttling por grupo de dispositivos via Usage Plans</span>
+
+<span class="c"># Grupo A: Sensores críticos (linha de produção)</span>
+critical_plan:
+  throttle: { burst: 5000, rate: 2000 }
+  quota: none
+
+<span class="c"># Grupo B: Sensores de monitoramento ambiental</span>
+standard_plan:
+  throttle: { burst: 1000, rate: 500 }
+  quota: { limit: 10_000_000, period: MONTH }
+
+<span class="c"># WAF: bloqueia IPs com &gt; 5000 req/5min (proteção contra storms)</span>
+<span class="c"># SQS: buffer com visibilidade 30s + DLQ para falhas</span>
+<span class="c"># Lambda: batch size 50 mensagens (PutRecords Kinesis)</span></pre>
+          <div class="callout callout-info">
+            <strong>💡 Pattern: Adaptive Throttling</strong>
+            Dispositivos que recebem 429 implementam backoff exponencial com jitter: <code>wait = min(base * 2^attempt + random(0, 1000), max_wait)</code>. Isso distribui os retries ao longo do tempo, evitando thundering herd.
+          </div>
+        </div>
+      </div>
+
+      <!-- Case 5 -->
+      <div class="case-card">
+        <div class="case-header" style="background: linear-gradient(135deg, #1e3a8a, #0f172a);">
+          <div class="case-icon">🏢</div>
+          <div class="case-meta">
+            <h4 style="color:#93c5fd">Case 5: Multi-tenant SaaS — API de Dados com Isolamento por Tenant</h4>
+            <p style="color:#64748b">Silo model: DynamoDB + Row-Level Security via Lambda Authorizer</p>
+          </div>
+        </div>
+        <div class="case-body">
+          <h4>Arquitetura Multi-tenant</h4>
+          <pre><span class="c"># Lambda Authorizer injeta tenantId no contexto</span>
+<span class="k">def</span> <span class="nf">lambda_handler</span>(event, context):
+    token = jwt.decode(event[<span class="s">"authorizationToken"</span>], secret)
+    tenant_id = token[<span class="s">"tenant_id"</span>]
+    user_role  = token[<span class="s">"role"</span>]
+
+    <span class="k">return</span> {
+        <span class="s">"principalId"</span>: token[<span class="s">"sub"</span>],
+        <span class="s">"policyDocument"</span>: allow_policy(event[<span class="s">"methodArn"</span>]),
+        <span class="s">"context"</span>: {
+            <span class="s">"tenantId"</span>: tenant_id,   <span class="c"># Injetado como $context.authorizer.tenantId</span>
+            <span class="s">"role"</span>: user_role,
+        }
+    }
+
+<span class="c"># Lambda backend usa tenantId para isolar dados no DynamoDB</span>
+<span class="k">def</span> <span class="nf">get_data</span>(event, context):
+    <span class="c"># Pega do contexto injetado pelo Authorizer — nunca do request body!</span>
+    tenant_id = event[<span class="s">"requestContext"</span>][<span class="s">"authorizer"</span>][<span class="s">"tenantId"</span>]
+
+    <span class="c"># Query com filter por tenant (Row-Level Security)</span>
+    result = table.query(
+        KeyConditionExpression=Key(<span class="s">"pk"</span>).eq(f<span class="s">"TENANT#{tenant_id}"</span>)
+    )
+    <span class="k">return</span> response(200, result[<span class="s">"Items"</span>])</pre>
+          <div class="callout callout-warn">
+            <strong>⚠️ Security Pattern</strong>
+            O <code>tenantId</code> NUNCA deve vir do request body (suscetível a tampering). Sempre injete via Lambda Authorizer do JWT validado. O backend deve usar somente o valor do <code>$context.authorizer</code> para garantir isolamento entre tenants.
+          </div>
+          <div class="track-tags">
+            <span class="track-tag">Multi-tenancy</span>
+            <span class="track-tag">Row-Level Security</span>
+            <span class="track-tag">JWT Claims</span>
+            <span class="track-tag">Lambda Authorizer</span>
+            <span class="track-tag">DynamoDB</span>
+            <span class="track-tag">SaaS Pattern</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) { sb.classList.add('open'); if (hb) hb.innerHTML = '✕'; }
+    else { sb.classList.remove('open'); if (hb) hb.innerHTML = '☰'; }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) { sb.classList.add('closed'); if (main) main.classList.add('sidebar-closed'); if (hb) hb.innerHTML = '☰'; }
+    else { sb.classList.remove('closed'); if (main) main.classList.remove('sidebar-closed'); if (hb) hb.innerHTML = '✕'; }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) { content.classList.remove('open'); headerEl.classList.remove('active'); if (arrow) arrow.innerHTML = '▶'; }
+  else { content.classList.add('open'); headerEl.classList.add('active'); if (arrow) arrow.innerHTML = '▼'; }
+}
+
+function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) { if (scrollY > 400) btn.classList.add('show'); else btn.classList.remove('show'); }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) { hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕'; }
+    else { hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰'; }
+  }
+  // Abrir seção da navbar ativa por padrão
+  document.querySelectorAll('.nav-cat-content.open').forEach(function(cat) {
+    var header = cat.previousElementSibling;
+    if (header) { header.classList.add('active'); var arrow = header.querySelector('.arrow'); if (arrow) arrow.innerHTML = '▼'; }
+  });
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) { sb.classList.remove('open'); if (hb) hb.innerHTML = '☰'; }
+  }
+});
+</script>
+<script src="progress.js"></script>
+</body>
+</html>

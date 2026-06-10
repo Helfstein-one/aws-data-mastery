@@ -168,6 +168,23 @@
         "networking-ingress.html#vpc-endpoints"
       ]
     },
+    api_gateway: {
+      name: "🔌 API Gateway Deep Dive",
+      badge: "Mestre do API Gateway",
+      color: "#7c3aed",
+      items: [
+        "api-gateway.html#fundamentos",
+        "api-gateway.html#crud-rest",
+        "api-gateway.html#async",
+        "api-gateway.html#terraform",
+        "api-gateway.html#integracoes",
+        "api-gateway.html#boas-praticas",
+        "api-gateway.html#observabilidade",
+        "api-gateway.html#diagramas",
+        "api-gateway.html#perguntas",
+        "api-gateway.html#cases"
+      ]
+    },
     security: {
       name: "🛡️ Segurança & IaC",
       badge: "Guardião de Segurança",
