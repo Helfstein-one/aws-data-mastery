@@ -289,6 +289,52 @@
         </table>
       </div>
 
+      <h4 style="margin-top: 32px;">Como calcular em Python (Exemplo Prático)</h4>
+      <p>Simulação de um empréstimo de <strong>R$ 10.000,00</strong> em <strong>12 meses</strong> com juros de <strong>2% ao mês</strong>.</p>
+      
+      <div class="code-block" style="margin-bottom: 24px;">
+        <div class="code-header">
+          <span class="code-lang">python</span>
+          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+        </div>
+        <pre><code class="language-python"># Cálculo Tabela SAC (Amortização Constante)
+def calcular_sac(capital, taxa_juros, meses):
+    amortizacao_mensal = capital / meses
+    saldo_devedor = capital
+    
+    print("Mês | Amortização | Juros   | Parcela  | Saldo Devedor")
+    for mes in range(1, meses + 1):
+        juros_mes = saldo_devedor * taxa_juros
+        parcela = amortizacao_mensal + juros_mes
+        saldo_devedor -= amortizacao_mensal
+        
+        print(f"{mes:02d}  | R$ {amortizacao_mensal:.2f} | R$ {juros_mes:.2f} | R$ {parcela:.2f} | R$ {saldo_devedor:.2f}")
+
+calcular_sac(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
+      </div>
+
+      <div class="code-block" style="margin-bottom: 32px;">
+        <div class="code-header">
+          <span class="code-lang">python</span>
+          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+        </div>
+        <pre><code class="language-python"># Cálculo Tabela Price (Parcela Fixa)
+def calcular_price(capital, taxa_juros, meses):
+    # Fórmula da Parcela Fixa (PMT)
+    parcela = capital * (taxa_juros * (1 + taxa_juros)**meses) / ((1 + taxa_juros)**meses - 1)
+    saldo_devedor = capital
+    
+    print("Mês | Amortização | Juros   | Parcela  | Saldo Devedor")
+    for mes in range(1, meses + 1):
+        juros_mes = saldo_devedor * taxa_juros
+        amortizacao_mes = parcela - juros_mes
+        saldo_devedor -= amortizacao_mes
+        
+        print(f"{mes:02d}  | R$ {amortizacao_mes:.2f} | R$ {juros_mes:.2f} | R$ {parcela:.2f} | R$ {saldo_devedor:.2f}")
+
+calcular_price(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
+      </div>
+
       <div class="callout callout-tip" style="border-left-color:var(--ext)">
         <strong>Engenharia: Modelagem do Contrato em um Datalake (SCD Tipo 2)</strong>
         <p>Um contrato de empréstimo não é estático. O cliente pode pedir renegociação, alongar o prazo ou mudar a data de vencimento. Se você usar uma tabela mutável simples (<code>UPDATE</code>), você destrói a história analítica. Em Bancos e Fintechs, adotamos as <strong>Slowly Changing Dimensions (SCD Tipo 2)</strong>. Cada mudança no contrato insere um registro novo na tabela `dim_contratos` com colunas <code>validade_inicio</code>, <code>validade_fim</code> e <code>is_active_flag</code>. Isso permite ao analista financeiro reconstruir a foto de carteira do banco em qualquer data do passado (Time-Travel lógico).</p>
@@ -324,6 +370,35 @@
             <br>2. <strong>Juros de Mora:</strong> Um valor diário (Pro-rata) cobrado por cada dia de atraso (Ex: 1% ao mês proporcional).<br>Isso faz a dívida escalar em "bola de neve".
           </div>
         </div>
+      </div>
+
+      <h4 style="margin-top: 32px;">Exemplo de Cálculo de Inadimplência</h4>
+      <div class="code-block" style="margin-bottom: 32px;">
+        <div class="code-header">
+          <span class="code-lang">python</span>
+          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+        </div>
+        <pre><code class="language-python"># Cálculo de Atraso (Multa e Juros de Mora)
+def calcular_divida_atraso(valor_parcela, dias_atraso, perc_multa=0.02, juros_mes=0.01):
+    if dias_atraso <= 0:
+        return valor_parcela
+        
+    # Multa cobrada uma única vez (ex: 2%)
+    valor_multa = valor_parcela * perc_multa
+    
+    # Juros de mora pro-rata die (ex: 1% ao mês / 30 dias)
+    juros_diario = juros_mes / 30
+    valor_mora = valor_parcela * juros_diario * dias_atraso
+    
+    divida_atualizada = valor_parcela + valor_multa + valor_mora
+    
+    print(f"Parcela Original: R$ {valor_parcela:.2f}")
+    print(f"Dias de Atraso: {dias_atraso}")
+    print(f"Multa ({perc_multa*100}%): R$ {valor_multa:.2f}")
+    print(f"Juros Mora ({juros_mes*100}% a.m): R$ {valor_mora:.2f}")
+    print(f"Total a Pagar: R$ {divida_atualizada:.2f}")
+
+calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
       </div>
 
       <h3>A Inadimplência na Engenharia de Dados</h3>
