@@ -1372,17 +1372,26 @@ df_final = df_bucket1.join(df_bucket2, "user_id") # Executa instantaneamente!</c
         </div>
       </div>
 
-      <p>Diferente de sistemas como o Flink, o <strong>Spark Structured Streaming</strong> opera sob o modelo de <strong>Micro-Batching</strong>. A engine aguarda um intervalo de trigger configurável (ex: 10 segundos), coleta as mensagens que chegaram no Kafka/Kinesis nesse intervalo, e as processa usando o mesmo motor otimizado do Spark SQL (Catalyst/Tungsten) como se fossem um DataFrame estático convencional.</p>
+      <p>Diferente de sistemas como o Flink, o <strong>Spark Structured Streaming</strong> opera nativamente sob o modelo de <strong>Micro-Batching</strong>. A engine aguarda um intervalo de trigger configurável (ex: 10 segundos), coleta as mensagens que chegaram no Kafka/Kinesis nesse intervalo, e as processa usando o mesmo motor otimizado do Spark SQL (Catalyst/Tungsten) como se fossem um DataFrame estático convencional.</p>
 
       <div class="grid-2">
         <div class="card" style="border-left: 3px solid var(--spark);">
-          <h4>💧 Gerenciamento de Estado e Watermarks</h4>
-          <p>Em processamentos stateful (como contagem de usuários ativos em uma janela de 5 minutos), o Spark precisa manter na memória (ou no RocksDB State Backend) os eventos que já chegaram. O <strong>Watermark</strong> define o tempo limite de tolerância para a chegada de dados atrasados.</p>
-          <p>Exemplo: Um watermark de "10 minutes" instrui a engine a descartar do estado da memória qualquer registro pertencente a uma janela de tempo que já expirou há mais de 10 minutos, evitando vazamento de memória (OOM).</p>
+          <h4>💧 Watermarking & "Late-arriving Data"</h4>
+          <p>Em operações <em>Stateful</em> (agregações baseadas em janelas temporais), o Spark precisa manter na RAM o estado parcial das agregações. Em IoT, a rede falha e um sensor pode enviar hoje um evento que aconteceu ontem ("Late Data").</p>
+          <p>Se o Spark mantiver a janela de ontem aberta para sempre, a RAM estoura (OOM). O <strong>Watermark</strong> resolve isso definindo o atraso máximo tolerado. Ex: <code>withWatermark("event_time", "10 minutes")</code>. Quando o evento mais recente chega às 12:00, o Watermark global avança para 11:50. Qualquer registro atrasado com <code>event_time &lt; 11:50</code> é ignorado, permitindo que a Engine decole agressivamente o estado velho da memória para limpar a RAM.</p>
         </div>
         <div class="card" style="border-left: 3px solid var(--spark);">
-          <h4>🔄 Tolerância a Falhas e Checkpoints</h4>
-          <p>Garantir semântica <strong>Exactly-Once</strong> exige um diretório de Checkpoint no S3 ou HDFS. O Spark salva os <em>offsets</em> consumidos do Kafka e o estado das agregações. Se um executor ou nó falhar, o job reinicia lendo exatamente do último <em>offset</em> validado, sem duplicar dados.</p>
+          <h4>🔄 Checkpoints & Write-Ahead Logs (WAL)</h4>
+          <p>Garantir semântica <strong>Exactly-Once</strong> contra falhas de hardware requer mais do que tentar de novo. O Spark utiliza um diretório de Checkpoint no S3 ou HDFS composto por dois artefatos: o <em>Offsets Log</em> e o <em>Write-Ahead Log (WAL)</em>.</p>
+          <p>Antes de começar o batch, o Spark anota no Offsets Log as exatas IDs (ex: Kafka offsets) que lerá. O estado intermediário é compactado via RocksDB e salvo periodicamente no WAL. Se um EC2 Spot morrer no meio do batch, o executor substituto consulta o WAL, ignora mensagens duplicadas, baixa o estado parcial e continua a computação cirurgicamente do exato ponto de interrupção, mantendo a atomicidade perfeita.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 20px;">
+        <div style="grid-column: 1 / -1;">
+          <h4>Trade-off de Arquitetura: Micro-batching vs Continuous Processing</h4>
+          <p>O Spark Streaming provê o <strong>Micro-batch mode</strong> (padrão) e o <strong>Continuous Processing mode</strong> (experimental). No Micro-batch, a latência mínima física costuma ser de 100ms a 500ms devido ao overhead estrutural de escalonar Tasks no YARN/K8s para cada trigger. Em contrapartida, ele atinge throughput massivo (milhões de eventos/seg).</p>
+          <p>Se a arquitetura exigir latência extrema inferior a 10 milissegundos (ex: detecção de fraude de cartão de crédito em catraca), o <em>Continuous Mode</em> altera o comportamento do Spark, deixando os executores ouvindo a rede ativamente (polling síncrono). No entanto, perde-se as agregações stateful complexas, tornando soluções dedicadas como o Apache Flink mais maduras para baixa latência determinística.</p>
         </div>
       </div>
 

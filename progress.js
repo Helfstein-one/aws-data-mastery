@@ -69,7 +69,9 @@
       color: "var(--emr)",
       items: [
         "ingestion.html#kinesis",
+        "ingestion.html#kinesis-avancado",
         "ingestion.html#firehose",
+        "ingestion.html#firehose-avancado",
         "ingestion.html#msk",
         "ingestion.html#ecs-fargate",
         "ingestion.html#dms",
