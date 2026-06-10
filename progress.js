@@ -133,6 +133,7 @@
       color: "var(--genai)",
       items: [
         "serving.html#athena",
+        "serving.html#athena-trino-arch",
         "serving.html#athena-avancado",
         "serving.html#iceberg-manutencao",
         "serving.html#redshift",

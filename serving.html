@@ -369,6 +369,110 @@
       </div>
     </section>
 
+    <section class="section" id="athena-trino-arch">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">01.2</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>A Arquitetura Oculta: Motor Trino e AWS Glue APIs</h2>
+          <p>Como o Athena compila SQL e orquestra workers efêmeros para escanear PBs no S3 em segundos.</p>
+        </div>
+      </div>
+
+      <p>Embora o Amazon Athena seja um produto <em>Serverless</em> empacotado pela AWS, o seu cérebro de processamento é um cluster <strong>Trino (antigo PrestoSQL)</strong> altamente customizado que roda em VPCs invisíveis gerenciadas pela Amazon. Para dominar a performance analítica, precisamos entender como o Coordinator do Trino interage com as APIs de metadados antes mesmo de ler o primeiro byte do S3.</p>
+
+      <!-- DIAGRAMA: TRINO ARCHITECTURE NO ATHENA -->
+      <div class="dw" style="margin-top: 20px; margin-bottom: 25px;">
+        <svg viewBox="0 0 760 340" width="760" height="340" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+          <rect width="760" height="340" fill="#0f172a" rx="14"/>
+          <text x="380" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="700" letter-spacing="1">ANATOMIA FÍSICA E FLUXO DE APIs DO AMAZON ATHENA (TRINO ENGINE)</text>
+          
+          <!-- Cliente -->
+          <rect x="40" y="140" width="100" height="50" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="90" y="160" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">Aplicação Client</text>
+          <text x="90" y="175" text-anchor="middle" fill="#cbd5e1" font-size="8">JDBC / Boto3</text>
+
+          <!-- API Gateway Athena -->
+          <rect x="190" y="80" width="120" height="170" rx="8" fill="#0f172a" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="250" y="100" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700">AWS Managed Plane</text>
+
+          <rect x="200" y="115" width="100" height="40" rx="4" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="250" y="132" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Athena API</text>
+          <text x="250" y="145" text-anchor="middle" fill="#cbd5e1" font-size="7">StartQueryExecution</text>
+
+          <rect x="200" y="185" width="100" height="50" rx="4" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="250" y="205" text-anchor="middle" fill="#f43f5e" font-size="9" font-weight="700">Trino Coordinator</text>
+          <text x="250" y="220" text-anchor="middle" fill="#cbd5e1" font-size="7">AST Parser / Planner</text>
+
+          <!-- Arrows from Client to Athena -->
+          <path d="M 140 165 L 190 165" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+          <path d="M 250 155 L 250 185" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+
+          <!-- AWS Glue Data Catalog -->
+          <rect x="360" y="50" width="150" height="70" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="435" y="75" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">AWS Glue Catalog</text>
+          <text x="435" y="90" text-anchor="middle" fill="#cbd5e1" font-size="7">Metastore Central</text>
+          <text x="435" y="105" text-anchor="middle" fill="#64748b" font-size="7">Databases, Tables, Partitions</text>
+
+          <!-- Trino API Call to Glue -->
+          <path d="M 300 210 L 330 210 L 330 85 L 360 85" stroke="#10b981" stroke-width="1.5" fill="none" marker-end="url(#arrow-green)"/>
+          <rect x="290" y="120" width="110" height="30" rx="4" fill="#0f172a" stroke="#334155"/>
+          <text x="345" y="133" text-anchor="middle" fill="#e2e8f0" font-size="7">1. GetTable()</text>
+          <text x="345" y="143" text-anchor="middle" fill="#e2e8f0" font-size="7">2. GetPartitions()</text>
+
+          <!-- Trino Workers -->
+          <rect x="360" y="210" width="150" height="90" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="435" y="235" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">Trino Workers</text>
+          <text x="435" y="250" text-anchor="middle" fill="#cbd5e1" font-size="7">Frota EC2 Distribuída</text>
+          
+          <rect x="375" y="265" width="45" height="20" rx="3" fill="#0f172a" stroke="#cbd5e1" stroke-width="0.5"/>
+          <text x="397" y="278" text-anchor="middle" fill="#cbd5e1" font-size="6">Worker</text>
+          <rect x="425" y="265" width="45" height="20" rx="3" fill="#0f172a" stroke="#cbd5e1" stroke-width="0.5"/>
+          <text x="447" y="278" text-anchor="middle" fill="#cbd5e1" font-size="6">Worker</text>
+          <rect x="475" y="265" width="20" height="20" rx="3" fill="#0f172a" stroke="#cbd5e1" stroke-width="0.5"/>
+          <text x="485" y="278" text-anchor="middle" fill="#cbd5e1" font-size="6">...</text>
+
+          <!-- Coordinator to Workers -->
+          <path d="M 300 230 L 360 230" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+          <text x="330" y="240" text-anchor="middle" fill="#94a3b8" font-size="6">Plano de Execução</text>
+
+          <!-- Amazon S3 -->
+          <rect x="560" y="130" width="160" height="90" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="2" stroke-dasharray="6,3"/>
+          <text x="640" y="155" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">Amazon S3 (Data Lake)</text>
+          <text x="640" y="170" text-anchor="middle" fill="#cbd5e1" font-size="7">Arquivos Físicos Parquet/CSV</text>
+          <rect x="580" y="185" width="120" height="20" rx="4" fill="#0f172a"/>
+          <text x="640" y="198" text-anchor="middle" fill="#cbd5e1" font-size="7">s3://bucket/part-001.parquet</text>
+
+          <!-- Workers to S3 -->
+          <path d="M 510 250 L 640 250 L 640 220" stroke="#f59e0b" stroke-width="1.5" fill="none" marker-end="url(#arrow-orange)"/>
+          <rect x="550" y="255" width="90" height="20" rx="4" fill="#0f172a" stroke="#334155"/>
+          <text x="595" y="268" text-anchor="middle" fill="#e2e8f0" font-size="7">3. s3:GetObject</text>
+
+          <!-- Marker Defs -->
+          <defs>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/></marker>
+            <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#a78bfa"/></marker>
+            <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/></marker>
+            <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#f43f5e"/></marker>
+            <marker id="arrow-orange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/></marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>A Fase de Planejamento (Planning Time)</h4>
+          <p>Quando a requisição chega, o <strong>Trino Coordinator</strong> assume o controle. O primeiro gargalo que a maioria dos engenheiros desconhece é a dependência profunda das APIs do AWS Glue. Antes de rodar, o Coordinator dispara as chamadas <code>glue:GetDatabase</code> e <code>glue:GetTable</code> para descobrir a tipagem das colunas e os formatos de compressão (SerDe).</p>
+          <p>Se a tabela for particionada (estilo Hive), o Coordinator lança milhares de paginações da API <code>glue:GetPartitions</code>. Em tabelas com dezenas de milhares de partições, essa fase pode demorar minutos, fazendo a query "travar no Planejamento" antes mesmo da execução real começar. <strong>Solução:</strong> Utilizar Partition Projection ou formato Apache Iceberg.</p>
+        </div>
+        <div>
+          <h4>A Fase de Execução (Execution Time)</h4>
+          <p>Uma vez que o plano de execução físico foi compilado e todas as rotas de S3 mapeadas, o Coordinator distribui a tarefa em centenas de <strong>Trino Workers</strong>. Esses workers (nós EC2 robustos gerenciados pelo pool da AWS) enviam requisições GET rangeadas diretamente para o S3 (<code>s3:GetObject</code>).</p>
+          <p>Eles aplicam o <em>Predicate Pushdown</em>, ou seja, só baixam da rede os blocos do formato Parquet estritamente necessários para satisfazer o seu <code>WHERE</code> ou o seu <code>SELECT (colunas especificas)</code>. Finalmente, os dados são processados e agregados na memória RAM dos workers, e o Coordinator devolve a resposta condensada ao Client.</p>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="athena-avancado">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--genai)">01.5</div>
