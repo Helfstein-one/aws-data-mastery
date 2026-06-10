@@ -1080,6 +1080,67 @@ print(f"Skew Ratio (Max / Avg): {max_count / avg_count:.2f}x (Valores > 1.5x ind
         </div>
       </section>
 
+    <section class="section" id="spark-dynamic-write">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">06.8</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Dinâmica de Escrita: Cálculo de Partições e Sizing no S3</h2>
+          <p>Estratégias matemáticas de particionamento (repartition vs coalesce) para combater o Small Files Problem no Data Lake</p>
+        </div>
+      </div>
+
+      <p>Escrever dados no S3 de forma ingênua (usando partições originadas de shuffles arbitrários) é a causa número um do <strong>Small Files Problem</strong>. Milhares de arquivos minúsculos (ex: 2KB) destroem a performance do S3 (estourando cotas de requisição de API GET/PUT) e arruínam a latência do Athena/Redshift, que precisam abrir e fechar conexões de metadados para cada arquivo. O tamanho ideal alvo por arquivo colunar (Parquet/Iceberg) no S3 deve ser entre <strong>128 MB e 256 MB</strong>.</p>
+
+      <div class="grid-2" style="margin-bottom: 20px;">
+        <div class="card" style="border-top: 3px solid var(--spark);">
+          <h4><code>repartition(N)</code></h4>
+          <p><strong>Causa um Shuffle completo na rede (Caro).</strong> Ele espalha os dados perfeitamente de forma uniforme (Round-Robin) por todos os executores. Use <em>sempre</em> antes de gravações grandes no S3 para garantir que todas as partições de saída tenham exatamente o mesmo tamanho em Megabytes, prevenindo Skew Files.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--spark);">
+          <h4><code>coalesce(N)</code></h4>
+          <p><strong>Não causa Shuffle (Barato).</strong> Ele apenas "funde" partições locais na memória do nó executor. <em>Perigo Fetal:</em> Chamar <code>coalesce(10)</code> logo após um <code>read()</code> encolhe o paralelismo lógico do cluster para 10 slots de CPU instantaneamente, deixando centenas de cores ociosos durante o resto do processamento!</p>
+        </div>
+      </div>
+
+      <h3>Implementação: Cálculo Dinâmico de Sizing para Escrita</h3>
+      <p>Hardcodar partições (ex: <code>df.repartition(200)</code>) é um erro crasso. Se a volumetria de dados crescer no Natal, os arquivos gerados serão de 2GB (lentos de processar). Se a volumetria cair, gerarão 200 arquivos minúsculos. A solução é <strong>calcular a volumetria dinamicamente no final da DAG:</strong></p>
+
+      <pre><code class="language-python">import pyspark.sql.functions as F
+from pyspark.sql import DataFrame
+
+def write_optimized_lake_table(df: DataFrame, s3_path: str, target_size_mb: int = 128):
+    # 1. Obtém o número total de linhas do DataFrame final
+    # Obs: Se já houver um count() prévio cacheado no job, use-o para evitar re-scan.
+    total_rows = df.count()
+    if total_rows == 0:
+        return
+
+    # 2. Estimativa heurística pesando o tamanho da linha serializada (ex: 200 bytes por linha)
+    # Em produção, um sample de 1% do df pode determinar o tamanho médio dinâmico em Bytes.
+    bytes_per_row = 150 
+    
+    # 3. Calcula o volume total estimado e determina o número de arquivos (partições) exatos
+    total_size_mb = (total_rows * bytes_per_row) / (1024 * 1024)
+    ideal_partitions = max(1, int(total_size_mb / target_size_mb))
+    
+    print(f"Escrevendo {total_size_mb:.2f} MB distribuídos em {ideal_partitions} arquivos parquet de ~{target_size_mb} MB")
+
+    # 4. Redistribui uniformemente e grava no S3
+    df.repartition(ideal_partitions) \
+      .write \
+      .mode("overwrite") \
+      .format("parquet") \
+      .save(s3_path)
+
+# Chamada do pipeline final
+write_optimized_lake_table(df_vendas_finais, "s3://meu-lake/silver/vendas/")</code></pre>
+
+      <div class="callout callout-info" style="margin-top:20px;">
+        <strong>Alternativa do Motor do Spark (Auto Sizing):</strong> Em ambientes com EMR 6.x+ ou AWS Glue, você pode delegar o limite de registros do arquivo ao Catalyst definindo <code>spark.sql.files.maxRecordsPerFile = 1000000</code> na configuração do cluster. Isso forçará o writer a "fechar" o arquivo parquet e abrir um novo assim que bater 1 milhão de linhas, independentemente das partições em RAM. 
+      </div>
+    </section>
+
   <section class="section" id="spark-joins">
     <div class="sec-hdr">
       <div class="sec-num" style="color:var(--spark)">07</div>
@@ -1120,6 +1181,99 @@ print(f"Skew Ratio (Max / Avg): {max_count / avg_count:.2f}x (Valores > 1.5x ind
 
     <h3>Tradeoffs Físicos de Execução de Joins no Spark</h3>
     <p>Abaixo estão descritos os comportamentos de rede, memória e processamento para cada algoritmo de join disponível no motor Catalyst:</p>
+
+    <!-- DIAGRAMA: BROADCAST VS SORT-MERGE JOIN -->
+    <div class="dw" style="margin-top: 20px; margin-bottom: 25px;">
+      <svg viewBox="0 0 760 320" width="760" height="320" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
+        <rect width="760" height="320" fill="#0f172a" rx="14"/>
+        <text x="380" y="25" text-anchor="middle" fill="white" font-size="11" font-weight="700" letter-spacing="1">MECÂNICA FÍSICA: BROADCAST HASH JOIN VS SORT-MERGE JOIN</text>
+        
+        <!-- ================= LADO ESQUERDO: BROADCAST JOIN ================= -->
+        <text x="180" y="60" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="700">Broadcast Hash Join (Sem Shuffle)</text>
+        
+        <!-- Driver -->
+        <rect x="110" y="80" width="140" height="40" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+        <text x="180" y="98" text-anchor="middle" fill="#3b82f6" font-size="8" font-weight="700">Spark Driver</text>
+        <text x="180" y="110" text-anchor="middle" fill="#cbd5e1" font-size="7">Lê Tabela Dimensão (5MB)</text>
+
+        <!-- Broadcast Arrow -->
+        <path d="M 180 120 L 180 150" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowSky)" fill="none"/>
+        <text x="185" y="138" fill="#3b82f6" font-size="7">Via BitTorrent (Rede)</text>
+
+        <!-- Executor 1 -->
+        <rect x="50" y="160" width="110" height="110" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+        <text x="105" y="175" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">Executor 1 (Node A)</text>
+        
+        <rect x="60" y="190" width="90" height="25" rx="4" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
+        <text x="105" y="205" text-anchor="middle" fill="#cbd5e1" font-size="7">RAM: Hash Map Tabela B</text>
+
+        <rect x="60" y="225" width="90" height="35" rx="4" fill="#0f172a" stroke="#ea580c" stroke-width="1"/>
+        <text x="105" y="240" text-anchor="middle" fill="#ea580c" font-size="7">Stream Tabela A</text>
+        <text x="105" y="250" text-anchor="middle" fill="#cbd5e1" font-size="6">O(1) Memory Lookup</text>
+
+        <!-- Executor 2 -->
+        <rect x="200" y="160" width="110" height="110" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+        <text x="255" y="175" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">Executor 2 (Node B)</text>
+        
+        <rect x="210" y="190" width="90" height="25" rx="4" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
+        <text x="255" y="205" text-anchor="middle" fill="#cbd5e1" font-size="7">RAM: Hash Map Tabela B</text>
+
+        <rect x="210" y="225" width="90" height="35" rx="4" fill="#0f172a" stroke="#ea580c" stroke-width="1"/>
+        <text x="255" y="240" text-anchor="middle" fill="#ea580c" font-size="7">Stream Tabela A</text>
+        <text x="255" y="250" text-anchor="middle" fill="#cbd5e1" font-size="6">O(1) Memory Lookup</text>
+
+        <path d="M 180 140 L 255 140 L 255 150" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowSky)" fill="none"/>
+        <path d="M 180 140 L 105 140 L 105 150" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowSky)" fill="none"/>
+
+        <!-- ================= DIVISOR ================= -->
+        <line x1="380" y1="50" x2="380" y2="300" stroke="#475569" stroke-width="2" stroke-dasharray="6,4" />
+
+        <!-- ================= LADO DIREITO: SORT-MERGE JOIN ================= -->
+        <text x="580" y="60" text-anchor="middle" fill="#ea580c" font-size="10" font-weight="700">Sort-Merge Join (Heavy Shuffle)</text>
+
+        <!-- Mappers -->
+        <rect x="420" y="80" width="130" height="45" rx="6" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+        <text x="485" y="98" text-anchor="middle" fill="#cbd5e1" font-size="8" font-weight="700">Executors (Map Phase)</text>
+        <text x="485" y="112" text-anchor="middle" fill="#94a3b8" font-size="7">Read Tab A &amp; Tab B (Gigantes)</text>
+
+        <!-- Hash Exchange (Shuffle) -->
+        <path d="M 485 125 L 485 145" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrowRose)" fill="none"/>
+        <path d="M 495 125 L 665 145" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrowRose)" fill="none"/>
+        
+        <rect x="580" y="80" width="130" height="45" rx="6" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+        <text x="645" y="98" text-anchor="middle" fill="#cbd5e1" font-size="8" font-weight="700">Executors (Map Phase)</text>
+        <text x="645" y="112" text-anchor="middle" fill="#94a3b8" font-size="7">Hash Partitioning by Join Key</text>
+
+        <path d="M 645 125 L 645 145" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrowRose)" fill="none"/>
+        <path d="M 635 125 L 465 145" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrowRose)" fill="none"/>
+        
+        <rect x="520" y="130" width="120" height="15" rx="4" fill="#ef4444"/>
+        <text x="580" y="141" text-anchor="middle" fill="white" font-size="7" font-weight="700">All-to-All Network Shuffle</text>
+
+        <!-- Reducers -->
+        <rect x="420" y="165" width="130" height="115" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="485" y="180" text-anchor="middle" fill="#f59e0b" font-size="8" font-weight="700">Reducer 1 (Key ID=Odd)</text>
+        
+        <rect x="430" y="195" width="110" height="30" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
+        <text x="485" y="208" text-anchor="middle" fill="#a78bfa" font-size="7">Sort Tab A</text>
+        <text x="485" y="218" text-anchor="middle" fill="#cbd5e1" font-size="6">Spills to EBS if Out of RAM</text>
+
+        <rect x="430" y="240" width="110" height="30" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
+        <text x="485" y="253" text-anchor="middle" fill="#a78bfa" font-size="7">Sort Tab B</text>
+        <text x="485" y="263" text-anchor="middle" fill="#cbd5e1" font-size="6">Merge via Pointers</text>
+
+        <rect x="580" y="165" width="130" height="115" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="645" y="180" text-anchor="middle" fill="#f59e0b" font-size="8" font-weight="700">Reducer 2 (Key ID=Even)</text>
+
+        <rect x="590" y="195" width="110" height="30" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
+        <text x="645" y="208" text-anchor="middle" fill="#a78bfa" font-size="7">Sort Tab A</text>
+        <text x="645" y="218" text-anchor="middle" fill="#cbd5e1" font-size="6">Spills to EBS if Out of RAM</text>
+
+        <rect x="590" y="240" width="110" height="30" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
+        <text x="645" y="253" text-anchor="middle" fill="#a78bfa" font-size="7">Sort Tab B</text>
+        <text x="645" y="263" text-anchor="middle" fill="#cbd5e1" font-size="6">Merge via Pointers</text>
+      </svg>
+    </div>
 
     <div class="tbl-wrap" style="margin-top: 15px; margin-bottom: 25px;">
       <table>
@@ -1238,6 +1392,11 @@ df_final = df_bucket1.join(df_bucket2, "user_id") # Executa instantaneamente!</c
           <div class="ppro">Bypass de GC. Gerenciado diretamente pelo Tungsten na RAM do S.O.</div>
           <div class="pcon">Requer habilitar <code>spark.memory.offHeap.enabled = true</code> e alocação prévia.</div>
         </div>
+      </div>
+
+      <div class="callout callout-warn" style="margin-top: 20px;">
+        <strong>Tradeoff Avançado de Produção (Serialization &amp; GC):</strong> 
+        O uso padrão do DataFrame API (<code>df.cache()</code>) mapeia para <code>MEMORY_AND_DISK</code>. Se o DataFrame tiver 50GB descompactados, ele inundará a Heap da JVM, acionando o Garbage Collector a todo instante (Stop-The-World), travando todos os cores. Em cenários Staff-Level, recomenda-se explicitamente o uso de <code>df.persist(StorageLevel.MEMORY_AND_DISK_SER)</code> acompanhado da configuração <code>spark.serializer = org.apache.spark.serializer.KryoSerializer</code> no cluster. Isso armazena os dados não como objetos Java dispersos, mas como um bloco binário massivo e coeso, reduzindo a pegada na RAM em até 80% e eliminando a pressão de limpeza do GC, trocando memória por um pequeno gasto de CPU (descompressão).
       </div>
     </section>
 

@@ -102,6 +102,7 @@
         "processing.html#spark-gc",
         "processing.html#spark-skew",
         "processing.html#spark-advanced-functions",
+        "processing.html#spark-dynamic-write",
         "processing.html#spark-joins",
         "processing.html#spark-cache",
         "processing.html#spark-streaming",

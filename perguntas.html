@@ -2251,6 +2251,50 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           </ul>
         </div>
       </div>
+      <!-- Case 86: O Problema dos Small Files e OOM -->
+      <div class="card" id="q86" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 86 · Sizing Dinâmico e Small Files (Spark)</div>
+        <h4>Ao processar terabytes de dados diariamente, como você calcula dinamicamente o particionamento final antes do `.write()` para o S3, a fim de evitar OOM no cluster e combater o Small Files Problem simultaneamente?</h4>
+        <p><strong>Cenário de Desastre:</strong> Um engenheiro hardcodou `df.repartition(100)` no final do pipeline. No Natal, a volumetria multiplicou por dez e as partições ficaram com 3GB cada, estourando a RAM dos executores (OOM). Em domingos, a volumetria cai, gerando 100 arquivos de 5KB (Small Files) destruindo a latência do Athena.</p>
+        <div class="callout callout-info">
+          <strong>A Solução (Matemática Dinâmica no Write):</strong>
+          <ul>
+            <li><strong>Auto Sizing via Motor:</strong> Em versões modernas (EMR 6.x), a maneira mais segura de evitar OOM em partições é delegar o corte ao Catalyst definindo <code>spark.sql.files.maxRecordsPerFile</code>. O arquivo Parquet será "fechado" e salvo ao atingir o limite, independentemente do volume em memória.</li>
+            <li><strong>Heurística de Bytes (Código):</strong> O arquiteto extrai um <code>df.count()</code> final (idealmente após um cache/checkpoint) e multiplica por um peso fixo em bytes (tamanho estimado de uma linha serializada). Divide-se o total pela constante alvo (ex: 128 MB).</li>
+            <li><strong>Invocação:</strong> O pipeline então invoca <code>df.repartition(calculo_dinamico).write()</code>. A volumetria elástica garante arquivos sempre na faixa de 128-256MB perfeitamente otimizados para Amazon S3.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 87: Coalesce vs Repartition e Destruição de Paralelismo -->
+      <div class="card" id="q87" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 87 · Tradeoffs de Coalesce (Spark)</div>
+        <h4>Por que utilizar `.coalesce()` em vez de `.repartition()` imediatamente após a leitura (read) ou de um filtro pesado no Spark pode destruir a performance do seu cluster inteiro, apesar de não realizar shuffle na rede?</h4>
+        <p><strong>Cenário do Erro:</strong> Um desenvolvedor lê uma tabela de 5 TB distribuída em 2000 arquivos (2000 tarefas paralelas). Como ele quer gerar apenas 10 arquivos no final do job, ele adiciona `df.coalesce(10)` logo após o filtro inicial, achando que está otimizando o I/O.</p>
+        <div class="callout callout-warn">
+          <strong>A Destruição do Paralelismo (Pushdown/Narrow Deps):</strong>
+          <ul>
+            <li><strong>Sem Shuffle = Agrupamento Forçado na Origem:</strong> O <code>coalesce()</code> não recria partições via rede, ele funde as partições nativas atuais. O Catalyst optimizer do Spark "puxa" essa fundição para o início da árvore de execução.</li>
+            <li><strong>O Gargalo Imediato:</strong> Ao forçar 10 partições físicas na memória, o cluster de 100 nós só terá trabalho para 10 slots de CPU. Os outros 90 nós ficarão ociosos <em>durante todo o processamento subsequente (transformações)</em>. O job demora dias para rodar.</li>
+            <li><strong>A Abordagem Correta:</strong> Use <code>repartition()</code> se precisar aumentar o paralelismo. O <code>coalesce()</code> deve ser usado de forma microscópica apenas imediatamente antes do comando de escrita (`.write()`), sem transformações intermediárias entre eles.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 88: Spill to Disk e Shuffle Partitions -->
+      <div class="card" id="q88" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 88 · Sort-Merge Join e Spill to Disk (Spark)</div>
+        <h4>Durante um Join pesado entre duas tabelas de bilhões de linhas, o Spark UI mostra que várias tasks demoraram muito mais que a mediana e registraram volumes altíssimos de "Spill (Memory)" e "Spill (Disk)". O que causa isso e como a arquitetura moderna (AQE) mitiga o problema?</h4>
+        <p><strong>Cenário:</strong> O tempo do Sort-Merge Join disparou e os logs mostram <code>Spilling in-memory map of 30.5 GB to disk</code>, forçando a instabilidade do EMR devido à exaustão de IOPs no EBS.</p>
+        <div class="callout callout-tip">
+          <strong>Diagnóstico e Ação via AQE:</strong>
+          <ul>
+            <li><strong>A Causa Física (Buffer RAM Mapeado):</strong> No Sort-Merge Join, após o shuffle de rede, os executores recebem os dados de chaves idênticas e precisam alocá-los em memória (Execution Memory) para realizar o Sort. Se o tamanho da partição recebida for maior que o buffer da JVM, o motor serializa o excesso e joga no disco local do nó (Spill). Como disco EBS é ordens de grandeza mais lento que a RAM, a task paralisa.</li>
+            <li><strong>O Problema da Configuração Estática:</strong> Historicamente, os desenvolvedores tentavam mitigar isso chutando valores mais altos no <code>spark.sql.shuffle.partitions</code> (ex: mudando do default 200 para 2000), o que diminuía o tamanho do pedaço e evitava o spill. Porém, se os dados tivessem Data Skew (assimetria da chave do negócio), uma das partições continuaria gigante e spillando, enquanto as outras 1999 ficariam vazias.</li>
+            <li><strong>O Remédio (Adaptive Query Execution):</strong> Ativando o AQE (<code>spark.sql.adaptive.enabled=true</code> e <code>spark.sql.adaptive.skewJoin.enabled=true</code>), o Catalyst detecta o skew em <em>runtime</em>. Ao ver uma partição que causará Spill, o Spark a divide proativamente em sub-partições menores e as entrega a executores separados para join particionado, impedindo o OOM sem precisar adivinhar o <code>shuffle.partitions</code> ideal.</li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 </div>
