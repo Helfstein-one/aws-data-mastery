@@ -2336,6 +2336,34 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           </ul>
         </div>
       </div>
+      <!-- Case 92: KCL DynamoDB Throttling -->
+      <div class="card" id="q92" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 92 · Kinesis, KCL e Falha Oculta no DynamoDB</div>
+        <h4>Uma aplicação consumidora Kinesis parou misteriosamente de avançar a leitura dos eventos, apesar das métricas do Kinesis Stream mostrarem que os Shards estão normais e a Lambda/EC2 do consumidor ter CPU e RAM ociosas. O que falhou no background e por quê?</h4>
+        <p><strong>Cenário:</strong> Um engenheiro escalou o Kinesis de 20 para 300 shards após o lançamento de uma campanha de marketing global, porém as métricas de leitura pararam de subir.</p>
+        <div class="callout callout-warn">
+          <strong>Diagnóstico e Ação (Dependência Invertida KCL):</strong>
+          <ul>
+            <li><strong>A Causa Física (State Backend estrangulado):</strong> A Kinesis Client Library (KCL) tenta ser resiliente distribuindo o estado de <em>quem leu qual offset</em> (checkpoint) numa tabela gerenciada do DynamoDB (criada implicitamente sob o mesmo nome da aplicação). Ao escalar para 300 shards bruscamente, as centenas de threads de workers começaram a bombardear essa tabela oculta com chamadas <code>UpdateItem</code> contínuas para gravar os novos offsets de cada micro-batch.</li>
+            <li><strong>O Gargalo:</strong> A tabela do DynamoDB provavelmente foi criada com Provisionamento Padrão de baixa capacidade (ex: 10 WCU). A AWS então lançou <code>ProvisionedThroughputExceededException</code>, impedindo a KCL de salvar o offset lido. Se o consumidor não pode salvar o estado, ele entra em modo de bloqueio para não ler dados que ele não poderá confirmar (Exactly-Once).</li>
+            <li><strong>A Mitigação:</strong> Alterar as configurações da tabela da KCL no DynamoDB para o modo de cobrança <strong>On-Demand (Pay-Per-Request)</strong>, permitindo que a KCL faça escritas de forma ilimitada durante picos e escale o throughput automaticamente para infinitos WCU instantaneamente.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 93: Spark Watermark e OOM -->
+      <div class="card" id="q93" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 93 · Spark Structured Streaming e Exaustão de RAM (OOM)</div>
+        <h4>Em um pipeline stateful que conta visitantes únicos a cada 1 hora de evento, o Spark vêm sofrendo quedas crônicas de Out Of Memory (OOM) após 3 dias rodando ininterruptamente. O que a falta da cláusula `.withWatermark()` provoca fisicamente no executor?</h4>
+        <p><strong>Cenário:</strong> Os desenvolvedores configuraram uma janela (Window Aggregation) no DataFrame, mas removeram a instrução de Watermark por acharem "complexa demais", com a justificativa de que confiam nos timestamps dos eventos enviados pelos celulares.</p>
+        <div class="callout callout-tip">
+          <strong>Diagnóstico e Ação (GC e Evicção de Estado):</strong>
+          <ul>
+            <li><strong>A Causa Física (Crescimento Infinito de Estado):</strong> O Spark não sabe se um celular que perdeu sinal no domingo vai mandar os logs na quarta-feira ("Late-arriving data"). Por padrão, sem uma restrição, o Spark nunca desliga o estado das agregações. Ele mantém na RAM dos executores (e no RocksDB state store) a janela de todas as horas dos últimos 3 dias "abertas e prontas para receber atualizações". Com milhões de eventos rodando, esse estado global inevitavelmente satura a heap da JVM, falhando o processo.</li>
+            <li><strong>A Mitigação Estrutural (Watermark Eviction):</strong> Ao adicionar <code>.withWatermark("event_time", "2 hours")</code>, o Spark descobre o <em>Global Event Time</em> (a hora do evento mais novo que ele já processou). Ele subtrai 2 horas desse pico e apaga cirurgicamente (evicção) da memória RAM todas as tabelas de estado (janelas) mais velhas que esse limite. Se um evento atrasado tentar chegar fora dessa tolerância (ex: 3 horas de atraso), o Spark o descarta imediatamente. O watermark transforma um consumo infinito de memória em um processamento matematicamente estável e limitado.</li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 </div>
