@@ -281,6 +281,99 @@
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
 
+    <!-- SECTION 1.5: EKS & KUBERNETES -->
+    <section class="section" id="eks">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">01.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Amazon EKS: Orquestração Avançada &amp; Kubernetes</h2>
+          <p>Karpenter, Spark Operator vs EMR on EKS, Segurança OIDC e Volumes Persistentes</p>
+        </div>
+      </div>
+
+      <p>Enquanto o ECS foca em simplicidade, o <strong>Amazon EKS (Elastic Kubernetes Service)</strong> é o padrão-ouro para Engenharia de Dados pesada. Ele permite orquestrar pipelines densos (Airflow, Spark, Kafka) através da mesma API declarativa usada por DevOps.</p>
+
+      <div class="abox info">
+        <div class="abox-hdr" style="background:var(--navy)">Karpenter vs. Cluster Autoscaler (CAS)</div>
+        <div class="abox-body">
+          <p>O CAS clássico reage a pods pendentes pedindo novas máquinas para um Auto Scaling Group (ASG), demorando de 3 a 5 minutos. O <strong>Karpenter</strong> é um provisionador "Just-In-Time" que intercepta os pods pendentes, calcula a CPU/Memória exata necessária, liga diretamente para as APIs do EC2 (Fleet) e traz nós Spot no tamanho exato em <strong>menos de 45 segundos</strong>. Para jobs de Spark transientes, o Karpenter reduz o tempo de inatividade e os custos de computação ociosa significativamente.</p>
+        </div>
+      </div>
+
+      <h3>Spark Operator vs. EMR on EKS</h3>
+      <p>Existem duas rotas principais para rodar Apache Spark em clusters Kubernetes na AWS:</p>
+      <ul>
+        <li><strong>Open-Source Spark Operator:</strong> Uma ferramenta nativa K8s (CRD) mantida pelo Google. Você cria arquivos YAML do tipo <code>SparkApplication</code>. <em>Vantagem:</em> Gratuito (você paga apenas o EC2). <em>Desvantagem:</em> Você gerencia as imagens Docker, tuning do S3 e não há suporte oficial da AWS.</li>
+        <li><strong>Amazon EMR on EKS:</strong> O EMR atua como a camada de submissão. <em>Vantagem:</em> Usa o runtime otimizado da AWS (consultas S3 30% mais rápidas), integração imediata com Glue Catalog. <em>Desvantagem:</em> Custo adicional da taxa por vCPU/Hora cobrada pelo EMR, além do custo físico das máquinas EC2/EKS.</li>
+      </ul>
+
+      <h3>Segurança: IRSA (IAM Roles for Service Accounts)</h3>
+      <p>Em vez de dar permissão S3 ao nó físico inteiro (EC2 Node Role), o EKS permite associar uma Role IAM específica a uma <strong>Kubernetes ServiceAccount</strong> usando OpenID Connect (OIDC). Isso garante que o Pod do "Job A" acesse o bucket de "Vendas", enquanto o Pod do "Job B", rodando no mesmo servidor EC2, acesse o bucket de "Marketing", sem risco de vazamento cruzado.</p>
+
+      <h3>Armazenamento de Dados no EKS (EBS, EFS e NVMe local)</h3>
+      <div class="grid-3">
+        <div class="card" style="border-top: 3px solid var(--accent)">
+          <h4>Persistent Volumes (EBS)</h4>
+          <p>Discos de rede atrelados a uma única Zona de Disponibilidade (AZ). Ideais para StatefulSets como bancos de dados (ex: PostgreSQL no K8s) que precisam que o disco sobreviva ao reinício do Pod.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--spark)">
+          <h4>Amazon EFS</h4>
+          <p>Sistema de arquivos elástico e distribuído. Permite modelo de montagem <strong>ReadWriteMany</strong> (vários pods em múltiplos nós podem gravar/ler simultaneamente no mesmo volume, ideal para DAGs do Airflow).</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--emr)">
+          <h4>HostPath (NVMe Efêmero)</h4>
+          <p>Mapeia o disco SSD físico ultrarrápido do nó EC2 para dentro do Pod. Extremamente volátil, mas perfeito para arquivos temporários de <strong>Spark Shuffle</strong>, entregando IOPS massivos de graça.</p>
+        </div>
+      </div>
+
+      <div class="dw">
+        <svg viewBox="0 0 800 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
+          <rect width="800" height="240" fill="#0f172a" rx="14"/>
+          <text x="400" y="30" text-anchor="middle" fill="#f8fafc" font-size="14" font-weight="700">ARQUITETURA: EMR ON EKS &amp; KARPENTER</text>
+          
+          <!-- EKS Control Plane -->
+          <rect x="50" y="70" width="180" height="130" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+          <text x="140" y="100" text-anchor="middle" fill="#f43f5e" font-size="12" font-weight="700">EKS Control Plane</text>
+          <text x="140" y="125" text-anchor="middle" fill="#cbd5e1" font-size="10">API Server</text>
+          <text x="140" y="145" text-anchor="middle" fill="#cbd5e1" font-size="10">Karpenter Controller</text>
+          <text x="140" y="165" text-anchor="middle" fill="#cbd5e1" font-size="10">OIDC Provider</text>
+
+          <!-- Action Arrow -->
+          <line x1="230" y1="135" x2="310" y2="135" stroke="#f8fafc" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrow)"/>
+          <text x="270" y="125" text-anchor="middle" fill="#94a3b8" font-size="10">Provisiona</text>
+
+          <!-- EC2 Node -->
+          <rect x="320" y="70" width="220" height="130" rx="8" fill="#0b0f19" stroke="#10b981" stroke-width="2"/>
+          <text x="430" y="95" text-anchor="middle" fill="#10b981" font-size="12" font-weight="700">EC2 Spot Node (Data)</text>
+
+          <!-- Spark Pod 1 -->
+          <rect x="330" y="110" width="90" height="70" rx="4" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="375" y="130" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Spark Driver</text>
+          <text x="375" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">IRSA: Role A</text>
+          <text x="375" y="165" text-anchor="middle" fill="#94a3b8" font-size="9">HostPath</text>
+
+          <!-- Spark Pod 2 -->
+          <rect x="440" y="110" width="90" height="70" rx="4" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5"/>
+          <text x="485" y="130" text-anchor="middle" fill="#06b6d4" font-size="10" font-weight="700">Spark Exec</text>
+          <text x="485" y="150" text-anchor="middle" fill="#94a3b8" font-size="9">IRSA: Role A</text>
+          <text x="485" y="165" text-anchor="middle" fill="#94a3b8" font-size="9">HostPath</text>
+
+          <!-- Action Arrow S3 -->
+          <line x1="540" y1="135" x2="620" y2="135" stroke="#f8fafc" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="580" y="125" text-anchor="middle" fill="#94a3b8" font-size="10">Acesso IAM</text>
+
+          <!-- S3 Bucket -->
+          <rect x="630" y="70" width="130" height="130" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+          <text x="695" y="135" text-anchor="middle" fill="#eab308" font-size="12" font-weight="700">Amazon S3</text>
+          <text x="695" y="155" text-anchor="middle" fill="#cbd5e1" font-size="10">Data Lake</text>
+
+        </svg>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
     <!-- SECTION 2: LOAD BALANCERS -->
     <section class="section" id="load-balancers">
       <div class="sec-hdr">

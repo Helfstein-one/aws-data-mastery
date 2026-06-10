@@ -2507,6 +2507,40 @@
         <p>A migração foi concluída em 5 horas e 40 minutos (SLA cumprido com folga). Os 4 milhões de arquivos pequenos foram compactados em menos de 85.000 arquivos Parquet de 512 MB. As consultas analíticas do Athena sobre a camada Gold tornaram-se 90% mais rápidas devido ao pruning aprimorado de metadados do Iceberg, e o custo do job no EMR Serverless foi de apenas $380 devido ao scaling agressivo em tempo de execução.</p>
       </div>
     </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- CASE 12: MIGRAÇÃO EMR EC2 PARA EKS SPOT COM KARPENTER -->
+    <section class="section" id="case-eks-karpenter-migracao">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">12</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Case 12: Redução de Custo de 70% na Migração de EMR EC2 para EKS Spot com Karpenter</h2>
+          <p>Modernização de pipelines Airflow + Spark trocando clusters transientes EMR on EC2 por EKS multitenant com autoscaling JIT</p>
+        </div>
+      </div>
+
+      <p>Uma fintech possuía 150 jobs de ETL diários orquestrados pelo Apache Airflow. Cada tarefa do DAG criava um cluster EMR no EC2 (Transient Cluster) para processar os dados e o destruía no final. Essa arquitetura sofria com <strong>Tempo de Inicialização</strong> (cada EMR demora de 6 a 10 minutos apenas para fazer o bootstrap do Hadoop) e com <strong>Desperdício Computacional</strong> (pagamento mínimo de 1 hora de EC2 mesmo para jobs de 10 minutos, além da taxa por minuto do EMR). O objetivo era unificar a computação no Kubernetes.</p>
+
+      <h3>Arquitetura de Solução: EKS + Karpenter + Spark Operator</h3>
+      <ol>
+        <li><strong>Substituição de EMR Steps por SparkApplication CRD:</strong>
+          <br>Os operadores <code>EmrCreateJobFlowOperator</code> e <code>EmrAddStepsOperator</code> do Airflow foram refatorados para o <code>SparkKubernetesOperator</code>. Em vez de provisionar máquinas virtuais, o Airflow agora envia um YAML declarativo (CRD) descrevendo a necessidade de CPU/RAM diretamente para a API do EKS (Spark Operator).
+        </li>
+        <li><strong>Provisionamento Just-In-Time com Karpenter:</strong>
+          <br>Foi instalado o <strong>Karpenter</strong> no Control Plane do EKS, substituindo o Cluster Autoscaler clássico. Quando o Spark Operator solicita 50 pods de executores (ex: 4 vCPUs cada), o Karpenter lê os pods pendentes, envia uma requisição agrupada (Fleet API) e traz instâncias EC2 Spot bare-metal do tamanho exato (ex: m5.12xlarge) em <strong>menos de 40 segundos</strong>. Sem pré-aquecimento de instâncias ou AMIs pesadas do Hadoop.
+        </li>
+        <li><strong>Spot Fleet Diversification e Tolerância a Falhas:</strong>
+          <br>Para evitar interrupções de capacidade Spot, o <code>NodePool</code> do Karpenter foi configurado para aceitar famílias flexíveis (<code>m5, m6i, r5, r6i, c5</code>) baseando-se no tipo de carga de trabalho do Spark. Se a Amazon requisitar a instância Spot de volta (aviso de 2 minutos), o Karpenter e o Kubernetes ejetam os Pods com graciosidade (Graceful Termination) e o motor de resiliência nativo do Apache Spark recomputa os RDDs perdidos do executor falho em outro nó automaticamente.
+        </li>
+      </ol>
+
+      <div class="callout callout-tip">
+        <strong>Resultado de Negócio:</strong>
+        <p>A latência ponta a ponta dos DAGs reduziu em 45% devido ao tempo de provisionamento de infraestrutura cair de 8 minutos para 40 segundos. A fatura mensal de processamento despencou mais de 70% porque o time parou de pagar as licenças caras de software do EMR e passou a faturar EC2 Spot pelo segundo exato de uso através da bin-packing extrema do Karpenter (múltiplos jobs Spark alocados perfeitamente nas mesmas instâncias até encher a RAM).</p>
+      </div>
+    </section>
   </main>
 </div>
 
