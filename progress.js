@@ -26,41 +26,20 @@
         "architecture.html#data-product-management"
       ]
     },
-    softskills: {
-      name: "🧠 Soft Skills",
-      badge: "Especialista Tático",
-      color: "var(--spark)",
+    plataforma: {
+      name: "🏗️ Plataforma de Dados",
+      badge: "Arquiteto de Plataforma",
+      color: "var(--accent)",
       items: [
-        "soft-skills.html#personas",
-        "soft-skills.html#pilares",
-        "soft-skills.html#implementacao"
-      ]
-    },
-    perguntas: {
-      name: "❓ Perguntas de Entrevista",
-      badge: "Mestre das Perguntas",
-      color: "var(--spark)",
-      items: [
-        "perguntas.html#q1",
-        "perguntas.html#q5",
-        "perguntas.html#q7",
-        "perguntas.html#q14",
-        "perguntas.html#q24"
-      ]
-    },
-    cases: {
-      name: "💼 Cases de Plataformas",
-      badge: "Resolvedor de Cases",
-      color: "var(--ext)",
-      items: [
-        "cases.html#case-streaming",
-        "cases.html#case-mesh",
-        "cases.html#case-genai",
-        "cases.html#case-genai-avancado",
-        "cases.html#case-ai-data-quality",
-        "cases.html#case-polaris-flink",
-        "cases.html#case-iot",
-        "cases.html#case-reverse-etl"
+        "plataforma-dados.html#estrategico",
+        "plataforma-dados.html#cenario-cdc",
+        "plataforma-dados.html#cenario-sharing",
+        "plataforma-dados.html#cenario-lineage",
+        "plataforma-dados.html#cenario-llmops",
+        "plataforma-dados.html#topologia",
+        "plataforma-dados.html#arquitetura",
+        "plataforma-dados.html#alinhamento",
+        "plataforma-dados.html#perguntas"
       ]
     },
     ingestion: {
@@ -76,19 +55,6 @@
         "ingestion.html#ecs-fargate",
         "ingestion.html#dms",
         "ingestion.html#dynamodb"
-      ]
-    },
-    storage: {
-      name: "💾 Lakehouse & Storage",
-      badge: "Guardião do Storage",
-      color: "var(--arch)",
-      items: [
-        "storage-lakehouse.html#s3-camadas",
-        "storage-lakehouse.html#s3-tiers",
-        "storage-lakehouse.html#formatos",
-        "storage-lakehouse.html#iceberg",
-        "storage-lakehouse.html#iceberg-vs-delta",
-        "storage-lakehouse.html#iceberg-rest-catalog"
       ]
     },
     processing: {
@@ -129,6 +95,41 @@
         "processing.html#emr-erros"
       ]
     },
+    infra_operacional: {
+      name: "🏗️ Computação & Bancos",
+      badge: "Mestre em Computação e Bancos",
+      color: "#f43f5e",
+      items: [
+        "computacao-bancos.html#ecs",
+        "computacao-bancos.html#load-balancers",
+        "computacao-bancos.html#rds-aurora",
+        "computacao-bancos.html#operacao"
+      ]
+    },
+    orquestracao: {
+      name: "⛓️ Orquestração de Dados",
+      badge: "Mestre da Orquestração",
+      color: "#a78bfa",
+      items: [
+        "orquestracao-dados.html#teoria",
+        "orquestracao-dados.html#step-functions",
+        "orquestracao-dados.html#mwaa-airflow",
+        "orquestracao-dados.html#operacional"
+      ]
+    },
+    storage: {
+      name: "💾 Lakehouse & Storage",
+      badge: "Guardião do Storage",
+      color: "var(--arch)",
+      items: [
+        "storage-lakehouse.html#s3-camadas",
+        "storage-lakehouse.html#s3-tiers",
+        "storage-lakehouse.html#formatos",
+        "storage-lakehouse.html#iceberg",
+        "storage-lakehouse.html#iceberg-vs-delta",
+        "storage-lakehouse.html#iceberg-rest-catalog"
+      ]
+    },
     serving: {
       name: "📊 Analytics & Serving",
       badge: "Mestre do Analytics",
@@ -142,34 +143,20 @@
         "serving.html#explain-tuning"
       ]
     },
-    genai: {
-      name: "🤖 GenAI & Dados",
-      badge: "Arquiteto de GenAI",
-      color: "#a78bfa",
+    security: {
+      name: "🛡️ Segurança & IaC",
+      badge: "Guardião de Segurança",
+      color: "var(--muted)",
       items: [
-        "genai.html#genai-teoria",
-        "genai.html#rag",
-        "genai.html#pgvector",
-        "genai.html#prompt-engineering"
-      ]
-    },
-    dataops: {
-      name: "⚙️ DataOps & MLOps",
-      badge: "Líder de Operations",
-      color: "#06b6d4",
-      items: [
-        "dataops-mlops.html#dataops-core",
-        "dataops-mlops.html#data-quality-avancado",
-        "dataops-mlops.html#data-contracts",
-        "dataops-mlops.html#data-lineage",
-        "dataops-mlops.html#plataforma-testes",
-        "dataops-mlops.html#mlops-core",
-        "dataops-mlops.html#mlops-feature-store",
-        "dataops-mlops.html#git-flow"
+        "governance-security.html#lakeformation",
+        "governance-security.html#iam-kms",
+        "governance-security.html#secretsmanager",
+        "governance-security.html#observabilidade",
+        "governance-security.html#erros"
       ]
     },
     networking: {
-      name: "🌐 Rede &amp; Ingress de Dados",
+      name: "🌐 Rede & Ingress de Dados",
       badge: "Mestre das Redes",
       color: "#06b6d4",
       items: [
@@ -195,16 +182,40 @@
         "api-gateway.html#cases"
       ]
     },
-    security: {
-      name: "🛡️ Segurança & IaC",
-      badge: "Guardião de Segurança",
-      color: "var(--muted)",
+    genai: {
+      name: "🤖 IA & GenAI",
+      badge: "Arquiteto de GenAI",
+      color: "#a78bfa",
       items: [
-        "governance-security.html#lakeformation",
-        "governance-security.html#iam-kms",
-        "governance-security.html#secretsmanager",
-        "governance-security.html#observabilidade",
-        "governance-security.html#erros"
+        "genai.html#genai-teoria",
+        "genai.html#rag",
+        "genai.html#pgvector",
+        "genai.html#prompt-engineering"
+      ]
+    },
+    dataops: {
+      name: "⚙️ DataOps & MLOps",
+      badge: "Líder de Operations",
+      color: "#06b6d4",
+      items: [
+        "dataops-mlops.html#dataops-core",
+        "dataops-mlops.html#data-quality-avancado",
+        "dataops-mlops.html#data-contracts",
+        "dataops-mlops.html#data-lineage",
+        "dataops-mlops.html#plataforma-testes",
+        "dataops-mlops.html#mlops-core",
+        "dataops-mlops.html#mlops-feature-store",
+        "dataops-mlops.html#git-flow"
+      ]
+    },
+    business_value: {
+      name: "💼 Business Value",
+      badge: "Estrategista de Dados",
+      color: "#f59e0b",
+      items: [
+        "business-value.html#conceito-ebitda",
+        "business-value.html#pitch-business-value",
+        "business-value.html#case-refatoracao-pipeline"
       ]
     },
     finops: {
@@ -218,6 +229,17 @@
         "finops.html#finops-terraform"
       ]
     },
+    financas: {
+      name: "🏦 Conhecimentos Financeiros",
+      badge: "Analista Financeiro",
+      color: "#0284c7",
+      items: [
+        "financas-dados.html#jornada",
+        "financas-dados.html#matematica",
+        "financas-dados.html#pos-venda",
+        "financas-dados.html#contabilidade"
+      ]
+    },
     oop: {
       name: "🏗️ Python & OOP",
       badge: "Engenheiro Pythonico",
@@ -227,6 +249,158 @@
         "data-engineering-oop.html#oop-dados",
         "data-engineering-oop.html#design-patterns",
         "data-engineering-oop.html#oop-cases-perguntas"
+      ]
+    },
+    softskills: {
+      name: "🧠 Soft Skills",
+      badge: "Especialista Tático",
+      color: "var(--spark)",
+      items: [
+        "soft-skills.html#personas",
+        "soft-skills.html#como-falar",
+        "soft-skills.html#framework-talk",
+        "soft-skills.html#lideranca",
+        "soft-skills.html#pilares",
+        "soft-skills.html#implementacao",
+        "soft-skills.html#cfo-pitch"
+      ]
+    },
+    perguntas_arquitetura: {
+      name: "❓ Perguntas: Arquitetura",
+      badge: "Mestre das Arquiteturas",
+      color: "var(--arch)",
+      items: [
+        "perguntas-arquitetura.html#perguntas",
+        "perguntas-arquitetura.html#q4",
+        "perguntas-arquitetura.html#q9",
+        "perguntas-arquitetura.html#q26",
+        "perguntas-arquitetura.html#q30",
+        "perguntas-arquitetura.html#q34",
+        "perguntas-arquitetura.html#q41",
+        "perguntas-arquitetura.html#q52",
+        "perguntas-arquitetura.html#q53",
+        "perguntas-arquitetura.html#q60",
+        "perguntas-arquitetura.html#q63",
+        "perguntas-arquitetura.html#q67",
+        "perguntas-arquitetura.html#q69",
+        "perguntas-arquitetura.html#q71",
+        "perguntas-arquitetura.html#q78",
+        "perguntas-arquitetura.html#q80",
+        "perguntas-arquitetura.html#q82",
+        "perguntas-arquitetura.html#q89",
+        "perguntas-arquitetura.html#q90",
+        "perguntas-arquitetura.html#q95",
+        "perguntas-arquitetura.html#q96",
+        "perguntas-arquitetura.html#q97",
+        "perguntas-arquitetura.html#q98",
+        "perguntas-arquitetura.html#q99"
+      ]
+    },
+    perguntas_engenharia: {
+      name: "❓ Perguntas: Engenharia",
+      badge: "Mestre dos Pipelines",
+      color: "#f59e0b",
+      items: [
+        "perguntas-engenharia.html#perguntas",
+        "perguntas-engenharia.html#q1",
+        "perguntas-engenharia.html#q2",
+        "perguntas-engenharia.html#q3",
+        "perguntas-engenharia.html#q6",
+        "perguntas-engenharia.html#q7",
+        "perguntas-engenharia.html#q14",
+        "perguntas-engenharia.html#q20",
+        "perguntas-engenharia.html#q28",
+        "perguntas-engenharia.html#q31",
+        "perguntas-engenharia.html#q32",
+        "perguntas-engenharia.html#q33",
+        "perguntas-engenharia.html#q46",
+        "perguntas-engenharia.html#q51",
+        "perguntas-engenharia.html#q62",
+        "perguntas-engenharia.html#q64",
+        "perguntas-engenharia.html#q68",
+        "perguntas-engenharia.html#q72",
+        "perguntas-engenharia.html#q86",
+        "perguntas-engenharia.html#q87",
+        "perguntas-engenharia.html#q88",
+        "perguntas-engenharia.html#q92",
+        "perguntas-engenharia.html#q93",
+        "perguntas-engenharia.html#q94"
+      ]
+    },
+    perguntas_governanca: {
+      name: "❓ Perguntas: Governança",
+      badge: "Mestre da Governança",
+      color: "var(--muted)",
+      items: [
+        "perguntas-governanca.html#perguntas",
+        "perguntas-governanca.html#q5",
+        "perguntas-governanca.html#q8",
+        "perguntas-governanca.html#q10",
+        "perguntas-governanca.html#q11",
+        "perguntas-governanca.html#q12",
+        "perguntas-governanca.html#q13",
+        "perguntas-governanca.html#q15",
+        "perguntas-governanca.html#q16",
+        "perguntas-governanca.html#q17",
+        "perguntas-governanca.html#q18",
+        "perguntas-governanca.html#q19",
+        "perguntas-governanca.html#q21",
+        "perguntas-governanca.html#q22",
+        "perguntas-governanca.html#q23",
+        "perguntas-governanca.html#q24",
+        "perguntas-governanca.html#q25",
+        "perguntas-governanca.html#q27",
+        "perguntas-governanca.html#q29",
+        "perguntas-governanca.html#q35",
+        "perguntas-governanca.html#q36",
+        "perguntas-governanca.html#q37",
+        "perguntas-governanca.html#q38",
+        "perguntas-governanca.html#q39",
+        "perguntas-governanca.html#q40",
+        "perguntas-governanca.html#q42",
+        "perguntas-governanca.html#q43",
+        "perguntas-governanca.html#q44",
+        "perguntas-governanca.html#q45",
+        "perguntas-governanca.html#q47",
+        "perguntas-governanca.html#q48",
+        "perguntas-governanca.html#q49",
+        "perguntas-governanca.html#q50",
+        "perguntas-governanca.html#q54",
+        "perguntas-governanca.html#q55",
+        "perguntas-governanca.html#q56",
+        "perguntas-governanca.html#q57",
+        "perguntas-governanca.html#q58",
+        "perguntas-governanca.html#q59",
+        "perguntas-governanca.html#q61",
+        "perguntas-governanca.html#q65",
+        "perguntas-governanca.html#q66",
+        "perguntas-governanca.html#q70",
+        "perguntas-governanca.html#q73",
+        "perguntas-governanca.html#q74",
+        "perguntas-governanca.html#q75",
+        "perguntas-governanca.html#q76",
+        "perguntas-governanca.html#q77",
+        "perguntas-governanca.html#q79",
+        "perguntas-governanca.html#q81",
+        "perguntas-governanca.html#q83",
+        "perguntas-governanca.html#q84",
+        "perguntas-governanca.html#q85",
+        "perguntas-governanca.html#q91"
+      ]
+    },
+    cases: {
+      name: "💼 Cases de Plataformas",
+      badge: "Resolvedor de Cases",
+      color: "var(--ext)",
+      items: [
+        "cases.html#case-streaming",
+        "cases.html#case-mesh",
+        "cases.html#case-genai",
+        "cases.html#case-genai-avancado",
+        "cases.html#case-ai-data-quality",
+        "cases.html#case-polaris-flink",
+        "cases.html#case-iot",
+        "cases.html#case-reverse-etl"
       ]
     },
     playbook: {
@@ -244,48 +418,12 @@
         "playbook-crises.html#crise-sla",
         "playbook-crises.html#crise-schema-drift",
         "playbook-crises.html#crise-lgpd",
-        "playbook-crises.html#crise-corrupcao"
-      ]
-    },
-    platform: {
-      name: "🏗️ Plataforma de Dados",
-      badge: "Arquiteto de Plataforma",
-      color: "var(--accent)",
-      items: [
-        "plataforma-dados.html#estrategico",
-        "plataforma-dados.html#cenario-cdc",
-        "plataforma-dados.html#cenario-sharing",
-        "plataforma-dados.html#cenario-lineage",
-        "plataforma-dados.html#cenario-llmops",
-        "plataforma-dados.html#topologia",
-        "plataforma-dados.html#arquitetura",
-        "plataforma-dados.html#alinhamento",
-        "plataforma-dados.html#perguntas"
-      ]
-    },
-    infra_operacional: {
-      name: "🏗️ Computação & Bancos",
-      badge: "Especialista em Computação e Bancos",
-      color: "#f43f5e",
-      items: [
-        "computacao-bancos.html#ecs",
-        "computacao-bancos.html#load-balancers",
-        "computacao-bancos.html#rds-aurora",
-        "computacao-bancos.html#operacao"
-      ]
-    },
-    orquestracao: {
-      name: "⛓️ Orquestração de Dados",
-      badge: "Mestre da Orquestração",
-      color: "#a78bfa",
-      items: [
-        "orquestracao-dados.html#teoria",
-        "orquestracao-dados.html#step-functions",
-        "orquestracao-dados.html#mwaa-airflow",
-        "orquestracao-dados.html#operacional"
+        "playbook-crises.html#crise-corrupcao",
+        "playbook-crises.html#cenarios-conflito",
+        "playbook-crises.html#crise-leakage-churn"
       ]
     }
-  };
+};
 
   // Carrega progresso do localStorage
   function loadProgress() {
@@ -592,6 +730,28 @@
         colors: ["#38bdf8", "#818cf8"], 
         icon: `<path class="badge-arch-path" d="M22 28 l10 -5 l10 5 l-10 5 z M22 28 v10 l10 5 v-10 z M42 28 v10 l-10 5 v-10 z" fill="none" stroke="url(#grad-architecture)" stroke-width="2" stroke-linejoin="round"/>` 
       },
+      
+      perguntas_arquitetura: { 
+        colors: ["#38bdf8", "#818cf8"], 
+        icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas_arquitetura)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas_arquitetura)" stroke-width="1.8" stroke-linecap="round"/>` 
+      },
+      perguntas_engenharia: { 
+        colors: ["#fbbf24", "#f59e0b"], 
+        icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas_engenharia)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas_engenharia)" stroke-width="1.8" stroke-linecap="round"/>` 
+      },
+      perguntas_governanca: { 
+        colors: ["#94a3b8", "#64748b"], 
+        icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas_governanca)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas_governanca)" stroke-width="1.8" stroke-linecap="round"/>` 
+      },
+      business_value: { 
+        colors: ["#f59e0b", "#d97706"], 
+        icon: `<path class="badge-fin-coin" d="M22 28 l10 -5 l10 5 l-10 5 z M22 28 v10 l10 5 v-10 z M42 28 v10 l-10 5 v-10 z" fill="none" stroke="url(#grad-business_value)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      financas: { 
+        colors: ["#0284c7", "#0369a1"], 
+        icon: `<circle class="badge-fin-coin" cx="32" cy="32" r="13" fill="none" stroke="url(#grad-financas)" stroke-width="2"/><text class="badge-fin-text" x="32" y="37" font-size="14" font-weight="900" font-family="'DM Sans', sans-serif" text-anchor="middle" fill="url(#grad-financas)">$</text>` 
+      },
+
       perguntas: { 
         colors: ["#fbbf24", "#f59e0b"], 
         icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas)" stroke-width="1.8" stroke-linecap="round"/>` 
