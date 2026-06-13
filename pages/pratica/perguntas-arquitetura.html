@@ -745,8 +745,20 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           </ul>
         </div>
       </div>
-    </section>
-  
+      <!-- Q100: Eventual Consistency e Exactly-Once em Streaming -->
+      <div class="card" id="q100" style="margin-bottom: 24px;">
+        <div class="card-lbl">Questão 100 · Trade-offs: Eventual Consistency e Exactly-Once Processing (Principal Level)</div>
+        <h4>Você foi contratado como Principal Engineer para projetar um sistema financeiro crítico na AWS. Cada transação de pagamento deve ser debitada exatamente uma vez (Exactly-Once Semantics), mas a diretoria exige uma arquitetura assíncrona Event-Driven com latência de fim-a-fim inferior a 50ms para suportar 1 milhão de TPS. O time de engenharia sugeriu usar SQS ou Kinesis. Qual a sua análise crítica sobre a validade desse design e os trade-offs de consistência?</h4>
+        <p><strong>Cenário:</strong> Desenvolvedores assumiram que a infraestrutura gerenciada de streaming na AWS (Kinesis, SQS, MSK) magicamente resolve consistência distribuída em alta velocidade sem overhead computacional.</p>
+        <div class="callout callout-tip">
+          <strong>Diagnóstico e Ação (Teorema CAP e Idempotência):</strong>
+          <ul>
+            <li><strong>A Análise de Trade-offs Físicos:</strong> O Princípio número 1 de sistemas distribuídos sob o Teorema CAP é que redes falham. SQS Standard garante apenas "At-Least-Once delivery" (uma mensagem pode ser entregue duas vezes). Kinesis Streams não possui processamento exactly-once nativo ponta-a-ponta, ele depende da aplicação leitora gerenciar o checkpointing. SQS FIFO garante Exactly-Once, mas o limite rígido é 3.000 TPS (ou High Throughput FIFO com batching), o que torna impossível atingir o requisito de 1 Milhão de TPS exigido pela diretoria de forma puramente síncrona/FIFO.</li>
+            <li><strong>A Solução Arquitetural (Idempotent Design):</strong> Como Principal Engineer, você deve rejeitar a ilusão do Exactly-Once no broker e implementar a solução no nível da aplicação. Você escolhe Amazon MSK (Kafka) ou Kinesis para aguentar a escala bruta (1M TPS) com garantia At-Least-Once. Na camada de processamento (consumidores ECS/EKS), você implementa um design estritamente <strong>Idempotente</strong>. Cada evento recebe um UUID de transação na origem. Antes de o consumidor atualizar o saldo no banco de dados (ex: DynamoDB), ele verifica se o UUID já foi processado através de uma operação condicional (`ConditionExpression`). Se a mensagem for entregue duplicada devido a um retry da rede, a operação de banco de dados rejeita silenciosamente a duplicata. Isso garante semântica Exactly-Once lógica sem o gargalo extremo de throughput de filas FIFO.</li>
+          </ul>
+        </div>
+      </div>
+    </section>  
     <!-- SEÇÃO DE REFERÊNCIAS -->
     <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
       <div class="sec-hdr">
