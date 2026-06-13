@@ -731,51 +731,119 @@ calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
       </div>
 
       <div class="callout callout-warning">
-        <strong>Contabilidade Bancária: COSIF e as Partidas Dobradas (Razonetes)</strong>
-        <p>Instituições financeiras no Brasil seguem rigorosamente o <strong>Plano Contábil das Instituições do Sistema Financeiro Nacional (COSIF)</strong> gerido pelo BACEN. Para um Arquiteto de Dados ou Data Engineer, isso significa que todo evento nos tópicos do Kafka/Kinesis <strong>deve</strong> gerar pelo menos duas pernas no banco de dados do Ledger (Livro-Razão) garantindo a equação fundamental: <code>Débito = Crédito</code>. A perda de uma perna destrói o balanço patrimonial do banco.</p>
-        
-        <p>Abaixo detalhamos a mecânica financeira cruzada com transferências entre as contas contábeis:</p>
-        
-        <h5 style="margin-top: 15px; color: var(--emr)">1. O Fluxo de Concessão (Originação)</h5>
-        <p>Quando o banco aprova o crédito e envia o dinheiro ao cliente, ocorre a transferência de um Ativo (Caixa) para outro Ativo (Direito a Receber).</p>
-        <ul style="margin-bottom: 10px;">
-          <li><strong>Débito (D):</strong> Carteira de Crédito (Ativo Circulante). Aumenta o montante que o banco tem a receber.</li>
-          <li><strong>Crédito (C):</strong> Reservas Bancárias / Caixa (Ativo). Diminui o dinheiro físico no cofre do banco para enviá-lo via TED/PIX ao cliente.</li>
-        </ul>
+        <strong>Contabilidade Bancária: COSIF e as Partidas Dobradas (Visão Plataforma)</strong>
+        <p>No Brasil, o <strong>Plano Contábil (COSIF)</strong> gerido pelo BACEN exige rigor absoluto. Para a Engenharia de Dados, isso significa que todo evento ingerido do <strong>Kafka/Kinesis</strong> pelo pipeline de Ledger deve gerar obrigatoriamente duas pernas transacionais ACID (Débito = Crédito) no banco de dados da Camada Gold. Perder um evento quebra o balanço patrimonial do banco.</p>
+      </div>
 
-        <h5 style="margin-top: 15px; color: var(--emr)">2. O Fluxo de Apropriação de Juros (Spot Accrual)</h5>
-        <p>Pelo regime de <strong>competência</strong>, o lucro não é reconhecido só quando o cliente paga. Diariamente, sistemas batch (ECS/Lambda) calculam os juros incorridos (Accrual) daquele dia.</p>
-        <ul style="margin-bottom: 10px;">
-          <li><strong>Débito (D):</strong> Rendas a Receber de Operações de Crédito (Ativo). Aumenta o saldo que o cliente deve.</li>
-          <li><strong>Crédito (C):</strong> Receitas de Operações de Crédito (DRE). O banco reconhece o lucro no seu demonstrativo de resultados.</li>
-        </ul>
-
-        <h5 style="margin-top: 15px; color: var(--emr)">3. O Fluxo de Pagamento (Liquidação da Parcela)</h5>
-        <p>Quando o cliente finalmente paga a parcela, parte do valor cobre os juros (amortizando a renda a receber) e parte abate a dívida principal (amortização de capital).</p>
-        <ul style="margin-bottom: 10px;">
-          <li><strong>Débito (D):</strong> Caixa / Banco de Compensação (Ativo). Entra dinheiro vivo.</li>
-          <li><strong>Crédito (C):</strong> Rendas a Receber (Ativo). Dá baixa nos juros apropriados no passo anterior.</li>
-          <li><strong>Crédito (C):</strong> Carteira de Crédito (Ativo). Dá baixa/reduz o saldo devedor original.</li>
-        </ul>
-
-        <h5 style="margin-top: 15px; color: var(--emr)">4. Inadimplência e Provisão (PDD / ECL)</h5>
-        <p>Se o cliente não paga, as normativas obrigam o banco a realizar a <strong>Provisão para Devedores Duvidosos (PDD)</strong> baseada no rating de risco da operação.</p>
-        <ul style="margin-bottom: 10px;">
-          <li><strong>Débito (D):</strong> Despesa de Provisão para Perdas (DRE). Corrói diretamente o lucro da instituição.</li>
-          <li><strong>Crédito (C):</strong> Provisão de Crédito (Conta Redutora do Ativo). Conta com saldo negativo que reduz o valor líquido da carteira de crédito no balanço.</li>
-        </ul>
-
-        <h5 style="margin-top: 15px; color: var(--emr)">5. Write-Off (Baixa para Prejuízo)</h5>
-        <p>Após atrasos severos (ex: 360 dias), o contrato é "limpo" do balanço contábil, ainda que a cobrança extrajudicial persista.</p>
-        <ul style="margin-bottom: 10px;">
-          <li><strong>Débito (D):</strong> Provisão de Crédito (Redutora do Ativo). Limpa a provisão que havia sido feita.</li>
-          <li><strong>Crédito (C):</strong> Carteira de Crédito (Ativo). O saldo a receber é efetivamente zerado nas demonstrações.</li>
-        </ul>
+      <div class="concept-grid" style="margin-top: 20px;">
+        <div class="concept-card" style="border-top: 4px solid #10b981;">
+          <div class="cc-tag">1. Concessão (Originação)</div>
+          <div class="cc-body">
+            <p>O motor de originação emite o evento <code>CREDIT_GRANTED</code>. A plataforma transfere um Ativo (Caixa) para outro (Direito a Receber).</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Carteira de Crédito (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Reservas/Caixa (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #ef4444;">
+          <div class="cc-tag">2. Estorno / Cancelamento</div>
+          <div class="cc-body">
+            <p>Se a TED falha (evento <code>PAYMENT_FAILED</code>), a plataforma realiza a reversão exata das pernas contábeis em D+0 (Rollback).</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Reservas/Caixa (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Carteira de Crédito (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #3b82f6;">
+          <div class="cc-tag">3. Apropriação (Spot Accrual)</div>
+          <div class="cc-body">
+            <p>Rotina Batch/Spark noturna calcula os juros do dia (<code>ACCRUAL_CALCULATED</code>), reconhecendo o lucro por <strong>competência</strong> antes do pagamento.</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Rendas a Receber (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Receita de Operações (DRE).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #10b981;">
+          <div class="cc-tag">4. Pagamento (Liquidação)</div>
+          <div class="cc-body">
+            <p>Evento <code>INSTALLMENT_PAID</code> aciona a baixa do saldo. Parte cobre a amortização do principal e parte paga os juros acumulados.</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Caixa / Compensação (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Rendas a Receber (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Carteira de Crédito (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #f59e0b;">
+          <div class="cc-tag">5. Renegociação</div>
+          <div class="cc-body">
+            <p>O evento <code>CONTRACT_RENEGOTIATED</code> liquida contabilmente a dívida velha ("Zera" o contrato T0) e origina um novo contrato (Novo T0).</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Nova Carteira (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Carteira Antiga (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #ef4444;">
+          <div class="cc-tag">6. Provisão (PDD / ECL)</div>
+          <div class="cc-body">
+            <p>No evento <code>DELINQUENCY_UPDATED</code>, o motor provisiona a perda provável reduzindo o lucro líquido com base no Score.</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Despesa de Provisão (DRE).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Provisão de Crédito (Ativo Redutora).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #94a3b8;">
+          <div class="cc-tag">7. Write-off (Baixa)</div>
+          <div class="cc-body">
+            <p>Evento <code>WRITEOFF_TRIGGERED</code> (ex: atraso de 360 dias). O saldo é expurgado limpo do Balanço Patrimonial.</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Provisão de Crédito (Ativo Redutora).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Carteira de Crédito (Ativo).</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
         <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>ARQUITETURA DO LIVRO-RAZÃO (LEDGER) E RAZONETES</div>
         <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"../../assets/diagrams/business-roi-ledger-aws.drawio"}'></div>
+      </div>
+
+      <h3>Concessão, Exposição e Risco de Crédito (Visão Plataforma)</h3>
+      <p>Em uma plataforma analítica escalável na AWS, é imperativo separar computacionalmente e logicamente os conceitos de liberação, saldo em risco e a probabilidade de perda. Veja como a arquitetura moderna mapeia essas variáveis:</p>
+      
+      <div class="concept-grid" style="margin-top: 20px;">
+        <div class="concept-card" style="border-top: 4px solid #10b981;">
+          <div class="cc-tag">A. Concessão (Origination)</div>
+          <div class="cc-body">
+            <p><strong>Conceito:</strong> É o ato inicial de liberação do limite ou do dinheiro. Define o apetite do banco.</p>
+            <p><strong>Plataforma:</strong> Ingestão via API Gateway e Kinesis. Os dados demográficos do cliente são enriquecidos em tempo real para calcular a capacidade de pagamento no instante D0.</p>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #f59e0b;">
+          <div class="cc-tag">B. Exposição de Crédito (EAD)</div>
+          <div class="cc-body">
+            <p><strong>Conceito:</strong> <em>Exposure at Default</em>. É o <strong>Saldo Devedor</strong> real do cliente num dado momento (Snapshot). Se o cliente falir hoje, qual o tamanho do rombo?</p>
+            <p><strong>Plataforma:</strong> Calculado e retido em alta disponibilidade via <strong>Amazon DynamoDB</strong> (Latência &lt; 5ms) para bloquear novas compras do cliente que estourou o limite.</p>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #ef4444;">
+          <div class="cc-tag">C. Risco de Crédito (PD &amp; LGD)</div>
+          <div class="cc-body">
+            <p><strong>Conceito:</strong> Risco = EAD &times; PD (Prob. Default) &times; LGD (Loss Given Default). É a quantificação matemática da perda esperada.</p>
+            <p><strong>Plataforma:</strong> Modelos Machine Learning em <strong>Amazon SageMaker</strong> leem o Data Lake (S3), preveem o <em>rating</em> do cliente (PD), e gravam o <em>Score</em> na camada Gold do Iceberg para acionar o provisionamento (PDD).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - EXPOSURE &amp; RISK MODELS</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"../../assets/diagrams/business-roi-credit-risk.drawio"}'></div>
       </div>
 
       <h3>Modelagem Data Mesh: Produtos de Dados Financeiros</h3>
