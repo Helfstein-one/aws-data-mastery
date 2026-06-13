@@ -8,6 +8,10 @@
   <title>PMO & SME para Dados - AWS Data Specialist</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../style.css">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
 </head>
 <body>
 
@@ -493,11 +497,35 @@
         <p style="margin-top:10px;"><strong>Tarefa (Task):</strong> O código em si (Engenharia). <br><em>Ex: "Criar crawler no Glue para o Bucket S3 Raw", "Construir job EMR Spark de deduplicação".</em></p>
       </div>
       <div class="card" style="background:#0f172a;">
-        <div class="card-lbl">Métricas PMO: Gantt & Burndown</div>
-        <h4 style="color:var(--spark)">Gráfico de Gantt</h4>
-        <p>Usado para planejamento de longo prazo (Roadmap) e gestão de dependências. Mostra as entregas trimestrais (Épicos) numa linha do tempo. Essencial para alinhamento executivo.</p>
-        <h4 style="margin-top:15px; color:var(--arch)">Burndown Chart</h4>
-        <p>Usado a nível de Squad na Sprint (2 semanas). O gráfico traça uma linha descendente do total de Story Points da Sprint e a quantidade já queimada. Se a linha real descer mais devagar que a linha ideal, a squad está em perigo e o PMO/Agilista atua.</p>
+        <div class="card-lbl">Métricas PMO: Visão Executiva & Operacional</div>
+        
+        <h4 style="color:var(--spark); margin-bottom:10px;">Gráfico de Gantt (Macro Roadmap)</h4>
+        <div class="mermaid" style="background:var(--card-bg); padding:10px; border-radius:8px; border:1px solid #1e293b; margin-bottom:15px; font-size: 0.8rem;">
+gantt
+    title Roadmap de Engenharia (Q3)
+    dateFormat  YYYY-MM-DD
+    section CDC Ingestion
+    Setup MSK & Kafka Connect      :done,    des1, 2026-07-01, 14d
+    Pipeline PySpark Raw to Bronze :active,  des2, after des1, 14d
+    section Data Mesh Gold
+    Deduplicação & Iceberg         :         des3, after des2, 21d
+    Data Contracts Enforcement     :         des4, after des3, 10d
+    section Consumo
+    Athena Views & IAM             :         des5, after des3, 14d
+    Dashboards QuickSight          :         des6, after des5, 14d
+        </div>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom: 25px;"><strong>Como ler:</strong> O Gantt traduz "Técnica" para "Tempo". C-Levels usam essa métrica para alinhar as expectativas de <em>Go-Live</em> com o negócio. Ele revela dependências críticas: não podemos construir o Dashboard sem o Iceberg pronto. Se o "Setup MSK" atrasa, a cascata inteira é comprometida.</p>
+
+        <h4 style="margin-top:15px; color:var(--arch); margin-bottom:10px;">Burndown Chart (Micro Gestão)</h4>
+        <div class="mermaid" style="background:var(--card-bg); padding:10px; border-radius:8px; border:1px solid #1e293b; margin-bottom:15px;">
+xychart-beta
+    title Sprint 14: Queima de Story Points
+    x-axis "Dias da Sprint" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    y-axis "Story Points (SP)" 0 --> 50
+    line "Ideal (Queima Perfeita)" [50, 46, 42, 38, 34, 30, 26, 22, 18, 14, 10, 6, 2, 0]
+    bar "Real (Completado)" [50, 50, 48, 48, 40, 38, 38, 35, 30, 20, 15, 10, 5, 2]
+        </div>
+        <p style="font-size:0.9rem; color:var(--muted);"><strong>Como ler:</strong> A linha traça o ritmo ideal de queima de pontos. As barras são a realidade. Se a barra estiver acima da linha, a Squad está entregando <strong>mais devagar</strong> que o planejado. Repare no "degrau" plano (Dias 5, 6 e 7): possivelmente os engenheiros ficaram bloqueados aguardando acesso IAM ou um PR review, represando os tickets. O Agile Master atua para destruir esses bloqueios e fazer a barra despencar de volta à meta (como aconteceu do dia 9 ao 10).</p>
       </div>
     </div>
 
@@ -535,30 +563,98 @@
   </section>
 </main>
 
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
 <script>
 function toggleNav() {
-  document.getElementById("sidebar").classList.toggle("open");
-}
-function toggleCategory(id, el) {
-  var cat = document.getElementById(id);
-  cat.classList.toggle("open");
-  el.classList.toggle("active");
-  var arrow = el.querySelector('.arrow');
-  if(cat.classList.contains("open")) {
-    arrow.textContent = "▼";
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
   } else {
-    arrow.textContent = "▶";
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
   }
 }
 
-document.addEventListener("DOMContentLoaded", function() {
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+  
   // Configuração rápida da active nav
   const pages = document.querySelectorAll('.nav-a');
   pages.forEach(p => p.classList.remove('active'));
   const current = document.querySelector('.nav-a[data-page="pmo-sme-dados"]');
   if(current) current.classList.add('active');
 });
-</script>
 
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+<script src="../../progress.js"></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>
