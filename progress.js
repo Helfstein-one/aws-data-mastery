@@ -593,6 +593,7 @@
         const currentPage = getCurrentPageName();
         key = currentPage.split("#")[0] + href;
       }
+      key = key.split('/').pop();
 
       // Adiciona o indicador visual se não existir
       let dot = link.querySelector(".nav-sdot");
