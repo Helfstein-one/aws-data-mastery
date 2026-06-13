@@ -625,6 +625,7 @@
           <p>Quando a requisição chega, o <strong>Trino Coordinator</strong> assume o controle. O primeiro gargalo que a maioria dos engenheiros desconhece é a dependência profunda das APIs do AWS Glue. Antes de rodar, o Coordinator dispara as chamadas <code>glue:GetDatabase</code> e <code>glue:GetTable</code> para descobrir a tipagem das colunas e os formatos de compressão (SerDe).</p>
           <p>Se a tabela for particionada (estilo Hive), o Coordinator lança milhares de paginações da API <code>glue:GetPartitions</code>. Em tabelas com dezenas de milhares de partições, essa fase pode demorar minutos, fazendo a query "travar no Planejamento" antes mesmo da execução real começar. <strong>Solução:</strong> Utilizar Partition Projection ou formato Apache Iceberg.</p>
         </div>
+        <div>
           <h4>A Fase de Execução (Execution Time) e os Trino Splits</h4>
           <p>Uma vez que o plano de execução físico foi compilado e todas as rotas de S3 mapeadas, o Coordinator distribui a tarefa em centenas de <strong>Trino Workers</strong> dividindo o trabalho em unidades lógicas chamadas <strong>Splits</strong>.</p>
           <p>Um "Split" geralmente equivale a um bloco HDFS/S3 físico (ex: um chunk de 128MB de um arquivo Parquet). Se você tiver milhares de arquivos de 1KB (Small Files Problem), o Coordinator sofrerá <em>Head-of-Line Blocking</em> tentando enfileirar milhares de minúsculos Splits para os workers, matando a performance. Se tiver arquivos muito grandes (10GB) não-segmentáveis (como JSON comprimido em GZIP), 1 único worker ficará preso lendo todo o arquivo enquanto os demais ficam ociosos. <strong>Otimização Suprema:</strong> Arquivos Parquet/ORC de ~128MB a 512MB com compressão Snappy, permitindo que cada Split seja perfeitamente processado em paralelo por múltiplos workers.</p>
@@ -708,7 +709,6 @@
 <span class="k">SELECT</span> table_schema, table_name, view_definition
 <span class="k">FROM</span> information_schema.views
 <span class="k">WHERE</span> table_schema = <span class="s">'meu_datalake'</span>;</pre>
-        </div>
         </div>
       </div>
 
@@ -1034,6 +1034,7 @@ spark.sql(<span class="s">"CALL glue_catalog.system.expire_snapshots(table => 'i
           <p>O <strong>Automatic WLM</strong> aloca dinamicamente memória e slots de processamento para diferentes grupos de usuários. Para combater a frustração, o Redshift usa Machine Learning via <strong>SQA (Short Query Acceleration)</strong>.</p>
           <p>Se uma query simples ("qual o total de vendas hoje?") entrar atrás de um ETL de 3 horas na fila, o SQA identifica via heurística que a query é curta e cria uma faixa expressa prioritária em um pool oculto de recursos, respondendo-a imediatamente sem que o usuário tenha que esperar o ETL finalizar.</p>
         </div>
+        <div>
           <h4>Concurrency Scaling e AQUA</h4>
           <p>Para picos de acessos extremos, o <strong>Concurrency Scaling</strong> levanta cópias efêmeras do cluster em milissegundos para absorver leituras. Mas para acelerar queries pesadas na própria base, o Redshift introduziu o <strong>AQUA (Advanced Query Accelerator)</strong>. O AQUA é um cache distribuído construído em instâncias FPGA personalizadas da AWS que fica "abaixo" dos Compute Nodes, próximo ao S3. Ele intercepta as varreduras de dados e executa operações de filtragem (<code>LIKE</code>) e agregação a nível de hardware antes mesmo que os dados trafeguem pela rede até o Compute Node principal, acelerando as queries em até 10x sem custo adicional nos nós RA3.</p>
         </div>
