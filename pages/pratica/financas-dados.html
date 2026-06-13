@@ -486,10 +486,6 @@
       <p>Simulação de um empréstimo de <strong>R$ 10.000,00</strong> em <strong>12 meses</strong> com juros de <strong>2% ao mês</strong>.</p>
       
       <div class="code-block" style="margin-bottom: 24px;">
-        <div class="code-header">
-          <span class="code-lang">python</span>
-          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-        </div>
         <pre><code class="language-python"># Cálculo Tabela SAC (Amortização Constante)
 def calcular_sac(capital, taxa_juros, meses):
     amortizacao_mensal = capital / meses
@@ -507,10 +503,6 @@ calcular_sac(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
       </div>
 
       <div class="code-block" style="margin-bottom: 32px;">
-        <div class="code-header">
-          <span class="code-lang">python</span>
-          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-        </div>
         <pre><code class="language-python"># Cálculo Tabela Price (Parcela Fixa)
 def calcular_price(capital, taxa_juros, meses):
     # Fórmula da Parcela Fixa (PMT)
@@ -567,10 +559,6 @@ calcular_price(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
 
       <h4 style="margin-top: 32px;">Exemplo de Cálculo de Inadimplência</h4>
       <div class="code-block" style="margin-bottom: 32px;">
-        <div class="code-header">
-          <span class="code-lang">python</span>
-          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-        </div>
         <pre><code class="language-python"># Cálculo de Atraso (Multa e Juros de Mora)
 def calcular_divida_atraso(valor_parcela, dias_atraso, perc_multa=0.02, juros_mes=0.01):
     if dias_atraso <= 0:
@@ -711,18 +699,35 @@ calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
         </ul>
       </div>
 
-      <h3>Linha do Tempo: Fluxos de Negócio</h3>
+      <h3>Linha do Tempo Completa e Eventos de Crédito</h3>
       <div class="timeline-container" style="margin-top: 20px; background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
-        <p>Uma visão simplificada dos eventos processados em tópicos Kafka e refletidos em um Data Lakehouse:</p>
-        <ol style="line-height: 1.8;">
-          <li><code>T0</code>: <strong>Contratação</strong> &rarr; Ingestão do contrato (Valor Base).</li>
-          <li><code>T1</code>: <strong>Concessão</strong> &rarr; Transação de liquidação (Dinheiro sai do Caixa e vai pro Cliente).</li>
-          <li><code>T1 a T30</code>: <strong>Spot Accrual</strong> &rarr; Jobs em lote/streaming calculam juros diários (Eventos de Accrual).</li>
-          <li><code>T30</code>: <strong>Recebimento</strong> &rarr; Entrada de caixa, baixa de juros apropriados e principal.</li>
-          <li><code>T60</code> (Se não houver pgto): <strong>Atraso</strong> &rarr; Início da esteira de cobrança. Risco atualizado.</li>
-          <li><code>T120</code>: <strong>Renegociação</strong> &rarr; Novo contrato criado.</li>
-          <li><code>T360+</code>: <strong>Write-off</strong> &rarr; Evento contábil de Baixa para Prejuízo.</li>
-        </ol>
+        <p>A arquitetura moderna deve distinguir claramente as datas de negócio (Business Time) das datas de sistema (Processing Time). Abaixo o ciclo de vida detalhado:</p>
+        
+        <ul style="line-height: 1.8;">
+          <li><strong style="color:var(--emr)">Data de Contratação:</strong> O momento em que o cliente assina e formaliza o termo de empréstimo.</li>
+          <li><strong style="color:var(--emr)">Data de Concessão:</strong> O instante em que o dinheiro (TED/PIX) efetivamente cai na conta do cliente (início da Exposição).</li>
+          <li><strong style="color:var(--emr)">Data de Processamento (System Time):</strong> A exata milissegunda em que o evento (Kafka/Kinesis) bateu no Data Lake (Silver/Gold). Difere da data do negócio por latências de rede ou batimentos noturnos.</li>
+          <li><strong style="color:var(--emr)">Data de Posição do Contrato (Snapshot D-1):</strong> A fotografia diária. O saldo devedor fechado à meia-noite (00:00), que inclui o cálculo de <strong>Spot Accrual</strong> (apropriação dos juros do dia).</li>
+          <li><strong style="color:var(--emr)">Data de Vencimento:</strong> A data limite pactuada no contrato para que o cliente pague a parcela sem incorrer em mora.</li>
+          <li><strong style="color:var(--emr)">Data de Pagamento da Parcela:</strong> Quando o cliente executa a transação no seu banco de origem.</li>
+          <li><strong style="color:var(--emr)">Data de Recebimento (Liquidação):</strong> Quando o dinheiro entra no caixa da instituição. Gera a baixa no saldo devedor e realiza a <strong>Amortização</strong> (abatimento do principal) e o pagamento dos juros.</li>
+          <li><strong style="color:var(--emr)">Data de Atraso (Delinquency):</strong> Quando a Data Atual ultrapassa a Data de Vencimento sem Recebimento. O sistema altera o status do contrato e aciona a provisão (PDD).</li>
+          <li><strong style="color:var(--emr)">Data de Renegociação:</strong> Cliente firma novo acordo, liquidando o contrato antigo (saldo zerado) e criando um novo contrato (novo T0).</li>
+          <li><strong style="color:var(--emr)">Data de Write-off:</strong> Após X dias de atraso (ex: 360), o crédito é baixado como prejuízo contábil total (retirado do Ativo Circulante).</li>
+        </ul>
+
+        <h5 style="margin-top:20px; color:var(--fg)">Modelagem de Tabelas (Exemplo Fato/Trusted)</h5>
+        <pre><code class="language-sql" style="background:#000; padding:15px; border-radius:6px; display:block; color:#e2e8f0;">CREATE TABLE gold.fato_eventos_credito (
+  id_evento STRING,
+  id_contrato STRING,
+  tipo_evento STRING, -- 'CONCESSAO', 'ACCRUAL', 'RECEBIMENTO', 'ATRASO', 'WRITE_OFF'
+  valor_principal DECIMAL(15,2),
+  valor_juros DECIMAL(15,2),
+  valor_amortizacao DECIMAL(15,2),
+  data_evento DATE, -- Business Time (Data do Recebimento, Concessão, etc)
+  data_processamento TIMESTAMP, -- System Time (Quando caiu no Kafka/Lake)
+  data_referencia_posicao DATE -- Data da fotografia contábil (D-1)
+) PARTITIONED BY (data_referencia_posicao);</code></pre>
       </div>
 
       <div class="callout callout-warning">
@@ -760,13 +765,14 @@ calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
         </div>
       </div>
 
-      <div style="margin-top: 30px;">
-        <h4>Visualização dos Diagramas Draw.io (Negócio e Técnico)</h4>
-        <p>Abaixo os fluxos modelados em Draw.io, que detalham a esteira de negócio e a integração Data Mesh:</p>
-        <div style="display:flex; gap:10px; margin-top: 10px;">
-          <a href="../../assets/diagrams/credit-lifecycle.drawio" download class="btn-primary" style="background:#0284c7; padding: 10px 15px; text-decoration: none; border-radius: 6px; color: white;">⬇️ Baixar Diagrama de Negócio (Draw.io)</a>
-          <a href="../../assets/diagrams/data-mesh-credit.drawio" download class="btn-primary" style="background:#f59e0b; padding: 10px 15px; text-decoration: none; border-radius: 6px; color: white;">⬇️ Baixar Diagrama Data Mesh (Draw.io)</a>
-        </div>
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - JORNADA DO CRÉDITO</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"../../assets/diagrams/business-roi-credit-journey.drawio"}'></div>
+      </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - DATA MESH</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"../../assets/diagrams/business-roi-data-mesh.drawio"}'></div>
       </div>
 
     </section>
