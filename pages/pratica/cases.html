@@ -388,104 +388,9 @@
       <p>Este caso prático ilustra a infraestrutura de uma empresa de varejo global que precisa coletar cliques, visualizações, adições ao carrinho e compras em tempo real. O sistema deve atender a dois requisitos conflitantes: baixa latência para alimentar um motor de análise de fraudes em tempo real e estruturação barata no S3 (formato colunar indexado) para análises analíticas e machine learning.</p>
 
       <!-- SVG DIAGRAM CASE 1 -->
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">PLATAFORMA DE INGESTÃO E PROCESSAMENTO DE EVENTOS EM LARGA ESCALA</text>
-          
-          <!-- Web/Mobile -->
-          <rect x="20" y="70" width="100" height="60" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="70" y="95" text-anchor="middle" fill="#3b82f6" font-size="8.5" font-weight="700">App Clientes</text>
-          <text x="70" y="112" text-anchor="middle" fill="#cbd5e1" font-size="7">Cliques &amp; Compras</text>
-
-          <path d="M 120 100 L 160 100" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Ingestion: ALB + ECS Fargate -->
-          <rect x="170" y="60" width="140" height="130" rx="8" fill="#1e293b" stroke="#0f766e" stroke-width="2"/>
-          <text x="240" y="80" text-anchor="middle" fill="#0f766e" font-size="9" font-weight="700">API DE INGESTÃO</text>
-          
-          <rect x="180" y="95" width="120" height="22" rx="4" fill="#0f172a" stroke="#0f766e" stroke-width="1"/>
-          <text x="240" y="109" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Load Balancer (ALB)</text>
-
-          <rect x="180" y="125" width="120" height="50" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="240" y="142" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">ECS Fargate</text>
-          <text x="240" y="155" text-anchor="middle" fill="#cbd5e1" font-size="7">(FastAPI Containers)</text>
-
-          <!-- Direct Line to Kinesis -->
-          <path d="M 310 120 L 350 120" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Kinesis Data Streams -->
-          <rect x="360" y="60" width="100" height="130" rx="8" fill="#1e293b" stroke="#ea580c" stroke-width="2"/>
-          <text x="410" y="85" text-anchor="middle" fill="#ea580c" font-size="9" font-weight="700">AWS Kinesis</text>
-          <text x="410" y="100" text-anchor="middle" fill="#ea580c" font-size="9" font-weight="700">Data Stream</text>
-          
-          <line x1="370" y1="120" x2="450" y2="120" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2,2"/>
-          <text x="410" y="135" text-anchor="middle" fill="#cbd5e1" font-size="7">Shard 1</text>
-          <text x="410" y="150" text-anchor="middle" fill="#cbd5e1" font-size="7">Shard 2</text>
-          <text x="410" y="165" text-anchor="middle" fill="#cbd5e1" font-size="7">Shard 3</text>
-
-          <!-- Path 1 (Speed Path): Lambda to DynamoDB -->
-          <path d="M 460 90 L 500 65 L 520 65" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="490" y="52" fill="#3b82f6" font-size="7" font-weight="700">Lambda (Fraude)</text>
-          
-          <rect x="530" y="40" width="200" height="50" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="630" y="62" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="700">Amazon DynamoDB</text>
-          <text x="630" y="78" text-anchor="middle" fill="#cbd5e1" font-size="7">Latência &lt;10ms / Escrita KV</text>
-
-          <!-- Path 2 (Storage/Batch Path): Firehose to S3 Bronze -->
-          <path d="M 460 150 L 500 175 L 520 175" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="490" y="195" fill="#f59e0b" font-size="7" font-weight="700">Kinesis Firehose</text>
-
-          <rect x="530" y="150" width="200" height="50" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
-          <text x="630" y="172" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="700">S3 Bronze Bucket</text>
-          <text x="630" y="188" text-anchor="middle" fill="#cbd5e1" font-size="7">Buffering (5min / Parquet)</text>
-
-          <!-- Batch processing line -->
-          <path d="M 630 200 L 630 240 L 460 240" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="560" y="232" fill="#7c3aed" font-size="8" font-weight="700">Recorrente (PySpark)</text>
-
-          <!-- AWS Glue Job (Processing Layer) -->
-          <rect x="230" y="215" width="220" height="85" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="340" y="235" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="700">AWS Glue Job (Spark)</text>
-          <text x="340" y="255" text-anchor="middle" fill="#cbd5e1" font-size="7.5">1. De-duplicação (DropDuplicates)</text>
-          <text x="340" y="270" text-anchor="middle" fill="#cbd5e1" font-size="7.5">2. Validação Glue Data Quality (DQDL)</text>
-          <text x="340" y="285" text-anchor="middle" fill="#cbd5e1" font-size="7.5">3. Compactação de Small Files</text>
-
-          <!-- Arrow from Glue to Silver/Quarantine -->
-          <path d="M 230 250 L 160 250 L 160 220 L 120 220" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="175" y="212" fill="#10b981" font-size="7">Aprovado</text>
-
-          <path d="M 230 270 L 160 270 L 160 300 L 120 300" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrow)" fill="none" stroke-dasharray="3,3"/>
-          <text x="175" y="315" fill="#ef4444" font-size="7">Rejeitado</text>
-
-          <!-- S3 Silver (Iceberg) -->
-          <rect x="10" y="195" width="100" height="50" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-          <text x="60" y="218" text-anchor="middle" fill="#10b981" font-size="8.5" font-weight="700">S3 Silver</text>
-          <text x="60" y="232" text-anchor="middle" fill="#cbd5e1" font-size="7">Apache Iceberg</text>
-
-          <!-- S3 Quarantine (Failed Quality) -->
-          <rect x="10" y="275" width="100" height="50" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
-          <text x="60" y="298" text-anchor="middle" fill="#ef4444" font-size="8.5" font-weight="700">S3 Quarantine</text>
-          <text x="60" y="312" text-anchor="middle" fill="#cbd5e1" font-size="7">Alert EventBridge</text>
-
-          <!-- Downstream Analytics serving S3 Silver -->
-          <path d="M 60 245 L 60 270" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="150" y="45" width="175" height="142" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="155" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: INGESTÃO &amp; API (DECOUPLED)</text>
-          
-          <rect x="350" y="32" width="395" height="175" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="360" y="28" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: SPEED PATH (REAL-TIME RISK)</text>
-
-          <rect x="220" y="210" width="240" height="95" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="230" y="320" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: BATCH PATH (LAKEHOUSE STORAGE)</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 1 — Pipeline de Clickstream em Tempo Real</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"340\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n      <mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"340\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"title\" value=\"CASE 1 \u2014 PIPELINE DE CLICKSTREAM EM TEMPO REAL\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_src\" value=\"FONTES\" style=\"rounded=1;arcSize=3;fillColor=#0a1628;strokeColor=#334155;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;labelBackgroundColor=none;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"10\" y=\"80\" width=\"140\" height=\"180\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"web\" value=\"Browser Events\" style=\"rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#475569;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;labelBackgroundColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"25\" y=\"100\" width=\"110\" height=\"36\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"mob\" value=\"Mobile SDK\" style=\"rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#475569;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;labelBackgroundColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"25\" y=\"150\" width=\"110\" height=\"36\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"iot\" value=\"IoT Devices\" style=\"rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#475569;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;labelBackgroundColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"25\" y=\"200\" width=\"110\" height=\"36\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"kds\" value=\"Kinesis\nData Streams\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis_data_streams;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"250\" y=\"145\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_web_kds\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"web\" target=\"kds\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_mob_kds\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"mob\" target=\"kds\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_iot_kds\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"iot\" target=\"kds\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"lmb\" value=\"Lambda\nValidation\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"410\" y=\"80\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"fh\" value=\"Firehose\nBatch Write\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis_data_firehose;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"410\" y=\"210\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_kds_lmb\" value=\"Real-time\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"kds\" target=\"lmb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_kds_fh\" value=\"Near-RT\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"kds\" target=\"fh\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"ddb\" value=\"DynamoDB\nSession State\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"560\" y=\"80\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3\" value=\"S3\nIceberg Gold\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"560\" y=\"210\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_lmb_ddb\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"lmb\" target=\"ddb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_fh_s3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"fh\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"athena\" value=\"Athena\nSession Analytics\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.athena;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"710\" y=\"80\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"rs\" value=\"Redshift\nFunnel DW\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.redshift;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"710\" y=\"210\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_ddb_ath\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"ddb\" target=\"athena\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_s3_rs\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"s3\" target=\"rs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"qs\" value=\"QuickSight\nDashboard\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.quicksight;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"850\" y=\"145\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_ath_qs\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"athena\" target=\"qs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_rs_qs\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"rs\" target=\"qs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root>\n</mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -621,90 +526,9 @@
       <p>Neste caso de uso de uma instituição bancária regulada, múltiplos domínios de negócios geram e gerenciam seus próprios dados. O domínio de **Contas Correntes** e o domínio de **Investimentos** precisam compartilhar dados para gerar relatórios unificados sem duplicar armazenamento e sob regras rígidas de compliance (ocultar saldo de investidores VIPs e mascarar CPFs).</p>
 
       <!-- SVG DIAGRAM CASE 2 -->
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA DATA MESH FINANCEIRA INTEGRADA E SEGURA</text>
-
-          <!-- DOMAIN 1: CONTAS CORRENTES -->
-          <rect x="20" y="60" width="220" height="130" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="130" y="80" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="700">DOMÍNIO CONTAS CORRENTES</text>
-          
-          <rect x="35" y="95" width="190" height="35" rx="4" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
-          <text x="130" y="112" text-anchor="middle" fill="#cbd5e1" font-size="7.5">EMR Serverless (PySpark Job)</text>
-          
-          <rect x="35" y="140" width="190" height="35" rx="4" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
-          <text x="130" y="157" text-anchor="middle" fill="#cbd5e1" font-size="7.5">S3 Bucket: Contas Silver (Iceberg)</text>
-
-          <!-- DOMAIN 2: INVESTIMENTOS -->
-          <rect x="20" y="210" width="220" height="130" rx="8" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
-          <text x="130" y="230" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">DOMÍNIO INVESTIMENTOS</text>
-          
-          <rect x="35" y="245" width="190" height="35" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
-          <text x="130" y="262" text-anchor="middle" fill="#cbd5e1" font-size="7.5">AWS Glue ETL (Catalog)</text>
-          
-          <rect x="35" y="290" width="190" height="35" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
-          <text x="130" y="307" text-anchor="middle" fill="#cbd5e1" font-size="7.5">S3 Bucket: Invest Silver (Iceberg)</text>
-
-          <!-- Center: central catalog with lake formation -->
-          <path d="M 240 120 L 290 120 L 290 160 L 320 160" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <path d="M 240 275 L 290 275 L 290 200 L 320 200" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- GOVERNANCE HUB -->
-          <rect x="330" y="110" width="180" height="150" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="420" y="130" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="700">GOVERNANÇA CENTRAL</text>
-          
-          <rect x="345" y="145" width="150" height="40" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1"/>
-          <text x="420" y="160" text-anchor="middle" fill="#e2e8f0" font-size="8" font-weight="700">AWS Lake Formation</text>
-          <text x="420" y="172" text-anchor="middle" fill="#10b981" font-size="7">Row &amp; Column Policies</text>
-
-          <rect x="345" y="195" width="150" height="50" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1"/>
-          <text x="420" y="210" text-anchor="middle" fill="#e2e8f0" font-size="8" font-weight="700">Glue Data Catalog</text>
-          <text x="420" y="222" text-anchor="middle" fill="#cbd5e1" font-size="7">Cross-Account Grant</text>
-          <text x="420" y="234" text-anchor="middle" fill="#cbd5e1" font-size="7">Shared RAM Catalog Link</text>
-
-          <!-- Sharing path to serving/consumer -->
-          <path d="M 510 180 L 560 180" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- CONSUMER DOMAIN / DATA API -->
-          <rect x="570" y="60" width="170" height="280" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="655" y="80" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700">DATA PRODUCTS (API)</text>
-
-          <rect x="580" y="100" width="150" height="45" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="655" y="115" text-anchor="middle" fill="#e2e8f0" font-size="8" font-weight="700">API Gateway</text>
-          <text x="655" y="128" text-anchor="middle" fill="#38bdf8" font-size="7">Cache (TTL 1h) &amp; Throttling</text>
-
-          <rect x="580" y="155" width="150" height="45" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="655" y="170" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">AWS Lambda</text>
-          <text x="655" y="183" text-anchor="middle" fill="#cbd5e1" font-size="7">Compute: Athena Query</text>
-
-          <rect x="580" y="210" width="150" height="45" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="655" y="225" text-anchor="middle" fill="#cbd5e1" font-size="8" font-weight="700">Athena Engine</text>
-          <text x="655" y="238" text-anchor="middle" fill="#cbd5e1" font-size="7">Aplica filtros LF</text>
-
-          <rect x="580" y="265" width="150" height="60" rx="4" fill="#1e293b" stroke="#cbd5e1" stroke-width="1"/>
-          <text x="655" y="280" text-anchor="middle" fill="#cbd5e1" font-size="7.5" font-weight="700">Consumidor de BI</text>
-          <text x="655" y="295" text-anchor="middle" fill="#10b981" font-size="7">Verifica: CPF Mascarado</text>
-          <text x="655" y="310" text-anchor="middle" fill="#10b981" font-size="7">Filtro: Saldo &lt; 500k</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="15" y="52" width="230" height="142" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="48" fill="#94a3b8" font-size="7" font-weight="700">DOMÍNIO A: CONTAS CORRENTES (CONTA PRODUTORA)</text>
-
-          <rect x="15" y="202" width="230" height="142" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="352" fill="#94a3b8" font-size="7" font-weight="700">DOMÍNIO B: INVESTIMENTOS (CONTA PRODUTORA)</text>
-
-          <rect x="320" y="100" width="200" height="170" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="325" y="95" fill="#94a3b8" font-size="7" font-weight="700">GOVERNANÇA CENTRAL (METADADOS)</text>
-
-          <rect x="560" y="52" width="190" height="295" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="565" y="48" fill="#94a3b8" font-size="7" font-weight="700">DATA PRODUCTS (CONTA CONSUMIDORA)</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 2 — Data Mesh: Plataforma Financeira Multi-Domínio</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"340\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n      <mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"340\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"title\" value=\"CASE 2 \u2014 DATA MESH: PLATAFORMA FINANCEIRA MULTI-DOM\u00cdNIO\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"d1\" value=\"DOM\u00cdNIO\nPAGAMENTOS\" style=\"rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#7c3aed;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;labelBackgroundColor=none;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"10\" y=\"70\" width=\"180\" height=\"240\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"kds1\" value=\"Kinesis\nStream\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis_data_streams;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"110\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3d1\" value=\"S3 Product\nData Port\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"200\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"glue1\" value=\"Glue ETL\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"110\" y=\"155\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"kds1\" target=\"glue1\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"glue1\" target=\"s3d1\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"d2\" value=\"DOM\u00cdNIO\nCR\u00c9DITO\" style=\"rounded=1;arcSize=3;fillColor=#020e1a;strokeColor=#0369a1;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;labelBackgroundColor=none;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"210\" y=\"70\" width=\"180\" height=\"240\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"aurora2\" value=\"Aurora\nCredit DB\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"240\" y=\"110\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3d2\" value=\"S3 Product\nData Port\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0369a1;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"240\" y=\"200\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"lmb2\" value=\"Lambda\nTransform\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0369a1;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"310\" y=\"155\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#0369a1;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"aurora2\" target=\"lmb2\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#0369a1;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"lmb2\" target=\"s3d2\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"d3\" value=\"DOM\u00cdNIO\nRISCO\" style=\"rounded=1;arcSize=3;fillColor=#1a0000;strokeColor=#dc2626;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;labelBackgroundColor=none;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"410\" y=\"70\" width=\"180\" height=\"240\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"rs3\" value=\"Redshift\nRisk DW\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.redshift;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"440\" y=\"110\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3d3\" value=\"S3 Product\nData Port\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"440\" y=\"200\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"glue3\" value=\"Glue\nAggregate\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"510\" y=\"155\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e5\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"rs3\" target=\"glue3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e6\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"glue3\" target=\"s3d3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_mesh\" value=\"MESH GOVERNANCE\" style=\"rounded=1;arcSize=3;fillColor=#1a1200;strokeColor=#eab308;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;labelBackgroundColor=none;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"630\" y=\"100\" width=\"250\" height=\"180\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"lf\" value=\"Lake Formation\nGlobal Catalog\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lake_formation;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"140\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"glue_mesh\" value=\"Glue Data\nCatalog\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"760\" y=\"140\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"iam\" value=\"IAM\nCross-Domain\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.role;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"710\" y=\"230\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e7\" value=\"Publish\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"s3d1\" target=\"lf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e8\" value=\"Publish\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"s3d2\" target=\"lf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e9\" value=\"Publish\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"s3d3\" target=\"lf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root>\n</mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -840,96 +664,9 @@
       <p>Este caso de uso descreve a arquitetura de uma assistente virtual de inteligência artificial de alta performance que responde a dúvidas complexas sobre manuais de produtos, logs de suporte e políticas de segurança corporativas. A plataforma deve ler dados não estruturados de um repositório central, gerar representações vetoriais (embeddings), armazená-las de forma otimizada para busca por similaridade e expor uma interface conversacional de baixa latência e baixo custo computacional.</p>
 
       <!-- SVG DIAGRAM CASE 3 -->
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA DE PLATAFORMA DE IA GENERATIVA &amp; RAG (AWS)</text>
-
-          <!-- INGESTION & PIPELINE (TOP HALF) -->
-          <rect x="20" y="60" width="160" height="110" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="100" y="80" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="700">PIPELINE DE VETORIZAÇÃO</text>
-          
-          <rect x="30" y="95" width="140" height="25" rx="4" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
-          <text x="100" y="110" text-anchor="middle" fill="#cbd5e1" font-size="7.5">S3: PDF/Manuals Raw</text>
-
-          <rect x="30" y="130" width="140" height="30" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1"/>
-          <text x="100" y="148" text-anchor="middle" fill="#7c3aed" font-size="8" font-weight="700">AWS Glue Spark</text>
-
-          <!-- Vectorization Call to Bedrock Embeddings -->
-          <path d="M 180 145 L 220 145 L 220 90 L 260 90" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="225" y="78" fill="#cbd5e1" font-size="7">Generates Embeddings</text>
-
-          <!-- Amazon Bedrock (Titan Embeddings) -->
-          <rect x="270" y="60" width="180" height="60" rx="6" fill="#1e293b" stroke="#a21caf" stroke-width="1.5"/>
-          <text x="360" y="85" text-anchor="middle" fill="#a21caf" font-size="9" font-weight="700">Amazon Bedrock</text>
-          <text x="360" y="100" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Titan Text Embeddings V2</text>
-
-          <!-- Arrow from Bedrock Embeddings to Vector Store -->
-          <path d="M 450 90 L 490 90 L 490 120 L 520 120" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Vector Store (OpenSearch Serverless) -->
-          <rect x="530" y="95" width="200" height="85" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="630" y="115" text-anchor="middle" fill="#10b981" font-size="9.5" font-weight="700">Amazon OpenSearch</text>
-          <text x="630" y="130" text-anchor="middle" fill="#10b981" font-size="9.5" font-weight="700">Serverless (Vector Engine)</text>
-          <text x="630" y="150" text-anchor="middle" fill="#cbd5e1" font-size="7.5">KNN Index / HNSW Algorithm</text>
-          <text x="630" y="165" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Metadata + Embeddings Vectors</text>
-
-          <!-- SERVING & INFERENCE (BOTTOM HALF) -->
-          <!-- Client Chat UI -->
-          <rect x="20" y="240" width="120" height="65" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
-          <text x="80" y="265" text-anchor="middle" fill="#38bdf8" font-size="8.5" font-weight="700">Usuário / Chat UI</text>
-          <text x="80" y="280" text-anchor="middle" fill="#cbd5e1" font-size="7">"Como configurar X?"</text>
-
-          <!-- Path user request -->
-          <path d="M 140 270 L 180 270" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- API Gateway / Orchestration -->
-          <rect x="190" y="210" width="220" height="130" rx="8" fill="#1e293b" stroke="#0f766e" stroke-width="2"/>
-          <text x="300" y="230" text-anchor="middle" fill="#0f766e" font-size="10" font-weight="700">CAMADA DE SERVING &amp; ORQUESTRAÇÃO</text>
-          
-          <rect x="200" y="245" width="200" height="22" rx="4" fill="#0f172a" stroke="#0f766e" stroke-width="1"/>
-          <text x="300" y="259" text-anchor="middle" fill="#cbd5e1" font-size="7.5">API Gateway / AppSync (GraphQL)</text>
-
-          <rect x="200" y="275" width="200" height="50" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="300" y="292" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">AWS Lambda Orchestrator</text>
-          <text x="300" y="305" text-anchor="middle" fill="#cbd5e1" font-size="7">Semantic Cache (ElastiCache Redis)</text>
-
-          <!-- Lambda queries OpenSearch for Context -->
-          <path d="M 390 280 L 490 280 L 490 250 L 520 250" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="495" y="268" fill="#cbd5e1" font-size="7">1. Search KNN Vectors</text>
-
-          <!-- OpenSearch returns context -->
-          <path d="M 520 260 L 470 260 L 470 290 L 390 290" stroke="#10b981" stroke-width="1" marker-end="url(#arrow)" fill="none" stroke-dasharray="2,2"/>
-          <text x="450" y="305" fill="#10b981" font-size="7">2. Context Retrieved</text>
-
-          <!-- OpenSearch serving node for query (shared box) -->
-          <rect x="530" y="210" width="200" height="60" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-          <text x="630" y="235" text-anchor="middle" fill="#cbd5e1" font-size="8">OpenSearch Query Engine</text>
-          <text x="630" y="250" text-anchor="middle" fill="#cbd5e1" font-size="7">Filtro de Metadados / Similaridade</text>
-
-          <!-- Lambda calls LLM on Bedrock (Claude 3.5) -->
-          <path d="M 300 210 L 300 135 L 290 135 L 290 130" stroke="#a21caf" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="245" y="195" fill="#a21caf" font-size="7" font-weight="700">3. Invoke LLM (Claude 3.5)</text>
-
-          <!-- Bedrock returns completion to Lambda -->
-          <path d="M 350 120 L 350 210" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none" stroke-dasharray="2,2"/>
-          <text x="355" y="195" fill="#cbd5e1" font-size="7">4. LLM Response</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="10" y="50" width="455" height="130" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="45" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: PIPELINE DE EMBEDDINGS (OFFLINE/BATCH)</text>
-
-          <rect x="520" y="85" width="225" height="195" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="525" y="80" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: BANCO VETORIAL (VPC PRIVATE)</text>
-
-          <rect x="10" y="200" width="415" height="150" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="362" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: SERVING Conversacional (ONLINE)</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 3 — IA Generativa + LGPD: Anonimização On-the-Fly</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"320\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n      <mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"320\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"title\" value=\"CASE 3 \u2014 IA GENERATIVA + LGPD: ANONIMIZA\u00c7\u00c3O ON-THE-FLY\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_src\" value=\"DADOS SENS\u00cdVEIS\" style=\"rounded=1;arcSize=3;fillColor=#1a0000;strokeColor=#dc2626;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;labelBackgroundColor=none;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"10\" y=\"60\" width=\"160\" height=\"200\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"rds\" value=\"RDS\nPII Data\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"100\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3_pii\" value=\"S3\nPII Files\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"200\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_anon\" value=\"ANONIMIZA\u00c7\u00c3O LGPD\" style=\"rounded=1;arcSize=3;fillColor=#1a1200;strokeColor=#eab308;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;labelBackgroundColor=none;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"230\" y=\"60\" width=\"220\" height=\"200\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"lmb\" value=\"Lambda\nAnonymizer\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"100\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"kms\" value=\"KMS\nTokenize\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.key_management_service;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"360\" y=\"100\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"tech\" value=\"Masking \u00b7 Tokenization \u00b7 K-Anon\" style=\"rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#eab308;fontColor=#fde68a;fontFamily=DM Sans;fontSize=8;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;labelBackgroundColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"240\" y=\"195\" width=\"190\" height=\"30\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_rds_lmb\" value=\"PII\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"rds\" target=\"lmb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_s3_lmb\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"s3_pii\" target=\"lmb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_lmb_kms\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"lmb\" target=\"kms\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3_safe\" value=\"S3\nAnonymized\nGold\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"530\" y=\"140\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"lf\" value=\"Lake Formation\nPII Controls\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lake_formation;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"530\" y=\"235\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_kms_s3\" value=\"Anonymized\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"kms\" target=\"s3_safe\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_llm\" value=\"BEDROCK GenAI\" style=\"rounded=1;arcSize=3;fillColor=#1a0020;strokeColor=#a21caf;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;labelBackgroundColor=none;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"680\" y=\"60\" width=\"210\" height=\"200\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"bedrock\" value=\"Amazon\nBedrock\n(Claude)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#a21caf;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"710\" y=\"100\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"guardrails\" value=\"Guardrails\nPII Block\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;labelBackgroundColor=none;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"800\" y=\"100\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"prompt\" value=\"Prompt \u2192 LLM \u2192 Safe Response\" style=\"rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#a21caf;fontColor=#f0abfc;fontFamily=DM Sans;fontSize=8;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;labelBackgroundColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"690\" y=\"195\" width=\"190\" height=\"30\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_s3_bd\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#a21caf;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"s3_safe\" target=\"bedrock\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_bd_g\" value=\"Validate\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;labelBackgroundColor=none;\" edge=\"1\" source=\"bedrock\" target=\"guardrails\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root>\n</mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -1060,83 +797,9 @@
 
       <p>Nesta arquitetura industrial de manufatura pesada (indústria 4.0), turbinas e braços robóticos geram vibrações, temperatura e telemetria de sensores a cada milissegundo. A plataforma deve absorver esses fluxos com alta durabilidade, persistir em tabelas de séries temporais de baixa latência para monitoramento do operador em tempo real e estruturar um Datalake histórico para treinamento de modelos de IA de detecção de anomalias.</p>
 
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">TELEMETRIA INDUSTRIAL IOT &amp; PIPELINE DE ANOMALIA</text>
-          
-          <!-- IoT Sensors -->
-          <rect x="20" y="60" width="100" height="60" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="70" y="85" text-anchor="middle" fill="#3b82f6" font-size="8.5" font-weight="700">Sensores IoT</text>
-          <text x="70" y="100" text-anchor="middle" fill="#cbd5e1" font-size="7">Vibração / Temp</text>
-          
-          <path d="M 120 90 L 160 90" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- AWS IoT Core -->
-          <rect x="170" y="60" width="120" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="230" y="85" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700">AWS IoT Core</text>
-          <text x="230" y="105" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Rules Engine (MQTT)</text>
-
-          <!-- Split to Timestream and Firehose -->
-          <path d="M 290 85 L 340 60 L 370 60" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="330" y="48" fill="#3b82f6" font-size="7">Regra Real-time</text>
-
-          <path d="M 290 115 L 340 140 L 370 140" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="330" y="155" fill="#ea580c" font-size="7">Regra Histórico</text>
-
-          <!-- Timestream (Realtime TSDB) -->
-          <rect x="380" y="35" width="160" height="50" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="460" y="58" text-anchor="middle" fill="#3b82f6" font-size="8.5" font-weight="700">Amazon Timestream</text>
-          <text x="460" y="72" text-anchor="middle" fill="#cbd5e1" font-size="7">Séries Temporais (TSDB)</text>
-
-          <!-- Firehose -->
-          <rect x="380" y="115" width="160" height="50" rx="6" fill="#1e293b" stroke="#ea580c" stroke-width="1.5"/>
-          <text x="460" y="138" text-anchor="middle" fill="#ea580c" font-size="8.5" font-weight="700">Kinesis Firehose</text>
-          <text x="460" y="152" text-anchor="middle" fill="#cbd5e1" font-size="7">Buffer S3 (Parquet)</text>
-
-          <!-- Path S3 -->
-          <path d="M 540 140 L 590 140" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- S3 Iceberg Lakehouse -->
-          <rect x="600" y="110" width="140" height="65" rx="8" fill="#1e293b" stroke="#0f766e" stroke-width="2"/>
-          <text x="670" y="130" text-anchor="middle" fill="#0f766e" font-size="9" font-weight="700">S3 Lakehouse</text>
-          <text x="670" y="145" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Apache Iceberg</text>
-          <text x="670" y="160" text-anchor="middle" fill="#cbd5e1" font-size="7">Camada Cold</text>
-
-          <!-- SageMaker training path from S3 -->
-          <path d="M 670 180 L 670 230 L 450 230" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="560" y="220" fill="#7c3aed" font-size="7.5">Dataset de Treino</text>
-
-          <!-- SageMaker Model Training & Inference -->
-          <rect x="220" y="200" width="220" height="80" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="330" y="220" text-anchor="middle" fill="#7c3aed" font-size="9.5" font-weight="700">Amazon SageMaker</text>
-          <text x="330" y="240" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Treinamento XGBoost / Anomalias</text>
-          <text x="330" y="255" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Incertezas de Falhas Físicas</text>
-
-          <!-- Operator dashboard serving -->
-          <path d="M 460 88 L 460 290 L 140 290 L 140 310" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="280" y="282" fill="#3b82f6" font-size="7.5">Real-time Dashboard Metrics</text>
-
-          <!-- Grafana / Dashboard -->
-          <rect x="80" y="310" width="120" height="50" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-          <text x="140" y="333" text-anchor="middle" fill="white" font-size="8.5" font-weight="700">Grafana Dashboard</text>
-          <text x="140" y="347" text-anchor="middle" fill="#cbd5e1" font-size="7">Alertas Operacionais</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="150" y="50" width="150" height="100" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="155" y="45" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: GATEWAY IOT (BROKER)</text>
-
-          <rect x="365" y="25" width="190" height="70" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="370" y="20" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: REAL-TIME OPERATION</text>
-
-          <rect x="585" y="100" width="165" height="150" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="590" y="95" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: AI &amp; ANALYTICS</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 4 — Telemetria Industrial IoT</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"800\" pageHeight=\"300\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"800\" height=\"300\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"IOT & PREDICTIVE ANALYTICS ARCHITECTURE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"800\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"iot\" value=\"AWS IoT Core\\n(MQTT)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.iot_core;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"fh\" value=\"Kinesis\\nFirehose\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"s3\" value=\"Amazon S3\\n(Time-Series)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"sm\" value=\"Amazon SageMaker\\n(Predictive Maint.)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#0d9488;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"iot\" target=\"fh\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"fh\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"s3\" target=\"sm\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -1241,67 +904,9 @@
 
       <p>Uma empresa de courier internacional rastreia pacotes em tempo real transitando entre galpões nos EUA, Europa e América Latina. Para garantir tempos de resposta de API inferiores a 20ms para os operadores logísticos de bipagem, os bancos operacionais devem estar localizados nas regiões físicas mais próximas. A plataforma deve conciliar essas bases de forma ativa-ativa sem conflitos e exportar logs de mudanças para um Data Warehouse centralizado.</p>
 
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">RASTREABILIDADE LOGÍSTICA MULTIRREGIÃO &amp; CDC ANALÍTICO</text>
-          
-          <!-- Region 1: US -->
-          <rect x="20" y="60" width="220" height="110" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="130" y="80" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="700">REGIÃO US-EAST-1 (OPERACIONAL)</text>
-          <rect x="35" y="95" width="190" height="30" rx="4" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
-          <text x="130" y="112" text-anchor="middle" fill="#cbd5e1" font-size="7.5">DynamoDB Table (US)</text>
-          <text x="130" y="145" text-anchor="middle" fill="#a7f3d0" font-size="7">Bipe Logístico &lt;20ms</text>
-
-          <!-- Region 2: EU -->
-          <rect x="20" y="195" width="220" height="110" rx="8" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
-          <text x="130" y="215" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">REGIÃO EU-WEST-1 (OPERACIONAL)</text>
-          <rect x="35" y="230" width="190" height="30" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
-          <text x="130" y="247" text-anchor="middle" fill="#cbd5e1" font-size="7.5">DynamoDB Table (EU)</text>
-          <text x="130" y="280" text-anchor="middle" fill="#a7f3d0" font-size="7">Bipe Logístico &lt;20ms</text>
-
-          <!-- Bidirectional Replication (Global Tables) -->
-          <path d="M 245 110 L 290 110 L 290 250 L 245 250" stroke="#10b981" stroke-width="2" stroke-dasharray="2,2" fill="none"/>
-          <text x="320" y="180" text-anchor="middle" fill="#10b981" font-size="7.5" transform="rotate(-90 320 180)">Global Tables Replication</text>
-
-          <!-- DynamoDB Streams CDC -->
-          <path d="M 240 135 L 360 135 L 360 150 L 390 150" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="310" y="125" fill="#f59e0b" font-size="7">DynamoDB Streams</text>
-
-          <!-- Lambda CDC consumer -->
-          <rect x="400" y="120" width="150" height="60" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
-          <text x="475" y="142" text-anchor="middle" fill="#f59e0b" font-size="8.5" font-weight="700">AWS Lambda</text>
-          <text x="475" y="157" text-anchor="middle" fill="#cbd5e1" font-size="7">Event Forwarder (JSON)</text>
-
-          <!-- Lambda to S3 Buffer -->
-          <path d="M 550 150 L 590 150" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- S3 Buffer + Redshift COPY -->
-          <rect x="600" y="120" width="140" height="150" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="670" y="140" text-anchor="middle" fill="#10b981" font-size="9.5" font-weight="700">REDIS/DW</text>
-          
-          <rect x="610" y="155" width="120" height="30" rx="4" fill="#0f172a" stroke="#cbd5e1" stroke-width="1"/>
-          <text x="670" y="172" text-anchor="middle" fill="#cbd5e1" font-size="7.5">S3 Staging</text>
-
-          <rect x="610" y="200" width="120" height="50" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="670" y="218" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">Redshift Serverless</text>
-          <text x="670" y="235" text-anchor="middle" fill="#cbd5e1" font-size="6.5">COPY Auto-Manifest</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="15" y="45" width="220" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: TRANSACIONAL REGIONAL</text>
-
-          <rect x="245" y="55" width="225" height="220" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="250" y="50" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: CDC REPLICATION ENGINE</text>
-
-          <rect x="480" y="45" width="270" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="485" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: DWH CENTRAL ANALYTICS</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 5 — Rastreabilidade Global CDC</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"860\" pageHeight=\"340\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"860\" height=\"340\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"MULTI-REGION CDC DYNAMODB\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"860\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"ddb_us\" value=\"DynamoDB Table\\n(us-east-1)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"100\" y=\"80\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"ddb_eu\" value=\"DynamoDB Table\\n(eu-west-1)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"100\" y=\"200\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"gt\" value=\"Global Tables\\nReplication\" style=\"rounded=1;fillColor=#1e3a8a;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"80\" y=\"150\" width=\"100\" height=\"30\" as=\"geometry\"/></mxCell><mxCell id=\"streams\" value=\"DynamoDB Streams\" style=\"rounded=1;fillColor=#2563eb;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"280\" y=\"140\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"lam\" value=\"AWS Lambda\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"500\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"s3\" value=\"Amazon S3\\n(Analytics)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"700\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e_us_gt\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;\" edge=\"1\" source=\"ddb_us\" target=\"gt\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e_eu_gt\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;\" edge=\"1\" source=\"ddb_eu\" target=\"gt\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e_us_str\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"ddb_us\" target=\"streams\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e_str_lam\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#2563eb;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"streams\" target=\"lam\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e_lam_s3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f97316;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"lam\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -1406,73 +1011,9 @@
 
       <p>Uma plataforma de streaming de mídia precisa sugerir vídeos de forma altamente personalizada. O motor de IA necessita de dados em tempo real (ex: últimas 5 categorias de vídeos assistidos nos últimos 10 minutos) e dados históricos (ex: preferência de gênero dos últimos 6 meses). A arquitetura implementa uma Feature Store dual (Online de baixíssima latência e Offline para histórico) para servir os modelos de Machine Learning.</p>
 
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">REAL-TIME FEATURE STORE &amp; ENGINE DE RECOMENDAÇÃO</text>
-          
-          <!-- Clickstream logs -->
-          <rect x="20" y="70" width="110" height="50" rx="6" fill="#1e293b" stroke="#ea580c" stroke-width="1.5"/>
-          <text x="75" y="95" text-anchor="middle" fill="#ea580c" font-size="8" font-weight="700">Logs Clickstream</text>
-          <text x="75" y="108" text-anchor="middle" fill="#cbd5e1" font-size="6.5">App Cliques</text>
-
-          <path d="M 130 95 L 170 95" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Spark Streaming (EMR) -->
-          <rect x="180" y="60" width="180" height="80" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="270" y="85" text-anchor="middle" fill="#7c3aed" font-size="9" font-weight="700">Spark Streaming (EMR)</text>
-          <text x="270" y="105" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Agregações em Janela (10m)</text>
-
-          <!-- Double write to online/offline Feature Store -->
-          <path d="M 360 85 L 400 60 L 430 60" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="390" y="48" fill="#10b981" font-size="7">Fast writes</text>
-
-          <path d="M 360 115 L 400 140 L 430 140" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="390" y="155" fill="#64748b" font-size="7">Batch writes</text>
-
-          <!-- Online Feature Store (Dynamo/Redis) -->
-          <rect x="440" y="35" width="180" height="50" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-          <text x="530" y="58" text-anchor="middle" fill="#10b981" font-size="8.5" font-weight="700">Online Store (DynamoDB)</text>
-          <text x="530" y="72" text-anchor="middle" fill="#cbd5e1" font-size="7">Latência de Serving <10ms</text>
-
-          <!-- Offline Feature Store (S3 Parquet) -->
-          <rect x="440" y="115" width="180" height="50" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-          <text x="530" y="138" text-anchor="middle" fill="white" font-size="8.5" font-weight="700">Offline Store (S3)</text>
-          <text x="530" y="152" text-anchor="middle" fill="#64748b" font-size="7">Histórico para Treinamento</text>
-
-          <!-- Recommendation API (ECS Fargate) -->
-          <rect x="230" y="220" width="220" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
-          <text x="340" y="240" text-anchor="middle" fill="#3b82f6" font-size="9.5" font-weight="700">API Recomendador (Fargate)</text>
-          <text x="340" y="260" text-anchor="middle" fill="#cbd5e1" font-size="7.5">1. Get_Online_Features (Redis/Dynamo)</text>
-          <text x="340" y="275" text-anchor="middle" fill="#cbd5e1" font-size="7.5">2. Executa inferência do Modelo</text>
-          <text x="340" y="290" text-anchor="middle" fill="#a7f3d0" font-size="7">Retorna IDs de Vídeos Recomendados</text>
-
-          <!-- Connection from Online Store to API -->
-          <path d="M 530 90 L 530 250 L 460 250" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="540" y="170" fill="#10b981" font-size="7.5">Serving Realtime Features</text>
-
-          <!-- Redis cache for Recommendations -->
-          <path d="M 230 265 L 140 265 L 140 215 L 170 215" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="110" y="245" fill="#38bdf8" font-size="7">Check Cache</text>
-
-          <rect x="180" y="195" width="40" height="40" rx="6" fill="#1e293b" stroke="#38bdf8"/>
-          <text x="200" y="218" text-anchor="middle" fill="#38bdf8" font-size="8">Redis</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="15" y="45" width="220" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: STREAMING INGEST (SPARK)</text>
-
-          <rect x="245" y="55" width="245" height="220" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="250" y="50" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: FEATURE STORE (ONLINE &amp; OFFLINE)</text>
-
-          <rect x="500" y="45" width="250" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="505" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: SERVING API &amp; INFERENCE</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 6 — Feature Store Real-time</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"800\" pageHeight=\"300\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"800\" height=\"300\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"REAL-TIME RECOMMENDATION ENGINE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"800\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"kin\" value=\"Amazon Kinesis\\nData Streams\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"fs\" value=\"SageMaker\\nFeature Store\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#0d9488;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"ec\" value=\"Amazon ElastiCache\\n(Redis)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"ecs\" value=\"ECS Fargate\\n(Inference API)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"kin\" target=\"fs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0d9488;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"fs\" target=\"ec\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;\" edge=\"1\" source=\"ec\" target=\"ecs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -1581,75 +1122,9 @@
 
       <p>Uma grande operadora de hospitais quer centralizar o histórico clínico de pacientes para pesquisa médica de IA. Por lidar com prontuários de saúde (regulados por HIPAA nos EUA e LGPD no Brasil), dados pessoais identificáveis (PII) e condições médicas confidenciais não podem ser expostos para pesquisadores que não possuem privilégio explícito. A plataforma deve anonimizar dados em trânsito e auditar cada leitura de dados.</p>
 
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">PROTEÇÃO DE DADOS DE SAÚDE &amp; GOVERNANÇA LGPD/HIPAA</text>
-          
-          <!-- Raw Clinical Data S3 -->
-          <rect x="20" y="70" width="130" height="60" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
-          <text x="85" y="95" text-anchor="middle" fill="#ef4444" font-size="8.5" font-weight="700">S3: Prontuários Raw</text>
-          <text x="85" y="110" text-anchor="middle" fill="#cbd5e1" font-size="7">Dados Não Estruturados</text>
-
-          <path d="M 150 100 L 190 100" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- AWS Macie (PII Detection) -->
-          <rect x="200" y="60" width="150" height="80" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
-          <text x="275" y="85" text-anchor="middle" fill="#f59e0b" font-size="9" font-weight="700">Amazon Macie</text>
-          <text x="275" y="105" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Classificação de PII</text>
-          <text x="275" y="120" text-anchor="middle" fill="#cbd5e1" font-size="7">Nomes, CPFs, Emails</text>
-
-          <!-- Path Macie to Glue Processing -->
-          <path d="M 350 100 L 390 100" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- AWS Glue Spark Sensitive Data Detection -->
-          <rect x="400" y="60" width="180" height="85" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="490" y="80" text-anchor="middle" fill="#7c3aed" font-size="9" font-weight="700">AWS Glue Spark Job</text>
-          <text x="490" y="100" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Masking / Tokenization</text>
-          <text x="490" y="115" text-anchor="middle" fill="#38bdf8" font-size="7">KMS Envelope Encryption</text>
-          <text x="490" y="130" text-anchor="middle" fill="#cbd5e1" font-size="6.5">Grava Silver em Iceberg</text>
-
-          <!-- Path Glue to S3 Silver -->
-          <path d="M 580 100 L 620 100" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- S3 Secure Silver/Gold -->
-          <rect x="630" y="70" width="110" height="60" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-          <text x="685" y="95" text-anchor="middle" fill="#10b981" font-size="8.5" font-weight="700">S3 Silver (Iceberg)</text>
-          <text x="685" y="110" text-anchor="middle" fill="#cbd5e1" font-size="7">Criptografado (KMS)</text>
-
-          <!-- Downstream Users (Researchers vs Doctors) -->
-          <path d="M 685 130 L 685 240 L 530 240" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Lake Formation Control Hub -->
-          <rect x="330" y="200" width="190" height="80" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="425" y="220" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="700">AWS Lake Formation</text>
-          <text x="425" y="240" text-anchor="middle" fill="#10b981" font-size="7.5">Filtros de Acesso Lógicos</text>
-          <text x="425" y="255" text-anchor="middle" fill="#cbd5e1" font-size="7">Pesquisadores: Oculta Diagnóstico</text>
-
-          <!-- Final Consumers -->
-          <path d="M 330 240 L 250 240" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Users & CloudWatch Audit -->
-          <rect x="60" y="210" width="180" height="65" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-          <text x="150" y="232" text-anchor="middle" fill="white" font-size="8.5" font-weight="700">Consumidor (Athena Query)</text>
-          <text x="150" y="248" text-anchor="middle" fill="#a7f3d0" font-size="7">Logs salvos no CloudTrail</text>
-          <text x="150" y="260" text-anchor="middle" fill="#a7f3d0" font-size="7">Auditoria Completa (HIPAA)</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="15" y="45" width="220" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: DE-IDENTIFICATION (OCR/PII)</text>
-
-          <rect x="245" y="55" width="245" height="220" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="250" y="50" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: ENVELOPE SECURE LAKEHOUSE</text>
-
-          <rect x="500" y="45" width="250" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="505" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: COMPLIANT ANALYTICS (LF)</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 7 — Health Lakehouse & LGPD</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"800\" pageHeight=\"360\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"800\" height=\"360\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"HEALTHCARE SECURE DATA LAKE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"800\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"s3\" value=\"Amazon S3\\n(Raw Data)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"macie\" value=\"AWS Macie\\n(PII Discovery)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.macie;fillColor=#dc2626;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"60\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"kms\" value=\"AWS KMS\\n(Encryption)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kms;fillColor=#dc2626;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"220\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"lf\" value=\"Lake Formation\\n(Cell-level ACL)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lake_formation;fillColor=#a21caf;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"athena\" value=\"Amazon Athena\\n(Querying)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.athena;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"s3\" target=\"macie\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"s3\" target=\"kms\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;dashed=1;\" edge=\"1\" source=\"macie\" target=\"lf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;dashed=1;\" edge=\"1\" source=\"kms\" target=\"lf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e5\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a21caf;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"lf\" target=\"athena\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -1759,74 +1234,9 @@
 
       <p>Uma instituição financeira verde deseja rastrear a pegada ecológica e transações de créditos de carbono em cadeias produtivas complexas (ex: identificar se uma mineradora adquire insumos de fazendas desmatadas indiretamente). Como as relações são de múltiplos níveis (n-graus de conexões), bancos de dados relacionais e colunares falham na performance de consultas complexas de cruzamento. A arquitetura propõe um banco de dados de Grafos integrado ao Lakehouse.</p>
 
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">GRAFOS ESG &amp; RASTREAMENTO DE CRÉDITO DE CARBONO</text>
-          
-          <!-- ERP / Supply chain files -->
-          <rect x="20" y="60" width="130" height="60" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-          <text x="85" y="85" text-anchor="middle" fill="white" font-size="8.5" font-weight="700">ERP &amp; Supply Chain</text>
-          <text x="85" y="100" text-anchor="middle" fill="#cbd5e1" font-size="7">Transações de Carbono</text>
-
-          <path d="M 150 90 L 190 90" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- AWS Glue Spark Graph Builder -->
-          <rect x="200" y="60" width="160" height="75" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="280" y="80" text-anchor="middle" fill="#7c3aed" font-size="9.5" font-weight="700">AWS Glue Spark</text>
-          <text x="280" y="100" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Graph Building Engine</text>
-          <text x="280" y="115" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Cria Vértices &amp; Arestas</text>
-
-          <!-- Path to Neptune Bulk Loader -->
-          <path d="M 360 90 L 400 90" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Amazon Neptune (Graph Database) -->
-          <rect x="410" y="60" width="180" height="85" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="500" y="80" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">Amazon Neptune</text>
-          <text x="500" y="100" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">(Graph DB / Gremlin)</text>
-          <text x="500" y="120" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Relações de n-graus ESG</text>
-
-          <!-- Path Neptune to Streams -->
-          <path d="M 590 100 L 630 100" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Neptune Streams -->
-          <rect x="640" y="70" width="100" height="60" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
-          <text x="690" y="95" text-anchor="middle" fill="#f59e0b" font-size="8.5" font-weight="700">Neptune Streams</text>
-          <text x="690" y="110" text-anchor="middle" fill="#cbd5e1" font-size="7">CDC / Logs Grafos</text>
-
-          <!-- Analytical Engine (Neptune analytics queries) -->
-          <path d="M 500 145 L 500 220 L 380 220" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="510" y="180" fill="#cbd5e1" font-size="7.5">Neptune Analytics Queries</text>
-
-          <!-- Lambda Executor -->
-          <rect x="220" y="195" width="150" height="65" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="295" y="215" text-anchor="middle" fill="#3b82f6" font-size="9" font-weight="700">AWS Lambda</text>
-          <text x="295" y="235" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Mapeador de conexões ESG</text>
-          <text x="295" y="250" text-anchor="middle" fill="#10b981" font-size="7.5">Alerta se fazenda desmatada</text>
-
-          <!-- Alert system -->
-          <path d="M 220 227 L 140 227" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Amazon SNS / Alert -->
-          <rect x="20" y="195" width="110" height="60" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
-          <text x="75" y="220" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="700">Amazon SNS</text>
-          <text x="75" y="240" text-anchor="middle" fill="#cbd5e1" font-size="7">Alerta Desmatamento</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="15" y="45" width="220" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: GRAFO DE RELACIONAMENTO (NEPTUNE)</text>
-
-          <rect x="245" y="55" width="245" height="220" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="250" y="50" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: SYNC STREAM PIPELINES</text>
-
-          <rect x="500" y="45" width="250" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="505" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: ESG BI &amp; DATA PRODUCT serving</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 8 — Grafos ESG & Créditos de Carbono</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"800\" pageHeight=\"300\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"800\" height=\"300\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"ESG GRAPH ANALYTICS ARCHITECTURE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"800\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"rds\" value=\"Amazon RDS\\n(Relational Data)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"glue\" value=\"AWS Glue\\n(ETL)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=#a21caf;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"neptune\" value=\"Amazon Neptune\\n(Graph DB)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.neptune;fillColor=#1d4ed8;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"sagemaker\" value=\"Amazon SageMaker\\n(Graph NN)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#0d9488;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"rds\" target=\"glue\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a21caf;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"glue\" target=\"neptune\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#1d4ed8;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"neptune\" target=\"sagemaker\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -1931,67 +1341,9 @@
 
       <p>Uma fintech multirnacional opera sistemas de cobrança (billing) que exigem execução pontual e impecável a cada virada de mês. O processo de conciliação de saldos exige extrair extratos de centenas de adquirentes locais, rodar cálculos pesados de juros no Spark, aplicar validações analíticas de dbt, persistir no Lakehouse e gerar faturas em PDF. A plataforma não pode sofrer falhas silenciosas de rede ou duplicar cobranças (idempotência dupla).</p>
 
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ORQUESTRAÇÃO E CONCILIAÇÃO DE BILLING GLOBAL (STEP FUNCTIONS)</text>
-          
-          <!-- EventBridge trigger -->
-          <rect x="20" y="60" width="120" height="60" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-          <text x="80" y="85" text-anchor="middle" fill="white" font-size="8" font-weight="700">EventBridge Chron</text>
-          <text x="80" y="100" text-anchor="middle" fill="#cbd5e1" font-size="7">Virada de Mês 00:00</text>
-
-          <path d="M 140 90 L 180 90" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Step Functions Workflow -->
-          <rect x="190" y="45" width="370" height="295" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
-          <text x="375" y="65" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">AWS STEP FUNCTIONS STATE MACHINE (WORKFLOW)</text>
-          
-          <!-- Step 1: EMR Spark Job -->
-          <rect x="210" y="90" width="330" height="45" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1"/>
-          <text x="375" y="110" text-anchor="middle" fill="#7c3aed" font-size="8" font-weight="700">Etapa 1: EMR Serverless (Cálculo de Juros / Consolidação Spark)</text>
-          <text x="375" y="125" text-anchor="middle" fill="#cbd5e1" font-size="7">Executa PySpark Jobs em paralelo por região</text>
-
-          <!-- Arrow to step 2 -->
-          <path d="M 375 135 L 375 165" stroke="#cbd5e1" stroke-width="1" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Step 2: dbt validation -->
-          <rect x="210" y="170" width="330" height="45" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="375" y="190" text-anchor="middle" fill="#10b981" font-size="8" font-weight="700">Etapa 2: AWS ECS (Executa dbt models &amp; tests)</text>
-          <text x="375" y="205" text-anchor="middle" fill="#cbd5e1" font-size="7">Valida saldos consolidados contra relatórios adquirentes</text>
-
-          <!-- Arrow to step 3 -->
-          <path d="M 375 215 L 375 245" stroke="#cbd5e1" stroke-width="1" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Step 3: Catch error / Choice State -->
-          <rect x="210" y="250" width="330" height="60" rx="4" fill="#0f172a" stroke="#ef4444" stroke-width="1"/>
-          <text x="375" y="270" text-anchor="middle" fill="#ef4444" font-size="8" font-weight="700">Etapa 3: Choice State (Sucesso vs Falha)</text>
-          <text x="375" y="285" text-anchor="middle" fill="#cbd5e1" font-size="7">Sucesso &rarr; Dispara Faturamento | Falha &rarr; Rollback</text>
-
-          <!-- Arrow out to target / downstream -->
-          <path d="M 560 190 L 610 190" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- S3 Secure Target (Faturas) -->
-          <rect x="620" y="155" width="120" height="70" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-          <text x="680" y="180" text-anchor="middle" fill="#10b981" font-size="8.5" font-weight="700">S3 Fin-Reports</text>
-          <text x="680" y="195" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Faturas / PDFs</text>
-          <text x="680" y="210" text-anchor="middle" fill="#cbd5e1" font-size="7">Assinados Cripto</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="15" y="45" width="220" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: STEP FUNCTIONS ORCHESTRATION</text>
-
-          <rect x="245" y="55" width="245" height="220" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="250" y="50" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: BATCH COMPUTE MOTOR (SPARK)</text>
-
-          <rect x="500" y="45" width="250" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="505" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: AUDITED DWH MODELING (DBT)</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 9 — Billing Global & Conciliação</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"600\" pageHeight=\"360\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"600\" height=\"360\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"GLOBAL BILLING ORCHESTRATION\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"600\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"sf\" value=\"AWS Step\\nFunctions\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;fillColor=#db2777;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"emr\" value=\"EMR Serverless\\n(Reconciliation)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"rds\" value=\"Amazon RDS\\n(Ledger)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"60\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"s3\" value=\"Amazon S3\\n(Audit Logs)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"220\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#db2777;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"sf\" target=\"emr\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"emr\" target=\"rds\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;dashed=1;\" edge=\"1\" source=\"emr\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -2090,66 +1442,9 @@
 
       <p>Uma equipe de marketing digital precisa sincronizar diariamente segmentos de clientes engajados (ex: usuários VIP que gastaram mais de R$ 500 no último mês) para o Salesforce CRM e Google Ads para campanhas de remarketing. Em vez de criar integrações pontuais e frágeis mantidas em scripts manuais, a arquitetura de Reverse ETL padroniza o fluxo analítico centralizado a partir do Data Warehouse.</p>
 
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">PIPELINE REVERSE ETL (DATA WAREHOUSE &rarr; SAAS MARK/CRM)</text>
-          
-          <!-- Central DW (Redshift) -->
-          <rect x="20" y="70" width="160" height="110" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="100" y="90" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700">Redshift Serverless</text>
-          <text x="100" y="110" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Modelos dbt (Gold)</text>
-          <text x="100" y="125" text-anchor="middle" fill="#38bdf8" font-size="7">Segmentos de Clientes</text>
-          <text x="100" y="140" text-anchor="middle" fill="#38bdf8" font-size="7">"VIPs Recentes"</text>
-
-          <!-- Export Path to S3 -->
-          <path d="M 180 120 L 220 120" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <text x="200" y="110" fill="#cbd5e1" font-size="7.5">UNLOAD</text>
-
-          <!-- S3 Staging bucket for ETL -->
-          <rect x="230" y="95" width="130" height="50" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5"/>
-          <text x="295" y="118" text-anchor="middle" fill="white" font-size="8.5" font-weight="700">S3 Transit Bucket</text>
-          <text x="295" y="132" text-anchor="middle" fill="#cbd5e1" font-size="7">CSV files segmentados</text>
-
-          <!-- Path S3 to AppFlow -->
-          <path d="M 360 120 L 400 120" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- AWS AppFlow -->
-          <rect x="410" y="60" width="180" height="85" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
-          <text x="500" y="80" text-anchor="middle" fill="#7c3aed" font-size="10" font-weight="700">AWS AppFlow</text>
-          <text x="500" y="98" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Sincronizador SaaS nativo</text>
-          <text x="500" y="112" text-anchor="middle" fill="#10b981" font-size="7.5">Google Ads / Salesforce</text>
-          <text x="500" y="125" text-anchor="middle" fill="#cbd5e1" font-size="7">OAuth Token Management</text>
-
-          <!-- SaaS Targets -->
-          <path d="M 590 85 L 630 65 L 650 65" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <path d="M 590 125 L 630 145 L 650 145" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Salesforce target -->
-          <rect x="660" y="35" width="90" height="50" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
-          <text x="705" y="58" text-anchor="middle" fill="#38bdf8" font-size="8">Salesforce</text>
-          <text x="705" y="70" text-anchor="middle" fill="#cbd5e1" font-size="6.5">Contatos VIP</text>
-
-          <!-- Google Ads target -->
-          <rect x="660" y="115" width="90" height="50" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="705" y="138" text-anchor="middle" fill="#3b82f6" font-size="8">Google Ads</text>
-          <text x="705" y="150" text-anchor="middle" fill="#cbd5e1" font-size="6.5">Remarketing List</text>
-
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-                  <!-- Desmembramento Boundary Boxes -->
-          <rect x="15" y="45" width="220" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="20" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 1: ANALYTICAL DATA HUB (REDSHIFT)</text>
-
-          <rect x="245" y="55" width="245" height="220" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="250" y="50" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 2: REVERSE ETL ENGINE (FLOW)</text>
-
-          <rect x="500" y="45" width="250" height="235" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3,3" rx="8"/>
-          <text x="505" y="40" fill="#94a3b8" font-size="7" font-weight="700">MÓDULO 3: ADTECH &amp; OUTBOUND DESTINATIONS</text>
-          </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 10 — Reverse ETL & CRM</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"640\" pageHeight=\"320\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"640\" height=\"320\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"REVERSE ETL MARKETING SYNC\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"640\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"redshift\" value=\"Amazon\\nRedshift\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.redshift;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"appflow\" value=\"Amazon\\nAppFlow\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.appflow;fillColor=#db2777;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"sf\" value=\"Salesforce\\n(CRM)\" style=\"rounded=1;fillColor=#0284c7;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"80\" width=\"100\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"mk\" value=\"Marketo\\n(Marketing)\" style=\"rounded=1;fillColor=#a21caf;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"200\" width=\"100\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"redshift\" target=\"appflow\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#db2777;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"appflow\" target=\"sf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#db2777;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"appflow\" target=\"mk\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional Passo a Passo</h3>
@@ -2246,60 +1541,9 @@
 
       <p>Um aplicativo móvel de entregas com milhões de usuários precisa enviar coordenadas geográficas e status de corridas a cada 5 segundos para a nuvem. Ligar os dispositivos diretamente ao AWS API Gateway geraria custos inviáveis devido ao billing por requisição. A arquitetura propõe um <strong>Application Load Balancer (ALB)</strong> na frente de um cluster <strong>Amazon ECS Fargate</strong> rodando uma API leve e assíncrona que joga os dados diretamente em um <strong>Amazon Kinesis Data Stream</strong>.</p>
 
-      <div class="dw" style="text-align: center; margin: 24px 0;">
-        <svg viewBox="0 0 760 380" width="760" height="380" xmlns="http://www.w3.org/2000/svg" font-family="DM Mono, monospace">
-          <rect width="760" height="380" fill="#0f172a" rx="14"/>
-          <text x="380" y="30" text-anchor="middle" fill="white" font-size="12" font-weight="700" letter-spacing="1">ARQUITETURA DE INGESTÃO MASSIVA COM ECS FARGATE</text>
-
-          <!-- Mobile Clients -->
-          <rect x="20" y="70" width="100" height="60" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="70" y="95" text-anchor="middle" fill="#3b82f6" font-size="8.5" font-weight="700">App Entregas</text>
-          <text x="70" y="112" text-anchor="middle" fill="#cbd5e1" font-size="7">Sinais de GPS (5s)</text>
-
-          <path d="M 120 100 L 160 100" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- ALB -->
-          <rect x="170" y="60" width="120" height="80" rx="8" fill="#1e293b" stroke="#0f766e" stroke-width="2"/>
-          <text x="230" y="85" text-anchor="middle" fill="#0f766e" font-size="9" font-weight="700">Application</text>
-          <text x="230" y="100" text-anchor="middle" fill="#0f766e" font-size="9" font-weight="700">Load Balancer</text>
-          <text x="230" y="120" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Terminação SSL/TLS</text>
-
-          <!-- Arrows to Fargate -->
-          <path d="M 290 90 L 340 75" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-          <path d="M 290 110 L 340 135" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- ECS Fargate Cluster -->
-          <rect x="350" y="40" width="180" height="130" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-          <text x="440" y="60" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700">ECS Fargate Cluster</text>
-
-          <rect x="365" y="75" width="150" height="30" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="440" y="93" text-anchor="middle" fill="#e2e8f0" font-size="8">API Container (FastAPI/Go)</text>
-
-          <rect x="365" y="115" width="150" height="30" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
-          <text x="440" y="133" text-anchor="middle" fill="#e2e8f0" font-size="8">API Container (FastAPI/Go)</text>
-
-          <!-- Direct Line to Kinesis -->
-          <path d="M 530 105 L 580 105" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Kinesis Data Streams -->
-          <rect x="590" y="60" width="140" height="80" rx="8" fill="#1e293b" stroke="#ea580c" stroke-width="2"/>
-          <text x="660" y="85" text-anchor="middle" fill="#ea580c" font-size="9" font-weight="700">Kinesis Stream</text>
-          <text x="660" y="105" text-anchor="middle" fill="#cbd5e1" font-size="7.5">Buffer Altamente Escalável</text>
-          <text x="660" y="120" text-anchor="middle" fill="#cbd5e1" font-size="7">Retenção de 24h a 7 dias</text>
-
-          <!-- Auto-scaling policy -->
-          <rect x="350" y="190" width="180" height="50" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
-          <text x="440" y="212" text-anchor="middle" fill="#f59e0b" font-size="8" font-weight="700">Auto Scaling Policy</text>
-          <text x="440" y="225" text-anchor="middle" fill="#cbd5e1" font-size="7">Target Tracking (CPU 50%)</text>
-          <path d="M 440 190 L 440 170" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2" marker-end="url(#arrow)" fill="none"/>
-
-          <!-- Definitions for arrows -->
-          <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
-            </marker>
-          </defs>
-        </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 10.5 — API de Ingestão Fargate</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"680\" pageHeight=\"320\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"680\" height=\"320\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"HIGH-THROUGHPUT INGESTION API\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"680\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"cli\" value=\"Mobile / Web\\nClients\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"140\" width=\"100\" height=\"50\" as=\"geometry\"/></mxCell><mxCell id=\"alb\" value=\"Application\\nLoad Balancer\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elastic_load_balancing;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"180\" y=\"135\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"ecs\" value=\"ECS Fargate\\n(Ingestion API)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"340\" y=\"135\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"msk\" value=\"Amazon MSK\\n(Kafka Buffer)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"540\" y=\"135\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"cli\" target=\"alb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"alb\" target=\"ecs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"ecs\" target=\"msk\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
       </div>
 
       <h3>Detalhamento do Fluxo Operacional</h3>
@@ -2325,6 +1569,11 @@
       </div>
 
       <p>Uma grande instituição financeira migrou sua plataforma de dados herdada baseada em Hadoop on-premises para a AWS. Eles precisavam apoiar 20 equipes de engenharia de dados independentes (Data Mesh produtor) que usam versões diferentes de dependências Python (PySpark) e bibliotecas de Machine Learning. Clusters EMR on EC2 dedicados por equipe eram caros demais, e clusters compartilhados geravam conflito de dependências. A solução adotada foi consolidar todo o processamento analítico em um mega cluster <strong>Amazon EKS</strong> utilizando o <strong>EMR on EKS</strong>.</p>
+
+      <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 11 — EMR on EKS</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"640\" pageHeight=\"300\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"640\" height=\"300\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"EMR ON EKS MULTI-TENANT ARCHITECTURE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"640\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"karp\" value=\"Karpenter\\n(Node Autoscaler)\" style=\"rounded=1;fillColor=#1e40af;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"60\" width=\"120\" height=\"50\" as=\"geometry\"/></mxCell><mxCell id=\"eks\" value=\"Amazon EKS\\n(Kubernetes Control Plane)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eks;fillColor=#2563eb;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"90\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"emr_a\" value=\"EMR Virtual Cluster A\\n(Team A Namespace)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"300\" y=\"80\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"emr_b\" value=\"EMR Virtual Cluster B\\n(Team B Namespace)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"300\" y=\"200\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"s3\" value=\"Amazon S3\\n(Data Lake)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"500\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#1e40af;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"karp\" target=\"eks\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#2563eb;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"eks\" target=\"emr_a\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#2563eb;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"eks\" target=\"emr_b\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"emr_a\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e5\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"emr_b\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
+      </div>
 
       <h3>Detalhamento do Fluxo e Arquitetura</h3>
       <ol>
@@ -2474,6 +1723,11 @@
 
       <p>Um grande conglomerado varejista implantou um sistema de IA conversacional para permitir que gerentes de negócios fizessem perguntas analíticas complexas sobre relatórios internos salvos no Data Lake. Contudo, na primeira semana de homologação, os gerentes enfrentaram alta latência de resposta, respostas incorretas (alucinações) e os custos da API do Amazon Bedrock dispararam devido a consultas redundantes dos usuários.</p>
 
+      <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 14 — GenAI Data Lake &amp; Semantic Cache</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"740\" pageHeight=\"320\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"740\" height=\"320\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"GENAI DATA LAKE HYBRID SEARCH ARCHITECTURE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"740\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"usr\" value=\"Usu\u00e1rio / Chat\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"140\" width=\"80\" height=\"40\" as=\"geometry\"/></mxCell><mxCell id=\"bedrock\" value=\"Amazon Bedrock\\n(LLM Claude)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;fillColor=#0891b2;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"200\" y=\"130\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"os\" value=\"OpenSearch Serverless\\n(Vector DB)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.opensearch;fillColor=#0f766e;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"400\" y=\"60\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"s3\" value=\"Amazon S3\\n(Data Lake Textos)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"400\" y=\"220\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"ag\" value=\"API Gateway\\n(Semantic Cache)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"600\" y=\"130\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"usr\" target=\"bedrock\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0891b2;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"bedrock\" target=\"os\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0f766e;strokeWidth=1.5;fillColor=none;dashed=1;\" edge=\"1\" source=\"os\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e4\" value=\"Cache Hit\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#c4b5fd;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"usr\" target=\"ag\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
+      </div>
+
       <h3>Os Desafios Técnicos Identificados</h3>
       <ul>
         <li><strong>Custos Redundantes de Inferência (70% do orçamento de IA):</strong> Diferentes usuários frequentemente digitavam a mesma pergunta com mínimas variações (ex: "Qual o lucro de ontem?" vs "Quanto lucramos no dia de ontem?"), gerando chamadas de inferência duplicadas e caras ao Claude 3.5 Sonnet.</li>
@@ -2551,6 +1805,11 @@
       </div>
 
       <p>Um banco digital possuía um Data Lake monolítico centralizado no S3 gerenciado por uma equipe central de engenharia. O modelo virou um gargalo: novas demandas levavam semanas, e os dados brutos careciam de proprietários claros. Para resolver, o banco iniciou a migração para a arquitetura **Data Mesh**, descentralizando a custódia dos dados por domínios de negócio estruturados.</p>
+
+      <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Case 16 — Data Mesh Federado &amp; Apache Polaris</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"800\" pageHeight=\"300\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"800\" height=\"300\" as=\"geometry\"/></mxCell><mxCell id=\"title\" value=\"DATA MESH FEDERATION WITH APACHE POLARIS\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"800\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"d1\" value=\"Dom\u00ednio A\\n(Vendas)\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"80\" width=\"100\" height=\"50\" as=\"geometry\"/></mxCell><mxCell id=\"d2\" value=\"Dom\u00ednio B\\n(Risco)\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"200\" width=\"100\" height=\"50\" as=\"geometry\"/></mxCell><mxCell id=\"flink\" value=\"Apache Flink SQL\\n(Data Products)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"130\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"polaris\" value=\"Apache Polaris\\n(REST Catalog)\" style=\"rounded=1;fillColor=#0f172a;strokeColor=#38bdf8;strokeWidth=2;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"140\" width=\"120\" height=\"40\" as=\"geometry\"/></mxCell><mxCell id=\"s3\" value=\"Amazon S3\\n(Data Mesh Storage)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"130\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"d1\" target=\"flink\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"d2\" target=\"flink\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"Register Table\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f97316;strokeWidth=1.5;fillColor=none;fontColor=#fdba74;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"flink\" target=\"polaris\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e4\" value=\"Federated Pointers\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;fillColor=none;fontColor=#7dd3fc;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"polaris\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
+      </div>
 
       <h3>A Nova Arquitetura Descentralizada</h3>
       <ol>
@@ -2763,67 +2022,9 @@
       <p>Um banco digital possuía um monolito transacional operando sobre um gigantesco <strong>Amazon RDS MySQL</strong>. O banco relacional estava estourando seus limites de IOPS (Disco EBS) e sofrendo <em>Connection Exhaustion</em> porque a tabela de "Extratos" sofria milhões de leituras diárias via app, misturadas com as atualizações de "Balanço" do Core Bancário. O tempo de resposta degradou de 20ms para 800ms. A missão era estrangular o monolito sem qualquer downtime.</p>
 
       <!-- DIAGRAMA: CDC DMS MIGRATION -->
-      <div class="dw" style="margin-top: 20px; margin-bottom: 25px;">
-        <svg viewBox="0 0 760 350" width="100%" height="350" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans, sans-serif">
-          <rect width="760" height="350" fill="#0f172a" rx="14"/>
-          <text x="380" y="25" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700">ARQUITETURA DE MIGRAÇÃO CDC (AWS DMS)</text>
-
-          <!-- Legacy Monolith -->
-          <rect x="40" y="50" width="200" height="260" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4,2"/>
-          <text x="140" y="75" text-anchor="middle" fill="#ef4444" font-size="12" font-weight="700">Origem: Legacy Monolith</text>
-          
-          <rect x="70" y="100" width="140" height="180" rx="6" fill="#0b0f19" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="140" y="130" text-anchor="middle" fill="#3b82f6" font-size="11" font-weight="700">Amazon RDS (MySQL)</text>
-          
-          <rect x="90" y="150" width="100" height="40" rx="4" fill="#1e293b"/>
-          <text x="140" y="175" text-anchor="middle" fill="#cbd5e1" font-size="9">Tabela: Balanços</text>
-
-          <rect x="90" y="210" width="100" height="40" rx="4" fill="#450a0a" stroke="#fca5a5" stroke-width="1"/>
-          <text x="140" y="235" text-anchor="middle" fill="#fca5a5" font-size="9">Tabela: Extratos (HOT!)</text>
-
-          <!-- AWS DMS -->
-          <rect x="280" y="120" width="180" height="120" rx="8" fill="#0b0f19" stroke="#8b5cf6" stroke-width="2"/>
-          <text x="370" y="145" text-anchor="middle" fill="#8b5cf6" font-size="12" font-weight="700">AWS DMS</text>
-          <text x="370" y="160" text-anchor="middle" fill="#cbd5e1" font-size="9">(Database Migration Service)</text>
-
-          <rect x="310" y="180" width="120" height="30" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="1"/>
-          <text x="370" y="200" text-anchor="middle" fill="#10b981" font-size="9">CDC (Binlog Tracking)</text>
-
-          <!-- Links Origin to DMS -->
-          <path d="M 210 170 L 280 170" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple-dms)"/>
-          <text x="245" y="165" text-anchor="middle" fill="#cbd5e1" font-size="8">Full Load</text>
-          <path d="M 210 230 L 310 200" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-green-dms)"/>
-
-          <!-- Target Architecture -->
-          <rect x="500" y="50" width="220" height="260" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,2"/>
-          <text x="610" y="75" text-anchor="middle" fill="#10b981" font-size="12" font-weight="700">Destino: Modern Data Stack</text>
-
-          <!-- Target Aurora -->
-          <rect x="530" y="100" width="160" height="80" rx="6" fill="#0b0f19" stroke="#38bdf8" stroke-width="1.5"/>
-          <text x="610" y="125" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">Aurora Serverless v2</text>
-          <rect x="550" y="140" width="120" height="30" rx="4" fill="#1e293b"/>
-          <text x="610" y="160" text-anchor="middle" fill="#cbd5e1" font-size="9">Balanços (ACID)</text>
-
-          <!-- Target DynamoDB -->
-          <rect x="530" y="200" width="160" height="80" rx="6" fill="#0b0f19" stroke="#f59e0b" stroke-width="1.5"/>
-          <text x="610" y="225" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">Amazon DynamoDB</text>
-          <rect x="550" y="240" width="120" height="30" rx="4" fill="#1e293b"/>
-          <text x="610" y="260" text-anchor="middle" fill="#cbd5e1" font-size="9">Extratos (O(1) NoSQL)</text>
-
-          <!-- Links DMS to Target -->
-          <path d="M 460 160 L 530 140" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-blue-dms)"/>
-          <text x="495" y="145" text-anchor="middle" fill="#38bdf8" font-size="8">Sync (SQL)</text>
-
-          <path d="M 460 200 L 530 220" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-orange-dms)"/>
-          <text x="495" y="205" text-anchor="middle" fill="#f59e0b" font-size="8">Sync (JSON)</text>
-
-          <defs>
-            <marker id="arrow-purple-dms" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#8b5cf6"/></marker>
-            <marker id="arrow-green-dms" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/></marker>
-            <marker id="arrow-blue-dms" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/></marker>
-            <marker id="arrow-orange-dms" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/></marker>
-          </defs>
-        </svg>
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>DMS CDC MIGRATION ARCHITECTURE</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"860\" pageHeight=\"320\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n    <mxCell id=\"bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"860\" height=\"320\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"title\" value=\"DMS CDC MIGRATION ARCHITECTURE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"860\" height=\"24\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"mono\" value=\"Legacy Monolith DB\\n(MySQL / Oracle)\" style=\"rounded=1;fillColor=#7f1d1d;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"140\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"dms\" value=\"AWS DMS\\n(CDC Engine)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database_migration_service;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"240\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"kin\" value=\"Amazon Kinesis\\nData Streams\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"400\" y=\"140\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"ms1\" value=\"Microservice 1\" style=\"rounded=1;fillColor=#15803d;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"560\" y=\"80\" width=\"120\" height=\"50\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"ms2\" value=\"Microservice 2\" style=\"rounded=1;fillColor=#15803d;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"560\" y=\"200\" width=\"120\" height=\"50\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"s3lake\" value=\"Amazon S3\\n(Data Lake)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"760\" y=\"135\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e_mo_dms\" value=\"Read Transaction Logs\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"mono\" target=\"dms\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e_dms_k\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"dms\" target=\"kin\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e_k_ms1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#15803d;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"kin\" target=\"ms1\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e_k_ms2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#15803d;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"kin\" target=\"ms2\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e_k_s3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;dashed=1;\" edge=\"1\" source=\"kin\" target=\"s3lake\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root>\n</mxGraphModel>"}'></div>
       </div>
 
       <h3>Arquitetura de Solução: AWS DMS + Single-Table Design + Aurora</h3>
@@ -2946,5 +2147,7 @@ document.addEventListener('click', function(e) {
 });
 </script>
 <script src="../../progress.js"></script>
+
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>
