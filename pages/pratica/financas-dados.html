@@ -683,6 +683,94 @@ calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
         </div>
       </div>
     </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SEÇÃO 5: O CICLO COMPLETO DE CRÉDITO -->
+    <section class="section" id="ciclo-credito">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#0284c7">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0284c7"></div>
+          <h2>O Ciclo de Vida do Crédito &amp; Razonete Contábil</h2>
+          <p>Da contratação ao Write-off: o fluxo contábil e a arquitetura de dados (Data Mesh) que garantem a integridade das operações financeiras.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-tip">
+        <strong>Conceitos Fundamentais de Crédito</strong>
+        <p>A engenharia de dados em fintechs e bancos exige o mapeamento preciso dos seguintes eventos de negócio:</p>
+        <ul>
+          <li><strong>Contratação &amp; Concessão:</strong> O cliente assina o termo, a conta do cliente é creditada (TED/PIX). Surge a <strong>Exposição de Crédito</strong> do banco.</li>
+          <li><strong>Cancelamento:</strong> Desistência da operação antes ou logo após a concessão (dentro da janela legal). A operação é estornada na contabilidade.</li>
+          <li><strong>Spot Accrual (Apropriação Spot):</strong> A apropriação diária (pro-rata) dos juros. Embora o cliente só pague no final do mês, contabilmente o banco reconhece o lucro dos juros diariamente (regime de competência).</li>
+          <li><strong>Recebimento:</strong> Quando o cliente paga a fatura/parcela. O saldo devedor diminui e o dinheiro entra no caixa.</li>
+          <li><strong>Atraso &amp; Risco de Crédito:</strong> Quando a parcela não é paga na data de vencimento. O rating de risco piora e entra em cobrança. A instituição provisiona perdas (PDD/ECL).</li>
+          <li><strong>Renegociação:</strong> O cliente em atraso refaz as condições da dívida. Um novo contrato (ou aditivo) é gerado, estendendo o prazo e alterando a taxa.</li>
+          <li><strong>Write-off (Baixa para Prejuízo):</strong> Quando a dívida chega a um nível irrecuperável (ex: mais de 360 dias de atraso), o banco realiza a baixa contábil ("joga para prejuízo"), limpando o balanço de ativos podres, mas a cobrança pode continuar externamente.</li>
+        </ul>
+      </div>
+
+      <h3>Linha do Tempo: Fluxos de Negócio</h3>
+      <div class="timeline-container" style="margin-top: 20px; background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+        <p>Uma visão simplificada dos eventos processados em tópicos Kafka e refletidos em um Data Lakehouse:</p>
+        <ol style="line-height: 1.8;">
+          <li><code>T0</code>: <strong>Contratação</strong> &rarr; Ingestão do contrato (Valor Base).</li>
+          <li><code>T1</code>: <strong>Concessão</strong> &rarr; Transação de liquidação (Dinheiro sai do Caixa e vai pro Cliente).</li>
+          <li><code>T1 a T30</code>: <strong>Spot Accrual</strong> &rarr; Jobs em lote/streaming calculam juros diários (Eventos de Accrual).</li>
+          <li><code>T30</code>: <strong>Recebimento</strong> &rarr; Entrada de caixa, baixa de juros apropriados e principal.</li>
+          <li><code>T60</code> (Se não houver pgto): <strong>Atraso</strong> &rarr; Início da esteira de cobrança. Risco atualizado.</li>
+          <li><code>T120</code>: <strong>Renegociação</strong> &rarr; Novo contrato criado.</li>
+          <li><code>T360+</code>: <strong>Write-off</strong> &rarr; Evento contábil de Baixa para Prejuízo.</li>
+        </ol>
+      </div>
+
+      <div class="callout callout-warning">
+        <strong>O Razonete Contábil e o Método das Partidas Dobradas</strong>
+        <p>Na contabilidade (e na camada de dados que a sustenta), todo evento financeiro tem pelo menos um <strong>Débito</strong> e um <strong>Crédito</strong> de igual valor. Se o Data Engineer falha em espelhar esse princípio, a integridade da plataforma cai.</p>
+        <p><strong>Exemplo de Apropriação Spot (Accrual Diário de Juros):</strong></p>
+        <p>- Débito: Ativo (Direito a Receber - Juros) <em>(O banco aumenta o que o cliente deve a ele)</em></p>
+        <p>- Crédito: Receita (Juros Auferidos) <em>(O banco reconhece o lucro naquele dia)</em></p>
+        <p><strong>Exemplo de Concessão de Crédito:</strong></p>
+        <p>- Débito: Ativo (Empréstimos e Financiamentos)</p>
+        <p>- Crédito: Ativo/Passivo (Caixa / Conta Corrente do Cliente)</p>
+        <p><em>Sempre que há perda silenciosa num pipeline Kafka, as pernas contábeis quebram.</em></p>
+      </div>
+
+      <h3>Modelagem Data Mesh: Produtos de Dados Financeiros</h3>
+      <p>Para escalar esses conceitos, a arquitetura moderna propõe o isolamento via Data Mesh:</p>
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid #0284c7;">
+          <div class="cc-tag">Domínio de Crédito</div>
+          <div class="cc-body">
+            Responsável pelos Data Products: <strong>Contratos</strong>, <strong>Posição de Saldo Devedor (Exposição)</strong>, e <strong>Eventos de Atraso/Renegociação</strong>. É o dono das regras de negócios do produto de crédito.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #f59e0b;">
+          <div class="cc-tag">Domínio Contábil</div>
+          <div class="cc-body">
+            Consome eventos de todos os domínios para compor o Data Product: <strong>Razonete/Lançamentos Contábeis (Ledger)</strong>. Valida a integridade Débito = Crédito diariamente (Conciliação).
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #e11d48;">
+          <div class="cc-tag">Domínio de Risco</div>
+          <div class="cc-body">
+            Consome dados de atraso e cria os Data Products: <strong>Scoring</strong>, <strong>Probabilidade de Default (PD)</strong>, e gera as recomendações de <strong>Write-off</strong> para a contabilidade provisionar perdas.
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 30px;">
+        <h4>Visualização dos Diagramas Draw.io (Negócio e Técnico)</h4>
+        <p>Abaixo os fluxos modelados em Draw.io, que detalham a esteira de negócio e a integração Data Mesh:</p>
+        <div style="display:flex; gap:10px; margin-top: 10px;">
+          <a href="../../assets/diagrams/credit-lifecycle.drawio" download class="btn-primary" style="background:#0284c7; padding: 10px 15px; text-decoration: none; border-radius: 6px; color: white;">⬇️ Baixar Diagrama de Negócio (Draw.io)</a>
+          <a href="../../assets/diagrams/data-mesh-credit.drawio" download class="btn-primary" style="background:#f59e0b; padding: 10px 15px; text-decoration: none; border-radius: 6px; color: white;">⬇️ Baixar Diagrama Data Mesh (Draw.io)</a>
+        </div>
+      </div>
+
+    </section>
+
   </main>
 </div>
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
