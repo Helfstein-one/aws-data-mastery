@@ -45,6 +45,12 @@
         <a href="../../pages/fundamentos/soft-skills.html#implementacao" class="nav-sub"><span class="nav-sdot"></span>Plano de Implementação</a>
         <a href="../../pages/fundamentos/soft-skills.html#cfo-pitch" class="nav-sub"><span class="nav-sdot"></span>Pilar 9: Pitch Executivo</a>
       </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/pmo-sme-dados.html" class="nav-a" data-page="pmo-sme-dados"><span class="nav-dot" style="background:#8b5cf6"></span>📈 PMO &amp; SME de Dados</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#okr-framework" class="nav-sub"><span class="nav-sdot"></span>Framework de OKRs</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#data-product-lifecycle" class="nav-sub"><span class="nav-sdot"></span>Ciclo de Vida do Produto</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#gestao-agil" class="nav-sub"><span class="nav-sdot"></span>Gestão Ágil e Squads</a>
+      </div>
     </div>
 
     <!-- 2. Arquitetura & Fundamentos -->
@@ -486,10 +492,6 @@
       <p>Simulação de um empréstimo de <strong>R$ 10.000,00</strong> em <strong>12 meses</strong> com juros de <strong>2% ao mês</strong>.</p>
       
       <div class="code-block" style="margin-bottom: 24px;">
-        <div class="code-header">
-          <span class="code-lang">python</span>
-          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-        </div>
         <pre><code class="language-python"># Cálculo Tabela SAC (Amortização Constante)
 def calcular_sac(capital, taxa_juros, meses):
     amortizacao_mensal = capital / meses
@@ -507,10 +509,6 @@ calcular_sac(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
       </div>
 
       <div class="code-block" style="margin-bottom: 32px;">
-        <div class="code-header">
-          <span class="code-lang">python</span>
-          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-        </div>
         <pre><code class="language-python"># Cálculo Tabela Price (Parcela Fixa)
 def calcular_price(capital, taxa_juros, meses):
     # Fórmula da Parcela Fixa (PMT)
@@ -567,10 +565,6 @@ calcular_price(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
 
       <h4 style="margin-top: 32px;">Exemplo de Cálculo de Inadimplência</h4>
       <div class="code-block" style="margin-bottom: 32px;">
-        <div class="code-header">
-          <span class="code-lang">python</span>
-          <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-        </div>
         <pre><code class="language-python"># Cálculo de Atraso (Multa e Juros de Mora)
 def calcular_divida_atraso(valor_parcela, dias_atraso, perc_multa=0.02, juros_mes=0.01):
     if dias_atraso <= 0:
@@ -683,6 +677,245 @@ calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
         </div>
       </div>
     </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SEÇÃO 5: O CICLO COMPLETO DE CRÉDITO -->
+    <section class="section" id="ciclo-credito">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#0284c7">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0284c7"></div>
+          <h2>O Ciclo de Vida do Crédito &amp; Razonete Contábil</h2>
+          <p>Da contratação ao Write-off: o fluxo contábil e a arquitetura de dados (Data Mesh) que garantem a integridade das operações financeiras.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-tip">
+        <strong>Conceitos Fundamentais de Crédito</strong>
+        <p>A engenharia de dados em fintechs e bancos exige o mapeamento preciso dos seguintes eventos de negócio:</p>
+        <ul>
+          <li><strong>Contratação &amp; Concessão:</strong> O cliente assina o termo, a conta do cliente é creditada (TED/PIX). Surge a <strong>Exposição de Crédito</strong> do banco.</li>
+          <li><strong>Cancelamento:</strong> Desistência da operação antes ou logo após a concessão (dentro da janela legal). A operação é estornada na contabilidade.</li>
+          <li><strong>Spot Accrual (Apropriação Spot):</strong> A apropriação diária (pro-rata) dos juros. Embora o cliente só pague no final do mês, contabilmente o banco reconhece o lucro dos juros diariamente (regime de competência).</li>
+          <li><strong>Recebimento:</strong> Quando o cliente paga a fatura/parcela. O saldo devedor diminui e o dinheiro entra no caixa.</li>
+          <li><strong>Atraso &amp; Risco de Crédito:</strong> Quando a parcela não é paga na data de vencimento. O rating de risco piora e entra em cobrança. A instituição provisiona perdas (PDD/ECL).</li>
+          <li><strong>Renegociação:</strong> O cliente em atraso refaz as condições da dívida. Um novo contrato (ou aditivo) é gerado, estendendo o prazo e alterando a taxa.</li>
+          <li><strong>Write-off (Baixa para Prejuízo):</strong> Quando a dívida chega a um nível irrecuperável (ex: mais de 360 dias de atraso), o banco realiza a baixa contábil ("joga para prejuízo"), limpando o balanço de ativos podres, mas a cobrança pode continuar externamente.</li>
+        </ul>
+      </div>
+
+      <h3>Linha do Tempo Completa e Eventos de Crédito</h3>
+      <div class="timeline-container" style="margin-top: 20px; background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+        <p>A arquitetura moderna deve distinguir claramente as datas de negócio (Business Time) das datas de sistema (Processing Time). Abaixo o ciclo de vida detalhado:</p>
+        
+        <ul style="line-height: 1.8;">
+          <li><strong style="color:var(--emr)">Data de Contratação:</strong> O momento em que o cliente assina e formaliza o termo de empréstimo.</li>
+          <li><strong style="color:var(--emr)">Data de Concessão:</strong> O instante em que o dinheiro (TED/PIX) efetivamente cai na conta do cliente (início da Exposição).</li>
+          <li><strong style="color:var(--emr)">Data de Processamento (System Time):</strong> A exata milissegunda em que o evento (Kafka/Kinesis) bateu no Data Lake (Silver/Gold). Difere da data do negócio por latências de rede ou batimentos noturnos.</li>
+          <li><strong style="color:var(--emr)">Data de Posição do Contrato (Snapshot D-1):</strong> A fotografia diária. O saldo devedor fechado à meia-noite (00:00), que inclui o cálculo de <strong>Spot Accrual</strong> (apropriação dos juros do dia).</li>
+          <li><strong style="color:var(--emr)">Data de Vencimento:</strong> A data limite pactuada no contrato para que o cliente pague a parcela sem incorrer em mora.</li>
+          <li><strong style="color:var(--emr)">Data de Pagamento da Parcela:</strong> Quando o cliente executa a transação no seu banco de origem.</li>
+          <li><strong style="color:var(--emr)">Data de Recebimento (Liquidação):</strong> Quando o dinheiro entra no caixa da instituição. Gera a baixa no saldo devedor e realiza a <strong>Amortização</strong> (abatimento do principal) e o pagamento dos juros.</li>
+          <li><strong style="color:var(--emr)">Data de Atraso (Delinquency):</strong> Quando a Data Atual ultrapassa a Data de Vencimento sem Recebimento. O sistema altera o status do contrato e aciona a provisão (PDD).</li>
+          <li><strong style="color:var(--emr)">Data de Renegociação:</strong> Cliente firma novo acordo, liquidando o contrato antigo (saldo zerado) e criando um novo contrato (novo T0).</li>
+          <li><strong style="color:var(--emr)">Data de Write-off:</strong> Após X dias de atraso (ex: 360), o crédito é baixado como prejuízo contábil total (retirado do Ativo Circulante).</li>
+        </ul>
+
+        <h5 style="margin-top:20px; color:var(--fg)">Modelagem de Tabelas (Exemplo Fato/Trusted)</h5>
+        <pre><code class="language-sql" style="background:#000; padding:15px; border-radius:6px; display:block; color:#e2e8f0;">CREATE TABLE gold.fato_eventos_credito (
+  id_evento STRING,
+  id_contrato STRING,
+  tipo_evento STRING, -- 'CONCESSAO', 'ACCRUAL', 'RECEBIMENTO', 'ATRASO', 'WRITE_OFF'
+  valor_principal DECIMAL(15,2),
+  valor_juros DECIMAL(15,2),
+  valor_amortizacao DECIMAL(15,2),
+  data_evento DATE, -- Business Time (Data do Recebimento, Concessão, etc)
+  data_processamento TIMESTAMP, -- System Time (Quando caiu no Kafka/Lake)
+  data_referencia_posicao DATE -- Data da fotografia contábil (D-1)
+) PARTITIONED BY (data_referencia_posicao);</code></pre>
+      </div>
+
+      <div class="callout callout-warning">
+        <strong>Contabilidade Bancária: COSIF e as Partidas Dobradas (Visão Plataforma)</strong>
+        <p>No Brasil, o <strong>Plano Contábil (COSIF)</strong> gerido pelo BACEN exige rigor absoluto. Para a Engenharia de Dados, isso significa que todo evento ingerido do <strong>Kafka/Kinesis</strong> pelo pipeline de Ledger deve gerar obrigatoriamente duas pernas transacionais ACID (Débito = Crédito) no banco de dados da Camada Gold. Perder um evento quebra o balanço patrimonial do banco.</p>
+      </div>
+
+      <div class="concept-grid" style="margin-top: 20px;">
+        <div class="concept-card" style="border-top: 4px solid #10b981;">
+          <div class="cc-tag">1. Concessão (Originação)</div>
+          <div class="cc-body">
+            <p>O motor de originação emite o evento <code>CREDIT_GRANTED</code>. A plataforma transfere um Ativo (Caixa) para outro (Direito a Receber).</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Carteira de Crédito (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Reservas/Caixa (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #ef4444;">
+          <div class="cc-tag">2. Estorno / Cancelamento</div>
+          <div class="cc-body">
+            <p>Se a TED falha (evento <code>PAYMENT_FAILED</code>), a plataforma realiza a reversão exata das pernas contábeis em D+0 (Rollback).</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Reservas/Caixa (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Carteira de Crédito (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #3b82f6;">
+          <div class="cc-tag">3. Apropriação (Spot Accrual)</div>
+          <div class="cc-body">
+            <p>Rotina Batch/Spark noturna calcula os juros do dia (<code>ACCRUAL_CALCULATED</code>), reconhecendo o lucro por <strong>competência</strong> antes do pagamento.</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Rendas a Receber (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Receita de Operações (DRE).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #10b981;">
+          <div class="cc-tag">4. Pagamento (Liquidação)</div>
+          <div class="cc-body">
+            <p>Evento <code>INSTALLMENT_PAID</code> aciona a baixa do saldo. Parte cobre a amortização do principal e parte paga os juros acumulados.</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Caixa / Compensação (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Rendas a Receber (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Carteira de Crédito (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #f59e0b;">
+          <div class="cc-tag">5. Renegociação</div>
+          <div class="cc-body">
+            <p>O evento <code>CONTRACT_RENEGOTIATED</code> liquida contabilmente a dívida velha ("Zera" o contrato T0) e origina um novo contrato (Novo T0).</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Nova Carteira (Ativo).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Carteira Antiga (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #ef4444;">
+          <div class="cc-tag">6. Provisão (PDD / ECL)</div>
+          <div class="cc-body">
+            <p>No evento <code>DELINQUENCY_UPDATED</code>, o motor provisiona a perda provável reduzindo o lucro líquido com base no Score.</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Despesa de Provisão (DRE).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Provisão de Crédito (Ativo Redutora).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #94a3b8;">
+          <div class="cc-tag">7. Write-off (Baixa)</div>
+          <div class="cc-body">
+            <p>Evento <code>WRITEOFF_TRIGGERED</code> (ex: atraso de 360 dias). O saldo é expurgado limpo do Balanço Patrimonial.</p>
+            <ul style="font-size:12px; margin-top:8px;">
+              <li><strong style="color:var(--emr)">D:</strong> Provisão de Crédito (Ativo Redutora).</li>
+              <li><strong style="color:var(--emr)">C:</strong> Carteira de Crédito (Ativo).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>ARQUITETURA DO LIVRO-RAZÃO (LEDGER) E RAZONETES</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/3943ade79ea5bb5ecc66a1fa54c4dcc6efe8be8f/assets/diagrams/business-roi-ledger-aws.drawio"}'></div>
+      </div>
+
+      <h3>Concessão, Exposição e Risco de Crédito (Visão Plataforma)</h3>
+      <p>Em uma plataforma analítica escalável na AWS, é imperativo separar computacionalmente e logicamente os conceitos de liberação, saldo em risco e a probabilidade de perda. Veja como a arquitetura moderna mapeia essas variáveis:</p>
+      
+      <div class="concept-grid" style="margin-top: 20px;">
+        <div class="concept-card" style="border-top: 4px solid #10b981;">
+          <div class="cc-tag">A. Concessão (Origination)</div>
+          <div class="cc-body">
+            <p><strong>Conceito:</strong> É o ato inicial de liberação do limite ou do dinheiro. Define o apetite do banco.</p>
+            <p><strong>Plataforma:</strong> Ingestão via API Gateway e Kinesis. Os dados demográficos do cliente são enriquecidos em tempo real para calcular a capacidade de pagamento no instante D0.</p>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #f59e0b;">
+          <div class="cc-tag">B. Exposição de Crédito (EAD)</div>
+          <div class="cc-body">
+            <p><strong>Conceito:</strong> <em>Exposure at Default</em>. É o <strong>Saldo Devedor</strong> real do cliente num dado momento (Snapshot). Se o cliente falir hoje, qual o tamanho do rombo?</p>
+            <p><strong>Plataforma:</strong> Calculado e retido em alta disponibilidade via <strong>Amazon DynamoDB</strong> (Latência &lt; 5ms) para bloquear novas compras do cliente que estourou o limite.</p>
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #ef4444;">
+          <div class="cc-tag">C. Risco de Crédito (PD &amp; LGD)</div>
+          <div class="cc-body">
+            <p><strong>Conceito:</strong> Risco = EAD &times; PD (Prob. Default) &times; LGD (Loss Given Default). É a quantificação matemática da perda esperada.</p>
+            <p><strong>Plataforma:</strong> Modelos Machine Learning em <strong>Amazon SageMaker</strong> leem o Data Lake (S3), preveem o <em>rating</em> do cliente (PD), e gravam o <em>Score</em> na camada Gold do Iceberg para acionar o provisionamento (PDD).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - EXPOSURE &amp; RISK MODELS</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/3943ade79ea5bb5ecc66a1fa54c4dcc6efe8be8f/assets/diagrams/business-roi-credit-risk.drawio"}'></div>
+      </div>
+
+      <h3>Modelagem Data Mesh: Produtos de Dados Financeiros</h3>
+      <p>Para escalar esses conceitos, a arquitetura moderna propõe o isolamento via Data Mesh:</p>
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid #0284c7;">
+          <div class="cc-tag">Domínio de Crédito</div>
+          <div class="cc-body">
+            Responsável pelos Data Products: <strong>Contratos</strong>, <strong>Posição de Saldo Devedor (Exposição)</strong>, e <strong>Eventos de Atraso/Renegociação</strong>. É o dono das regras de negócios do produto de crédito.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #f59e0b;">
+          <div class="cc-tag">Domínio Contábil</div>
+          <div class="cc-body">
+            Consome eventos de todos os domínios para compor o Data Product: <strong>Razonete/Lançamentos Contábeis (Ledger)</strong>. Valida a integridade Débito = Crédito diariamente (Conciliação).
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid #e11d48;">
+          <div class="cc-tag">Domínio de Risco</div>
+          <div class="cc-body">
+            Consome dados de atraso e cria os Data Products: <strong>Scoring</strong>, <strong>Probabilidade de Default (PD)</strong>, e gera as recomendações de <strong>Write-off</strong> para a contabilidade provisionar perdas.
+          </div>
+        </div>
+      </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - ORQUESTRAÇÃO E2E (MOBILE AO MESH)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/3943ade79ea5bb5ecc66a1fa54c4dcc6efe8be8f/assets/diagrams/platform-e2e-orchestration.drawio"}'></div>
+      </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - JORNADA DO CRÉDITO</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/3943ade79ea5bb5ecc66a1fa54c4dcc6efe8be8f/assets/diagrams/business-roi-credit-journey.drawio"}'></div>
+      </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - DATA MESH</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/3943ade79ea5bb5ecc66a1fa54c4dcc6efe8be8f/assets/diagrams/business-roi-data-mesh.drawio"}'></div>
+      </div>
+
+    </section>
+
+    <!-- SEÇÃO DE REFERÊNCIAS CONTÁBEIS -->
+    <section class="section" id="referencias-contabeis" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--muted)">REF</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--muted)"></div>
+          <h2>Referências Oficiais &amp; Manuais</h2>
+          <p>Documentação normativa exigida na Engenharia Financeira.</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-lbl">Regulação Banco Central (BACEN)</div>
+          <h4>Manual COSIF</h4>
+          <p>Plano Contábil das Instituições do Sistema Financeiro Nacional. Define a padronização e o elenco das contas (Ativo, Passivo, Resultado). A base do Ledger.</p>
+        </div>
+        <div class="card">
+          <div class="card-lbl">Normativa de Provisão</div>
+          <h4>Resolução CMN 2.682</h4>
+          <p>Regras para a classificação das operações de crédito e a constituição de PDD (Provisão para Devedores Duvidosos) baseada nos dias de atraso (Rating AA a H).</p>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div>
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
@@ -771,5 +1004,6 @@ document.addEventListener('click', function(e) {
 });
 </script>
 <script src="../../progress.js"></script>
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>

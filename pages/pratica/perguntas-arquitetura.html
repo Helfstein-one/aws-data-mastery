@@ -41,6 +41,12 @@
         <a href="../../pages/fundamentos/soft-skills.html#implementacao" class="nav-sub"><span class="nav-sdot"></span>Plano de Implementação</a>
         <a href="../../pages/fundamentos/soft-skills.html#cfo-pitch" class="nav-sub"><span class="nav-sdot"></span>Pilar 9: Pitch Executivo</a>
       </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/pmo-sme-dados.html" class="nav-a" data-page="pmo-sme-dados"><span class="nav-dot" style="background:#8b5cf6"></span>📈 PMO &amp; SME de Dados</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#okr-framework" class="nav-sub"><span class="nav-sdot"></span>Framework de OKRs</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#data-product-lifecycle" class="nav-sub"><span class="nav-sdot"></span>Ciclo de Vida do Produto</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#gestao-agil" class="nav-sub"><span class="nav-sdot"></span>Gestão Ágil e Squads</a>
+      </div>
     </div>
 
     <!-- 2. Arquitetura & Fundamentos -->
@@ -773,6 +779,24 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
           <ul>
             <li><strong>A Análise de Trade-offs Físicos:</strong> O Princípio número 1 de sistemas distribuídos sob o Teorema CAP é que redes falham. SQS Standard garante apenas "At-Least-Once delivery" (uma mensagem pode ser entregue duas vezes). Kinesis Streams não possui processamento exactly-once nativo ponta-a-ponta, ele depende da aplicação leitora gerenciar o checkpointing. SQS FIFO garante Exactly-Once, mas o limite rígido é 3.000 TPS (ou High Throughput FIFO com batching), o que torna impossível atingir o requisito de 1 Milhão de TPS exigido pela diretoria de forma puramente síncrona/FIFO.</li>
             <li><strong>A Solução Arquitetural (Idempotent Design):</strong> Como Principal Engineer, você deve rejeitar a ilusão do Exactly-Once no broker e implementar a solução no nível da aplicação. Você escolhe Amazon MSK (Kafka) ou Kinesis para aguentar a escala bruta (1M TPS) com garantia At-Least-Once. Na camada de processamento (consumidores ECS/EKS), você implementa um design estritamente <strong>Idempotente</strong>. Cada evento recebe um UUID de transação na origem. Antes de o consumidor atualizar o saldo no banco de dados (ex: DynamoDB), ele verifica se o UUID já foi processado através de uma operação condicional (`ConditionExpression`). Se a mensagem for entregue duplicada devido a um retry da rede, a operação de banco de dados rejeita silenciosamente a duplicata. Isso garante semântica Exactly-Once lógica sem o gargalo extremo de throughput de filas FIFO.</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Q101: Business Value & ROI Architecture -->
+      <div class="card" id="q101" style="margin-bottom: 24px;">
+        <div class="card-lbl" style="color:var(--orange)">Questão 101 · Arquitetura de Valor de Negócio e ROI (C-Level / Staff Level)</div>
+        <h4>Como Arquiteto de Dados Chefe, você projetou a migração de um Monolito on-premise para uma arquitetura Serverless (ECS Fargate + Kinesis + DynamoDB). O CTO concordou com a viabilidade técnica, mas o CFO (Chief Financial Officer) bloqueou o orçamento alegando que "tecnologia pela tecnologia não paga as contas". Como você traduz os componentes puramente técnicos (Event-Driven, Sharding, Kinesis) em métricas de negócio claras, garantindo a aprovação do projeto com foco no Valor de Negócio (ROI)?</h4>
+        <p><strong>Cenário:</strong> Engenheiros brilhantes frequentemente falham ao comunicar o impacto do seu trabalho. Eles detalham milissegundos de latência, número de shards e eficiência de CPU, enquanto a diretoria executiva pensa exclusivamente em: <strong>Redução de Custo, Aumento de Receita, Mitigação de Risco Operacional e Agilidade (Time-to-Market)</strong>.</p>
+        <div class="callout callout-tip">
+          <strong>Diagnóstico e Ação (Business Value &amp; ROI Mapping):</strong>
+          <ul>
+            <li><strong>A Análise Executiva:</strong> Você não deve vender "microsserviços" ou "streaming" para o board. Você deve vender a solução de problemas de negócio críticos.</li>
+            <li><strong>Mapeamento Tático (A Camada Técnica conectada à Camada de Negócios):</strong>
+              <br>1. <strong>Otimização de Custos (FinOps):</strong> Você explica que a mudança para Serverless e autoscaling (Fargate/Lambda) elimina ociosidade. Em vez de pagar por VMs rodando à toa de madrugada, o TCO (Total Cost of Ownership) cairá em 40%, liberando capital para novos investimentos.
+              <br>2. <strong>Aumento de Receita (SLA e Latência):</strong> O Kinesis permite o processamento em sub-segundos. Você traduz isso dizendo: "Atualmente, demoramos 15 minutos para detectar um carrinho de compras abandonado e perdemos o cliente. Com a nova arquitetura, enviaremos um desconto em 500ms, aumentando a conversão e gerando +US$ 1M anuais."
+              <br>3. <strong>Mitigação de Risco (DynamoDB):</strong> O DynamoDB com tabelas globais impede que o sistema caia. Isso significa que não teremos mais <em>downtimes</em> na Black Friday, evitando perdas de vendas de $45.000 por hora. Além de prevenir fraudes de crédito em tempo real.
+              <br>4. <strong>Agilidade e Time-to-Market:</strong> O desacoplamento do Kinesis (Event-Driven) significa que as equipes não precisam mais aguardar o time do banco de dados central. Elas consomem os tópicos e lançam novos produtos financeiros 3 vezes mais rápido.
+            </li>
           </ul>
         </div>
       </div>
