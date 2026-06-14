@@ -241,27 +241,20 @@
       ]
     },
     oop: {
-      name: "🏗️ Python & OOP",
-      badge: "Engenheiro Pythonico",
+      name: "🐍 Python Legend",
+      badge: "Lenda Viva do Python",
       color: "#f43f5e",
       items: [
         "data-engineering-oop.html#boas-praticas",
         "data-engineering-oop.html#oop-dados",
         "data-engineering-oop.html#design-patterns",
-        "data-engineering-oop.html#oop-cases-perguntas"
+        "data-engineering-oop.html#oop-cases-perguntas",
+        "data-engineering-oop.html#cpython-memoria",
+        "data-engineering-oop.html#core-types",
+        "data-engineering-oop.html#oop-avancado",
+        "data-engineering-oop.html#pandas-projetos"
       ]
-    },
-    "python-mastery": {
-      name: "🐍 Python Mastery",
-      badge: "Mestre Python",
-      color: "#0ea5e9",
-      items: [
-        "python-mastery.html#cpython-memoria",
-        "python-mastery.html#core-types",
-        "python-mastery.html#oop-avancado",
-        "python-mastery.html#pandas-projetos"
-      ]
-    },
+    },,
     testing: {
       name: "🧪 Software Testing",
       badge: "Engenheiro de Qualidade",
@@ -821,11 +814,7 @@
       oop: { 
         colors: ["#f43f5e", "#e11d48"], 
         icon: `<path class="badge-oop-code" d="M24 24 L16 32 L24 40 M40 24 L48 32 L40 40 M36 16 L28 48" fill="none" stroke="url(#grad-oop)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
-      },
-      "python-mastery": { 
-        colors: ["#0ea5e9", "#0284c7"], 
-        icon: `<path class="badge-oop-code" d="M24 24 L16 32 L24 40 M40 24 L48 32 L40 40 M36 16 L28 48" fill="none" stroke="url(#grad-python-mastery)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
-      },
+      },,
       testing: { 
         colors: ["#10b981", "#059669"], 
         icon: `<path class="badge-oop-code" d="M32 16 v24 M24 24 h16 M20 40 h24" fill="none" stroke="url(#grad-testing)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
