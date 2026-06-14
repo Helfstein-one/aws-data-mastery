@@ -99,12 +99,33 @@
         <a href="../../pages/fundamentos/plataforma-dados.html#alinhamento" class="nav-sub"><span class="nav-sdot"></span>Pitch de Alinhamento &amp; Venda</a>
         <a href="../../pages/fundamentos/plataforma-dados.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas Técnicas &amp; Cases</a>
       </div>
+
+    </div>
+
+    <!-- 2.5 Linguagens & IaC -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('linguagens-iac-cat', this)">
+      <span>💻 Linguagens &amp; IaC</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="linguagens-iac-cat" class="nav-cat-content">
       <div class="nav-page-group">
         <a href="../../pages/fundamentos/data-engineering-oop.html" class="nav-a" data-page="data-engineering-oop"><span class="nav-dot" style="background:#f43f5e"></span>💻 Python &amp; OOP para Dados</a>
         <a href="../../pages/fundamentos/data-engineering-oop.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Código Python</a>
         <a href="../../pages/fundamentos/data-engineering-oop.html#oop-dados" class="nav-sub"><span class="nav-sdot"></span>Orientação a Objetos em Dados</a>
         <a href="../../pages/fundamentos/data-engineering-oop.html#design-patterns" class="nav-sub"><span class="nav-sdot"></span>Design Patterns de Engenharia</a>
         <a href="../../pages/fundamentos/data-engineering-oop.html#oop-cases-perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas de Arquitetura &amp; Cases</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/sql-mastery.html" class="nav-a" data-page="sql-mastery"><span class="nav-dot" style="background:#f59e0b"></span>🗄️ SQL para Dados</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#fundamentos-sql" class="nav-sub"><span class="nav-sdot"></span>A Evolução do SQL Analítico</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#ctes-window" class="nav-sub"><span class="nav-sdot"></span>CTEs e Window Functions</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#iceberg-hive" class="nav-sub"><span class="nav-sdot"></span>SQL em Data Lakes</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/terraform.html" class="nav-a" data-page="terraform"><span class="nav-dot" style="background:#8b5cf6"></span>🏗️ Terraform &amp; IaC</a>
+        <a href="../../pages/fundamentos/terraform.html#fundamentos-terraform" class="nav-sub"><span class="nav-sdot"></span>Conceitos Básicos de Terraform</a>
+        <a href="../../pages/fundamentos/terraform.html#comandos-terraform" class="nav-sub"><span class="nav-sdot"></span>Estrutura e Comandos Principais</a>
+        <a href="../../pages/fundamentos/terraform.html#arquitetura-terraform" class="nav-sub"><span class="nav-sdot"></span>Arquitetura e Integração AWS</a>
       </div>
     </div>
 
@@ -546,6 +567,99 @@ CMD ["python", "etl_pipeline.py"]</code></pre>
     </section>
 
   
+
+    <section class="section" id="docker-comandos-workflow">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#0ea5e9">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0ea5e9"></div>
+          <h2>Workflow do Desenvolvedor: Compose &amp; Makefile</h2>
+          <p>Orquestrando localmente e automatizando builds</p>
+        </div>
+      </div>
+
+      <p>Em projetos reais de Engenharia de Dados, você raramente digita comandos <code>docker run</code> gigantescos no terminal. Utilizamos ferramentas auxiliares para documentar e orquestrar a execução local.</p>
+
+      <h3>Docker Compose</h3>
+      <p>O <code>docker-compose.yml</code> é usado para subir múltiplos containers que se comunicam. Exemplo: subir o Apache Airflow localmente ou um banco PostgreSQL junto com uma ferramenta de ingestão.</p>
+
+      <div class="code-block" style="margin-bottom: 20px;">
+        <div class="cb-hdr"><span class="cb-lang">docker-compose.yml</span></div>
+        <pre><code class="language-yaml">version: '3.8'
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: datalake_meta
+    ports:
+      - "5432:5432"
+
+  pyspark_env:
+    build: .
+    volumes:
+      - ./scripts:/app/scripts
+    depends_on:
+      - postgres</code></pre>
+      </div>
+
+      <h3>Makefile para Dados</h3>
+      <p>Engenheiros de software usam <code>make</code> para automatizar rotinas. Em dados, é extremamente útil para não ter que decorar as strings de conexão e os builds do Docker.</p>
+
+      <div class="code-block">
+        <div class="cb-hdr"><span class="cb-lang">Makefile</span></div>
+        <pre><code class="language-makefile">IMAGE_NAME = my_data_pipeline:latest
+AWS_ACCOUNT_ID = 123456789012
+REGION = us-east-1
+
+build:
+	docker build -t $(IMAGE_NAME) .
+
+run-local:
+	docker run --env-file .env -v $(PWD)/data:/app/data $(IMAGE_NAME) python main.py
+
+push-ecr: build
+	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com
+	docker tag $(IMAGE_NAME) $(AWS_ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com/$(IMAGE_NAME)
+	docker push $(AWS_ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com/$(IMAGE_NAME)</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="aws-templates-imagens">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#0ea5e9">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0ea5e9"></div>
+          <h2>Templates AWS: EMR Serverless &amp; Glue</h2>
+          <p>Trazendo sua própria imagem (BYOC) para ambientes Serverless</p>
+        </div>
+      </div>
+
+      <p>Historicamente, gerenciar dependências no Glue e EMR (arquivos `.whl`, <em>bootstrap actions</em>) era um pesadelo (causando conflitos de C++ e bibliotecas compiladas). A solução definitiva da AWS foi liberar o suporte a <strong>Custom Docker Images</strong> nestes motores.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <div class="cc-tag">Custom Image</div>
+          <div class="cc-title">AWS Glue BYOC</div>
+          <div class="cc-body">
+            Você compila a imagem a partir da imagem base da AWS (<code>amazon/aws-glue-libs:glue_3.0_ast_20220601</code>) instalando suas bibliotecas Pandas/Numpy específicas via <code>pip install</code> ou <code>conda</code>, e envia pro ECR. O Job do Glue então aponta para essa imagem no momento do <em>run</em>.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">Serverless Container</div>
+          <div class="cc-title">EMR Serverless Image</div>
+          <div class="cc-body">
+            No EMR Serverless, você empacota seu código PySpark e todas as dependências nativas (como binários em C++) usando a imagem base do EMR. Isso garante tempos de <em>spin-up</em> muito menores comparados à instalação via shell script no startup.
+          </div>
+        </div>
+      </div>
+      
+      <div class="mxgraph" style="margin-top:20px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+        <div data-mxgraph="{&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom layers tags lightbox&quot;,&quot;edit&quot;:&quot;_blank&quot;,&quot;xml&quot;:&quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;24.4.10\&quot;&gt;&lt;diagram name=\&quot;Docker AWS ECR Flow\&quot; id=\&quot;docker_ecr\&quot;&gt;&lt;mxGraphModel dx=\&quot;1422\&quot; dy=\&quot;746\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;827\&quot; pageHeight=\&quot;1169\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot; /&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot; /&gt;&lt;mxCell id=\&quot;2\&quot; value=\&quot;GitHub Actions (CI)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;160\&quot; height=\&quot;60\&quot; x=\&quot;40\&quot; y=\&quot;200\&quot; /&gt;&lt;mxCell id=\&quot;3\&quot; value=\&quot;Amazon ECR (Registry)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#c026d3;strokeColor=#a21caf;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;160\&quot; height=\&quot;60\&quot; x=\&quot;320\&quot; y=\&quot;200\&quot; /&gt;&lt;mxCell id=\&quot;4\&quot; value=\&quot;AWS Glue (Custom Img)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#06b6d4;strokeColor=#0891b2;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;160\&quot; height=\&quot;60\&quot; x=\&quot;600\&quot; y=\&quot;120\&quot; /&gt;&lt;mxCell id=\&quot;5\&quot; value=\&quot;EMR Serverless (BYOC)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#f59e0b;strokeColor=#d97706;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;160\&quot; height=\&quot;60\&quot; x=\&quot;600\&quot; y=\&quot;280\&quot; /&gt;&lt;mxCell id=\&quot;6\&quot; value=\&quot;Docker Push\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;2\&quot; target=\&quot;3\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=2;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;7\&quot; value=\&quot;Docker Pull\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;4\&quot; target=\&quot;3\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;520\&quot; y=\&quot;150\&quot; /&gt;&lt;mxPoint x=\&quot;520\&quot; y=\&quot;210\&quot; /&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;8\&quot; value=\&quot;Docker Pull\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;5\&quot; target=\&quot;3\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;520\&quot; y=\&quot;310\&quot; /&gt;&lt;mxPoint x=\&quot;520\&quot; y=\&quot;250\&quot; /&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}"></div>
+      </div>
+    </section>
+
   </main>
 </div>
 <script>

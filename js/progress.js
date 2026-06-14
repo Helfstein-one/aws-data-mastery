@@ -7,6 +7,37 @@
 (function() {
   // Configuração das trilhas e suas respectivas seções/hashes para cálculo de progresso
   const MODULES = {
+    python: {
+      name: "💻 Python & OOP para Dados",
+      badge: "Engenheiro Python",
+      color: "#f43f5e",
+      items: [
+        "data-engineering-oop.html#boas-praticas",
+        "data-engineering-oop.html#oop-dados",
+        "data-engineering-oop.html#design-patterns",
+        "data-engineering-oop.html#oop-cases-perguntas"
+      ]
+    },
+    sql: {
+      name: "🗄️ SQL Analytics",
+      badge: "Mestre em SQL",
+      color: "#f59e0b",
+      items: [
+        "sql-mastery.html#fundamentos-sql",
+        "sql-mastery.html#ctes-window",
+        "sql-mastery.html#iceberg-hive"
+      ]
+    },
+    terraform: {
+      name: "🏗️ Terraform & IaC",
+      badge: "Arquiteto IaC",
+      color: "#8b5cf6",
+      items: [
+        "terraform.html#fundamentos-terraform",
+        "terraform.html#comandos-terraform",
+        "terraform.html#arquitetura-terraform"
+      ]
+    },
     architecture: {
       name: "📐 Arquitetura & Padrões",
       badge: "Arquiteto de Dados",
@@ -766,6 +797,18 @@
   // Helper to generate dynamic premium SVG icons for academic badges
   function getBadgeSVG(modId, hasCompleted) {
     const configs = {
+      python: { 
+        colors: ["#f43f5e", "#e11d48"],
+        icon: `<path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.08.77-.04.84-.02 1.27.05 1.05.14.88.21.73.28.59.33.46.36.35.38.25.38.16.37.08.35.03.3.01.23v.13zm-3.64 12.01l-.22.02-.27.07-.31.14-.33.23-.31.33-.26.43-.17.53-.08.64-.02.73.04.82.12.87.23.9.36.88.51.81.68.72.88.58 1.09.43 1.34.24 1.58.05 1.56-.15 1.32-.34 1.08-.5.86-.64.65-.75.45-.82.26-.85.09-.84v-.2h-5.06l-.68-.05-.58-.14-.5-.22-.41-.27-.33-.32-.27-.35-.2-.36-.15-.37-.1-.35-.07-.32-.04-.27-.02-.21v-3.06h2.21l.21.03.28.07.32.12.35.18.36.26.36.36.35.46.32.59.28.73.21.88.14 1.05.05 1.23-.06 1.22-.16 1.04-.24.87-.32.71-.36.57-.4.44-.42.33-.42.24-.4.16-.36.1-.32.05-.24.01h-.16l-.06-.01h-8.16v.83h5.27l.01 2.75.02.37-.05.34-.11.31-.17.28-.25.26-.31.23-.38.2-.44.18-.51.15-.58.12-.64.1-.71.08-.77.04-.84.02-1.27-.05-1.05-.14-.88-.21-.73-.28-.59-.33-.46-.36-.35-.38-.25-.38-.16-.37-.08-.35-.03-.3-.01-.23v-.13zM9.54 2.87a.9.9 0 00-.9.9.9.9 0 00.9.9.9.9 0 00.9-.9.9.9 0 00-.9-.9zm4.92 18.26a.9.9 0 00.9-.9.9.9 0 00-.9-.9.9.9 0 00-.9.9.9.9 0 00.9.9z"/>`
+      },
+      sql: { 
+        colors: ["#f59e0b", "#d97706"],
+        icon: `<path d="M12 2C6.48 2 2 4.02 2 6.5C2 8.98 6.48 11 12 11C17.52 11 22 8.98 22 6.5C22 4.02 17.52 2 12 2ZM12 8.5C7.42 8.5 4.34 6.94 4.06 6.5C4.34 6.06 7.42 4.5 12 4.5C16.58 4.5 19.66 6.06 19.94 6.5C19.66 6.94 16.58 8.5 12 8.5ZM22 10.5C22 12.98 17.52 15 12 15C6.48 15 2 12.98 2 10.5V14.5C2 16.98 6.48 19 12 19C17.52 19 22 16.98 22 14.5V10.5ZM2 18.5C2 20.98 6.48 23 12 23C17.52 23 22 20.98 22 18.5V21.5C22 23.98 17.52 26 12 26C6.48 26 2 23.98 2 21.5V18.5Z"/>`
+      },
+      terraform: { 
+        colors: ["#8b5cf6", "#7c3aed"],
+        icon: `<path d="M1.44 0v7.245L7.708 3.62V-1.334zM8.56 4.032v7.245l6.269-3.625V.407zM8.56 12.181v7.245l6.269-3.625V8.556zM15.681 8.04v7.245l6.269-3.625V4.415z"/>`
+      },
       architecture: { 
         colors: ["#38bdf8", "#818cf8"], 
         icon: `<path class="badge-arch-path" d="M22 28 l10 -5 l10 5 l-10 5 z M22 28 v10 l10 5 v-10 z M42 28 v10 l-10 5 v-10 z" fill="none" stroke="url(#grad-architecture)" stroke-width="2" stroke-linejoin="round"/>` 
@@ -887,7 +930,18 @@
 
     return `
       <svg viewBox="0 0 64 64" width="48" height="48" style="transition: all 0.3s ease; display: inline-block; opacity: ${opacityVal};">
-        <defs>
+        <defs>      <linearGradient id="grad-python" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#f43f5e" />
+        <stop offset="100%" stop-color="#e11d48" />
+      </linearGradient>
+      <linearGradient id="grad-sql" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#f59e0b" />
+        <stop offset="100%" stop-color="#d97706" />
+      </linearGradient>
+      <linearGradient id="grad-terraform" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#8b5cf6" />
+        <stop offset="100%" stop-color="#7c3aed" />
+      </linearGradient>
           <linearGradient id="grad-${modId}" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="${cfg.colors[0]}" />
             <stop offset="100%" stop-color="${cfg.colors[1]}" />
