@@ -557,15 +557,47 @@ env =
         </code></pre>
       </div>
 
-      <h3>Orquestrando os Testes E2E</h3>
+      
+      <h3>Orquestrando os Testes E2E (Testcontainers)</h3>
+      <p>Para orquestrar testes E2E, o padrão ouro é utilizar <strong>Testcontainers</strong> e CI/CD Runners. Em vez de testar na AWS (o que gera custos e instabilidade), subimos dependências via Docker em tempo de pipeline.</p>
+      
+      <div class="code-block">
+        <div class="code-header">🐍 tests/e2e/test_with_docker.py</div>
+        <pre><code class="language-python">
+import pytest
+from testcontainers.postgres import PostgresContainer
+from testcontainers.kafka import KafkaContainer
+import psycopg2
 
-      <p>Para orquestrar testes E2E, o padrão ouro é utilizar <strong>Testcontainers</strong> e CI/CD Runners. Em vez de testar na AWS (o que gera custos e instabilidade), subimos dependências via Docker em tempo de pipeline:</p>
+@pytest.fixture(scope="session")
+def postgres_db():
+    """Sobe um PostgreSQL em Docker para o teste e destrói ao final."""
+    with PostgresContainer("postgres:15-alpine") as postgres:
+        # Passa a URL de conexão para os testes rodarem
+        yield postgres.get_connection_url()
+
+@pytest.fixture(scope="session")
+def kafka_broker():
+    """Sobe um Kafka em Docker para injetar mensagens."""
+    with KafkaContainer("confluentinc/cp-kafka:7.3.0") as kafka:
+        yield kafka.get_bootstrap_server()
+
+def test_pipeline_e2e(postgres_db, kafka_broker, spark):
+    """
+    Seu job Spark rodará local, conectará no broker Kafka efêmero para ler a fila
+    e salvará no Postgres efêmero. 
+    """
+    assert "postgresql://" in postgres_db
+    # Lógica de Spark.readStream.format("kafka")...
+        </code></pre>
+      </div>
+
       <ul>
-        <li><strong>Setup:</strong> O <code>pytest</code> invoca um fixture que sobe um contêiner Kafka, um LocalStack (S3) e um PostgreSQL (Redshift mock).</li>
-        <li><strong>Run:</strong> O teste insere dados no tópico Kafka.</li>
-        <li><strong>Assert:</strong> O PySpark roda, consome o Kafka e salva no LocalStack. O teste lê o S3 e garante que a tabela de Fato foi preenchida com as métricas agregadas.</li>
-        <li><strong>Teardown:</strong> Os contêineres são destruídos automaticamente.</li>
+        <li><strong>Setup Idempotente:</strong> O `pytest` invoca as fixtures que sobem os containers em portas randômicas (evitando colisões no CI/CD).</li>
+        <li><strong>Run & Assert:</strong> O PySpark consome o Kafka efêmero e grava no Postgres efêmero. O teste verifica as tabelas no Postgres.</li>
+        <li><strong>Teardown Automático:</strong> Os contêineres são destruídos quando o contexto do `with` encerra, não deixando "lixo" na máquina do desenvolvedor.</li>
       </ul>
+
     </section>
 
     <!-- SECTION 3 -->
@@ -607,7 +639,25 @@ def spark():
         </code></pre>
       </div>
     
+      
+      <h3>Otimização: O plugin pytest-pyspark</h3>
+      <p>Escrever a fixture de inicialização do Spark manualmente é útil para entender o funcionamento, mas em projetos profissionais, a recomendação é usar o plugin oficial <code>pytest-pyspark</code>. Ao instalá-lo (<code>pip install pytest-pyspark</code>), ele injeta automaticamente uma fixture chamada <code>spark</code> no seu ambiente, já configurada para testes.</p>
+      <div class="code-block">
+        <div class="code-header">⚙️ pytest.ini (Com pytest-pyspark)</div>
+        <pre><code class="language-ini">
+[pytest]
+# Configura o plugin nativo para já inicializar o Spark
+spark_options =
+    spark.app.name: my-pytest-spark-tests
+    spark.executor.instances: 1
+    spark.sql.shuffle.partitions: 2
+    spark.ui.enabled: false
+        </code></pre>
+      </div>
+      <p>Com essa configuração, você pode deletar a fixture manual do <code>conftest.py</code> e apenas chamar <code>def test_algo(spark):</code> nas suas funções.</p>
+
       <h3>Gerando Massas de Dados Fictícias com Faker</h3>
+
       <p>Para testar lógicas de dados, não utilize bases reais (risco de vazamento de PII/LGPD). Crie fixtures no <code>conftest.py</code> utilizando a biblioteca <code>faker</code> para gerar milhares de registros consistentes sob demanda.</p>
       
       <div class="code-block">
@@ -866,6 +916,51 @@ def test_benchmark_aggregate_transactions(benchmark, fake_transactions_df):
         </code></pre>
       </div>
 
+    </section>
+
+
+    <!-- SECTION 7: REFERÊNCIAS -->
+    <section class="section" id="referencias">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">07</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Referências & Boas Práticas da Indústria</h2>
+          <p>As <em>Golden Rules</em> recomendadas para testar pipelines distribuídos na AWS e Databricks.</p>
+        </div>
+      </div>
+      
+      <p>Baseado em pesquisas de arquiteturas modernas (Databricks, AWS e Apache Spark Communitites), consolidamos as melhores práticas para que seu ambiente de CI/CD (GitHub Actions, GitLab CI) rode seus testes Spark + Docker sem dor de cabeça:</p>
+
+      <div class="bento-grid" style="grid-template-columns: 1fr;">
+        <div class="bento-card bento-large bento-item" style="border-top: 3px solid var(--warn);">
+          <div class="bento-content">
+            <h3 class="bento-title">1. Desative a Spark UI nos Testes</h3>
+            <p class="bento-desc">A Spark UI (porta 4040) gasta um tempo gigantesco subindo servidores Web no <em>driver</em>. Em um container Docker executando um pipeline de CI/CD, isso não só é inútil como penaliza a performance e causa falhas de port-binding. Adicione sempre: <code>spark.ui.enabled = false</code> e <code>spark.ui.showConsoleProgress = false</code>.</p>
+          </div>
+        </div>
+
+        <div class="bento-card bento-large bento-item" style="border-top: 3px solid var(--accent);">
+          <div class="bento-content">
+            <h3 class="bento-title">2. Portas Efêmeras (Evite Hardcode)</h3>
+            <p class="bento-desc">Quando usar <strong>Testcontainers</strong>, nunca defina manualmente as portas (ex: mapear Kafka na 9092 rígida). O Testcontainers seleciona portas host randômicas livres. Isso permite que seus testes rodem em modo paralelo de maneira segura usando ferramentas como <code>pytest-xdist</code>.</p>
+          </div>
+        </div>
+
+        <div class="bento-card bento-large bento-item" style="border-top: 3px solid var(--ok);">
+          <div class="bento-content">
+            <h3 class="bento-title">3. Separe Lógica Core de Infraestrutura</h3>
+            <p class="bento-desc">Mantenha a lógica de transformação de dados em funções puras (recebem DataFrame e retornam DataFrame) para testá-las rápido via Testes Unitários. O I/O com S3, Redshift ou Kafka deve ser isolado nos jobs orquestradores e validado através dos Testes de Integração com Docker.</p>
+          </div>
+        </div>
+        
+        <div class="bento-card bento-large bento-item" style="border-top: 3px solid var(--spark);">
+          <div class="bento-content">
+            <h3 class="bento-title">4. Spark Connect vs Local Mode</h3>
+            <p class="bento-desc">Para testes rápidos em código, <code>master("local[*]")</code> é suficiente. No entanto, para projetos arquiteturalmente distribuídos, estude a arquitetura de Cliente-Servidor separada usando o novo <strong>Spark Connect</strong>.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
   </main>
