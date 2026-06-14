@@ -642,7 +642,56 @@ resource "aws_s3_bucket" "data_lake" {
 }
 
 # Isso criará 3 buckets com um único bloco de código!</code></pre>
+      
+
+      <h3 style="margin-top: 40px;">Anatomia de um Componente de Dados</h3>
+      <p>Quando desenvolvemos um módulo complexo (como um Cluster EMR ou um Data Lakehouse S3), quebrar a infraestrutura em múltiplos arquivos `.tf` melhora drasticamente a legibilidade em vez de colocar tudo em um <code>main.tf</code> de mil linhas. Abaixo a estrutura ideal de arquivos para um componente:</p>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <div class="cc-tag">1. providers.tf & backend.tf</div>
+          <div class="cc-title">Conexão & Estado</div>
+          <div class="cc-body">
+            <code>providers.tf</code> define as versões dos provedores (AWS, Random) e a região. <code>backend.tf</code> informa onde o <em>state</em> será salvo (Bucket S3) e o controle de <em>lock</em> (DynamoDB).
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">2. variables.tf & outputs.tf</div>
+          <div class="cc-title">Entradas e Saídas</div>
+          <div class="cc-body">
+            <code>variables.tf</code> declara os parâmetros aceitos pelo componente (tamanho da máquina, ambiente). <code>outputs.tf</code> devolve dados (ARNs, IDs) para que outros módulos possam consumir essa infraestrutura.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">3. locals.tf</div>
+          <div class="cc-title">Variáveis Calculadas</div>
+          <div class="cc-body">
+            Diferente das <em>variables</em> (que vêm de fora), os <code>locals</code> armazenam lógica interna, formatações de string e tags comuns geradas em tempo de execução para evitar repetição.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">4. main.tf</div>
+          <div class="cc-title">Recurso Principal</div>
+          <div class="cc-body">
+            Reserva-se o <code>main.tf</code> estritamente para o coração do componente. Se for um módulo de banco de dados, aqui fica o <code>aws_db_instance</code>. O resto vai para arquivos secundários.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">5. iam.tf</div>
+          <div class="cc-title">Identidade & Permissões</div>
+          <div class="cc-body">
+            Centraliza todas as Roles, Policies e assumable roles (`aws_iam_role`, `aws_iam_policy`). Separar o IAM previne que engenheiros cometam acidentes de segurança ao misturar permissões com recursos computacionais.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">6. security.tf & vpc.tf</div>
+          <div class="cc-title">Redes e Proteção</div>
+          <div class="cc-body">
+            <code>vpc.tf</code> para criação/importação de Subnets, Route Tables e Gateways. <code>security.tf</code> abriga os <em>Security Groups</em>, NACLs e chaves de criptografia KMS.
+          </div>
+        </div>
       </div>
+</div>
     </section>
 
     <section class="section" id="terraform-cases">
