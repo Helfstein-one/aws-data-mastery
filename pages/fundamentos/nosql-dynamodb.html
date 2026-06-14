@@ -499,6 +499,27 @@
         <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-power-designer.drawio"}'></div>
       </div>
 
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #3b82f6; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#93c5fd; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>Item Collection</strong>: Toda a caixa tracejada representa uma Partição Física (disco) da AWS onde <code>PK=USER#101</code>.</li>
+          <li><strong>Adjacency List</strong>: Perfil, Pedido e Itens coexistem juntos no mesmo disco, ordenados alfabeticamente pela <code>SK</code>.</li>
+          <li><strong>Query Range</strong>: Buscar por <code>SK begins_with("ORDER")</code> retorna os pedidos na hora, eliminando JOINs relacionais.</li>
+        </ul>
+      </div>
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header"><span class="code-lang">Terraform: Tabela Genérica Single-Table</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>resource "aws_dynamodb_table" "ecommerce" {
+  name         = "ecommerce-single-table"
+  billing_mode = "PAY_PER_REQUEST" # On-Demand (Serverless Scale)
+  hash_key     = "PK"
+  range_key    = "SK"
+
+  attribute { name = "PK"; type = "S" }
+  attribute { name = "SK"; type = "S" }
+}</code></pre>
+      </div>
+
       <div class="callout callout-info">
         <div class="callout-icon">💡</div>
         <div class="callout-content">
@@ -536,6 +557,88 @@
         <div class="drawio-label"><span class="dot"></span>EXEMPLO 4: GAMING LEADERBOARD (GLOBAL SECONDARY INDEX)</div>
         <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-gaming.drawio"}'></div>
       </div>
+
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #f59e0b; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#fde68a; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>Tabela Base</strong>: Organizada por Jogador (PK) e Jogo (SK). Ótima para ver o histórico do Jogador.</li>
+          <li><strong>GSI (Global Secondary Index)</strong>: Clona os dados invertendo a lógica: agrupa pelo Jogo (GSI_PK) e ordena pela Pontuação (GSI_SK) para gerar o Ranking Mundial nativamente.</li>
+        </ul>
+      </div>
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header"><span class="code-lang">Terraform: Criando o GSI de Leaderboard</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>resource "aws_dynamodb_table" "gaming" {
+  name         = "gaming-leaderboards"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "PK"
+  range_key    = "SK"
+
+  attribute { name = "PK"; type = "S" }
+  attribute { name = "SK"; type = "S" }
+  attribute { name = "Score"; type = "N" } # Número
+
+  # GSI: Invertendo os atributos para Placar
+  global_secondary_index {
+    name               = "LeaderboardIndex"
+    hash_key           = "SK"       # ID do Jogo vira PK
+    range_key          = "Score"    # Score vira a SK para ordenação
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["PlayerName"]
+  }
+}</code></pre>
+      </div>
+
+      <p>No Exemplo 4 (Gaming Leaderboard), entramos no território dos <strong>Global Secondary Indexes (GSI)</strong>. A Tabela Base é modelada para o Padrão de Acesso primário: Recuperar todo o histórico de um Jogador (`PK=PLAYER#ID`). Mas e se o negócio exigir um Ranking Global por Jogo? A Tabela Base falharia (exigiria um *Scan* letal).</p>
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-content">
+          <strong>A Mágica do GSI (Inversão de Índice)</strong>
+          <p>O GSI é um índice clonado em background pela AWS. Nele, nós <em>invertemos</em> a chave: A <code>GSI_PK</code> passa a ser o ID do Jogo (`GAME#ZELDA`) e a <code>GSI_SK</code> passa a ser o Score. Dessa forma, podemos realizar uma Query simples ordenando numericamente e o Leaderboard sai pronto, sem onerar a tabela primária.</p>
+        </div>
+      </div>
+
+    
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>EXEMPLO 3: IOT TIME-SERIES (SK COMO TIMESTAMP)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-iot.drawio"}'></div>
+      </div>
+      <p>Neste exemplo 3 (IoT), demonstramos como salvar leituras contínuas de sensores. Ao invés de uma Adjacency List de entidades diferentes, usamos a <strong>Sort Key como um Timestamp (ISO-8601)</strong>. Isso é fundamental pois a Sort Key suporta operadores matemáticos. Podemos fazer `Query(PK="SENSOR#T78", SK BETWEEN data1 AND data2)` e o DynamoDB agirá como uma Timeseries Database extremamente veloz.</p>
+
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>EXEMPLO 4: GAMING LEADERBOARD (GLOBAL SECONDARY INDEX)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-gaming.drawio"}'></div>
+      </div>
+
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #f59e0b; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#fde68a; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>Tabela Base</strong>: Organizada por Jogador (PK) e Jogo (SK). Ótima para ver o histórico do Jogador.</li>
+          <li><strong>GSI (Global Secondary Index)</strong>: Clona os dados invertendo a lógica: agrupa pelo Jogo (GSI_PK) e ordena pela Pontuação (GSI_SK) para gerar o Ranking Mundial nativamente.</li>
+        </ul>
+      </div>
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header"><span class="code-lang">Terraform: Criando o GSI de Leaderboard</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>resource "aws_dynamodb_table" "gaming" {
+  name         = "gaming-leaderboards"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "PK"
+  range_key    = "SK"
+
+  attribute { name = "PK"; type = "S" }
+  attribute { name = "SK"; type = "S" }
+  attribute { name = "Score"; type = "N" } # Número
+
+  # GSI: Invertendo os atributos para Placar
+  global_secondary_index {
+    name               = "LeaderboardIndex"
+    hash_key           = "SK"       # ID do Jogo vira PK
+    range_key          = "Score"    # Score vira a SK para ordenação
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["PlayerName"]
+  }
+}</code></pre>
+      </div>
+
       <p>No Exemplo 4 (Gaming Leaderboard), entramos no território dos <strong>Global Secondary Indexes (GSI)</strong>. A Tabela Base é modelada para o Padrão de Acesso primário: Recuperar todo o histórico de um Jogador (`PK=PLAYER#ID`). Mas e se o negócio exigir um Ranking Global por Jogo? A Tabela Base falharia (exigiria um *Scan* letal).</p>
       <div class="callout callout-warn">
         <div class="callout-icon">⚠️</div>

@@ -443,6 +443,37 @@
         <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/pattern-sns-sqs-fanout.drawio"}'></div>
       </div>
 
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #10b981; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#a7f3d0; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>SNS Topic</strong>: Atua como Roteador (Pub/Sub). O S3 aciona o tópico passando atributos na mensagem (ex: type=csv).</li>
+          <li><strong>Filas SQS</strong>: Estão inscritas (Subscribed) no SNS. Usam <code>FilterPolicy</code> para só receber mensagens relevantes.</li>
+          <li><strong>Workers</strong>: Lambda e ECS consomem o SQS específico com segurança, sem sobrecarga de validação.</li>
+        </ul>
+      </div>
+      
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header">
+          <span class="code-lang">Terraform: SNS Fanout com FilterPolicy</span>
+          <button class="copy-btn">Copiar</button>
+        </div>
+        <pre><code># 1. Cria a Fila SQS e o Tópico SNS
+resource "aws_sqs_queue" "csv_loader_queue" { name = "csv-loader-queue" }
+resource "aws_sns_topic" "event_upload" { name = "s3-event-upload" }
+
+# 2. Inscreve a Fila no SNS aplicando a Regra de Filtragem!
+resource "aws_sns_topic_subscription" "csv_sqs_target" {
+  topic_arn = aws_sns_topic.event_upload.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.csv_loader_queue.arn
+
+  # A Mágica da Economia: Filter Policy
+  filter_policy = jsonencode({
+    type = ["csv"]
+  })
+}</code></pre>
+      </div>
+
       <div class="callout callout-info">
         <div class="callout-icon">💡</div>
         <div class="callout-content">
@@ -466,6 +497,38 @@
       <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
         <div class="drawio-label"><span class="dot"></span>CICLO DE VIDA DA MENSAGEM: FALHAS E DEAD LETTER QUEUE (DLQ)</div>
         <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/pattern-sqs-lambda-dlq.drawio"}'></div>
+      </div>
+
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #e11d48; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#fecdd3; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>Zonda de Invisibilidade</strong>: Tempo em que a Lambda tem posse da mensagem. Nenhuma outra Lambda pode vê-la.</li>
+          <li><strong>Falha (Crash)</strong>: Se a Lambda não rodar <code>DeleteMessage</code> antes do timeout acabar, a invisibilidade expira.</li>
+          <li><strong>DLQ Route</strong>: Após falhar 3 vezes (maxReceiveCount), a AWS remove automaticamente a mensagem para a DLQ.</li>
+        </ul>
+      </div>
+
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header">
+          <span class="code-lang">Terraform: SQS com Dead Letter Queue</span>
+          <button class="copy-btn">Copiar</button>
+        </div>
+        <pre><code># 1. Cria a DLQ (Fila de Rejeição)
+resource "aws_sqs_queue" "dlq" {
+  name = "worker-dlq"
+}
+
+# 2. Cria a Fila Principal vinculada à DLQ
+resource "aws_sqs_queue" "main_queue" {
+  name                       = "worker-queue"
+  visibility_timeout_seconds = 30 # Tempo de Invisibilidade
+
+  # Redrive Policy: Configura a DLQ e o limite de falhas
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.dlq.arn
+    maxReceiveCount     = 3
+  })
+}</code></pre>
       </div>
 
       <h3>Dilemas Clássicos e Soluções</h3>
@@ -569,6 +632,36 @@
       <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
         <div class="drawio-label"><span class="dot"></span>EVENTBRIDGE ENTERPRISE HUB ARCHITECTURE</div>
         <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/platform-event-hub.drawio"}'></div>
+      </div>
+
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #f59e0b; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#fde68a; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>Produtores</strong>: Sistemas (ERPs, SaaS) enviam eventos no formato padrão (EventBridge Schema) para o Bus Central.</li>
+          <li><strong>Regras (Rules)</strong>: Analisam o <em>Content Payload JSON</em> para rotear os eventos massivamente.</li>
+          <li><strong>Targets</strong>: EventBridge encaminha (Push) para SQS, SNS ou Kinesis Firehose baseado no matching da regra.</li>
+        </ul>
+      </div>
+
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header">
+          <span class="code-lang">Terraform: EventBridge Content Filtering</span>
+          <button class="copy-btn">Copiar</button>
+        </div>
+        <pre><code>resource "aws_cloudwatch_event_rule" "high_value_br_orders" {
+  name        = "capture-br-high-value"
+  description = "EventBridge: Filtro de Conteúdo JSON Complexo"
+  
+  # Lógica de Roteamento baseada no valor dos campos JSON!
+  event_pattern = jsonencode({
+    "source": ["com.ecommerce.orders"],
+    "detail-type": ["OrderCreated"],
+    "detail": {
+      "country": ["BR"],
+      "amount": [{ "numeric": [">", 500] }]
+    }
+  })
+}</code></pre>
       </div>
 
       <div class="callout callout-warning">
