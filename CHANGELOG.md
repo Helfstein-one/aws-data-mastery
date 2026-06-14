@@ -2,6 +2,22 @@
 
 Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
 
+## [v1.6.0] - 2026-06-14
+
+### Adicionado
+- **Arquitetura de Dados (Power Designer & IaC)**: Mergulho profundo em modelagem física e lógica.
+  - Diagramas lógicos RDBMS para E-Commerce, ERPs (Junction Table N:M) e RH (Self-Referencing) injetados em Computação e Bancos.
+  - Padrões de acesso NoSQL massivos no DynamoDB (Adjacency List para Redes Sociais, Time-Series para IoT e Global Secondary Index para Gaming Leaderboards).
+  - Blocos de infraestrutura como código (Terraform HCL) acoplados diretamente sob cada diagrama para provisionamento imediato.
+- **Deep Dive: Mensageria (SQS & SNS)**: Página inteiramente refatorada com o padrão ouro corporativo.
+  - Dissecados os dilemas e configurações críticas: Long Polling, Batch Window, FIFO vs Standard e Poison Pills.
+  - Novas arquiteturas em Draw.io: Padrão Fan-Out com Filtros SNS (Message Attributes) e Ciclo de Vida da Mensagem detalhando o Visibility Timeout e a Dead Letter Queue (DLQ).
+- **Legendas Dinâmicas Educacionais**: Todos os novos diagramas arquiteturais ganharam painéis de legendas embutidos, mapeando e explicando o comportamento de conectores lógicos, zonas de invisibilidade e índices.
+
+### Modificado
+- **Renderização de Diagramas (CORS/CSP Fix)**: Transição absoluta de todas as referências de imagens da AWS nos arquivos `.drawio` do Github RAW para a CDN Global **JSDelivr**, blindando as pranchas arquiteturais contra bloqueios do visualizador e garantindo 100% de confiabilidade no carregamento dos ícones.
+- **Página Inicial (Index)**: Ajustes de redimensionamento e padronização visual nos cartões Bento Grid, acompanhados da atualização da imagem de *preview* de metadados (`aws-data-mastery-preview.png`).
+
 ## [v1.5.0] - 2026-06-14
 
 ### Adicionado
