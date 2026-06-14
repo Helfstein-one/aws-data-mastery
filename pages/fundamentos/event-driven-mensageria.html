@@ -432,148 +432,151 @@
         <div class="sec-num" style="color:var(--accent)">01</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--accent)"></div>
-          <h2>Enterprise Event Hub: A Arquitetura Macro</h2>
-          <p>O coração do desacoplamento organizacional</p>
+          <h2>Padrão Pub/Sub &amp; Fan-out com SNS e SQS</h2>
+          <p>Dilema: Como entregar o mesmo evento para múltiplos consumidores independentes?</p>
         </div>
       </div>
-      <p>Em vez de ligar dezenas de microsserviços via APIs síncronas de ponto a ponto (gerando a anti-pattern de "Spaghetti Architecture"), plataformas maduras adotam o conceito de <strong>Event Hub</strong>. O Amazon EventBridge e o SNS/SQS atuam como o sistema nervoso central: Produtores (como ERPs ou SaaS) injetam eventos, e o Barramento distribui de forma paralela via roteamento inteligente.</p>
+      <p>A arquitetura moderna exige Desacoplamento. Quando um arquivo entra no S3, você não pode criar uma Lambda gigantesca que extrai OCR, gera PDF e atualiza o Banco ao mesmo tempo (isso gera falha em cascata). A solução é o <strong>Padrão Fan-out</strong>: O S3 notifica um Tópico SNS (Pub/Sub), que "espalha" o evento paralelamente para múltiplas Filas SQS (Queues).</p>
+      
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>ARQUITETURA DE DADOS: FAN-OUT COM SNS MESSAGE FILTERING</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/pattern-sns-sqs-fanout.drawio"}'></div>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong>SNS Message Filtering (A arte da economia)</strong>
+          <p>O SNS não precisa mandar cópia de TUDO para TODAS as filas SQS. Nós usamos a <code>FilterPolicy</code> no SNS. Se o S3 envia um JSON onde <code>"type": "pdf"</code>, apenas a Fila de OCR receberá a mensagem. Isso economiza dinheiro de SQS e ciclos de processamento de Lambda, pois a filtragem ocorre no roteador (SNS) e não no código da aplicação!</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="sqs-lifecycle">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Ciclo de Vida do SQS: Visibility Timeout &amp; DLQ</h2>
+          <p>Dilema: O que acontece se o Worker "crashar" no meio do processamento?</p>
+        </div>
+      </div>
+      <p>Ao contrário de um Barramento (EventBridge) que apenas "chuta" o evento pra frente, a Fila SQS guarda o estado do evento. Quando um Worker (Lambda, ECS) lê a mensagem (API <code>ReceiveMessage</code>), ela <strong>não é deletada</strong>! Ela fica invisível para outros workers pelo tempo do <strong>Visibility Timeout</strong>.</p>
+      
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>CICLO DE VIDA DA MENSAGEM: FALHAS E DEAD LETTER QUEUE (DLQ)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/pattern-sqs-lambda-dlq.drawio"}'></div>
+      </div>
+
+      <h3>Dilemas Clássicos e Soluções</h3>
+      <ul>
+        <li><strong>A "Poison Pill" (Pílula de Veneno)</strong>: Se uma mensagem com JSON quebrado entrar na fila, a Lambda lerá, dará erro no código e não chamará <code>DeleteMessage</code>. Após os 30s de Visibility Timeout, a mensagem volta à fila. Isso gerará um loop infinito de consumo e cobrança.
+        <br><br><strong>Solução</strong>: Configurar uma <strong>DLQ (Dead Letter Queue)</strong> no SQS principal com <code>maxReceiveCount = 3</code>. Após 3 tentativas frustradas, a AWS remove a mensagem da fila primária e a guarda na DLQ para auditoria humana, salvando o sistema.</li>
+        
+        <br><li><strong>Processamento Longo &amp; Duplicidade</strong>: Sua Lambda demora 45s processando um vídeo longo, mas seu SQS Visibility Timeout está em 30s. Antes da Lambda terminar e apagar a mensagem, ela reaparece na fila e UMA SEGUNDA LAMBDA pega a mesma tarefa!
+        <br><br><strong>Solução</strong>: O Visibility Timeout sempre deve ser no mínimo <strong>6 vezes maior</strong> que o Timeout da Lambda. Se a Lambda pode durar 1 min, o Visibility Timeout da fila deve ser 6 minutos. Além disso, no código da Lambda, chame a API <code>ChangeMessageVisibility</code> para pedir mais tempo caso note que vai demorar.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="triggers-integrations">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--arch)">03</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--arch)"></div>
+          <h2>Integrações, Triggers e Configurações Letais</h2>
+          <p>EventSourceMapping e as Configurações de Faturamento</p>
+        </div>
+      </div>
+      
+      <div class="grid-2-col">
+        <div class="card secondary-card">
+          <h3>SQS como Trigger de Lambda</h3>
+          <p>O SQS não "chama" a Lambda (Push). A AWS usa um serviço interno oculto chamado <strong>EventSourceMapping</strong> que fica fazendo <em>Polling</em> (Pull) na sua fila. Configurações chaves:</p>
+          <ul class="feature-list">
+            <li><strong>BatchSize:</strong> (Padrão 10). Em vez de acionar a Lambda 10 vezes, manda as 10 mensagens num array (economiza R$).</li>
+            <li><strong>MaximumBatchingWindowInSeconds:</strong> Espera até 5 minutos para encher o Batch antes de invocar a Lambda.</li>
+          </ul>
+        </div>
+        <div class="card secondary-card">
+          <h3>Polling: O Custo Invisível</h3>
+          <p>Fazer Polling contínuo em uma fila SQS vazia (Short Polling) custa muito caro. O <code>ReceiveMessageWaitTimeSeconds</code> deve ser sempre setado para <strong>20 Segundos (Long Polling)</strong>.</p>
+          <p>No Long Polling, se a fila está vazia, a conexão HTTP não é fechada imediatamente. Ela fica pendurada na nuvem por 20s. Se chegar uma mensagem no segundo 15, ele devolve e fecha. Isso derruba as requisições faturadas da API SQS em mais de 90%.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="fifo-limits">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#8b5cf6">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#8b5cf6"></div>
+          <h2>Limites Matemáticos &amp; A Batalha FIFO vs Standard</h2>
+          <p>Onde o SQS quebra e como lidar com a ordem estrita</p>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Característica / Limite</th>
+              <th>SQS Standard</th>
+              <th>SQS FIFO (First-In, First-Out)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Throughput (TPS)</strong></td>
+              <td>Ilimitado (Scale to Infinity)</td>
+              <td>Limitado a 300 msg/s (Até 3.000 em High Throughput Mode)</td>
+            </tr>
+            <tr>
+              <td><strong>Ordenação</strong></td>
+              <td>Best-effort (A ordem não é garantida de chegada).</td>
+              <td>Garantia Absoluta na Ordem (Ideal para Event Sourcing de Contas Bancárias).</td>
+            </tr>
+            <tr>
+              <td><strong>Entrega (Delivery)</strong></td>
+              <td><em>At-Least-Once</em> (Pode ocorrer duplicação de mensagens!)</td>
+              <td><em>Exactly-Once</em> (Duplicação resolvida pela AWS).</td>
+            </tr>
+            <tr>
+              <td><strong>MessageGroupId (Dilema)</strong></td>
+              <td>Não se aplica.</td>
+              <td>Todas as mensagens com o mesmo <code>MessageGroupId</code> (ex: ID da Conta Corrente) ficam "trancadas" sequencialmente para que uma não processe antes da outra no Worker.</td>
+            </tr>
+            <tr>
+              <td><strong>Tamanho do Payload</strong></td>
+              <td>Max 256 KB.</td>
+              <td>Max 256 KB. Para arquivos de 10MB, deve-se usar o <strong>Padrão Claim-Check</strong> (S3 URL).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="platform-hub">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--warn)">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--warn)"></div>
+          <h2>Plataforma Enterprise: Barramento Global</h2>
+          <p>EventBridge como Sistema Nervoso Central</p>
+        </div>
+      </div>
+      <p>Apesar do SNS ser ótimo para <em>Fan-out</em> simples de um tópico, as corporações adotaram o <strong>Amazon EventBridge</strong> (evolução do CloudWatch Events) como Barramento (Bus) da plataforma inteira. Nele, todos os SaaS (Zendesk, Datadog), ERPs e Microserviços jogam eventos no Bus central. O EventBridge usa <strong>Content Filtering Avançado</strong> (Lendo as variáveis internas do Payload JSON) para criar regras de roteamento massivas sem limite de tópicos.</p>
       
       <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
         <div class="drawio-label"><span class="dot"></span>EVENTBRIDGE ENTERPRISE HUB ARCHITECTURE</div>
         <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/platform-event-hub.drawio"}'></div>
       </div>
-    </section>
 
-    <section class="section" id="limites">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--emr)">02</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Limites Táticos e Quotas da AWS</h2>
-          <p>Restrições de hardware e custos que definem a arquitetura</p>
-        </div>
-      </div>
-      <div class="grid-2-col">
-        <div class="card secondary-card">
-          <h3>SNS &amp; SQS (Quotas)</h3>
-          <p>O limite rígido de payload para ambos é <strong>256 KB</strong>. O tempo máximo de retenção do SQS é de <strong>14 dias</strong>. Em termos de TPS (Transações por Segundo): Filas Standard e Tópicos Standard são virtualmente ilimitados. Já as Filas SQS FIFO suportam 3.000 TPS em modo <em>High Throughput</em>.</p>
-        </div>
-        <div class="card secondary-card">
-          <h3>Custos e Polling Otimizado</h3>
-          <p>O SQS cobra por requisição. Usar <strong>Short Polling</strong> dispara requisições contínuas, gerando custo alto. O <strong>Long Polling</strong> (ReceiveMessageWaitTimeSeconds = 20s) segura a conexão aberta até a mensagem chegar, derrubando o custo em mais de 90% e diminuindo chamadas vazias.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="claim-check">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--warn)">03</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--warn)"></div>
-          <h2>Padrão Claim-Check (Payloads de 10MB+)</h2>
-          <p>Vencendo a barreira matemática dos 256KB</p>
-        </div>
-      </div>
-      <p>Se o limite do SQS é 256KB, como trafegar relatórios ou PDFs? Usando o <strong>Claim-Check Pattern</strong>: O Produtor faz upload do payload pesado para um Bucket S3, recebe a URL gerada e posta <em>apenas a URL (o "Claim")</em> na fila SQS. O Consumidor lê a fila, pega a URL e faz o download seguro diretamente do S3.</p>
-      
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label"><span class="dot"></span>PADRÃO CLAIM-CHECK COM SQS EXTENDED CLIENT</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/pattern-claim-check.drawio"}'></div>
-      </div>
-    </section>
-
-    <section class="section" id="idempotencia">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--arch)">04</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--arch)"></div>
-          <h2>Sobrevivência: Idempotência &amp; At-Least-Once</h2>
-          <p>E quando o SQS entrega a mesma mensagem duas vezes?</p>
-        </div>
-      </div>
-      <p>Filas Standard entregam a mensagem <strong>"Pelo menos uma vez"</strong>. Devido à rede distribuída da AWS, a mesma transação de cartão de crédito pode chegar duas vezes ao seu consumidor. A arquitetura exige que o Worker seja <strong>Idempotente</strong>.</p>
-      
-      <div class="callout callout-info">
-        <div class="callout-icon">💡</div>
+      <div class="callout callout-warning">
+        <div class="callout-icon">🔥</div>
         <div class="callout-content">
-          <strong>Como resolver Duplicação Logicamente?</strong>
-          <p>Crie uma tabela de "Deduplicação" no DynamoDB. Assim que a Lambda lê a mensagem do SQS, ela tenta gravar o `MessageID` na tabela com uma condição (`ConditionExpression: attribute_not_exists(PK)`). Se a escrita falhar, significa que essa mensagem já foi processada no passado e a Lambda descarta o evento imediatamente.</p>
+          <strong>O Dilema da Idempotência Crítica no Standard!</strong>
+          <p>Lembra que o SQS Standard entrega as mensagens "Pelo menos uma vez"? Se um consumidor processa uma venda no banco de dados e morre antes de dar o DeleteMessage, outra máquina processará a venda novamente! A arquitetura exige que todo Worker consumindo SQS Standard seja <strong>Idempotente</strong>. Usamos uma Tabela de Deduplicação no DynamoDB, gravando o <code>MessageID</code> com a instrução <code>ConditionExpression: attribute_not_exists(PK)</code> para garantir que a mesma transação nunca ocorra duas vezes (Mutação Condicional SQL-less).</p>
         </div>
-      </div>
-    </section>
-
-    <section class="section" id="terraform">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">05</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Terraform Deep Dive: EventBridge Content Filtering</h2>
-          <p>IaC focado em filtragem profunda no Payload JSON</p>
-        </div>
-      </div>
-      <p>A magia do EventBridge é rotear baseado no <strong>conteúdo exato</strong> do JSON. No exemplo abaixo em Terraform, a regra avalia se o pedido é do "Brasil" e com valor "Acima de R$ 500", enviando apenas esses eventos hiper-específicos para o Kinesis Firehose.</p>
-      
-      <div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">main.tf (HCL)</span>
-          <button class="copy-btn">Copiar</button>
-        </div>
-        <pre><code>resource "aws_cloudwatch_event_rule" "high_value_br_orders" {
-  name        = "capture-br-high-value"
-  description = "Filtro de Conteúdo JSON Complexo"
-  
-  # Content Filtering: Lógica de Motor de Regras Embutida!
-  event_pattern = jsonencode({
-    "source": ["com.ecommerce.orders"],
-    "detail-type": ["OrderCreated"],
-    "detail": {
-      "country": ["BR"],
-      "amount": [{ "numeric": [">", 500] }]
-    }
-  })
-}
-
-resource "aws_cloudwatch_event_target" "firehose_lake" {
-  rule      = aws_cloudwatch_event_rule.high_value_br_orders.name
-  target_id = "SendToFirehose"
-  arn       = aws_kinesis_firehose_delivery_stream.lakehouse.arn
-  role_arn  = aws_iam_role.eventbridge_to_firehose.arn
-}</code></pre>
-      </div>
-    </section>
-
-    <section class="section" id="cases">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--ok)">06</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--ok)"></div>
-          <h2>Cases &amp; Simulador de Entrevista</h2>
-          <p>Respondendo Cenários Arquiteturais Complexos de Alta Escala</p>
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Cenário Corporativo Crítico</th>
-              <th>Parecer Arquitetural</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>1. "Poison Pill": Um consumidor Lambda falha iterativamente tentando processar o mesmo JSON malformado que está na Fila. A Fila nunca zera.</td>
-              <td>Configurar uma <strong>Dead Letter Queue (DLQ)</strong>. O parâmetro <code>maxReceiveCount</code> fará o SQS redirecionar automaticamente mensagens que falharam N vezes para a DLQ, liberando o processamento principal. Os dados corrompidos podem ser avaliados depois via Redrive.</td>
-            </tr>
-            <tr>
-              <td>2. Garantir Ordem Absoluta num sistema transacional onde a latência de chegada é desregulada.</td>
-              <td>Utilizar <strong>SQS FIFO</strong> integrado ao <strong>SNS FIFO</strong>, associando um <code>MessageGroupId</code> baseado no ID do Pedido para forçar garantia de sequencialidade estrita, evitando *Race Conditions*.</td>
-            </tr>
-            <tr>
-              <td>3. Ingestão de 1 Milhão de Eventos por Segundo para o Data Lake. O SQS aguenta?</td>
-              <td>Sim, o SQS suporta, mas a mecânica errada aqui causaria falência financeira em Polling. O correto é abandonar o modelo de Filas (Mensageria Clássica) e usar Motores de Streaming de Log Imutável: <strong>Amazon Kinesis Data Streams</strong> ou <strong>Amazon MSK (Kafka)</strong>, por causa das mecânicas de Batching massivo e Shards.</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </section>
 
