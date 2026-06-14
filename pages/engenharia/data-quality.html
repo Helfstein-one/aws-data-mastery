@@ -4,8 +4,8 @@
   <meta name="author" content="Mauricio Helfstein">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Engenharia de Software para Engenharia de Dados. Padrões de código em Python, tipagem e Orientação a Objetos avançada.">
-  <title>Software Engineering for Data - AWS Data Specialist</title>
+  <meta name="description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <title>Processamento Distribuído - AWS Data Specialist</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../style.css">
 </head>
@@ -384,504 +384,213 @@
 </nav>
 
 <div id="main">
-  <div class="hero">
-    <div class="hero-ey">Arquitetura de Software aplicada a Dados</div>
-    <h1>Python Limpo, Tipagem &amp; OOP em Dados</h1>
-    <p class="hero-d">Domine a construção de frameworks de dados reutilizáveis, modulares e resilientes usando boas práticas de desenvolvimento de software em Python.</p>
-  </div>
+
 
   <main class="main-content">
-    
-    <!-- SECTION 1: BOAS PRÁTICAS PYTHON -->
-    <section class="section" id="boas-praticas">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">01</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Boas Práticas de Código Python em Pipelines</h2>
-          <p>Escrevendo códigos Pythonics (PEP8), seguros e autodocumentados</p>
-        </div>
+
+      <div class="hero">
+        <h1 class="hero-title"><span class="highlight" style="color:var(--emr)">Data Quality &amp; Business Quality</span></h1>
+        <p class="hero-subtitle">Governança proativa, validação de regras de negócios, AWS Glue DQ, Amazon Deequ e Circuit Breakers Analíticos.</p>
       </div>
 
-      <p>Em ambientes de Engenharia de Dados, pipelines de dados mudam constantemente. Para garantir que seu código continue inteligível e manutenível por diferentes desenvolvedores, aplique as regras da <strong>PEP 8</strong> e convenções estruturadas:</p>
-
-      <ul>
-        <li><strong>Nomenclatura (snake_case vs CamelCase):</strong>
-          <ul>
-            <li>Use <strong>snake_case</strong> (letras minúsculas com underline) para variáveis, funções e métodos lógicos (ex: <code>def carregar_dados_s3()</code>).</li>
-            <li>Use <strong>CamelCase</strong> (iniciais maiúsculas sem espaçamento) exclusivamente para declarações de Classes lógicas e Types complexos (ex: <code>class SparkConnector</code>).</li>
-            <li>Constantes Globais imutáveis devem ser declaradas em maiúsculas (ex: <code>DEFAULT_S3_BUCKET = "trusted-zone"</code>).</li>
-          </ul>
-        </li>
-        <li><strong>Tipagem de Variáveis e Assinaturas (Static Type Hinting):</strong>
-          A tipagem estática do Python (através do pacote <code>typing</code>) previne a passagem acidental de tipos incorretos em tempo de compilação/teste estático. Use o **mypy** no CI/CD para validar.
-        </li>
-      </ul>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Exemplo Prático: Tipagem Explícita e Implícita em Python</div>
-        <div class="abox-body">
-          <p>Veja a diferença de legibilidade de código ao tipar as variáveis explícita e implicitamente:</p>
-          <pre><code class="language-python"># Tipagem Implícita (Dificulta auditoria e linting estático)
-def calcular_imposto_legado(dados):
-    valores = [d["preco"] for d in dados]
-    return sum(valores) * 0.15
-
-# Tipagem Explícita (Recomendado para Especialistas)
-from typing import List, Dict, Any, Union
-
-def calcular_imposto_pyspark(dados: List[Dict[str, Any]]) -> float:
-    valores: List[float] = [float(d["preco"]) for d in dados]
-    return sum(valores) * 0.15</code></pre>
-        </div>
-      </div>
-
-      <h3>Validação de Dados em Runtime com Pydantic</h3>
-      <p>Tipagem do Python não impede a passagem de dados errados em tempo de execução (runtime). Para validar contratos de dados em Ingestion, utilize o <strong>Pydantic</strong>:</p>
-
-      <pre><code class="language-python">from pydantic import BaseModel, EmailStr, Field
-from datetime import datetime
-
-class TransacaoModel(BaseModel):
-    id_transacao: str = Field(min_length=36, max_length=36) # UUID
-    email_usuario: EmailStr
-    valor: float = Field(gt=0.0) # Deve ser maior que 0
-    criado_em: datetime
-
-# Pydantic valida os tipos dinamicamente e quebra se o payload falhar no contrato
-payload_valido = TransacaoModel(
-    id_transacao="9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-    email_usuario="ana@empresa.com",
-    valor=250.50,
-    criado_em=datetime.now()
-)</code></pre>
-
-      <h3>Estruturas de Dados Fundamentais e Complexidade Big-O</h3>
-      <p>Em processamento de dados local ou pipelines Python puros, a escolha da estrutura de dados nativa dita o consumo de memória e a latência de processamento de buscas. Conhecer a complexidade de tempo (Big-O) evita gargalos clássicos:</p>
-
-      <table class="tuning-table" style="width:100%; margin-bottom: 24px; font-size:12px;">
-        <thead>
-          <tr>
-            <th>Estrutura</th>
-            <th>Inserção/Append</th>
-            <th>Busca por Elemento (`x in collection`)</th>
-            <th>Uso de Memória</th>
-            <th>Caso de Ingestão Ideal</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>List</strong></td>
-            <td>O(1) amortizado</td>
-            <td>O(N) (Pesquisa linear)</td>
-            <td>Baixo / Sequencial</td>
-            <td>Manter ordem física de colunas ou acumular batches ordenados de registros.</td>
-          </tr>
-          <tr>
-            <td><strong>Set</strong></td>
-            <td>O(1)</td>
-            <td>O(1) (Hash table lookup)</td>
-            <td>Médio (Hash tables exigem padding)</td>
-            <td>Filtrar IDs duplicados de transações recebidos em lote da Raw Layer.</td>
-          </tr>
-          <tr>
-            <td><strong>Dict</strong></td>
-            <td>O(1)</td>
-            <td>O(1) (Busca de chaves)</td>
-            <td>Alto (Armazena chaves, hashes e valores)</td>
-            <td>Representar registros e mapeamento de chaves para consultas rápidas (*Lookup Tables*).</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="callout callout-tip" style="margin-bottom:24px;">
-        <strong>Otimização de Loops: Compreensão de Listas (List Comprehension):</strong>
-        Loops tradicionais (<code>for x in lista: ...</code>) em Python interpretado geram custos de interpretação a cada ciclo. A compreensão de listas (<code>[processa(x) for x in lista]</code>) é executada no nível da linguagem C sob o capô, gerando ganhos de até 25% na velocidade de processamento.
-      </div>
-
-      <pre><code class="language-python"># Código Ineficiente (Iteração Lenta com loops)
-ids_invalidos = []
-for transacao in transacoes:
-    if transacao.valor <= 0:
-        ids_invalidos.append(transacao.id)
-
-# Código Pythonic O(1) Lookup & List Comprehension
-# Se ids_blacklist for um SET em vez de LIST, a pesquisa 'in' cai de O(N) para O(1)
-ids_blacklist = {"uuid-1", "uuid-2", "uuid-3"}
-transacoes_validas = [t for t in transacoes if t.id not in ids_blacklist]</code></pre>
-
-      <h3>Performance, Vetorização e Otimização com Pandas DataFrame</h3>
-      <p>Pandas é amplamente utilizado para manipulação local de volumes médios de dados. No entanto, o Pandas foi escrito em C/Cython. Utilizar laços manuais do Python sobre DataFrames é um dos maiores gargalos cometidos por engenheiros:</p>
-
-      <ul>
-        <li><strong>Anti-Pattern (<code>iterrows</code>):</strong> O método <code>.iterrows()</code> converte cada linha em um objeto Pandas Series do Python em tempo de execução, gerando um overhead computacional massivo.</li>
-        <li><strong>Vectorization (Vetorização):</strong> Operações vetorizadas enviam a instrução de cálculo diretamente para arrays nativos do C (NumPy) sem passar pelo interpretador Python a cada linha (SIMD - Single Instruction, Multiple Data).</li>
-      </ul>
-
-      <div class="abox" style="margin-bottom:24px;">
-        <div class="abox-hdr" style="background: var(--navy)">Técnicas de Performance: Iteração Manual vs. Vetorização no Pandas</div>
-        <div class="abox-body">
-          <pre><code class="language-python">import pandas as pd
-import numpy as np
-
-df = pd.DataFrame({"valor_dolar": np.random.uniform(1, 100, 1_000_000)})
-taxa = 5.30
-
-# ANTI-PATTERN: iterrows (Lento - pode levar vários segundos)
-valores_reais = []
-for index, row in df.iterrows():
-    valores_reais.append(row["valor_dolar"] * taxa)
-df["valor_real_lento"] = valores_reais
-
-# PADRÃO OURO: Vetorização (Ultra Rápido - milissegundos)
-df["valor_real_rapido"] = df["valor_dolar"] * taxa  # Processamento C nativo</code></pre>
-        </div>
-      </div>
-
-      <p><strong>Otimização de Tipos de Dados no Pandas:</strong> Por padrão, o Pandas pode inferir inteiros como <code>int64</code> e decimais como <code>float64</code>, consumindo mais memória do que o necessário. Além disso, strings repetidas consomem muita RAM. Podemos otimizar a memória utilizando <code>downcast</code> e convertendo tipos de strings para <code>category</code>:</p>
-
-      <pre><code class="language-python"># Redução drástica do tamanho do DataFrame na RAM
-def otimizar_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    for col in df.columns:
-        # Downcast de inteiros
-        if df[col].dtype == "int64":
-            df[col] = pd.to_numeric(df[col], downcast="integer")
-        # Downcast de floats
-        elif df[col].dtype == "float64":
-            df[col] = pd.to_numeric(df[col], downcast="float")
-        # Conversão de objetos/strings repetitivos para Category (Consome muito menos RAM)
-        elif df[col].dtype == "object":
-            if df[col].nunique() / len(df[col]) < 0.5: # Menos de 50% de valores únicos
-                df[col] = df[col].astype("category")
-    return df</code></pre>
-    </section>
-
-    <!-- SECTION 2: OOP EM DADOS -->
-    <section class="section" id="oop-dados">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">02</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Orientação a Objetos Voltada para Dados</h2>
-          <p>Os 4 Pilares da Programação aplicados na construção de conectores de Datalake</p>
-        </div>
-      </div>
-
-      <p>Pipelines monolíticos em scripts lineares acumulam complexidade, redundância de código e dificultam a testabilidade de partes isoladas. Aplicar OOP modulariza a arquitetura:</p>
-
-      <div class="grid-2">
-        <div class="card">
-          <h4>1. Abstração</h4>
-          <p>Oculte a complexidade das interações físicas criando interfaces genéricas. O usuário do conector não precisa saber como o Spark estabelece a conexão sob o capô, apenas chama <code>connector.read()</code>.</p>
-        </div>
-        <div class="card">
-          <h4>2. Encapsulamento</h4>
-          <p>Proteja e controle o estado interno da classe. Variáveis sensíveis do Spark (como tokens de autenticação ou credenciais de banco) devem ser protegidas como membros privados/protegidos (ex: <code>self._client_key</code>).</p>
-        </div>
-        <div class="card">
-          <h4>3. Herança</h4>
-          <p>Permite especializar conectores sem reescrever o código base. Uma classe <code>S3Connector</code> herda de uma classe abstrata <code>DataConnector</code> todos os logs, configurações e métodos comuns.</p>
-        </div>
-        <div class="card">
-          <h4>4. Polimorfismo</h4>
-          <p>Diferentes classes podem implementar o mesmo método com assinaturas idênticas, mas comportamentos internos diferentes. Tanto <code>S3Connector</code> quanto <code>JDBCConnector</code> respondem a <code>.read()</code> retornando um DataFrame.</p>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Código: Implementação Prática dos 4 Pilares de OOP para Engenharia de Dados</div>
-        <div class="abox-body">
-          <p>O script abaixo exemplifica a abstração de conectores de Datalake usando a biblioteca nativa <code>abc</code> do Python:</p>
-          <pre><code class="language-python">from abc import ABC, abstractmethod
-from pyspark.sql import SparkSession, DataFrame
-
-# 1. Abstração: Define a interface genérica
-class DataConnector(ABC):
-    def __init__(self, spark: SparkSession):
-        self._spark = spark # Encapsulamento de membro protegido
-
-    @abstractmethod
-    def read(self, source_path: str) -> DataFrame:
-        pass
-
-# 2. Herança: S3Connector especializa a classe abstrata
-class S3Connector(DataConnector):
-    def read(self, source_path: str) -> DataFrame:
-        # Polimorfismo: leitura específica do S3
-        print(f"Lendo arquivos Parquet de: {source_path}")
-        return self._spark.read.parquet(source_path)
-
-# 3. Polimorfismo: JDBCConnector implementa o mesmo método lendo de Bancos Relacionais
-class JDBCConnector(DataConnector):
-    def __init__(self, spark: SparkSession, url: str):
-        super().__init__(spark)
-        self.__url = url # Membro estritamente privado (Private)
-
-    def read(self, source_path: str) -> DataFrame:
-        print(f"Lendo tabela {source_path} via JDBC")
-        return self._spark.read.format("jdbc") \
-            .option("url", self.__url) \
-            .option("dbtable", source_path) \
-            .load()</code></pre>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 3: DESIGN PATTERNS -->
-    <section class="section" id="design-patterns">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">03</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Design Patterns de Engenharia de Dados</h2>
-          <p>Padrões de projeto e padrões arquiteturais para frameworks de processamento</p>
-        </div>
-      </div>
-
-      <p>Padrões de projeto (Design Patterns) clássicos do GoF resolvem problemas de design comuns em frameworks analíticos de dados:</p>
-
-      <h3>1. Factory Method (Fábrica de Conectores)</h3>
-      <p>Centraliza a lógica de criação de objetos, permitindo instanciar conectores S3, JDBC ou Kafka dinamicamente com base nas strings de conexão de entrada, desacoplando o código de ingestão:</p>
-
-      <pre><code class="language-python">class ConnectorFactory:
-    @staticmethod
-    def get_connector(conn_type: str, spark: SparkSession, **kwargs) -> DataConnector:
-        if conn_type.lower() == "s3":
-            return S3Connector(spark)
-        elif conn_type.lower() == "jdbc":
-            return JDBCConnector(spark, url=kwargs["url"])
-        else:
-            raise ValueError(f"Tipo de conector '{conn_type}' desconhecido.")</code></pre>
-
-      <h3>2. Builder Pattern (Construção Fluida de Pipelines)</h3>
-      <p>Permite configurar transformações complexas encadeadas em DataFrames de forma legível e modular:</p>
-
-      <pre><code class="language-python">class PipelineBuilder:
-    def __init__(self, df: DataFrame):
-        self.df = df
-
-    def filter_active(self) -> 'PipelineBuilder':
-        self.df = self.df.filter("status = 'Ativo'")
-        return self
-
-    def normalize_dates(self, date_col: str) -> 'PipelineBuilder':
-        import pyspark.sql.functions as F
-        self.df = self.df.withColumn(date_col, F.to_date(F.col(date_col), "yyyy-MM-dd"))
-        return self
-
-    def build(self) -> DataFrame:
-        return self.df
-
-# Chamada fluida do Builder (Clean Code)
-df_processado = PipelineBuilder(df_bruto) \
-    .filter_active() \
-    .normalize_dates("data_criacao") \
-    .build()</code></pre>
-
-      <h3>3. Repository Pattern (Isolamento de Estado e Metadados)</h3>
-      <p>Isola a lógica de leitura/escrita de metadados do Datalake, permitindo que a aplicação salve o estado das execuções sem acoplamento direto com o banco:</p>
-
-      <pre><code class="language-python">class ExecutionRepository(ABC):
-    @abstractmethod
-    def save_log(self, job_name: str, status: str, records_processed: int) -> None:
-        pass
-
-class DynamoDBExecutionRepository(ExecutionRepository):
-    def save_log(self, job_name: str, status: str, records_processed: int) -> None:
-        print(f"Gravando logs de {job_name} no DynamoDB")
-        # Logica de escrita física no DynamoDB...</code></pre>
-
-      <h3>4. Strategy Pattern (Leitura Dinâmica de Formatos)</h3>
-      <p>Permite injetar dinamicamente diferentes algoritmos de leitura física (CSV, Parquet, JSON) no conector em tempo de execução, mantendo a classe do pipeline isolada das particularidades de cada formato:</p>
-
-      <pre><code class="language-python">class FileReadStrategy(ABC):
-    @abstractmethod
-    def read_file(self, filepath: str) -> DataFrame:
-        pass
-
-class ParquetReadStrategy(FileReadStrategy):
-    def __init__(self, spark: SparkSession):
-        self.spark = spark
-    def read_file(self, filepath: str) -> DataFrame:
-        return self.spark.read.parquet(filepath)
-
-class CSVReadStrategy(FileReadStrategy):
-    def __init__(self, spark: SparkSession):
-        self.spark = spark
-    def read_file(self, filepath: str) -> DataFrame:
-        return self.spark.read.option("header", "true").csv(filepath)
-
-class FlexiblePipeline:
-    def __init__(self, strategy: FileReadStrategy):
-        self.strategy = strategy  # Injeção da estratégia
-
-    def run(self, filepath: str) -> DataFrame:
-        return self.strategy.read_file(filepath)</code></pre>
-
-      <h3>5. Otimização de Memória com <code>__slots__</code> em Classes de Entidades</h3>
-      <p>Por padrão, cada objeto em Python cria um dicionário <code>__dict__</code> interno dinâmico para poder receber novos atributos a qualquer momento. Em Big Data, ao representar milhões de registros estruturados como objetos Python em memória, esse overhead consome centenas de Megabytes de RAM. Utilizar <code>__slots__</code> impede o uso do dicionário dinâmico, economizando até 70% de RAM:</p>
-
-      <pre><code class="language-python"># Sem __slots__ (Consome alta memória por dicionário interno)
-class LinhaDatalakeLegada:
-    def __init__(self, id_transacao: str, valor: float):
-        self.id_transacao = id_transacao
-        self.valor = valor
-
-# Com __slots__ (Reduz em até 70% o uso de RAM por instância física)
-class LinhaDatalakeOtimizada:
-    __slots__ = ("id_transacao", "valor")  # Trava atributos fixos
-    
-    def __init__(self, id_transacao: str, valor: float):
-        self.id_transacao = id_transacao
-        self.valor = valor</code></pre>
-
-      <h3>6. Ingestão Eficiente com Generators (<code>yield</code> vs Listas Completas)</h3>
-      <p>Ao extrair dados de bancos transacionais OLTP (PostgreSQL, Oracle) usando Python, acumular todos os dados em listas na memória RAM causa estouro de heap (OOM). Generators (<code>yield</code>) transmitem os dados de forma lazy:</p>
-
-      <pre><code class="language-python"># ANTI-PATTERN: fetchall() acumula tudo na memória do servidor local
-def carregar_dados_lista(cursor) -> list:
-    return cursor.fetchall()  # Perigo de OOM para tabelas grandes
-
-# PADRÃO OURO: yield streaming paginado de dados
-def streaming_dados_generator(cursor, batch_size=1000):
-    while True:
-        linhas = cursor.fetchmany(batch_size)
-        if not linhas:
-            break
-        for linha in linhas:
-            yield linha  # Retorna de forma preguiçosa (Lazy Evaluation)</code></pre>
-
-      <h3>Diagrama de Classes: Arquitetura Avançada de Ingestão OOP</h3>
-      <p>Abaixo está detalhada a relação arquitetural e a linhagem de classes contendo os padrões Factory, Strategy e Repository integrados para desacoplamento e altíssima testabilidade:</p>
-
-            <div class="drawio-wrap">
-        <div class="drawio-label"><span class="dot"></span>DataOps — CI/CD Pipeline para Dados</div>
-        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"300\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n      <mxCell id=\"bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"300\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"title\" value=\"DATAOPS \u2014 CI/CD PIPELINE PARA DADOS\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"dev\" value=\"Data Engineer\nGit Push\" style=\"labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#475569;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=11;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"130\" width=\"90\" height=\"44\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_cicd\" value=\"CI/CD PIPELINE\" style=\"labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#7c3aed;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"180\" y=\"60\" width=\"320\" height=\"180\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"gh\" value=\"GitHub\nActions\" style=\"labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#1a0526;strokeColor=#7c3aed;fontColor=#c4b5fd;fontFamily=DM Sans;fontSize=11;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"200\" y=\"90\" width=\"110\" height=\"40\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"test\" value=\"pytest\nGreat Expect.\" style=\"labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#1a0526;strokeColor=#16a34a;fontColor=#86efac;fontFamily=DM Sans;fontSize=11;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"330\" y=\"90\" width=\"110\" height=\"40\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"tf\" value=\"Terraform Plan \u2192 Apply\" style=\"labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#1a0526;strokeColor=#7c3aed;fontColor=#c4b5fd;fontFamily=DM Sans;fontSize=11;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"200\" y=\"175\" width=\"240\" height=\"40\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_d_gh\" value=\"PR\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"dev\" target=\"gh\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_gh_t\" value=\"Test\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"gh\" target=\"test\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_t_tf\" value=\"Pass \u2192 Deploy\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"test\" target=\"tf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_dep\" value=\"DEPLOYMENT\" style=\"labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0e00;strokeColor=#FF6B00;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"570\" y=\"60\" width=\"320\" height=\"180\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"glue\" value=\"Glue Jobs\n(Scripts)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"600\" y=\"90\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sf\" value=\"Step Functions\n(Workflow)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"700\" y=\"90\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3\" value=\"S3\nArtifacts\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"800\" y=\"90\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"cw\" value=\"CloudWatch\nAlarms\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"700\" y=\"185\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_tf_g\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"tf\" target=\"glue\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_tf_sf\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"tf\" target=\"sf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_g_s3\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"glue\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sf_cw\" value=\"Monitor\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"sf\" target=\"cw\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root>\n</mxGraphModel>"}'></div>
-
-</div>
-<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> DATAOPS — CI/CD PIPELINE PARA DADOS, Data Engineer Git Push, CI/CD PIPELINE, GitHub Actions, pytest Great Expect., Terraform Plan → Apply, PR, Test, Pass → Deploy, DEPLOYMENT, Glue Jobs (Scripts), Step Functions (Workflow), S3 Artifacts, CloudWatch Alarms, Monitor</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "DataOps — CI/CD Pipeline para Dados" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
-</div>
-
-      <h3>Padrões Arquiteturais Avançados em Engenharia de Dados</h3>
-      <p>Além dos padrões criacionais e estruturais clássicos, a arquitetura moderna de plataformas de dados exige desacoplamento estrito entre a representação dos dados na RAM (DataFrames, Records) e as camadas físicas de persistência:</p>
-
-      <ul>
-        <li><strong>Dependency Injection (Injeção de Dependência):</strong>
-          Evite que seus conectores ou classes de transformação instanciem a própria sessão do Spark (<code>SparkSession.builder...</code>) internamente. Injete o Spark ativamente no construtor da classe. Isso permite mockar sessões do Spark em ambientes de testes locais unitários de forma extremamente ágil.
-        </li>
-        <li><strong>Data Mapper vs. Active Record em Dados:</strong>
-          <ul>
-            <li><em>Active Record (Evitar para Big Data):</em> O próprio objeto de dados conhece a lógica de persistência no banco (ex: <code>df.save_to_s3()</code>). Gera alto acoplamento e quebra o princípio de responsabilidade única (SRP).</li>
-            <li><em>Data Mapper (Recomendado):</em> Uma classe isolada do sistema é encarregada de fazer a leitura e escrita (o mapeamento físico) do DataFrame na origem/destino (ex: a classe <code>S3Connector</code> gerencia o S3, mantendo o DataFrame isolado de saber onde será armazenado).</li>
-          </ul>
-        </li>
-      </ul>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Exemplo Prático: Dependency Injection e Data Mapper</div>
-        <div class="abox-body">
-          <p>O código abaixo ilustra a injeção da dependência do Spark e o isolamento completo da persistência usando o padrão Data Mapper:</p>
-          <pre><code class="language-python"># 1. Dependency Injection no construtor da Classe de Transformação
-class ClientTransformer:
-    def __init__(self, spark: SparkSession):
-        self.spark = spark  # SparkSession injetado de fora (testável!)
-
-    def clean_data(self, df: DataFrame) -> DataFrame:
-        import pyspark.sql.functions as F
-        return df.filter(F.col("status") == "ATIVO").withColumn("nome", F.upper(F.col("nome")))
-
-# 2. Data Mapper para Persistência (Isolando o DataFrame do destino físico)
-class S3DataMapper:
-    def __init__(self, s3_path: str):
-        self.s3_path = s3_path
-
-    def save(self, df: DataFrame) -> None:
-        # Lógica física de gravação encapsulada
-        df.write.mode("overwrite").parquet(self.s3_path)</code></pre>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 4: PERGUNTAS E CASES OOP EM DADOS -->
-    <section class="section" id="oop-cases-perguntas">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">04</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Perguntas de Arquitetura & Cases Reais de OOP</h2>
-          <p>Cases de produção e simulações de perguntas de entrevista para posições de Especialista/Principal</p>
-        </div>
-      </div>
-
-      <h3>Cases Reais de Uso de OOP em Plataformas de Dados</h3>
-      
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
-          <div class="cc-tag">Case 1 · Multi-Tenant Ingestion</div>
-          <div class="cc-title">Framework de Ingestão Genérico (Adobe / Uber Style)</div>
-          <div class="cc-body">
-            <strong>Desafio:</strong> Ingerir dados de mais de 500 tabelas PostgreSQL, Oracle e APIs de terceiros diariamente para o S3 Raw Layer de forma padronizada.<br>
-            <strong>Solução OOP:</strong> Criação de uma classe abstrata <code>BaseIngestor</code> que expõe o método template <code>run()</code> (executa sequencialmente <code>pre_validate()</code>, <code>extract()</code>, <code>apply_schema()</code>, <code>write()</code> e <code>post_validate()</code>). A classe <code>JDBCReader</code> herda o comportamento e implementa apenas a lógica física de extração do banco relacional, enquanto a classe <code>RESTApiReader</code> implementa a lógica HTTP. Novos conectores são adicionados estendendo a base sem alterar uma única linha de código do core de orquestração.
+      <div class="content-wrapper">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--emr)">01</div>
+          <div class="sec-meta">
+            <div class="sec-acc" style="background:var(--emr)"></div>
+            <h2 id="teoria-dq">Conceitos Técnicos de Data Quality</h2>
+            <p>Os pilares da confiabilidade dos dados e as métricas fundamentais de observabilidade.</p>
           </div>
         </div>
 
-        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
-          <div class="cc-tag">Case 2 · SDK Corporativo</div>
-          <div class="cc-title">SDK Interno de Segurança e Mascaramento de PII</div>
-          <div class="cc-body">
-            <strong>Desafio:</strong> Garantir que todos os times de engenharia apliquem as mesmas técnicas de encriptação SHA-256 e LGPD/GDPR sobre CPFs/E-mails antes de salvar no Lakehouse.<br>
-            <strong>Solução OOP:</strong> Encapsulamento da lógica de criptografia em uma classe singleton <code>DataAnonymizer</code>. Ela consome chaves criptográficas injetadas a partir do AWS Secrets Manager e expõe um método polimórfico <code>anonymize(df: DataFrame, cols: List[str]) -> DataFrame</code> que identifica as famílias de tipos do Spark para aplicar hash ou mascarar (ex: aplicando regex para e-mail ou zeros para telefone), garantindo conformidade regulatória transversal.
+        <p>A qualidade de dados (DQ) não é um projeto pontual, mas uma <strong>disciplina contínua</strong> de engenharia e governança. Sem DQ, um Data Lake se torna um pântano (Data Swamp) de informações não confiáveis, quebrando pipelines de Machine Learning e destruindo a confiança dos executivos nos dashboards financeiros.</p>
+
+        <h3>Dimensões Fundamentais de Qualidade</h3>
+        <table class="aws-table">
+          <thead>
+            <tr>
+              <th>Dimensão</th>
+              <th>Descrição</th>
+              <th>Exemplo Técnico (AWS Glue DQDL)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Completude (Completeness)</strong></td>
+              <td>Garante que atributos críticos não sejam nulos ou vazios.</td>
+              <td><code>Completeness "cpf" &gt; 0.99</code></td>
+            </tr>
+            <tr>
+              <td><strong>Acurácia (Accuracy)</strong></td>
+              <td>O dado reflete a realidade do mundo (sintática e semanticamente).</td>
+              <td><code>ColumnValues "idade" &gt; 0 AND &lt; 120</code></td>
+            </tr>
+            <tr>
+              <td><strong>Unicidade (Uniqueness)</strong></td>
+              <td>Identificação e tratamento de registros duplicados absolutos ou parciais.</td>
+              <td><code>IsPrimaryKey "transaction_id"</code></td>
+            </tr>
+            <tr>
+              <td><strong>Tempestividade (Timeliness)</strong></td>
+              <td>O dado está disponível no SLA acordado (Data Freshness).</td>
+              <td><code>ColumnValues "data_proc" &gt; (now() - 2h)</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="drawio-wrap" style="margin-top: 30px;">
+          <div class="drawio-label"><span class="dot"></span>END-TO-END DATA QUALITY PLATFORM</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"860\" pageHeight=\"320\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n    <mxCell id=\"bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"860\" height=\"320\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"title\" value=\"END-TO-END DATA QUALITY PLATFORM\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"860\" height=\"24\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"src\" value=\"Data Sources\\n(RDS/API)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"ing\" value=\"Ingestion\\n(Kinesis/DMS)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"220\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"s3\" value=\"Amazon S3\\n(Raw Layer)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"380\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"glue\" value=\"AWS Glue DQ\\n(Rules Engine)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"540\" y=\"60\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"macie\" value=\"Amazon Macie\\n(PII Detection)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.macie;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"540\" y=\"180\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"dash\" value=\"Data Quality\\nDashboard (QS)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.quicksight;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"720\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e1\" value=\"Extract\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"src\" target=\"ing\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e2\" value=\"Land Data\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"ing\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e3\" value=\"Trigger Eval\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"s3\" target=\"glue\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e4\" value=\"Scan PII\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"s3\" target=\"macie\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e5\" value=\"Publish Metrics\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"glue\" target=\"dash\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e6\" value=\"Publish Alerts\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"macie\" target=\"dash\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root></mxGraphModel>"}'></div>
+        </div>
+
+        <div class="sec-hdr" style="margin-top:50px;">
+          <div class="sec-num" style="color:#f59e0b">02</div>
+          <div class="sec-meta">
+            <div class="sec-acc" style="background:#f59e0b"></div>
+            <h2 id="business-quality">Business Quality (Extensivo)</h2>
+            <p>Alinhamento de regras técnicas com o valor real e impacto financeiro nos domínios de negócio.</p>
           </div>
         </div>
+
+        <p>Enquanto <em>Data Quality</em> foca em garantir que a coluna "Salário" seja do tipo <code>FLOAT</code> e não seja <code>NULL</code>, <strong>Business Quality</strong> foca em garantir que o valor do "Salário" faça sentido no contexto das regras da empresa. Se um sistema de RH calcular o salário de um estagiário como R$ 500.000, a Qualidade de Dados técnica dirá que está perfeito (é um float não nulo), mas a Qualidade de Negócios acionará um alerta crítico.</p>
+
+        <h3>Traduzindo Requisitos de Negócios para Código (Deequ/DQDL)</h3>
+        <p>Engenheiros de Dados Seniores devem trabalhar lado a lado com os <em>Data Product Owners</em> e <em>SMEs</em> para mapear as complexidades do domínio. Veja exemplos de mercado:</p>
+
+        <table class="aws-table">
+          <thead>
+            <tr>
+              <th>Domínio</th>
+              <th>Regra de Negócio (Business Quality)</th>
+              <th>Implementação Técnica (AWS Glue / Deequ)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Fintech (Cartões)</strong></td>
+              <td>"Clientes na categoria 'Black' não podem ter limite de crédito menor que R$ 10.000."</td>
+              <td><code>CustomSql "SELECT count(*) FROM table WHERE tier='Black' AND limite &lt; 10000" == 0</code></td>
+            </tr>
+            <tr>
+              <td><strong>E-commerce</strong></td>
+              <td>"Uma compra não pode ter data de entrega anterior à data de processamento do pedido."</td>
+              <td><code>ColumnValues "data_entrega" &gt;= "data_pedido"</code></td>
+            </tr>
+            <tr>
+              <td><strong>Logística</strong></td>
+              <td>"A geolocalização do caminhão não pode indicar um salto maior que 500km em 1 hora."</td>
+              <td>Validação complexa via PySpark Window Functions + UDFs no EMR.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <blockquote>
+          <p><strong>Dica de Arquiteto:</strong> Isole as regras técnicas (nulos, duplicatas) na camada <strong>Bronze/Raw</strong> (usando DQDL). Regras de Business Quality (que dependem de cruzamento de tabelas e lógica de negócio) devem ser validadas na camada <strong>Silver/Gold</strong> ou no pipeline de transformação (dbt/Spark).</p>
+        </blockquote>
+
+        <div class="sec-hdr" style="margin-top:50px;">
+          <div class="sec-num" style="color:#10b981">03</div>
+          <div class="sec-meta">
+            <div class="sec-acc" style="background:#10b981"></div>
+            <h2 id="cases-dq">Case Prático: DQDL Circuit Breaker</h2>
+            <p>Isolando dados podres antes que contaminem o Data Lake financeiro.</p>
+          </div>
+        </div>
+
+        <p><strong>Cenário:</strong> Um banco recebe streams de transações de adquirência via Kinesis. Ocasionalmente, o parceiro envia lotes inteiros com o campo <code>valor_transacao</code> mascarado ou corrompido. Se isso entrar na camada consumível, os relatórios de fechamento de caixa apresentarão rombos milionários.</p>
+
+        <p><strong>Solução:</strong> Implementar um padrão <em>Circuit Breaker</em> usando AWS Glue Streaming e Data Quality. O stream é processado em micro-batches. Antes da gravação (Sink), a API de Data Quality do Glue avalia o batch. Se o Score de Qualidade cair abaixo de 95%, o batch inteiro é roteado para uma <strong>Dead Letter Queue (S3 Quarantine)</strong> e não entra no Lake principal.</p>
+
+        <div class="drawio-wrap" style="margin-top: 30px;">
+          <div class="drawio-label"><span class="dot"></span>CIRCUIT BREAKER ARCHITECTURE</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"860\" pageHeight=\"320\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n    <mxCell id=\"bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"860\" height=\"320\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"title\" value=\"CIRCUIT BREAKER ARCHITECTURE\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"860\" height=\"24\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"kds\" value=\"Kinesis Data\\nStreams\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"100\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"glue\" value=\"Glue Streaming\\n(Spark Structured)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"300\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"dqdl\" value=\"DQDL Engine\\n(Rule Eval)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.gear;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"300\" y=\"220\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"s3_ok\" value=\"Amazon S3\\n(Trusted Zone)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"550\" y=\"60\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"s3_bad\" value=\"Amazon S3\\n(Quarantine/DLQ)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"550\" y=\"180\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e1\" value=\"Consume\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"kds\" target=\"glue\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e2\" value=\"Evaluate\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"glue\" target=\"dqdl\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e3\" value=\"Pass (Score &gt; 95%)\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"glue\" target=\"s3_ok\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e4\" value=\"Fail (Score &lt; 95%)\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"glue\" target=\"s3_bad\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root></mxGraphModel>"}'></div>
+        </div>
+
+        <p><strong>python glue_circuit_breaker.py</strong></p>
+        <pre><code class="language-python">from awsglue.gluedq.transforms import EvaluateDataQuality
+
+# Regras de DQDL
+ruleset = """
+Rules = [
+    IsComplete "transaction_id",
+    IsComplete "valor_transacao",
+    ColumnValues "valor_transacao" > 0,
+    ColumnLength "currency" == 3
+]
+"""
+
+# Avaliação do DataFrame em memória (DynamicFrame)
+dq_results = EvaluateDataQuality().apply(
+    frame = dynamic_frame,
+    ruleset = ruleset,
+    publishing_options = {"dataQualityEvaluationContext": "Streaming_Tx", "enableDataQualityCloudWatchMetrics": True}
+)
+
+# Roteamento baseado no resultado
+if dq_results.get_score() >= 0.95:
+    write_to_s3_trusted(dynamic_frame)
+else:
+    write_to_s3_quarantine(dynamic_frame)
+    trigger_sns_alert("Batch Reprovado no Circuit Breaker de DQ")</code></pre>
+        </div>
+
+
+        <div class="sec-hdr" style="margin-top:50px;">
+          <div class="sec-num" style="color:#ef4444">04</div>
+          <div class="sec-meta">
+            <div class="sec-acc" style="background:#ef4444"></div>
+            <h2 id="crises-dq">Playbook de Crise: Schema Drift Silencioso</h2>
+            <p>Como resolver incidentes onde a origem muda o tipo de dado sem avisar.</p>
+          </div>
+        </div>
+
+        <p><strong>Incidente P1:</strong> O time de backend da aplicação principal alterou o campo <code>id_cliente</code> de <code>INT</code> para <code>UUID (STRING)</code>. Os pipelines de ingestão quebram com erros de casting, ou pior, sistemas baseados em schema-on-read (Athena) começam a retornar silenciosamente NULL para todos os novos IDs de cliente.</p>
+
+        <div class="drawio-wrap" style="margin-top: 30px;">
+          <div class="drawio-label"><span class="dot"></span>SCHEMA DRIFT CRISIS MITIGATION</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"860\" pageHeight=\"320\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n    <mxCell id=\"bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"860\" height=\"320\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"title\" value=\"SCHEMA DRIFT CRISIS MITIGATION\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"860\" height=\"24\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"api\" value=\"Producer API\\n(Schema Changed)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.client;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"80\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"event\" value=\"Amazon EventBridge\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"280\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"catalog\" value=\"AWS Glue Catalog\\n(Schema Registry)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"480\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"sns\" value=\"Amazon SNS\\n(Alerts)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"480\" y=\"220\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"lambda\" value=\"AWS Lambda\\n(Auto-Evolution)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"680\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e1\" value=\"Publish Event\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"api\" target=\"event\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e2\" value=\"Validate Schema\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"event\" target=\"catalog\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e3\" value=\"Drift Detected\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"catalog\" target=\"sns\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e4\" value=\"Trigger Webhook\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sns\" target=\"lambda\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n    <mxCell id=\"e5\" value=\"Update Catalog\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"lambda\" target=\"catalog\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root></mxGraphModel>"}'></div>
+        </div>
+
+        <h3>Plano de Mitigação (RCA-M)</h3>
+        <ul class="aws-list">
+          <li><strong>Detecção (T0 + 5m):</strong> Alarme do AWS Glue Schema Registry dispara via EventBridge ao detectar versão incompatível (Backward Incompatible).</li>
+          <li><strong>Contenção (T0 + 15m):</strong> O pipeline de ingestão pausa automaticamente. Dados são retidos em buffers (Kinesis/Kafka) que possuem 7 dias de retenção.</li>
+          <li><strong>Resolução (T0 + 40m):</strong> Cria-se uma nova tabela no Lakehouse (ex: <code>clientes_v2</code>) ou utiliza-se recursos de <em>Schema Evolution</em> do Apache Iceberg para promover a coluna para STRING.</li>
+          <li><strong>Pós-Mortem:</strong> Implementar <strong>Data Contracts</strong> obrigatórios na borda da API para que quebras de schema sejam bloqueadas no CI/CD do produtor, e não na Engenharia de Dados.</li>
+        </ul>
+
+
+        <div class="sec-hdr" style="margin-top:50px;">
+          <div class="sec-num" style="color:#8b5cf6">05</div>
+          <div class="sec-meta">
+            <div class="sec-acc" style="background:#8b5cf6"></div>
+            <h2 id="perguntas-dq">Simulador de Entrevistas: Data Quality</h2>
+            <p>Teste seu conhecimento com perguntas reais de design system.</p>
+          </div>
+        </div>
+
+        <div class="question-card">
+          <div class="question-header">
+            <span class="difficulty hard">Sênior / Especialista</span>
+            <h4>Como você gerenciaria regras de Data Quality para 5.000 tabelas no Data Lake sem hardcodar os scripts?</h4>
+          </div>
+          <div class="question-body">
+            <p><strong>Cenário:</strong> Sua empresa possui milhares de tabelas. Criar um job do AWS Glue DQ para cada tabela é insustentável. Como arquitetar uma validação escalável guiada por metadados?</p>
+            <div class="answer-reveal">
+              <strong>Gabarito Arquitetural:</strong>
+              <ul>
+                <li>Construir um <strong>Data Quality Framework Baseado em Metadados</strong>.</li>
+                <li>Criar uma tabela de configuração no DynamoDB onde cada item é o nome da tabela e o JSON contendo as regras DQDL ou Deequ específicas para ela.</li>
+                <li>Ter um único Job Glue genérico parametrizado. O Job lê o nome da tabela, busca no DynamoDB as regras associadas, converte para o formato do avaliador e executa a validação dinâmica.</li>
+                <li>Integração com AWS Step Functions para orquestrar a varredura noturna em milhares de tabelas em paralelo (Map State).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <h3 style="margin-top:30px;">Perguntas de Entrevista Técnica Avançadas (OOP &amp; Dados)</h3>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Pergunta 1: Como o polimorfismo reduz o acoplamento e facilita testes em pipelines de Spark?</div>
-        <div class="abox-body">
-          <p><strong>Resposta Técnica Esperada:</strong> O polimorfismo permite definir interfaces de processamento genéricas (ex: <code>DataWriter</code> com método <code>write(df)</code>). Durante a execução real, o código recebe instâncias físicas como <code>IcebergS3Writer</code> ou <code>RedshiftWriter</code>. Nos testes unitários locais, podemos passar uma classe Mockada <code>LocalMemoryWriter</code> que apenas armazena o DataFrame na memória RAM local e faz asserções, evitando conexões reais com o S3 ou banco, agilizando o ciclo de testes de CI/CD e desacoplando a lógica de negócio do armazenamento.</p>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Pergunta 2: Qual a desvantagem em usar Orientação a Objetos de forma excessiva em PySpark e como o Catalyst lida com isso?</div>
-        <div class="abox-body">
-          <p><strong>Resposta Técnica Esperada:</strong> A Orientação a Objetos no Python roda no interpretador (CPython) em nível de usuário. Se criarmos classes para envelopar individualmente cada <em>linha</em> de um DataFrame e fizermos iterações em loop utilizando lógica de objetos (ex: instanciando uma classe <code>UserRecord</code> para cada registro da tabela), forçamos o Spark a deserializar os dados da JVM para o Python, quebrando a computação paralela distribuída (JVM Executor para CPU de usuário) e causando gargalo severo. A melhor prática é usar OOP apenas para **estruturar o fluxo de controle e metadados** (conectores, builders de lógica, orquestradores), e deixar a transformação de dados pura (as projeções) para a API declarativa de DataFrames nativos, permitindo que o Catalyst compile tudo na JVM de forma otimizada.</p>
-        </div>
-      </div>
-    </section>
-  
-    <!-- SEÇÃO DE REFERÊNCIAS -->
-    <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--muted)">REF</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Referências &amp; Notas de Curadoria</h2>
-          <p>Documentos originais e literatura técnica de referência para este módulo</p>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-lbl">Design Patterns: Elements of Reusable Object-Oriented Software</div>
-          <h4>Erich Gamma et al. (Addison-Wesley)</h4>
-          <p>O catálogo clássico dos padrões de design (Singleton, Factory, Builder) aplicados no design de frameworks de pipelines.</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">Clean Code: A Handbook of Agile Software Craftsmanship</div>
-          <h4>Robert C. Martin (Prentice Hall)</h4>
-          <p>Conceitos fundamentais de código limpo, legibilidade, testes unitários e refatoração de software aplicados a engenharia de dados.</p>
-        </div>
-      </div>
-    </section>
-  </main>
+</main>
 </div>
 
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
