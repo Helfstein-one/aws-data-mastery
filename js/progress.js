@@ -12,10 +12,10 @@
       badge: "Engenheiro Python",
       color: "#f43f5e",
       items: [
-        "data-engineering-oop.html#boas-praticas",
-        "data-engineering-oop.html#oop-dados",
-        "data-engineering-oop.html#design-patterns",
-        "data-engineering-oop.html#oop-cases-perguntas"
+        "python-legend.html#boas-praticas",
+        "python-legend.html#oop-dados",
+        "python-legend.html#design-patterns",
+        "python-legend.html#oop-cases-perguntas"
       ]
     },
     sql: {
@@ -300,10 +300,10 @@
       badge: "Engenheiro Pythonico",
       color: "#f43f5e",
       items: [
-        "data-engineering-oop.html#boas-praticas",
-        "data-engineering-oop.html#oop-dados",
-        "data-engineering-oop.html#design-patterns",
-        "data-engineering-oop.html#oop-cases-perguntas"
+        "python-legend.html#boas-praticas",
+        "python-legend.html#oop-dados",
+        "python-legend.html#design-patterns",
+        "python-legend.html#oop-cases-perguntas"
       ]
     },
     softskills: {
