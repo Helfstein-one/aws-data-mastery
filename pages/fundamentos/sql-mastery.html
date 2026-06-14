@@ -417,11 +417,7 @@
 </nav>
 
 <div id="main">
-  <div class="hero" style="background-color: #0d2a1b">
-    <div class="hero-ey">FinOps &amp; Otimização de Custos</div>
-    <h1>FinOps na <em>Engenharia de Dados</em></h1>
-    <p class="hero-d">Melhores práticas para o controle, monitoramento e otimização financeira de infraestruturas analíticas na nuvem AWS.</p>
-  </div>
+  
 
   <main class="main-content">
   <div class="hero" style="background-color: var(--navy)">
@@ -462,7 +458,63 @@
       </div>
     </section>
 
-    <section class="section" id="ctes-window">
+    
+    <section class="section" id="comandos-basicos">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f59e0b">01.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f59e0b"></div>
+          <h2>Fundamentos: DML, DDL e Filtros</h2>
+          <p>As ferramentas essenciais do dia a dia</p>
+        </div>
+      </div>
+
+      <p>Apesar dos motores modernos de Data Lakehouse serem extremamente sofisticados, as operações cotidianas ainda dependem do domínio absoluto da tríade clássica do SQL: Filtragem, Agregação e Junção.</p>
+
+      <h3>1. DDL e DML Básico</h3>
+      <p>Em ambientes de Data Warehouse como Redshift, é comum criarmos tabelas temporárias ou fazermos operações de UPSERT (Merge) para gerenciar dimensões que mudam lentamente (SCD).</p>
+      
+      <div class="code-block">
+        <div class="cb-hdr"><span class="cb-lang">SQL</span></div>
+        <pre><code class="language-sql">-- Criando Tabela (DDL)
+CREATE TABLE raw.users (
+    user_id INT PRIMARY KEY,
+    name VARCHAR(255),
+    created_at TIMESTAMP
+);
+
+-- Inserindo Dados (DML)
+INSERT INTO raw.users (user_id, name, created_at)
+VALUES (1, 'Ana', CURRENT_TIMESTAMP);
+
+-- Merge (UPSERT)
+MERGE INTO gold.users_dim t
+USING raw.users s
+ON t.user_id = s.user_id
+WHEN MATCHED THEN
+  UPDATE SET name = s.name
+WHEN NOT MATCHED THEN
+  INSERT (user_id, name, created_at) VALUES (s.user_id, s.name, s.created_at);</code></pre>
+      </div>
+
+      <h3>2. Agregações e Filtros Avançados</h3>
+      <p>O uso correto de <code>GROUP BY</code> aliado ao <code>HAVING</code> permite filtrar resultados <em>depois</em> da agregação, poupando a necessidade de sub-queries.</p>
+      
+      <div class="code-block">
+        <div class="cb-hdr"><span class="cb-lang">SQL</span></div>
+        <pre><code class="language-sql">SELECT 
+    department,
+    COUNT(employee_id) as total_employees,
+    AVG(salary) as avg_salary
+FROM hr.employees
+WHERE status = 'ACTIVE' -- Filtra ANTES de agregar
+GROUP BY department
+HAVING COUNT(employee_id) > 10 -- Filtra DEPOIS de agregar
+ORDER BY avg_salary DESC;</code></pre>
+      </div>
+    </section>
+
+<section class="section" id="ctes-window">
       <div class="sec-hdr">
         <div class="sec-num" style="color:#f59e0b">02</div>
         <div class="sec-meta">
@@ -520,7 +572,50 @@ SELECT * FROM StoreRanking WHERE rank_per_day <= 3;</code></pre>
       </div>
     </section>
 
-    <section class="section" id="iceberg-hive">
+    
+    <section class="section" id="otimizacao-avancada">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f59e0b">02.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f59e0b"></div>
+          <h2>Técnicas Avançadas e Otimização</h2>
+          <p>Desenhando queries para alta performance</p>
+        </div>
+      </div>
+
+      <p>Engenheiros de Dados experientes precisam saber como o banco vai executar sua query por debaixo dos panos, e como extrair valor de tipos de dados complexos (JSON, Arrays).</p>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <div class="cc-tag">Debugging</div>
+          <div class="cc-title">O Comando EXPLAIN</div>
+          <div class="cc-body">
+            Use <code>EXPLAIN ANALYZE</code> antes de rodar queries em produção. Ele mostra o Plano de Execução, revelando gargalos como <em>Seq Scan</em> (Full Table Scan) e sugerindo onde índices ou partições estão falhando.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">Tratamento JSON</div>
+          <div class="cc-title">Unnest / Lateral View</div>
+          <div class="cc-body">
+            Ao receber logs brutos contendo Arrays ou JSON, usamos <code>UNNEST</code> (Presto/Athena) ou <code>LATERAL VIEW EXPLODE</code> (Spark/Hive) para "achatar" listas e transformar 1 linha em múltiplas linhas tabulares.
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block" style="margin-top: 20px;">
+        <div class="cb-hdr"><span class="cb-lang">SQL Athena (UNNEST)</span></div>
+        <pre><code class="language-sql">-- Achatando um Array de tags JSON de um evento de clique
+SELECT 
+    event_id,
+    user_id,
+    tag
+FROM raw_events
+CROSS JOIN UNNEST(event_tags) AS t(tag)
+WHERE event_name = 'page_view';</code></pre>
+      </div>
+    </section>
+
+<section class="section" id="iceberg-hive">
       <div class="sec-hdr">
         <div class="sec-num" style="color:#f59e0b">03</div>
         <div class="sec-meta">
