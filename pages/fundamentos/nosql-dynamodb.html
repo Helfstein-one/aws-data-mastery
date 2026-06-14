@@ -431,11 +431,11 @@
         <div class="sec-num" style="color:var(--emr)">01</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Conceitos Core do DynamoDB</h2>
+          <h2>Conceitos Core &amp; O Paradigma NoSQL</h2>
           <p>O DynamoDB rompe com o modelo relacional tradicional</p>
         </div>
       </div>
-      <p>O Amazon DynamoDB é um banco de dados NoSQL chave-valor e de documentos, totalmente gerenciado e <em>serverless</em>. Ele foi projetado para rodar aplicações de alto desempenho em qualquer escala.</p>
+      <p>O Amazon DynamoDB é um banco de dados NoSQL chave-valor e de documentos, totalmente gerenciado, multi-AZ e <em>serverless</em>. Projetado por Werner Vogels (CTO da Amazon) para sobreviver a picos massivos de tráfego de E-commerce, ele garante latência de milissegundos em qualquer escala (seja 1 GB ou 100 TB).</p>
       
       <div class="table-responsive">
         <table class="data-table">
@@ -443,34 +443,34 @@
             <tr>
               <th>RDBMS Clássico</th>
               <th>DynamoDB</th>
-              <th>Definição no NoSQL</th>
+              <th>Definição Arquitetural</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>Tabela</td>
               <td><strong>Table</strong></td>
-              <td>Coleção de Itens. Sem schema fixo.</td>
+              <td>Coleção de Itens. Sem schema fixo, exceto pelas Chaves Primárias.</td>
             </tr>
             <tr>
               <td>Linha / Registro</td>
               <td><strong>Item</strong></td>
-              <td>Coleção de Atributos (limite estrito de 400KB por item).</td>
+              <td>Coleção de Atributos. Limite físico estrito de <strong>400 KB</strong> por item.</td>
             </tr>
             <tr>
               <td>Coluna</td>
               <td><strong>Attribute</strong></td>
-              <td>Dado fundamental. Tipos: String, Number, Binary, Map, List.</td>
+              <td>Tipos suportados: Escalares (String, Number, Binary), Documentos (List, Map) e Sets.</td>
             </tr>
             <tr>
               <td>Primary Key</td>
               <td><strong>Partition Key (PK)</strong></td>
-              <td>Define em qual nó físico o dado será armazenado na infra da AWS.</td>
+              <td>A PK passa por uma função de <em>Hash</em> que determina exatamente em qual partição física de armazenamento da AWS o dado residirá.</td>
             </tr>
             <tr>
               <td>Composite Key</td>
               <td><strong>PK + Sort Key (SK)</strong></td>
-              <td>A PK agrupa itens, a SK ordena lexograficamente dentro dessa partição.</td>
+              <td>A PK agrupa itens no mesmo disco (Item Collection); a SK organiza os itens de forma <em>Lexicográfica</em> (alfabética/numérica) dentro dessa partição.</td>
             </tr>
           </tbody>
         </table>
@@ -482,66 +482,105 @@
         <div class="sec-num" style="color:var(--accent)">02</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--accent)"></div>
-          <h2>Single-Table Design &amp; Boas Práticas</h2>
-          <p>A Regra de Ouro do DynamoDB</p>
+          <h2>Modelagem Avançada: Single-Table Design</h2>
+          <p>A Engenharia por trás do "Fim do N+1"</p>
         </div>
       </div>
-      <p>A recomendação da AWS é: <strong>Mantenha o número de tabelas o menor possível (idealmente apenas 1)</strong>. O padrão Single-Table Design (STD) consolida diferentes entidades (Ex: Clientes, Pedidos) em uma única tabela usando nomes genéricos de PK e SK.</p>
-      
+      <p>A "Regra de Ouro" da AWS para o DynamoDB é: <strong>Mantenha o número de tabelas o menor possível (idealmente 1)</strong>. O padrão Single-Table Design (STD) elimina a necessidade de <code>JOINs</code> consolidando múltiplas entidades.</p>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>SINGLE-TABLE DESIGN: VISUALIZAÇÃO DE PARTICIONAMENTO</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-single-table.drawio"}'></div>
+      </div>
+
       <div class="callout callout-info">
         <div class="callout-icon">💡</div>
         <div class="callout-content">
-          <strong>Por que Single-Table? (O Fim do N+1)</strong>
-          <p>O DynamoDB não possui <code>JOINs</code>. Se você normalizar os dados em múltiplas tabelas, precisará fazer múltiplas requisições de rede. No STD, você pre-calcula e "pre-junta" os dados gravando-os em Coleções de Itens baseadas na mesma PK. Com apenas um <code>Query()</code>, você retorna os dados do cliente e todos os seus pedidos.</p>
+          <strong>Por que modelar assim?</strong>
+          <p>Se um Banco Relacional normaliza os dados (evitando redundância), o DynamoDB os <strong>desnormaliza e pre-junta</strong>. Ao acessar a aplicação, você não faz requisições separadas para "Usuários" e "Pedidos". Você faz uma <code>Query(PK="USER#101")</code> e a rede retorna, em um único bloco de milissegundos, tanto o perfil do usuário quanto seus últimos 5 pedidos, pois estão fisicamente adjacentes na mesma "Item Collection".</p>
         </div>
       </div>
 
-      <h3>Hierarquia e Write Sharding</h3>
-      <p>A chave de ordenação (SK) geralmente usa um padrão de delimitação, como <code>COUNTRY#STATE#CITY</code>, permitindo <code>begins_with()</code>. Em casos de <strong>Hot Partitions</strong> (batendo no limite de 1.000 WCUs), usa-se <strong>Write Sharding</strong> adicionando um sufixo (ex: <code>USER#123_1</code>).</p>
+      <h3>Hierarquia e Padrões de SK (Sort Key)</h3>
+      <p>A chave de ordenação usa delimitadores para construir buscas hierárquicas. Exemplo: Se a SK for <code>PAIS#ESTADO#CIDADE</code> (Ex: <code>BR#SP#SAOPAULO</code>), você pode usar o operador matemático <code>begins_with("BR#SP")</code> para retornar todas as cidades de SP em uma única query otimizada.</p>
     </section>
 
-    <section class="section" id="indices">
+    <section class="section" id="calculo-capacidade">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--arch)">03</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--arch)"></div>
-          <h2>Índices Secundários (GSIs e LSIs)</h2>
-          <p>Consultando por atributos não previstos na Chave Primária</p>
+          <h2>Matemática de Provisionamento: RCU &amp; WCU</h2>
+          <p>Entendendo a cobrança por trás das operações do banco</p>
         </div>
       </div>
+      <p>A diferença do DynamoDB para RDBMS é que você não escolhe instâncias de servidor (CPU/RAM). Você provisiona <strong>Capacidade de Leitura e Escrita</strong> baseada em requisições por segundo e tamanho do Payload em KB.</p>
+
       <div class="grid-2-col">
         <div class="card secondary-card">
-          <h3>Global Secondary Index (GSI)</h3>
-          <p>Permite criar uma <strong>nova Partition Key e nova Sort Key</strong> copiando os dados da tabela base.</p>
+          <h3>Read Capacity Unit (RCU)</h3>
+          <p>1 RCU permite ler 1 item de até <strong>4 KB</strong> por segundo (em consistência Forte).</p>
           <ul class="feature-list">
-            <li>Pode ser criado/apagado a qualquer momento.</li>
-            <li>Tem sua própria capacidade de leitura/escrita.</li>
-            <li>Consome o dobro do armazenamento.</li>
-            <li>Leituras são fortemente Eventuais.</li>
+            <li><strong>Strongly Consistent:</strong> 1 leitura = 1 RCU (até 4KB).</li>
+            <li><strong>Eventually Consistent:</strong> 2 leituras = 1 RCU (metade do preço!).</li>
+            <li><strong>Transactional:</strong> 1 leitura = 2 RCUs (o dobro do preço).</li>
           </ul>
+          <div class="code-block" style="margin-top:10px;">
+            <p style="color:var(--warn);font-size:0.9em;margin:0;">Ex: Ler 10 itens de 3KB via Query Forte:</p>
+            <p style="color:var(--ok);font-size:0.9em;margin:0;">R: (10 * (4KB arredondado)) / 4 = 10 RCUs.</p>
+          </div>
         </div>
         <div class="card secondary-card">
-          <h3>Local Secondary Index (LSI)</h3>
-          <p>Mantém a <strong>mesma PK</strong> da tabela principal, mas altera a Sort Key.</p>
+          <h3>Write Capacity Unit (WCU)</h3>
+          <p>1 WCU permite escrever 1 item de até <strong>1 KB</strong> por segundo.</p>
           <ul class="feature-list">
-            <li>Só pode ser criado na criação da tabela.</li>
-            <li>Limita o tamanho da partição a 10GB.</li>
-            <li>Suporta leituras fortemente consistentes.</li>
+            <li><strong>Standard Write:</strong> 1 escrita = 1 WCU (até 1KB).</li>
+            <li><strong>Transactional Write:</strong> 1 escrita = 2 WCUs.</li>
+            <li>O tamanho é sempre arredondado para cima. Se você escrever 1.5 KB, custará 2 WCUs.</li>
           </ul>
+          <div class="code-block" style="margin-top:10px;">
+            <p style="color:var(--warn);font-size:0.9em;margin:0;">Ex: Escrever 5 itens de 2.5KB:</p>
+            <p style="color:var(--ok);font-size:0.9em;margin:0;">R: (2.5 -> 3KB). 5 * 3 = 15 WCUs.</p>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="section" id="terraform">
+    <section class="section" id="cdc-streams">
       <div class="sec-hdr">
         <div class="sec-num" style="color:#8b5cf6">04</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Implementação em Terraform: Billing &amp; TTL</h2>
-          <p>Provisionamento como código (IaC)</p>
+          <h2>DynamoDB Streams &amp; Integração Lakehouse</h2>
+          <p>O Change Data Capture (CDC) do NoSQL da AWS</p>
         </div>
       </div>
-      <p>Configuração para inicializar uma tabela <code>PAY_PER_REQUEST</code>, com TTL e um GSI declarado.</p>
+      <p>O DynamoDB Streams captura uma sequência cronológica de eventos de mutação na tabela (INSERT, MODIFY, REMOVE) e garante a retenção em shard por <strong>24 horas</strong>. É a principal mecânica de integração Event-Driven do banco.</p>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>ARQUITETURA DE CDC COM DYNAMODB STREAMS</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-cdc-streams.drawio"}'></div>
+      </div>
+      
+      <p>Você pode configurar o Stream com opções de <code>StreamViewType</code>, como:</p>
+      <ul>
+        <li><code>KEYS_ONLY</code>: Apenas a PK e SK do item modificado.</li>
+        <li><code>NEW_IMAGE</code>: Todo o estado do item após a modificação.</li>
+        <li><code>OLD_IMAGE</code>: O estado do item antes da modificação.</li>
+        <li><code>NEW_AND_OLD_IMAGES</code>: O *antes* e o *depois*, perfeito para detecção de anomalias com Lambdas.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="terraform">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Implementação em Terraform: Billing &amp; TTL</h2>
+          <p>Provisionamento Enterprise via HCL</p>
+        </div>
+      </div>
+      <p>Abaixo, a configuração padrão para inicializar uma tabela com Auto-scaling (PAY_PER_REQUEST), habilitando o Time To Live (TTL) para exclusão automática de registros antigos (sem consumir WCU), e o GSI.</p>
       
       <div class="code-block">
         <div class="code-header">
@@ -550,7 +589,7 @@
         </div>
         <pre><code>resource "aws_dynamodb_table" "ecommerce" {
   name         = "ecommerce-single-table"
-  billing_mode = "PAY_PER_REQUEST"
+  billing_mode = "PAY_PER_REQUEST" # On-Demand, escala até 40K WCUs sem provisionamento
   hash_key     = "PK"
   range_key    = "SK"
 
@@ -559,6 +598,7 @@
   attribute { name = "GSI1PK"; type = "S" }
   attribute { name = "GSI1SK"; type = "S" }
 
+  # Apaga itens velhos de graça se eles contiverem o atributo unix timestamp "ExpirationTime"
   ttl {
     attribute_name = "ExpirationTime"
     enabled        = true
@@ -578,27 +618,43 @@
       </div>
     </section>
 
-    <section class="section" id="cdc">
+    <section class="section" id="cases">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--warn)">05</div>
+        <div class="sec-num" style="color:var(--warn)">06</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--warn)"></div>
-          <h2>DynamoDB Streams &amp; CDC</h2>
-          <p>O Change Data Capture do ecossistema NoSQL da AWS</p>
+          <h2>Simulador de Entrevista &amp; Boas Práticas</h2>
+          <p>Resolvendo Problemas Críticos de Modelagem</p>
         </div>
       </div>
-      <p>O DynamoDB Streams captura uma sequência cronológica de eventos de mutação na tabela.</p>
-
-      <div class="callout callout-warning">
-        <div class="callout-icon">🔥</div>
-        <div class="callout-content">
-          <strong>Use Cases Poderosos do DynamoDB Streams:</strong>
-          <ul>
-            <li>Replicação de dados em Analytics: Ingestão das mutações para o S3 Lakehouse via Kinesis Firehose.</li>
-            <li>Sincronização de OpenSearch para Full-Text Search.</li>
-            <li>Notificações (Ex: Acionar EventBridge/SNS se um item for cancelado).</li>
-          </ul>
-        </div>
+      
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Cenário Corporativo (Desafio)</th>
+              <th>Padrão Arquitetural / Solução</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1. "Hot Partition": Uma eleição fez com que a chave <code>PK=VOTO#CANDIDATO_X</code> recebesse 5.000 requisições/seg. Ocorreu Throttling.</td>
+              <td>Implementar <strong>Write Sharding</strong>. Adicionamos um sufixo aleatório na PK (ex: <code>VOTO#CANDIDATO_X_1</code> a <code>_10</code>). Isso espalha a carga por 10 partições físicas, resolvendo o afunilamento térmico do hardware.</td>
+            </tr>
+            <tr>
+              <td>2. Precisamos buscar todos os usuários por Data de Criação, algo que não está na PK base da tabela.</td>
+              <td>Criar um <strong>GSI (Global Secondary Index)</strong> onde a Partition Key pode ser algo global (ex: <code>USER_GROUP</code>) e a Sort Key é a <code>CreatedAt</code>, projetando os atributos desejados da tabela original.</td>
+            </tr>
+            <tr>
+              <td>3. Qual a diferença letal entre <code>Scan</code> e <code>Query</code> no seu script de faturamento?</td>
+              <td>A <strong>Query</strong> busca apenas a partição específica e é RCU-eficiente (ex: 2 RCUs). O <strong>Scan</strong> lê a tabela inteira (mesmo que haja filtros pós-leitura), podendo consumir milhares de RCUs atoa e causar pico de fatura. Regra: Jamais use Scan em produção.</td>
+            </tr>
+            <tr>
+              <td>4. O DynamoDB tem limite de 400KB por item. O usuário subiu um JSON de metadados de 2MB. O que fazer?</td>
+              <td>Usar o padrão <strong>S3 Offloading</strong>. Salvar o payload grande no S3 e gravar apenas a URL do objeto no atributo do item no DynamoDB.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
