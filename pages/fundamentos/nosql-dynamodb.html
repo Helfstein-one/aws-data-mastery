@@ -420,480 +420,179 @@
   </div>
 
   <main class="main-content">
-    
-    <!-- SECTION 1: ECS -->
-    <section class="section" id="ecs">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">01</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Amazon ECS: Teoria de Containers &amp; Launch Types</h2>
-          <p>Diferenças fundamentais entre ECS Fargate e ECS on EC2, estrutura de blueprints e segurança</p>
+      <header class="content-header">
+        <h1>NoSQL &amp; Amazon DynamoDB</h1>
+        <p>A arquitetura definitiva de bancos Serverless: Single-Table Design, GSIs, e Change Data Capture (CDC) via Streams para alta volumetria e latência na casa dos milissegundos.</p>
+        <div class="meta-tags">
+          <span class="tag">DynamoDB</span>
+          <span class="tag">NoSQL</span>
+          <span class="tag">Single-Table</span>
+          <span class="tag">K-V Store</span>
+          <span class="tag">Streams</span>
         </div>
-      </div>
+      </header>
 
-      <p>O <strong>Amazon ECS (Elastic Container Service)</strong> é o serviço de orquestração de containers altamente escalável e de alta performance nativo da AWS. Diferente do Kubernetes (EKS), o ECS foca em simplificar o deploy eliminando a necessidade de gerenciar nós de controle complexos (Control Plane).</p>
-
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
-          <div class="cc-tag">Launch Type</div>
-          <div class="cc-title">ECS Fargate (Serverless)</div>
-          <div class="cc-body">
-            <strong>Como funciona:</strong> A AWS gerencia toda a computação. O engenheiro declara apenas o tamanho de CPU e Memória da Task.
-            <br><strong>Tradeoffs:</strong> Menor overhead operacional, isolamento físico de segurança por task (micro-VMs Firecracker). Custo ligeiramente superior por recurso ativo e boot time mais longo.
+      <section class="content-section">
+        <div class="section-header">
+          <div class="icon-wrapper">
+            <img src="../../assets/aws-icons/DynamoDB.png" alt="DynamoDB" style="width:24px;">
           </div>
+          <h2>Conceitos Core do DynamoDB</h2>
         </div>
-
-        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
-          <div class="cc-tag">Launch Type</div>
-          <div class="cc-title">ECS on EC2 (Gerenciado)</div>
-          <div class="cc-body">
-            <strong>Como funciona:</strong> O cluster ECS usa instâncias EC2 gerenciadas no seu próprio grupo de Auto Scaling como workers de container.
-            <br><strong>Tradeoffs:</strong> Controle total do sistema operacional, suporte a volumes EBS locais e GPUs dedicadas. Exige gerenciar patches do SO e agentes do ECS instalados nas máquinas.
-          </div>
-        </div>
-      </div>
-
-      <h3>Arquitetura ECS: Cluster, Service, Task &amp; Task Definition</h3>
-      <p>A tabela a seguir explica a hierarquia de objetos lógicos dentro do ecossistema do ECS:</p>
-
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Componente</th>
-              <th>Propósito</th>
-              <th>Análogo Físico</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Cluster</strong></td>
-              <td>Agrupamento lógico de computação (Fargate ou EC2) em subredes privadas.</td>
-              <td>Data Center Virtualizado</td>
-            </tr>
-            <tr>
-              <td><strong>Task Definition</strong></td>
-              <td>O blueprint em formato JSON definindo a imagem Docker, portas, variáveis de ambiente e volumes.</td>
-              <td>Dockerfile / Docker Compose</td>
-            </tr>
-            <tr>
-              <td><strong>Task</strong></td>
-              <td>A instância ativa e executável do container em si, rodando de forma isolada na VPC.</td>
-              <td>Container Ativo (Docker Run)</td>
-            </tr>
-            <tr>
-              <td><strong>Service</strong></td>
-              <td>Gerenciador que garante que a quantidade solicitada de Tasks esteja saudável, integrando-as ao Load Balancer.</td>
-              <td>Process Daemon / Orquestrador</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>Segurança de Containers: Task Role vs. Task Execution Role</h3>
-      <p>Um erro de segurança recorrente em projetos de ECS é conceder permissões excessivas às instâncias que executam os containers. A AWS divide a identidade IAM no ECS em duas camadas de privilégio de grão fino:</p>
-      
-      <ul>
-        <li><strong>Task Execution Role:</strong> Utilizada pelo **agente do ECS** rodando na infraestrutura (antes do container iniciar). Permissões típicas: baixar a imagem do container do ECR, enviar logs de stdout para o CloudWatch, descriptografar variáveis sensíveis vindas do Secrets Manager ou System Manager Parameter Store.</li>
-        <li><strong>Task Role:</strong> Utilizada pela **sua aplicação** de fato rodando dentro do container (após a inicialização). Permissões típicas: ler/gravar dados em um bucket S3, consultar uma tabela do DynamoDB, ou publicar mensagens em um tópico SNS.</li>
-      </ul>
-
-            <div class="drawio-wrap">
-        <div class="drawio-label"><span class="dot"></span>ECS Fargate — Ingestão Customizada de Alta Escala</div>
-        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph="{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;<mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;860\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;>  <root>    <mxCell id=\&quot;0\&quot;/>    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>    <mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;860\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;title\&quot; value=\&quot;RDS VS AURORA STORAGE ARCHITECTURE\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;860\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;rds_grp\&quot; value=\&quot;AMAZON RDS TRADICIONAL\&quot; style=\&quot;rounded=1;fillColor=#02160a;strokeColor=#16a34a;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#bbf7d0;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;20\&quot; y=\&quot;50\&quot; width=\&quot;340\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;rds_p\&quot; value=\&quot;Primary Node(EC2 Compute)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;96\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;rds_s\&quot; value=\&quot;Secondary Node(Standby)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;236\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;ebs_p\&quot; value=\&quot;Amazon EBS(Data &amp;amp; Logs)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ebs;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;96\&quot; y=\&quot;240\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;ebs_s\&quot; value=\&quot;Amazon EBS(Replica)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ebs;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;236\&quot; y=\&quot;240\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;aur_grp\&quot; value=\&quot;AMAZON AURORA\&quot; style=\&quot;rounded=1;fillColor=#170802;strokeColor=#ea580c;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#fed7aa;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;420\&quot; y=\&quot;50\&quot; width=\&quot;400\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;aur_p\&quot; value=\&quot;Primary Instance\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;486\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;aur_r1\&quot; value=\&quot;Read Replica\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;616\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;aur_r2\&quot; value=\&quot;Read Replica\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;716\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;aur_sto\&quot; value=\&quot;Aurora Distributed Storage Volume(6 Copies across 3 AZs)\&quot; style=\&quot;rounded=1;fillColor=#1a0e00;strokeColor=#ea580c;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;460\&quot; y=\&quot;240\&quot; width=\&quot;320\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;e_rp_ep\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;rds_p\&quot; target=\&quot;ebs_p\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_rs_es\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;rds_s\&quot; target=\&quot;ebs_s\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ep_es\&quot; value=\&quot;SynchronousBlock Replication\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;dashed=1;fontColor=#dcfce7;fontFamily=DM Sans;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;ebs_p\&quot; target=\&quot;ebs_s\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ap_st\&quot; value=\&quot;Redo Logs\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#fed7aa;fontFamily=DM Sans;fontSize=9;exitX=0.5;exitY=1;entryX=0.15;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;aur_p\&quot; target=\&quot;aur_sto\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ar1_st\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;aur_r1\&quot; target=\&quot;aur_sto\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ar2_st\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;exitX=0.5;exitY=1;entryX=0.85;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;aur_r2\&quot; target=\&quot;aur_sto\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>  </root></mxGraphModel>&quot;}"></div>
-
-</div>
-<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> RDS VS AURORA STORAGE ARCHITECTURE, AMAZON RDS TRADICIONAL, Primary Node (EC2 Compute), Secondary Node (Standby), Amazon EBS (Data &amp; Logs), Amazon EBS (Replica), AMAZON AURORA, Primary Instance, Read Replica, Aurora Distributed Storage Volume (6 Copies across 3 AZs), Synchronous Block Replication, Redo Logs</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "RDS VS AURORA STORAGE ARCHITECTURE" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
-</div>
-
-      <div class="grid-2">
-        <div>
-          <h4>Escrita em Quorum (Write Quorum) no Aurora</h4>
-          <p>Para otimizar escritas, o Aurora utiliza um sistema de quórum distribuído. Cada bloco de dados é segmentado e gravado em 6 instâncias de storage (2 por AZ). Uma escrita é considerada um commit válido assim que <strong>4 das 6 instâncias confirmam a gravação física (4/6 Write Quorum)</strong>. Leituras de blocos requerem a confirmação de <strong>3 de 6 cópias (3/6 Read Quorum)</strong> para reconstruir dados consistentes caso ocorram falhas parciais em storage pools.</p>
-        </div>
-        <div>
-          <h4>Multi-AZ DB Instance vs DB Cluster (RDS Tradicional)</h4>
-          <p>Se você não utiliza Aurora, a AWS oferece dois modelos de alta disponibilidade no RDS PostgreSQL/MySQL: <strong>Multi-AZ DB Instance</strong>, onde o Standby é fisicamente idêntico mas bloqueado para leitura (failover de ~60-120s); e o novo <strong>Multi-AZ DB Cluster</strong>, que usa três instâncias ativas (2 Readers e 1 Writer) e acelera commits escrevendo simultaneamente nos SSDs locais de duas réplicas legíveis, diminuindo o failover para ~35s.</p>
-        </div>
-      </div>
-
-      <h3 style="margin-top: 30px;">Estratégias de Snapshots, Backups e RTO/RPO</h3>
-      <ul>
-        <li><strong>Automated Backups (RDS Tradicional):</strong> A AWS tira um snapshot diário do disco EBS inteiro e arquiva os <em>Transaction Logs (WAL)</em> a cada 5 minutos no S3. O RPO (Recovery Point Objective) máximo é de ~5 minutos para Point-in-Time Recovery (PiTR). Restaurações demoram o tempo necessário para provisionar e "esquentar" (hydrate) os blocos do S3 para um novo disco EBS.</li>
-        <li><strong>Continuous Backups (Aurora):</strong> No Aurora, o backup é completamente contínuo e streaming. Como a camada de storage é baseada em logs, o storage engine transfere micro-blocos para o S3 em tempo real de forma assíncrona, sem impactar a CPU do banco, atingindo impacto nulo de I/O em backups pesados.</li>
-      </ul>
-
-      <div class="grid-2" style="margin-top: 20px;">
-        <div>
-          <h4>Amazon RDS Proxy: Connection Pooling</h4>
-          <p>Microsserviços serverless esgotam rapidamente a memória (RAM) da instância RDS por conexões ociosas (o Postgres consome ~10MB por TCP inativa). O <strong>RDS Proxy</strong> gerencia um <em>Connection Pool</em>, multiplexando dezenas de clientes em poucas conexões físicas com o DB. Além disso, em caso de failover do Aurora, ele redireciona instantaneamente as chamadas HTTP para o novo Writer, mascarando a interrupção da aplicação (sem timeouts de DNS).</p>
-        </div>
-        <div>
-          <h4>Migração e CDC com AWS DMS e SCT</h4>
-          <p>Para migrar de bancos legados (ex: Oracle local ou RDS Monolítico) para Aurora sem downtime, utiliza-se o <strong>AWS Database Migration Service (DMS)</strong> acompanhado do <strong>SCT (Schema Conversion Tool)</strong>.</p>
-          <p>O DMS se conecta ao banco de origem, realiza o <em>Full Load</em> da base inicial e então ativa o <strong>CDC (Change Data Capture)</strong>. O CDC lê nativamente os transaction logs do banco de origem (ex: <code>wal2json</code> no Postgres) e aplica os <code>INSERT/UPDATES</code> na nova base Aurora. Quando o "Lag" do DMS se aproxima de 0s, a engenharia simplesmente "vira a chave" do tráfego na aplicação.</p>
-        </div>
-      </div>
-    </section>
-
-    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
-
-    <!-- SECTION 3.5: DYNAMODB DEEP DIVE -->
-    <section class="section" id="dynamodb-deep-dive">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#10b981">03.5</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#10b981"></div>
-          <h2>Amazon DynamoDB: Architecture &amp; Single-Table Design</h2>
-          <p>Modelagem NoSQL avançada, RCU/WCU, GSI, LSI e Hot Partitions</p>
-        </div>
-      </div>
-
-      <p>Bancos NoSQL corporativos como o DynamoDB diferem substancialmente do modelo relacional tradicional. Eles são otimizados para latência milissegunda consistente independente do tamanho da tabela, desde que as chaves de acesso sejam perfeitamente modeladas (Acesso em O(1)).</p>
-
-      <!-- DIAGRAMA DYNAMODB PARTITIONS -->
-                    <div class="drawio-wrap">
-        <div class="drawio-label"><span class="dot"></span>DYNAMODB PARTITIONING MODEL</div>
-        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph="{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;<mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;640\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;>  <root>    <mxCell id=\&quot;0\&quot;/>    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>    <mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;640\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;title\&quot; value=\&quot;DYNAMODB PARTITIONING MODEL\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;640\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;req\&quot; value=\&quot;Item Request(Partition Key)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;20\&quot; y=\&quot;120\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;router\&quot; value=\&quot;Request Router(MD5 Hash Function)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.endpoint;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;246\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;p1\&quot; value=\&quot;Partition 1Hash: 0000-3333\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;466\&quot; y=\&quot;40\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;p2\&quot; value=\&quot;Partition 2Hash: 3334-6666\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;466\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;p3\&quot; value=\&quot;Partition 3Hash: 6667-FFFF\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;466\&quot; y=\&quot;200\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;e_r_ro\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;req\&quot; target=\&quot;router\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ro_p1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;router\&quot; target=\&quot;p1\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ro_p2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;router\&quot; target=\&quot;p2\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ro_p3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;router\&quot; target=\&quot;p3\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>  </root></mxGraphModel>&quot;}"></div>
-
-</div>
-<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> DYNAMODB PARTITIONING MODEL, Item Request (Partition Key), Request Router (MD5 Hash Function), Partition 1 Hash: 0000-3333, Partition 2 Hash: 3334-6666, Partition 3 Hash: 6667-FFFF</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "DYNAMODB PARTITIONING MODEL" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
-</div>
-
-      <div class="grid-2">
-        <div>
-          <h4>Capacity: RCU, WCU e Modo On-Demand</h4>
-          <p>Em modo Provisionado, a métrica raiz de throughput são <strong>RCUs (Read Capacity Units)</strong> e <strong>WCUs (Write Capacity Units)</strong>. 1 WCU permite gravar 1 KB por segundo. 1 RCU permite ler 4 KB/s se a consistência for eventual, ou requer 2 RCUs para garantir <em>Strong Consistency</em>.</p>
-          <p>O modo <strong>On-Demand</strong> é recomendado quando a carga é altamente imprevisível. Você paga por requisição sem estipular limites prévios, deixando o Dynamo escalonar agressivamente por debaixo dos panos.</p>
-        </div>
-        <div>
-          <h4>Balanceamento HASH e Hot Partitions</h4>
-          <p>O throughput provisionado de uma tabela (ex: 3.000 WCU) é dividido <strong>igualmente</strong> pelo número de partições físicas SSD (ex: 3 partições = 1.000 WCU por partição). Se a sua <strong>Partition Key (PK)</strong> for uma data atual (<code>2026-06-10</code>), todas as gravações do dia cairão na mesma partição (<em>Hot Partition</em>). O Dynamo estourará um <code>ProvisionedThroughputExceededException</code> ao atingir 1.000 WCU, mesmo com 2.000 WCUs sobrando na tabela. Use Hash Sharding/UUIDs para a PK.</p>
-        </div>
-      </div>
-
-      <h3 style="margin-top: 30px;">Modelagem: Single-Table Design, GSI e LSI</h3>
-      <ul>
-        <li><strong>Single-Table Design:</strong> Diferente do modelo Relacional (Normalização 3NF com FKs), no DynamoDB a regra de ouro é colocar <em>todos os tipos de entidades em uma única tabela física</em>. Para relacionar entidades 1:N (Ex: Usuário e seus Pedidos), você agrupa os itens empilhando as <strong>Sort Keys (SK)</strong> sob a mesma Partition Key. Exemplo: <code>PK="USER#123", SK="PROFILE"</code> para dados do usuário; <code>PK="USER#123", SK="ORDER#99"</code> para seus pedidos.</li>
-        <li><strong>Global Secondary Index (GSI):</strong> Se você precisa buscar pedidos por "Data" em vez de "Usuário", você cria um GSI. O GSI é uma tabela réplica física, mantida asíncronamente pela AWS, que escolhe novos atributos para assumirem os papéis de nova PK/SK. Cuidado: GSIs possuem seu próprio pool de RCU/WCUs e podem sofrer throttling se mal dimensionados.</li>
-        <li><strong>Local Secondary Index (LSI):</strong> Compartilha a mesma PK da tabela base, mas muda a SK. Só pode ser criado no momento de criação da tabela (limite físico de 10GB por partição).</li>
-      </ul>
-
-      <div class="callout callout-tip">
-        <strong>Integração Zero-ETL do DynamoDB com Aurora/Redshift:</strong>
-        <p>A nova feature de integração AWS permite espelhar o DynamoDB para o Amazon Redshift ou S3 (usando DynamoDB Export/Kinesis Streams) sem escrever código Lambda, habilitando queries analíticas SQL complexas (com JOINs) em tempo quase real sem prejudicar o desempenho transacional da tabela NoSQL.</p>
-      </div>
-
-      <h3 style="margin-top: 40px; margin-bottom: 15px;">Desenho de Arquitetura: Data Engineering CDC (DynamoDB &amp; RDS para Iceberg)</h3>
-      <p style="margin-bottom: 15px;">Para um engenheiro de dados, o desafio de bancos transacionais NoSQL e SQL (DynamoDB e Aurora) é que não é possível rodar queries analíticas pesadas (<code>GROUP BY</code>, <code>JOIN</code> em milhões de linhas) diretamente na origem sem derrubar a aplicação. A solução é montar um <strong>Change Data Capture (CDC)</strong> contínuo para extrair apenas o delta (o que mudou) e consolidar num formato colunar como Apache Iceberg no S3.</p>
-
-      <div class="mxgraph" style="max-width:100%;background:#080f1e;margin-top:15px;margin-bottom:30px;" data-mxgraph="{&quot;highlight&quot;: &quot;#10b981&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;880\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;880\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;t1\&quot; value=\&quot;CDC PIPELINE (OLTP para OLAP)\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;880\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;db1\&quot; value=\&quot;Amazon RDS / Aurora\\n(Transacional SQL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;60\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;db2\&quot; value=\&quot;Amazon DynamoDB\\n(Transacional NoSQL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;180\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;c1\&quot; value=\&quot;AWS DMS\\n(Lê BinLog/WAL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database_migration_service;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;60\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;c2\&quot; value=\&quot;DynamoDB Streams\\n(Eventos de Modificação)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;180\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;str\&quot; value=\&quot;Amazon Kinesis / Kafka\\n(Buffer / Tópico CDC)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;400\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;proc\&quot; value=\&quot;EMR Serverless (Spark)\\nMerge INTO (ACID)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;560\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;lake\&quot; value=\&quot;Apache Iceberg (S3)\\n(Data Lake Analítico)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;740\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;db1\&quot; target=\&quot;c1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;db2\&quot; target=\&quot;c2\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.25;\&quot; edge=\&quot;1\&quot; source=\&quot;c1\&quot; target=\&quot;str\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e4\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.75;\&quot; edge=\&quot;1\&quot; source=\&quot;c2\&quot; target=\&quot;str\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e5\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;str\&quot; target=\&quot;proc\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e6\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;proc\&quot; target=\&quot;lake\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
-
-      <div class="callout callout-tip">
-        <strong>📚 Documentação Oficial AWS:</strong>
-        <p>A AWS recomenda arquiteturas de CDC orientadas a eventos utilizando <strong>DynamoDB Streams</strong> nativo para capturar alterações em nível de item. Isso não consome WCU/RCU da tabela principal e garante ordem estrita para entrega ao Kinesis ou Lambda (<em>AWS Prescriptive Guidance: Stream data from DynamoDB to S3</em>).</p>
-      </div>
-    </section>
-
-    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
-
-    <!-- SECTION 4: OPERACAO & TROUBLESHOOTING -->
-    <section class="section" id="operacao">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">04</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Guia Operacional: Monitoramento &amp; Troubleshooting Avançado</h2>
-          <p>Queries SQL de tuning de bancos, comandos CLI cruciais de diagnóstico do ECS e Load Balancers</p>
-        </div>
-      </div>
-
-      <h3>CLI Cheat Sheet: Operando e Diagnosticando ECS &amp; Load Balancers</h3>
-      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Obter informações de tarefas rodando no ECS</span>
-aws ecs list-tasks --cluster prod-analytics-cluster
-
-<span class="c"># 2. Descrever detalhes de uma task específica (verificar se há erros de Out of Memory - OOM)</span>
-aws ecs describe-tasks \
-  --cluster prod-analytics-cluster \
-  --tasks arn:aws:ecs:us-east-1:123456789012:task/prod-analytics-cluster/99b6622
-
-<span class="c"># 3. Forçar um redesploy limpo sem alterar a Task Definition</span>
-aws ecs update-service \
-  --cluster prod-analytics-cluster \
-  --service analytics-service \
-  --force-new-deployment
-
-<span class="c"># 4. Interagir diretamente (SSH/Bash) dentro do container ECS rodando no Fargate</span>
-aws ecs execute-command \
-  --cluster prod-analytics-cluster \
-  --task 99b66223a4 \
-  --container api-container \
-  --interactive \
-  --command <span class="s">"/bin/sh"</span>
-
-<span class="c"># 5. Verificar o status de integridade do ALB Target Group</span>
-aws elbv2 describe-target-health \
-  --target-group-arn arn:aws:elasticloadbalancing:us-east-1:12345678:targetgroup/tg-ecs-analytics/bc51</pre>
-
-      <h3 style="margin-top: 30px;">SQL Diagnostics para Administradores de Bancos (PostgreSQL RDS / Aurora)</h3>
-      <p>Em momentos de travamento no banco, utilize as queries estruturadas abaixo para descobrir e encerrar locks e processos órfãos consumindo CPU:</p>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Query 1: Listar conexões ativas ordenadas por tempo de execução (identificar queries travando)</div>
-        <div class="abox-body">
-          <pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span> pid, age(query_start, clock_timestamp()), usename, state, query 
-<span class="k">FROM</span> pg_stat_activity 
-<span class="k">WHERE</span> state != <span class="s">'idle'</span> 
-<span class="k">ORDER BY</span> query_start <span class="k">ASC</span> 
-<span class="k">LIMIT</span> 10;</pre>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Query 2: Identificar Locks Ativos (Tabelas bloqueadas por transações pendentes)</div>
-        <div class="abox-body">
-          <pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span>
-    blocked_locks.pid     <span class="k">AS</span> blocked_pid,
-    blocked_activity.usename  <span class="k">AS</span> blocked_user,
-    blocking_locks.pid    <span class="k">AS</span> blocking_pid,
-    blocking_activity.usename <span class="k">AS</span> blocking_user,
-    blocked_activity.query    <span class="k">AS</span> blocked_statement,
-    blocking_activity.query   <span class="k">AS</span> blocking_statement
-<span class="k">FROM</span>  pg_catalog.pg_locks         blocked_locks
-<span class="k">JOIN</span> pg_catalog.pg_stat_activity blocked_activity <span class="k">ON</span> blocked_activity.pid = blocked_locks.pid
-<span class="k">JOIN</span> pg_catalog.pg_locks         blocking_locks 
-    <span class="k">ON</span> blocking_locks.locktype = blocked_locks.locktype
-    <span class="k">AND</span> blocking_locks.database <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.database
-    <span class="k">AND</span> blocking_locks.relation <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.relation
-    <span class="k">AND</span> blocking_locks.page <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.page
-    <span class="k">AND</span> blocking_locks.tuple <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.tuple
-    <span class="k">AND</span> blocking_locks.virtualxid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.virtualxid
-    <span class="k">AND</span> blocking_locks.transactionid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.transactionid
-    <span class="k">AND</span> blocking_locks.classid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.classid
-    <span class="k">AND</span> blocking_locks.objid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.objid
-    <span class="k">AND</span> blocking_locks.objsubid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.objsubid
-    <span class="k">AND</span> blocking_locks.pid != blocked_locks.pid
-<span class="k">JOIN</span> pg_catalog.pg_stat_activity blocking_activity <span class="k">ON</span> blocking_activity.pid = blocking_locks.pid
-<span class="k">WHERE</span> <span class="k">NOT</span> blocked_locks.granted;</pre>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Comando 3: Derrubar transação bloqueadora específica via ID do processo (PID)</div>
-        <div class="abox-body">
-          <pre style="background:#0f172a; color:#f8fafc;"><span class="c">-- Termina a query de forma limpa</span>
-<span class="k">SELECT</span> pg_cancel_backend(blocking_pid);
-
-<span class="c">-- Força o encerramento imediato da conexão física com o banco</span>
-<span class="k">SELECT</span> pg_terminate_backend(blocking_pid);</pre>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 5: GUIA E COMPARAÇÃO DE BANCOS DE DADOS AWS -->
-    <section class="section" id="aws-databases-guide">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">05</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Tipos de Bancos de Dados AWS: Guia de Tomada de Decisão</h2>
-          <p>Mapeamento completo de engines de banco, tipos de dados e quando usar</p>
-        </div>
-      </div>
-
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Banco AWS</th>
-              <th>Modelo / Engine</th>
-              <th>Vantagem Crítica</th>
-              <th>trade-offs / Limites</th>
-              <th>Caso de Uso Recomendado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Amazon RDS</strong></td>
-              <td>Relacional (OLTP) - Postgres, MySQL, Oracle, SQL Server</td>
-              <td>Compatibilidade total com drivers e bibliotecas tradicionais.</td>
-              <td>Replicação Multi-AZ lenta baseada em EBS. Dificuldade de escalar escritas globalmente.</td>
-              <td>Sistemas transacionais legados, ERPs clássicos, CRMs com relações complexas de chaves estrangeiras.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon Aurora</strong></td>
-              <td>Relacional (OLTP compatível) - Postgres/MySQL</td>
-              <td>Armazenamento compartilhado atômico de log, auto-healing, failover em 3s, até 15 réplicas sem lag de leitura.</td>
-              <td>Custo superior ao RDS tradicional para instâncias muito pequenas (não analíticas).</td>
-              <td>**Sistemas transacionais modernos de altíssima concorrência** e APIs corporativas escaláveis.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon DynamoDB</strong></td>
-              <td>NoSQL (Chave-Valor / Documento)</td>
-              <td>Serverless, escala infinita com latência estável inferior a 10ms (single-digit). Latência global via Global Tables.</td>
-              <td>Não suporta joins relacionais natively. Exige modelagem rigorosa de acesso (Single-Table Design).</td>
-              <td>Carrinhos de compras, catálogo de produtos, sessão de usuários e logs de auditoria rápida.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon DocumentDB</strong></td>
-              <td>NoSQL (Documento compatível com MongoDB)</td>
-              <td>Totalmente gerenciado, escala para milhões de leituras por segundo integrando JSON nativo.</td>
-              <td>Não suporta queries de joins analíticos complexos de forma performática.</td>
-              <td>Gerenciadores de conteúdo (CMS), catálogos com atributos altamente dinâmicos e variáveis.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon ElastiCache</strong></td>
-              <td>Em Memória (Redis / Memcached)</td>
-              <td>Latência sub-milissegundo para queries repetidas e processamento de pub/sub rápido.</td>
-              <td>Dados voláteis na RAM (mesmo com persistência ligada, o custo de RAM por GB é altíssimo).</td>
-              <td>Caching de sessões HTTP, tabelas de classificação em tempo real e buffers de mensagens de alta vazão.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon Neptune</strong></td>
-              <td>Grafo (RDF / Property Graph)</td>
-              <td>Armazena e navega em relacionamentos altamente interconectados com velocidade milissegunda.</td>
-              <td>Linguagens de query específicas (Gremlin, SPARQL).</td>
-              <td>Sistemas de detecção de fraude, motores de recomendação de amigos/produtos e redes sociais.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon Timestream</strong></td>
-              <td>Séries Temporais (Time-Series)</td>
-              <td>Auto-scaling nativo para bilhões de métricas de IoT diárias, ciclo de vida automático (in-memory para magnetic storage).</td>
-              <td>Restrito a dados ordenados por timestamp imutáveis.</td>
-              <td>Telemetria IoT de sensores industriais, métricas de aplicações de infraestrutura, logs de cliques.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon Redshift</strong></td>
-              <td>MPP Data Warehouse (OLAP)</td>
-              <td>Armazenamento colunar com processamento massivo em paralelo para petabytes de dados analíticos.</td>
-              <td>Latência de gravação linha a linha péssima. Não deve ser usado como banco de API de microsserviços.</td>
-              <td>**Data Warehousing corporativo centralizado**, agregação histórica pesada e queries de BI corporativo.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- SECTION 6: COMPARATIVO SQL VS NOSQL VS SQS -->
-    <section class="section" id="sql-nosql-sqs">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">06</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Comparativo e Matriz de Decisão: SQL vs. NoSQL vs. SQS</h2>
-          <p> trade-offs arquiteturais entre persistência transacional, escalabilidade e desacoplamento assíncrono</p>
-        </div>
-      </div>
-
-      <p>Um erro de design comum em arquiteturas distribuídas na AWS é tentar usar a mesma tecnologia para objetivos computacionais opostos. Abaixo detalhamos a comparação física e lógica das soluções:</p>
-
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Característica</th>
-              <th>SQL (ex: Aurora Postgres)</th>
-              <th>NoSQL (ex: DynamoDB)</th>
-              <th>SQS (Simple Queue Service)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Natureza do Serviço</strong></td>
-              <td>Banco de Dados Relacional estruturado (Tabelas/Esquemas rígidos).</td>
-              <td>Banco de Dados Não-Relacional distribuído (Chave-Valor/Documento).</td>
-              <td>Mensageria / Fila de Mensagens distribuída (Fila FIFO ou Standard).</td>
+        <p>O Amazon DynamoDB é um banco de dados NoSQL chave-valor e de documentos, totalmente gerenciado e *serverless*. Ele foi projetado para rodar aplicações de alto desempenho em qualquer escala. A estrutura base do DynamoDB rompe com o modelo relacional tradicional:</p>
+        
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>RDBMS Clássico</th>
+                <th>DynamoDB</th>
+                <th>Definição no NoSQL</th>
               </tr>
-            <tr>
-              <td><strong>Garantias de Consistência</strong></td>
-              <td>Transações ACID estritas (isolação serializável, chaves estrangeiras, consistência forte imediata).</td>
-              <td>Eventualmente consistente (consistência forte sob demanda pagando taxa adicional). Sem ACID nativo multi-tabelas clássico.</td>
-              <td>Exactly-Once (em filas FIFO) ou At-Least-Once (filas Standard). Desacoplamento temporal.</td>
-            </tr>
-            <tr>
-              <td><strong>Escalabilidade de Escrita</strong></td>
-              <td>Vertical (Writer único no Aurora, escala até limites da máquina). Réplicas apenas lêem.</td>
-              <td>Horizontal infinita (auto-scaling automático adicionando partições baseadas nas PKs).</td>
-              <td>Praticamente infinita (escala automaticamente sem provisionamento prévio).</td>
-            </tr>
-            <tr>
-              <td><strong>Padrão de Consulta</strong></td>
-              <td>Queries ad-hoc altamente complexas, joins multi-tabelas, agregações arbitrárias (<code>GROUP BY</code>).</td>
-              <td>Apenas por chaves primárias e índices secundários conhecidos (GSI/LSI). Sem joins.</td>
-              <td>Apenas leitura destrutiva sequencial (consumidor lê a mensagem da fila e a deleta após processar).</td>
-            </tr>
-            <tr>
-              <td><strong>Decisão de Uso (Quando Escolher?)</strong></td>
-              <td>**Quando a integridade relacional é lei** e as queries são imprevisíveis (ex: fechamento contábil, BI flexível).</td>
-              <td>**Quando o padrão de acesso é conhecido** e você exige escala linear infinita com latência estável milissegunda.</td>
-              <td>**Para desacoplar microsserviços**, amortecer picos de carga de escrita (Buffer/Throttling) e garantir resiliência assíncrona.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3 style="margin-top: 30px;">Qual a Melhor Decisão de Quando Usar? (Arquitetura de Ingress Segura)</h3>
-      <p>Em sistemas produtivos resilientes, o design de ingress combina os três serviços em um fluxo cooperativo:</p>
-
-                    <div class="drawio-wrap">
-        <div class="drawio-label"><span class="dot"></span>Arquitetura Event-Driven — SNS · SQS · EventBridge</div>
-        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"380\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n      <mxCell id=\"bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"380\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"title\" value=\"ARQUITETURA EVENT-DRIVEN \u2014 SNS \u00b7 SQS \u00b7 EVENTBRIDGE\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"aurora\" value=\"Aurora DB\nPostgreSQL\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"160\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"evb\" value=\"EventBridge\nCustom Bus\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"200\" y=\"160\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_a_evb\" value=\"CDC/DMS\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"aurora\" target=\"evb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sns\" value=\"SNS\nTopic\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"380\" y=\"80\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sqs\" value=\"SQS\nQueue\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"380\" y=\"240\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_evb_sns\" value=\"Broadcast\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"evb\" target=\"sns\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_evb_sqs\" value=\"Buffer\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"evb\" target=\"sqs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_sf\" value=\"AWS STEP FUNCTIONS\" style=\"labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#7c3aed;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"550\" y=\"50\" width=\"200\" height=\"280\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sf\" value=\"Step\nFunctions\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"570\" y=\"80\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"glue\" value=\"Glue Job\nSpark\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"570\" y=\"170\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sns_err\" value=\"SNS\nAlert\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"170\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sqs_sf\" value=\"Trigger\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sqs\" target=\"sf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sf_glue\" value=\"On Success\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sf\" target=\"glue\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sf_err\" value=\"On Error\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"sf\" target=\"sns_err\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3\" value=\"S3 Silver\nParquet\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"800\" y=\"100\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"cw\" value=\"CloudWatch\nAlarms\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"800\" y=\"230\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_glue_s3\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"glue\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_err_cw\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sns_err\" target=\"cw\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"lmb\" value=\"Lambda\n(Notif)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"550\" y=\"310\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sns_lmb\" value=\"Fan-out\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"sns\" target=\"lmb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root>\n</mxGraphModel>"}'></div>
-
-</div>
-<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> ARQUITETURA EVENT-DRIVEN — SNS · SQS · EVENTBRIDGE, Aurora DB PostgreSQL, EventBridge Custom Bus, CDC/DMS, SNS Topic, SQS Queue, Broadcast, Buffer, AWS STEP FUNCTIONS, Step Functions, Glue Job Spark, SNS Alert, Trigger, On Success, On Error, S3 Silver Parquet, CloudWatch Alarms, Lambda (Notif), Fan-out</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "Arquitetura Event-Driven — SNS · SQS · EventBridge" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
-</div>
-
-      <div class="callout callout-info" style="margin-top:20px;">
-        <strong>Regra de Ouro da Arquitetura Decisória:</strong>
-        <br>1. Use **SQS** na borda (Ingress) sempre que receber dados de sensores ou eventos externos massivos de e-commerce. A fila garante que a sua API responda "202 Accepted" em milissegundos, impedindo que picos de tráfego derrubem ou gerem exaustão de conexões físicas no banco de dados.
-        <br>2. Use o **NoSQL (DynamoDB)** para dados operacionais desestruturados ou rastreamento rápido de estado de curta duração (ex: se o pagamento foi processado ou não).
-        <br>3. Use o **SQL (Aurora)** apenas quando a mensagem for validada e precisar de consistência relacional estrita (ex: alterar balanço de contas bancárias ou gerar a fatura consolidada final do cliente).
-      </div>
-    </section>
-  
-    <!-- SEÇÃO DE REFERÊNCIAS -->
-    <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--muted)">REF</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Referências &amp; Notas de Curadoria</h2>
-          <p>Documentos originais e literatura técnica de referência para este módulo</p>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Tabela</td>
+                <td><strong>Table</strong></td>
+                <td>Coleção de Itens. Sem schema fixo.</td>
+              </tr>
+              <tr>
+                <td>Linha / Registro</td>
+                <td><strong>Item</strong></td>
+                <td>Coleção de Atributos (limite de 400KB por item).</td>
+              </tr>
+              <tr>
+                <td>Coluna</td>
+                <td><strong>Attribute</strong></td>
+                <td>Dado fundamental. Tipos: String, Number, Binary, Map, List.</td>
+              </tr>
+              <tr>
+                <td>Primary Key</td>
+                <td><strong>Partition Key (PK)</strong></td>
+                <td>Define em qual nó/partição o dado será armazenado (Hashing físico).</td>
+              </tr>
+              <tr>
+                <td>Composite Key</td>
+                <td><strong>PK + Sort Key (SK)</strong></td>
+                <td>A PK agrupa itens na mesma partição física, e a SK ordena os itens lexograficamente dentro dessa partição.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-lbl">Database Internals</div>
-          <h4>Alex Petrov (O'Reilly Media)</h4>
-          <p>Arquiteturas e estruturas de armazenamento internas de bancos de dados relacionais e não-relacionais (B-Trees, LSM-Trees, e motores de indexação).</p>
+      </section>
+
+      <section class="content-section">
+        <div class="section-header">
+          <div class="icon-wrapper">
+            <span class="icon">⚡</span>
+          </div>
+          <h2>Single-Table Design</h2>
         </div>
-        <div class="card">
-          <div class="card-lbl">Amazon DynamoDB Developer Guide</div>
-          <h4>AWS Official Documentation</h4>
-          <p>O guia de referência oficial para modelagem NoSQL single-table design, partições lógicas e consumo de RCU/WCU. <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 600;">Acessar Guia</a></p>
+        <p>A "Regra de Ouro" do DynamoDB ditada pela AWS é: <strong>Mantenha o número de tabelas o menor possível (idealmente apenas 1)</strong>. O padrão Single-Table Design (STD) consolida diferentes entidades (Ex: Clientes, Pedidos, Itens de Pedido) em uma única tabela usando nomes genéricos de PK e SK.</p>
+        
+        <div class="callout callout-info">
+          <div class="callout-icon">💡</div>
+          <div class="callout-content">
+            <strong>Por que Single-Table?</strong>
+            <p>O DynamoDB não possui <code>JOINs</code>. Se você normalizar os dados em múltiplas tabelas, precisará fazer múltiplas requisições de rede para carregar uma página (Problema N+1). No STD, você pre-calcula e "pre-junta" os dados gravando-os em Coleções de Itens (Item Collections) baseadas na mesma PK. Com apenas um <code>Query()</code> na PK do Cliente, você retorna os dados do cliente e todos os seus pedidos na mesma requisição de milissegundos.</p>
+          </div>
         </div>
-      </div>
-    </section>
-  </main>
+
+        <h3>Exemplo de Mapeamento Single-Table</h3>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">Item Collection (PK = CUSTOMER#123)</span>
+          </div>
+          <pre><code>PK                 SK                    EntityType   Attributes
+------------------ --------------------- ------------ -------------------------
+CUSTOMER#123       PROFILE#123           Customer     { "Name": "Maria", "Tier": "Gold" }
+CUSTOMER#123       ORDER#998             Order        { "Date": "2023-10-01", "Total": 150 }
+CUSTOMER#123       ORDER#999             Order        { "Date": "2023-10-15", "Total": 320 }</code></pre>
+        </div>
+        <p>Fazendo uma operação <code>Query(PK="CUSTOMER#123", SK begins_with "ORDER#")</code>, você recupera nativamente todo o histórico de compras da Maria, já ordenado (pois a SK dita a ordem de armazenamento físico na partição).</p>
+      </section>
+
+      <section class="content-section">
+        <div class="section-header">
+          <div class="icon-wrapper">
+            <span class="icon">🔍</span>
+          </div>
+          <h2>Índices Secundários (GSIs e LSIs)</h2>
+        </div>
+        <p>A arquitetura de chave primária serve para otimizar os padrões de acesso mais frequentes. Porém, e quando precisamos consultar a tabela por atributos não previstos na Chave Primária? É aqui que entram os Índices Secundários.</p>
+        
+        <div class="grid-2-col">
+          <div class="card secondary-card">
+            <h3>Global Secondary Index (GSI)</h3>
+            <p>Permite criar uma <strong>nova Partition Key e nova Sort Key</strong> copiando (projetando) os dados da tabela base para uma estrutura otimizada nos bastidores.</p>
+            <ul class="feature-list">
+              <li>Pode ser criado ou apagado a qualquer momento.</li>
+              <li>Tem sua própria capacidade provisionada de leitura/escrita.</li>
+              <li>Consome o dobro do armazenamento e custo de escrita, pois replica o item.</li>
+              <li>As leituras no GSI são fortemente Eventuais (Eventual Consistency).</li>
+            </ul>
+          </div>
+          
+          <div class="card secondary-card">
+            <h3>Local Secondary Index (LSI)</h3>
+            <p>Mantém a <strong>mesma Partition Key</strong> da tabela principal, mas altera a Sort Key. Usado quando você precisa classificar a mesma coleção de itens de formas diferentes.</p>
+            <ul class="feature-list">
+              <li><strong>Obrigatório:</strong> Só pode ser criado no momento da criação da tabela.</li>
+              <li>Limita o tamanho da partição base a 10GB.</li>
+              <li>Usa a capacidade de provisionamento da tabela principal.</li>
+              <li>Suporta leituras fortemente consistentes.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section">
+        <div class="section-header">
+          <div class="icon-wrapper">
+            <img src="../../assets/aws-icons/Lambda.png" alt="Lambda" style="width:24px;">
+          </div>
+          <h2>DynamoDB Streams & Change Data Capture (CDC)</h2>
+        </div>
+        <p>O DynamoDB Streams captura uma sequência cronológica de eventos de nível de item em qualquer tabela. Trata-se do verdadeiro <strong>Change Data Capture (CDC)</strong> do ecossistema NoSQL da AWS.</p>
+
+        <p>Ao habilitar o Stream, sempre que um item for criado, alterado ou excluído, o DynamoDB envia um log com a alteração que fica disponível por 24 horas. Esses fluxos são o gatilho perfeito para uma <strong>AWS Lambda</strong> que processa eventos em near-real-time.</p>
+
+        <div class="callout callout-warning">
+          <div class="callout-icon">🔥</div>
+          <div class="callout-content">
+            <strong>Use Cases Poderosos do DynamoDB Streams:</strong>
+            <ul>
+              <li>Replicação de dados em Analytics: Ingestão contínua das mutações da tabela para o <code>S3 Lakehouse</code> ou agregação/Roll-Up views (CQRS).</li>
+              <li>Auditoria e Log de Transações.</li>
+              <li>Notificações Automáticas (ex: Disparar um e-mail de "Boas-vindas" sempre que um <code>Insert</code> ocorrer na tabela de <code>Users</code>).</li>
+              <li>Sincronização com OpenSearch para habilitar Full-Text Search dos dados da tabela.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      
+      <section class="content-section">
+        <h2>Padrões de Precificação Básicos</h2>
+        <p>O DynamoDB oferece dois modos flexíveis de cobrança, adequados para as diferentes maturidades do seu workload:</p>
+        <ul class="feature-list">
+          <li><strong>On-Demand:</strong> Você não provisiona capacidade. O DynamoDB escala automaticamente e cobra exatemente pelos Write Request Units (WRU) e Read Request Units (RRU) consumidos. Ideal para cargas imprevisíveis, Data Lakes e workloads esporádicos.</li>
+          <li><strong>Provisioned (Com Auto Scaling):</strong> Você especifica os WCU (Write Capacity Units) e RCU (Read Capacity Units). Mais barato em cenários com tráfego denso e previsível (baseline constante).</li>
+        </ul>
+      </section>
+
+      <footer class="content-footer">
+        <div class="nav-links">
+          <a href="computacao-bancos.html" class="nav-btn prev">
+            <span class="icon">←</span>
+            <span class="text">Anterior: Containers & ECS</span>
+          </a>
+          <a href="event-driven-mensageria.html" class="nav-btn next">
+            <span class="text">Próximo: Event-Driven SQS/SNS</span>
+            <span class="icon">→</span>
+          </a>
+        </div>
+      </footer>
+    </main>
 </div>
 
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
