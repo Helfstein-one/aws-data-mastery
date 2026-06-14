@@ -302,6 +302,7 @@
         <a href="../../pages/engenharia/finops.html" class="nav-a" data-page="finops"><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
         <a href="../../pages/engenharia/finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>Pilares de FinOps em Dados</a>
         <a href="../../pages/engenharia/finops.html#finops-boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Engenharia</a>
+        <a href="../../pages/engenharia/finops.html#finops-aws-cost-explorer" class="nav-sub"><span class="nav-sdot"></span>AWS Cost Explorer & Trade-offs</a>
         <a href="../../pages/engenharia/finops.html#finops-analise" class="nav-sub"><span class="nav-sdot"></span>Análise de Custos Analíticos</a>
         <a href="../../pages/engenharia/finops.html#finops-terraform" class="nav-sub"><span class="nav-sdot"></span>Tagging com Terraform</a>
       </div>
@@ -463,9 +464,78 @@
       </div>
     </section>
 
+    
+    <section class="section" id="finops-aws-cost-explorer">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">03</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Monitoramento e Trade-offs com AWS Cost Explorer</h2>
+          <p>Visibilidade de faturamento, alarmes financeiros e compilado de decisões arquiteturais na AWS.</p>
+        </div>
+      </div>
+
+      <h3>Compilado de Trade-offs: Preços e Componentes</h3>
+      <p>Decisões de engenharia devem equilibrar performance e custo. Abaixo, um resumo comparativo de componentes críticos de um pipeline de dados.</p>
+      
+      <div style="overflow-x: auto; margin-bottom: 24px;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; background: var(--slate); border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
+          <thead style="background: #1e293b; color: #f8fafc; font-family: 'DM Mono', monospace; font-size: 13px;">
+            <tr>
+              <th style="padding: 12px 16px;">Componente</th>
+              <th style="padding: 12px 16px;">Modelo de Precificação</th>
+              <th style="padding: 12px 16px;">Trade-off Principal (Quando Usar)</th>
+              <th style="padding: 12px 16px;">Risco FinOps</th>
+            </tr>
+          </thead>
+          <tbody style="font-size: 14px; color: #cbd5e1;">
+            <tr style="border-bottom: 1px solid #1e293b;">
+              <td style="padding: 12px 16px;"><strong>S3 vs DynamoDB</strong></td>
+              <td style="padding: 12px 16px;">S3: $0.023/GB + Puts/Gets<br>Dynamo: WCU/RCU ou On-Demand</td>
+              <td style="padding: 12px 16px;">S3 para armazenamento de grandes volumes (Data Lake). DynamoDB para acesso transacional rápido.</td>
+              <td style="padding: 12px 16px;">Custo de RCU/WCU escalando infinitamente sem limites.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #1e293b;">
+              <td style="padding: 12px 16px;"><strong>EMR vs Glue</strong></td>
+              <td style="padding: 12px 16px;">EMR: Instância EC2/hr + EMR Fee<br>Glue: $0.44 por DPU/Hora</td>
+              <td style="padding: 12px 16px;">EMR (Spot) para processamento contínuo. Glue para pipelines Serverless esporádicos.</td>
+              <td style="padding: 12px 16px;">Glue rodando jobs lentos consome DPUs rapidamente ($$).</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #1e293b;">
+              <td style="padding: 12px 16px;"><strong>Athena vs Redshift</strong></td>
+              <td style="padding: 12px 16px;">Athena: $5 por TB escaneado<br>Redshift: RA3 Nodes ($/hr) + Storage</td>
+              <td style="padding: 12px 16px;">Athena para queries ad-hoc. Redshift para Data Warehouse contínuo e Dashboards BI.</td>
+              <td style="padding: 12px 16px;">Athena sem <code>PARTITION</code> faz <i>Full Scan</i> custoso.</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 16px;"><strong>Lambda vs ECS/Fargate</strong></td>
+              <td style="padding: 12px 16px;">Lambda: GB-segundo + Requests<br>ECS: vCPU/hr e GB/hr</td>
+              <td style="padding: 12px 16px;">Lambda para orquestração leve. ECS para APIs robustas e containers pesados.</td>
+              <td style="padding: 12px 16px;">Lambda com timeout alto em tarefas IO-bound.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card">
+          <h4>AWS Cost Explorer</h4>
+          <p>O <strong>Cost Explorer</strong> permite visualizar tendências históricas e projetar custos futuros. Na Engenharia de Dados, deve-se habilitar <em>Cost Allocation Tags</em> (Ex: <code>Project: DataLake</code>) para separar custos por centro de custo (Storage, Compute, Analytics).</p>
+        </div>
+        <div class="card">
+          <h4>AWS Budgets & Alarmes</h4>
+          <p>Para evitar faturas astronômicas, utilize <strong>AWS Budgets</strong> para criar limites de gastos e configurar alertas via SNS/E-mail quando a previsão exceder 80% do orçamento mensal. Ações automáticas podem ser ligadas ao AWS Chatbot.</p>
+        </div>
+      </div>
+      
+      <div class="alert alert-warning" style="margin-top: 20px;">
+        <strong>Dica de Arquitetura:</strong> Ao desenhar pipelines, sempre apresente justificativas financeiras. "Eu escolheria Glue pelo tempo rápido de deployment, mas se a volumetria passar de 5 Terabytes diários, faria sentido migrar para EMR com Instâncias Spot para economizar 70%." Isso demonstra forte maturidade em FinOps.
+      </div>
+    </section>
+
     <section class="section" id="finops-analise">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--ok)">03</div>
+        <div class="sec-num" style="color:var(--ok)">XX</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--ok)"></div>
           <h2>Automação &amp; Serverless Anomaly Detection</h2>
@@ -655,7 +725,7 @@ resource "aws_budgets_budget" "lakehouse_budget" {
 
     <section class="section" id="finops-terraform">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--ok)">04</div>
+        <div class="sec-num" style="color:var(--ok)">XX</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--ok)"></div>
           <h2>Estratégia de Tagging com Terraform IaC</h2>
