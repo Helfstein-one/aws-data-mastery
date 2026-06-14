@@ -660,7 +660,135 @@ push-ecr: build
       </div>
     </section>
 
-  </main>
+  
+    <section class="section" id="docker-avancado">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#0ea5e9">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0ea5e9"></div>
+          <h2>Boas Práticas Extremos: Imagens Seguras e Leves</h2>
+          <p>Multi-stage Builds e Cache de Camadas em Alta Performance</p>
+        </div>
+      </div>
+
+      <p>Escrever um <code>Dockerfile</code> que simplesmente funciona é fácil. Escrever um que seja rápido de fazer *Build*, leve para baixar e seguro contra ataques é a marca de um Especialista.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <div class="cc-tag">Layer Caching</div>
+          <div class="cc-title">Copiando Requisitos Primeiro</div>
+          <div class="cc-body">
+            O Docker armazena cada linha do seu Dockerfile em uma camada. Se você copiar o código fonte <em>antes</em> do <code>requirements.txt</code>, qualquer mudança em um script forçará o recarregamento de todas as bibliotecas. Copie dependências primeiro!
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">Multi-Stage Build</div>
+          <div class="cc-title">Redução de Tamanho</div>
+          <div class="cc-body">
+            Você compila bibliotecas em C (como Numpy ou Pandas) em um container "Builder" pesando 2GB e depois copia apenas os binários para a imagem final "Runner", que pesará 300MB.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">Security</div>
+          <div class="cc-title">Usuário Non-Root</div>
+          <div class="cc-body">
+            Nunca rode processos dentro do container como `root` (UID 0). Crie um usuário dedicado (ex: `appuser`). Isso impede que invasões comprometam o Host Linux subjacente.
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block" style="margin-top: 20px;">
+        <div class="cb-hdr"><span class="cb-lang">Dockerfile - Engenharia de Dados (Multi-stage)</span></div>
+        <pre><code class="language-dockerfile"># ESTÁGIO 1: Builder (Pesado, com compiladores C++)
+FROM python:3.9-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN apt-get update && apt-get install -y gcc     && pip install --user -r requirements.txt
+
+# ESTÁGIO 2: Runner (Leve, apenas para execução)
+FROM python:3.9-slim
+WORKDIR /app
+
+# Criação do usuário Non-Root por segurança
+RUN useradd -m appuser
+USER appuser
+
+# Copia apenas as bibliotecas já compiladas do estágio anterior
+COPY --from=builder /root/.local /home/appuser/.local
+ENV PATH=/home/appuser/.local/bin:$PATH
+
+COPY src/ .
+CMD ["python", "main_pipeline.py"]</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="docker-cases">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#0ea5e9">07</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0ea5e9"></div>
+          <h2>Cases Reais: Orquestração na AWS (ECS)</h2>
+          <p>O Fim da Máquina Virtual "Zumbi"</p>
+        </div>
+      </div>
+
+      <div class="drawio-container">
+        <div class="drawio-diagram" data-mxgraph='{"highlight":"#0ea5e9","nav":true,"resize":true,"toolbar":"zoom layers lightbox","xml":"<mxfile host=&quot;app.diagrams.net&quot; agent=&quot;Mozilla/5.0&quot; version=&quot;24.4.10&quot;>
+  <diagram name=&quot;ECS Fargate&quot; id=&quot;a9b8c7&quot;>
+    <mxGraphModel dx=&quot;1000&quot; dy=&quot;800&quot; grid=&quot;1&quot; gridSize=&quot;10&quot; guides=&quot;1&quot; tooltips=&quot;1&quot; connect=&quot;1&quot; arrows=&quot;1&quot; fold=&quot;1&quot; page=&quot;1&quot; pageScale=&quot;1&quot; pageWidth=&quot;827&quot; pageHeight=&quot;1169&quot; math=&quot;0&quot; shadow=&quot;0&quot;>
+      <root>
+        <mxCell id=&quot;0&quot; />
+        <mxCell id=&quot;1&quot; parent=&quot;0&quot; />
+        <!-- VPC -->
+        <mxCell id=&quot;vpc&quot; value=&quot;&lt;b&gt;AWS Cloud (VPC)&lt;/b&gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;verticalAlign=top;align=left;spacingTop=5;spacingLeft=5;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;100&quot; y=&quot;50&quot; width=&quot;600&quot; height=&quot;400&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <!-- ECR -->
+        <mxCell id=&quot;ecr&quot; value=&quot;&lt;b&gt;Amazon ECR&lt;/b&gt;&lt;hr&gt;Docker Images&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;150&quot; y=&quot;100&quot; width=&quot;120&quot; height=&quot;80&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <!-- ECS Fargate Cluster -->
+        <mxCell id=&quot;ecs&quot; value=&quot;&lt;b&gt;ECS Fargate Cluster (Private Subnet)&lt;/b&gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=center;spacingTop=5;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;350&quot; y=&quot;100&quot; width=&quot;300&quot; height=&quot;200&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <!-- Tasks -->
+        <mxCell id=&quot;task1&quot; value=&quot;&lt;b&gt;Task 1&lt;/b&gt;&lt;br&gt;Data Pipeline&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;380&quot; y=&quot;150&quot; width=&quot;100&quot; height=&quot;60&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <mxCell id=&quot;task2&quot; value=&quot;&lt;b&gt;Task 2&lt;/b&gt;&lt;br&gt;ML Model&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;510&quot; y=&quot;150&quot; width=&quot;100&quot; height=&quot;60&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <!-- S3 -->
+        <mxCell id=&quot;s3&quot; value=&quot;&lt;b&gt;Amazon S3&lt;/b&gt;&lt;hr&gt;Data Lake&quot; style=&quot;shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;440&quot; y=&quot;340&quot; width=&quot;120&quot; height=&quot;90&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id=&quot;e1&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;ecr&quot; target=&quot;ecs&quot;>
+          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;>
+            <mxPoint x=&quot;300&quot; y=&quot;140&quot; as=&quot;targetPoint&quot; />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id=&quot;e2&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;task1&quot; target=&quot;s3&quot;>
+          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <mxCell id=&quot;e3&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;task2&quot; target=&quot;s3&quot;>
+          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot; />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>"}'></div>
+      </div>
+
+      <h3>Case 1: Migrando Cron Jobs para o ECS Fargate</h3>
+      <p><strong>Cenário:</strong> Um banco tinha uma máquina EC2 rodando 15 scripts de extração em Cron Tabs. Frequentemente os scripts conflitavam por falta de memória, a máquina travava de madrugada, e alguém tinha que acordar para reiniciá-la.</p>
+      <p><strong>A Solução:</strong> A equipe transformou cada script em uma Imagem Docker isolada e os enviou para o <strong>Amazon ECR</strong>. Eles então utilizaram o <strong>AWS ECS Fargate</strong> (modo Serverless de Containers da AWS) com a configuração <em>Scheduled Task</em> (via Amazon EventBridge).</p>
+      <p><strong>O Resultado:</strong> Agora, cada extração sobe seu próprio micro-computador independente apenas pela duração da execução (por exemplo, 5 minutos), desliga imediatamente após gravar no S3 e economiza custos de ociosidade, além de garantir isolamento de dependências.</p>
+
+      <h3>VPC Endpoints (O Detalhe Oculto)</h3>
+      <p>Na arquitetura do diagrama acima, observe que o Cluster Fargate reside em uma <strong>Private Subnet</strong> (sem acesso direto à internet para segurança bancária). Para conseguir fazer o <code>docker pull</code> do ECR de forma privada sem cruzar a internet, configura-se um <em>VPC Endpoint</em> ligando diretamente a rede interna da AWS aos serviços do ECR e S3.</p>
+    </section>
+</main>
 </div>
 <script>
 function toggleNav() {

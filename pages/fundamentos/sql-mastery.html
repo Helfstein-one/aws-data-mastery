@@ -650,7 +650,130 @@ TBLPROPERTIES (
 );</code></pre>
       </div>
     </section>
-  </main>
+  
+    <section class="section" id="modelagem-avancada">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f59e0b">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f59e0b"></div>
+          <h2>Boas Práticas de Modelagem Analítica</h2>
+          <p>Organizando Terabytes de dados para consumo eficiente</p>
+        </div>
+      </div>
+
+      <p>Consultar dados crus (Raw/Bronze) diretamente em dashboards é uma receita certa para lentidão e altos custos. O motor SQL precisa que os dados estejam modelados para evitar <em>Joins</em> complexos em tempo real.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <div class="cc-tag">Star Schema (Kimball)</div>
+          <div class="cc-title">O Padrão Ouro</div>
+          <div class="cc-body">
+            Centraliza os eventos em uma tabela longa e estreita (<strong>Fato</strong>) e as descrições em tabelas curtas e largas (<strong>Dimensões</strong>). Permite leitura rápida e agregações simples.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">OBT / Denormalization</div>
+          <div class="cc-title">One Big Table</div>
+          <div class="cc-body">
+            Em bancos colunares modernos, realizar joins pode ser caro. Criamos uma "Única Tabela Grande" onde as dimensões já estão pré-juntadas (desnormalizadas), reduzindo o tempo de leitura ao custo de maior espaço de armazenamento.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">Data Vault</div>
+          <div class="cc-title">Auditoria e Histórico</div>
+          <div class="cc-body">
+            Modelo focado na camada Enterprise (Hubs, Links, Satellites). Altamente auditável e escalável para múltiplos sistemas de origem, porém demasiadamente complexo para consumo direto por analistas.
+          </div>
+        </div>
+      </div>
+
+      <div class="drawio-container">
+        <div class="drawio-diagram" data-mxgraph='{"highlight":"#f59e0b","nav":true,"resize":true,"toolbar":"zoom layers lightbox","xml":"<mxfile host=&quot;app.diagrams.net&quot; agent=&quot;Mozilla/5.0&quot; version=&quot;24.4.10&quot;>
+  <diagram name=&quot;Star Schema&quot; id=&quot;x1y2z3&quot;>
+    <mxGraphModel dx=&quot;1000&quot; dy=&quot;800&quot; grid=&quot;1&quot; gridSize=&quot;10&quot; guides=&quot;1&quot; tooltips=&quot;1&quot; connect=&quot;1&quot; arrows=&quot;1&quot; fold=&quot;1&quot; page=&quot;1&quot; pageScale=&quot;1&quot; pageWidth=&quot;827&quot; pageHeight=&quot;1169&quot; math=&quot;0&quot; shadow=&quot;0&quot;>
+      <root>
+        <mxCell id=&quot;0&quot; />
+        <mxCell id=&quot;1&quot; parent=&quot;0&quot; />
+        <!-- Fato -->
+        <mxCell id=&quot;fact&quot; value=&quot;&lt;b&gt;Fato_Vendas&lt;/b&gt;&lt;hr&gt;id_venda&lt;br&gt;id_cliente (FK)&lt;br&gt;id_produto (FK)&lt;br&gt;id_data (FK)&lt;br&gt;valor_total&quot; style=&quot;shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;350&quot; y=&quot;250&quot; width=&quot;120&quot; height=&quot;130&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <!-- Dimensões -->
+        <mxCell id=&quot;dim1&quot; value=&quot;&lt;b&gt;Dim_Cliente&lt;/b&gt;&lt;hr&gt;id_cliente (PK)&lt;br&gt;nome&lt;br&gt;cidade&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;150&quot; y=&quot;100&quot; width=&quot;120&quot; height=&quot;80&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <mxCell id=&quot;dim2&quot; value=&quot;&lt;b&gt;Dim_Produto&lt;/b&gt;&lt;hr&gt;id_produto (PK)&lt;br&gt;categoria&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;550&quot; y=&quot;100&quot; width=&quot;120&quot; height=&quot;80&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <mxCell id=&quot;dim3&quot; value=&quot;&lt;b&gt;Dim_Data&lt;/b&gt;&lt;hr&gt;id_data (PK)&lt;br&gt;ano&lt;br&gt;mes&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
+          <mxGeometry x=&quot;350&quot; y=&quot;450&quot; width=&quot;120&quot; height=&quot;80&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <!-- Edges -->
+        <mxCell id=&quot;e1&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;dim1&quot; target=&quot;fact&quot;>
+          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <mxCell id=&quot;e2&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;dim2&quot; target=&quot;fact&quot;>
+          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot; />
+        </mxCell>
+        <mxCell id=&quot;e3&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;dim3&quot; target=&quot;fact&quot;>
+          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot; />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>"}'></div>
+      </div>
+    </section>
+
+    <section class="section" id="sql-cases-reais">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f59e0b">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f59e0b"></div>
+          <h2>Cases Reais de Otimização e Avanço</h2>
+          <p>Arquitetura em ação no mundo corporativo</p>
+        </div>
+      </div>
+
+      <h3>Case 1: Refatoração com Predicate Pushdown</h3>
+      <p><strong>Cenário:</strong> Uma query analítica lendo um bucket S3 com formato Parquet estava demorando 4 horas no Athena.</p>
+      <p><strong>Ação:</strong> A tabela original não estava particionada e a query executava um <em>Full Table Scan</em> (lia todos os arquivos do bucket). O time reescreveu a tabela usando o formato Iceberg particionado por <code>data_evento</code>.</p>
+      <p><strong>A Otimização:</strong> Ao adicionar a cláusula <code>WHERE data_evento = '2026-06-01'</code>, o motor do Athena conseguiu ignorar 99% dos arquivos do bucket antes mesmo de lê-los (fenômeno conhecido como <em>Predicate Pushdown</em>), reduzindo a execução para 5 minutos.</p>
+
+      <h3>Comandos Avançados Adicionais</h3>
+      <p>Existem padrões complexos que resolvem problemas difíceis de estrutura.</p>
+
+      <div class="code-block">
+        <div class="cb-hdr"><span class="cb-lang">SQL - CTE Recursiva (Hierarquias)</span></div>
+        <pre><code class="language-sql">-- Encontrando toda a cadeia de liderança de um funcionário
+WITH RECURSIVE employee_hierarchy AS (
+    -- Caso Base: o CEO (sem gerente)
+    SELECT id, name, manager_id, 1 as level
+    FROM employees WHERE manager_id IS NULL
+
+    UNION ALL
+
+    -- Passo Recursivo: junta os funcionários com os gerentes encontrados
+    SELECT e.id, e.name, e.manager_id, h.level + 1
+    FROM employees e
+    JOIN employee_hierarchy h ON e.manager_id = h.id
+)
+SELECT * FROM employee_hierarchy;</code></pre>
+      </div>
+
+      <div class="code-block" style="margin-top: 20px;">
+        <div class="cb-hdr"><span class="cb-lang">SQL - Pivot Analítico Manual</span></div>
+        <pre><code class="language-sql">-- Transformando linhas em colunas (quando o banco não suporta PIVOT nativo)
+SELECT 
+    vendedor_id,
+    SUM(CASE WHEN trimestre = 'Q1' THEN valor_venda ELSE 0 END) AS total_q1,
+    SUM(CASE WHEN trimestre = 'Q2' THEN valor_venda ELSE 0 END) AS total_q2,
+    SUM(CASE WHEN trimestre = 'Q3' THEN valor_venda ELSE 0 END) AS total_q3
+FROM vendas
+GROUP BY vendedor_id;</code></pre>
+      </div>
+    </section>
+</main>
 </div>
 <script>
 function toggleNav() {
