@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado.">
+  <title>AWS Data Mastery - Event-Driven & Mensageria</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar">
+  <div class="nav-logo">
+    <div class="t">AWS Data<br>Engineering</div>
+    <div class="s">Portal de Estudos</div>
+    <div class="auth" style="font-family: 'DM Mono', monospace; font-size: 8px; color: #38bdf8; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase;">Autor: Mauricio Helfstein</div>
+  </div>
+  <div style="padding:0 12px">
+    
+    <!-- 1. Visão Geral & Introdução -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('visao-geral-cat', this)">
+      <span>🗺️ Visão Geral & Introdução</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="visao-geral-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../index.html" class="nav-a" data-page="index"><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/soft-skills.html" class="nav-a" data-page="soft-skills"><span class="nav-dot" style="background:var(--spark)"></span>🧠 Soft Skills & Liderança</a>
+        <a href="../../pages/fundamentos/soft-skills.html#personas" class="nav-sub"><span class="nav-sdot"></span>Personas do Ecossistema</a>
+        <a href="../../pages/fundamentos/soft-skills.html#como-falar" class="nav-sub"><span class="nav-sdot"></span>Como Falar com Cada Persona</a>
+        <a href="../../pages/fundamentos/soft-skills.html#framework-talk" class="nav-sub"><span class="nav-sdot"></span>Framework T.A.L.K.</a>
+        <a href="../../pages/fundamentos/soft-skills.html#lideranca" class="nav-sub"><span class="nav-sdot"></span>Liderança Técnica &amp; Gestão</a>
+        <a href="../../pages/fundamentos/soft-skills.html#pilares" class="nav-sub"><span class="nav-sdot"></span>Os 8 Pilares da Cultura</a>
+        <a href="../../pages/fundamentos/soft-skills.html#implementacao" class="nav-sub"><span class="nav-sdot"></span>Plano de Implementação</a>
+        <a href="../../pages/fundamentos/soft-skills.html#cfo-pitch" class="nav-sub"><span class="nav-sdot"></span>Pilar 9: Pitch Executivo</a>
+      </div>
+    </div>
+
+    <!-- 2. Arquitetura & Fundamentos -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('arquitetura-fundamentos-cat', this)">
+      <span>📐 Arquitetura & Fundamentos</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="arquitetura-fundamentos-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/architecture.html" class="nav-a" data-page="architecture"><span class="nav-dot" style="background:var(--arch)"></span>📐 Arquitetura de Dados</a>
+        
+        <div class="nav-sub-lbl">1. Fundamentos &amp; Padrões</div>
+        <a href="../../pages/fundamentos/architecture.html#pilares" class="nav-sub"><span class="nav-sdot"></span>Os 7 Pilares de uma Arquitetura</a>
+        <a href="../../pages/fundamentos/architecture.html#lakehouse" class="nav-sub"><span class="nav-sdot"></span>Modern Data Lakehouse</a>
+        <a href="../../pages/fundamentos/architecture.html#lambda" class="nav-sub"><span class="nav-sdot"></span>Arquitetura Lambda</a>
+        <a href="../../pages/fundamentos/architecture.html#kappa" class="nav-sub"><span class="nav-sdot"></span>Arquitetura Kappa</a>
+        <a href="../../pages/fundamentos/architecture.html#comparativo-arquiteturas" class="nav-sub"><span class="nav-sdot"></span>Comparativo de Arquiteturas</a>
+        <a href="../../pages/fundamentos/architecture.html#datamesh" class="nav-sub"><span class="nav-sdot"></span>Data Mesh: Governança</a>
+
+        <div class="nav-sub-lbl">2. Mensageria, Eventos &amp; Workflows</div>
+        <a href="../../pages/fundamentos/architecture.html#mensageria" class="nav-sub"><span class="nav-sdot"></span>Padrões de Mensageria e Event-Driven</a>
+        <a href="../../pages/fundamentos/architecture.html#kafka" class="nav-sub"><span class="nav-sdot"></span>Apache Kafka &amp; Amazon MSK</a>
+        <a href="../../pages/fundamentos/architecture.html#triggers" class="nav-sub"><span class="nav-sdot"></span>Amazon EventBridge e Triggers</a>
+        <a href="../../pages/fundamentos/architecture.html#workflows" class="nav-sub"><span class="nav-sdot"></span>Orquestração e Workflows de Dados</a>
+
+        <div class="nav-sub-lbl">3. Modelagem &amp; Produtos de Dados</div>
+        <a href="../../pages/fundamentos/architecture.html#modelagem-dados" class="nav-sub"><span class="nav-sdot"></span>Paradigmas de Modelagem</a>
+        <a href="../../pages/fundamentos/architecture.html#modelagem" class="nav-sub"><span class="nav-sdot"></span>Frameworks: Kimball vs Inmon</a>
+        <a href="../../pages/fundamentos/architecture.html#modelagem-dimensional-profunda" class="nav-sub"><span class="nav-sdot"></span>Modelagem Dimensional Profunda</a>
+        <a href="../../pages/fundamentos/architecture.html#data-product-management" class="nav-sub"><span class="nav-sdot"></span>Gestão de Produtos de Dados</a>
+
+        <div class="nav-sub-lbl">4. Engenharia, Tuning &amp; Governança</div>
+        <a href="../../pages/fundamentos/architecture.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>AWS Lake Formation</a>
+        <a href="../../pages/fundamentos/architecture.html#tuning" class="nav-sub"><span class="nav-sdot"></span>Tuning de Performance</a>
+        <a href="../../pages/fundamentos/architecture.html#smallfiles" class="nav-sub"><span class="nav-sdot"></span>O Problema de Small Files</a>
+        <a href="../../pages/fundamentos/architecture.html#migracao" class="nav-sub"><span class="nav-sdot"></span>Migração de Bancos de Dados</a>
+        <a href="../../pages/fundamentos/architecture.html#tradeoffs" class="nav-sub"><span class="nav-sdot"></span>Tradeoffs de Tecnologia</a>
+        <a href="../../pages/fundamentos/architecture.html#finops" class="nav-sub"><span class="nav-sdot"></span>Pilar de FinOps em Engenharia</a>
+        <a href="../../pages/fundamentos/architecture.html#cicd" class="nav-sub"><span class="nav-sdot"></span>CI/CD para Pipelines de Dados</a>
+        <a href="../../pages/fundamentos/architecture.html#dbt" class="nav-sub"><span class="nav-sdot"></span>dbt na AWS</a>
+        <a href="../../pages/fundamentos/architecture.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Data Observability &amp; Lineage</a>
+        <a href="../../pages/fundamentos/architecture.html#data-apis" class="nav-sub"><span class="nav-sdot"></span>APIs de Dados &amp; API Gateway</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/plataforma-dados.html" class="nav-a" data-page="plataforma-dados"><span class="nav-dot" style="background:var(--accent)"></span>🏗️ Plataforma de Dados</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#estrategico" class="nav-sub"><span class="nav-sdot"></span>Plataforma de Risco &amp; Crédito</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#cenario-cdc" class="nav-sub"><span class="nav-sdot"></span>Plataforma de Ingestão CDC</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#cenario-sharing" class="nav-sub"><span class="nav-sdot"></span>Plataforma de Data Mesh</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#cenario-lineage" class="nav-sub"><span class="nav-sdot"></span>Plataforma de Governança</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#cenario-llmops" class="nav-sub"><span class="nav-sdot"></span>Plataforma de IA Generativa</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#topologia" class="nav-sub"><span class="nav-sdot"></span>Topologia de Times &amp; Jornada</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#arquitetura" class="nav-sub"><span class="nav-sdot"></span>Barramento de Serviços</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#alinhamento" class="nav-sub"><span class="nav-sdot"></span>Pitch de Alinhamento &amp; Venda</a>
+        <a href="../../pages/fundamentos/plataforma-dados.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas Técnicas &amp; Cases</a>
+      </div>
+
+    </div>
+
+    <!-- 2.5 Linguagens & IaC -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('linguagens-iac-cat', this)">
+      <span>💻 Linguagens &amp; IaC</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="linguagens-iac-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/data-engineering-oop.html" class="nav-a" data-page="data-engineering-oop"><span class="nav-dot" style="background:#f43f5e"></span>💻 Python &amp; OOP para Dados</a>
+        <a href="../../pages/fundamentos/data-engineering-oop.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Código Python</a>
+        <a href="../../pages/fundamentos/data-engineering-oop.html#oop-dados" class="nav-sub"><span class="nav-sdot"></span>Orientação a Objetos em Dados</a>
+        <a href="../../pages/fundamentos/data-engineering-oop.html#design-patterns" class="nav-sub"><span class="nav-sdot"></span>Design Patterns de Engenharia</a>
+        <a href="../../pages/fundamentos/data-engineering-oop.html#oop-cases-perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas de Arquitetura &amp; Cases</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/sql-mastery.html" class="nav-a" data-page="sql-mastery"><span class="nav-dot" style="background:#f59e0b"></span>🗄️ SQL para Dados</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#fundamentos-sql" class="nav-sub"><span class="nav-sdot"></span>A Evolução do SQL Analítico</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#ctes-window" class="nav-sub"><span class="nav-sdot"></span>CTEs e Window Functions</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#iceberg-hive" class="nav-sub"><span class="nav-sdot"></span>SQL em Data Lakes</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/terraform.html" class="nav-a" data-page="terraform"><span class="nav-dot" style="background:#8b5cf6"></span>🏗️ Terraform &amp; IaC</a>
+        <a href="../../pages/fundamentos/terraform.html#fundamentos-terraform" class="nav-sub"><span class="nav-sdot"></span>Conceitos Básicos de Terraform</a>
+        <a href="../../pages/fundamentos/terraform.html#comandos-terraform" class="nav-sub"><span class="nav-sdot"></span>Estrutura e Comandos Principais</a>
+        <a href="../../pages/fundamentos/terraform.html#arquitetura-terraform" class="nav-sub"><span class="nav-sdot"></span>Arquitetura e Integração AWS</a>
+      </div>
+    </div>
+
+    <!-- 3. Engenharia de Dados (Core) -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('engenharia-core-cat', this)">
+      <span>⚙️ Engenharia de Dados (Core)</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="engenharia-core-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/ingestion.html" class="nav-a" data-page="ingestion"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Ingestão &amp; Streaming</a>
+        <a href="../../pages/engenharia/ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Amazon Kinesis: Teoria</a>
+        <a href="../../pages/engenharia/ingestion.html#kinesis-avancado" class="nav-sub"><span class="nav-sdot"></span>Kinesis Deep Dive: EFO, KCL</a>
+        <a href="../../pages/engenharia/ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Kinesis Firehose Dynamic Partitioning</a>
+        <a href="../../pages/engenharia/ingestion.html#firehose-avancado" class="nav-sub"><span class="nav-sdot"></span>Firehose Deep Dive: Buffering</a>
+        <a href="../../pages/engenharia/ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>Amazon MSK: Teoria &amp; Prática</a>
+        <a href="../../pages/engenharia/ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate: Ingestão Customizada</a>
+        <a href="../../pages/engenharia/ingestion.html#cdc-comparativo" class="nav-sub"><span class="nav-sdot"></span>Change Data Capture (CDC)</a>
+        <a href="../../pages/engenharia/ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>AWS DMS: Teoria &amp; Prática</a>
+        <a href="../../pages/engenharia/ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB Ingestion</a>
+        <a href="../../pages/engenharia/ingestion.html#rds" class="nav-sub"><span class="nav-sdot"></span>RDS / Aurora Ingestion</a>
+        <a href="../../pages/engenharia/ingestion.html#comparativo" class="nav-sub"><span class="nav-sdot"></span>Batch vs Streaming vs Lambda</a>
+        <a href="../../pages/engenharia/ingestion.html#tabela-aws" class="nav-sub"><span class="nav-sdot"></span>Mapeamento de Ingestão</a>
+        <a href="../../pages/engenharia/ingestion.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns de Ingestão</a>
+      </div>
+      <div class="nav-page-group">
+         <a href="../../pages/engenharia/processing.html" class="nav-a" data-page="processing"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Processamento Spark &amp; EMR</a>
+         
+         <div class="nav-sub-lbl">SPARK CORE &amp; INTERNALS</div>
+         <a href="../../pages/engenharia/processing.html#spark-conceitos" class="nav-sub"><span class="nav-sdot"></span>Apache Spark: Teoria</a>
+         <a href="../../pages/engenharia/processing.html#spark-arch" class="nav-sub"><span class="nav-sdot"></span>Arquitetura e Ciclo de Execução</a>
+         <a href="../../pages/engenharia/processing.html#spark-yarn-pyramid" class="nav-sub"><span class="nav-sdot"></span>Hadoop, YARN e Pirâmide</a>
+         <a href="../../pages/engenharia/processing.html#spark-math" class="nav-sub"><span class="nav-sdot"></span>Cálculo de Alocação de Memória</a>
+         <a href="../../pages/engenharia/processing.html#tungsten" class="nav-sub"><span class="nav-sdot"></span>Tungsten &amp; JIT Engine</a>
+         <a href="../../pages/engenharia/processing.html#spark-gc" class="nav-sub"><span class="nav-sdot"></span>Garbage Collection &amp; Heap Tuning</a>
+
+         <div class="nav-sub-lbl">DESENVOLVIMENTO &amp; TUNING</div>
+         <a href="../../pages/engenharia/processing.html#spark-skew" class="nav-sub"><span class="nav-sdot"></span>Shuffle, Skew, Salting</a>
+         <a href="../../pages/engenharia/processing.html#spark-advanced-functions" class="nav-sub"><span class="nav-sdot"></span>Funções Avançadas PySpark</a>
+         <a href="../../pages/engenharia/processing.html#spark-dynamic-write" class="nav-sub"><span class="nav-sdot"></span>Dinâmica de Escrita</a>
+         <a href="../../pages/engenharia/processing.html#spark-joins" class="nav-sub"><span class="nav-sdot"></span>Estratégias de Join no Spark</a>
+         <a href="../../pages/engenharia/processing.html#spark-cache" class="nav-sub"><span class="nav-sdot"></span>Níveis de Persistência</a>
+         <a href="../../pages/engenharia/processing.html#spark-streaming" class="nav-sub"><span class="nav-sdot"></span>Spark Structured Streaming</a>
+         <a href="../../pages/engenharia/processing.html#spark-tuning" class="nav-sub"><span class="nav-sdot"></span>Tuning do Spark: Guia Completo</a>
+
+         <div class="nav-sub-lbl">DEBUGGING &amp; DIAGNÓSTICO</div>
+         <a href="../../pages/engenharia/processing.html#spark-ui-deepdive" class="nav-sub"><span class="nav-sdot"></span>Guia Prático Spark UI</a>
+         <a href="../../pages/engenharia/processing.html#spark-debug" class="nav-sub"><span class="nav-sdot"></span>Debugging Spark UI</a>
+         <a href="../../pages/engenharia/processing.html#spark-erros" class="nav-sub"><span class="nav-sdot"></span>Guia de Resolução de Erros</a>
+         <a href="../../pages/engenharia/processing.html#spark-specialist-debug" class="nav-sub"><span class="nav-sdot"></span>Estratégias de Diagnóstico</a>
+
+         <div class="nav-sub-lbl">AWS EMR &amp; GLUE</div>
+         <a href="../../pages/engenharia/processing.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue: ETL Serverless</a>
+         <a href="../../pages/engenharia/processing.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>Amazon EMR em EC2</a>
+         <a href="../../pages/engenharia/processing.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>Amazon EMR Serverless</a>
+         <a href="../../pages/engenharia/processing.html#emr-eks" class="nav-sub"><span class="nav-sdot"></span>Amazon EMR on EKS</a>
+         <a href="../../pages/engenharia/processing.html#emr-comparativo" class="nav-sub"><span class="nav-sdot"></span>Comparativo Glue vs EMR</a>
+         <a href="../../pages/engenharia/processing.html#emr-arch" class="nav-sub"><span class="nav-sdot"></span>Arquitetura do Cluster EMR</a>
+         <a href="../../pages/engenharia/processing.html#emr-bootstrap" class="nav-sub"><span class="nav-sdot"></span>EMR Bootstrap Actions</a>
+         <a href="../../pages/engenharia/processing.html#emr-instancias" class="nav-sub"><span class="nav-sdot"></span>Dimensionamento de Instâncias</a>
+         <a href="../../pages/engenharia/processing.html#emr-configs" class="nav-sub"><span class="nav-sdot"></span>Configurações EMR &amp; S3</a>
+         <a href="../../pages/engenharia/processing.html#spark-finops-costs" class="nav-sub"><span class="nav-sdot"></span>FinOps: Alocação Spark</a>
+         <a href="../../pages/engenharia/processing.html#emr-erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns no AWS EMR</a>
+
+         <div class="nav-sub-lbl">OUTROS MOTORES</div>
+         <a href="../../pages/engenharia/processing.html#flink-streaming" class="nav-sub"><span class="nav-sdot"></span>Apache Flink &amp; Stateful Streaming</a>
+         <a href="../../pages/engenharia/processing.html#spark-e2e-integrations" class="nav-sub"><span class="nav-sdot"></span>Integrações End-to-End</a>
+       </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/storage-lakehouse.html" class="nav-a" data-page="storage-lakehouse"><span class="nav-dot" style="background:#4f46e5"></span>💾 Lakehouse &amp; Storage</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#s3-camadas" class="nav-sub"><span class="nav-sdot"></span>Persistência Física: Camadas S3</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#s3-tiers" class="nav-sub"><span class="nav-sdot"></span>Tiers de Custo &amp; Ciclo de Vida</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#formatos" class="nav-sub"><span class="nav-sdot"></span>Formatos de Dados e Compressões</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#parquet-internals" class="nav-sub"><span class="nav-sdot"></span>Internals do Apache Parquet</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg" class="nav-sub"><span class="nav-sdot"></span>Apache Iceberg: Otimização</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-internals" class="nav-sub"><span class="nav-sdot"></span>Árvore de Metadados Iceberg</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-rest-catalog" class="nav-sub"><span class="nav-sdot"></span>Iceberg REST Catalogs</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-vs-delta" class="nav-sub"><span class="nav-sdot"></span>Iceberg vs Delta Lake vs Hudi</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção de Tabelas Iceberg</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#upsert-code" class="nav-sub"><span class="nav-sdot"></span>Código PySpark para Upserts</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em Storage</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/serving.html" class="nav-a" data-page="serving"><span class="nav-dot" style="background:#be123c"></span>📊 Analytics &amp; Serving</a>
+        <a href="../../pages/engenharia/serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Amazon Athena: Teoria</a>
+        <a href="../../pages/engenharia/serving.html#athena-trino-arch" class="nav-sub"><span class="nav-sdot"></span>A Arquitetura Oculta Trino</a>
+        <a href="../../pages/engenharia/serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Federated Query</a>
+        <a href="../../pages/engenharia/serving.html#iceberg-manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção Iceberg via Athena</a>
+        <a href="../../pages/engenharia/serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Amazon Redshift: Teoria</a>
+        <a href="../../pages/engenharia/serving.html#redshift-spectrum" class="nav-sub"><span class="nav-sdot"></span>Redshift Spectrum: Queries Externas</a>
+        <a href="../../pages/engenharia/serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>Explain &amp; Tuning de Query</a>
+        <a href="../../pages/engenharia/serving.html#redshift-io" class="nav-sub"><span class="nav-sdot"></span>Ingestão Massiva COPY/UNLOAD</a>
+        <a href="../../pages/engenharia/serving.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns no Consumo</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/orquestracao-dados.html" class="nav-a" data-page="orquestracao-dados"><span class="nav-dot" style="background:#a78bfa"></span>⛓️ Orquestração de Dados</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#teoria" class="nav-sub"><span class="nav-sdot"></span>Três Pilares de Orquestração</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#step-functions" class="nav-sub"><span class="nav-sdot"></span>AWS Step Functions</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#mwaa-airflow" class="nav-sub"><span class="nav-sdot"></span>Amazon MWAA (Apache Airflow)</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#operacional" class="nav-sub"><span class="nav-sdot"></span>Cases Reais &amp; Diagnósticos</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/containers-docker.html" class="nav-a" data-page="containers-docker"><span class="nav-dot" style="background:#0ea5e9"></span>🐳 Containers & Docker</a>
+        <a href="../../pages/engenharia/containers-docker.html#fundamentos-docker" class="nav-sub"><span class="nav-sdot"></span>Fundamentos Docker</a>
+        <a href="../../pages/engenharia/containers-docker.html#aws-containers-ecosystem" class="nav-sub"><span class="nav-sdot"></span>Ecossistema AWS (ECR/ECS/EKS)</a>
+        <a href="../../pages/engenharia/containers-docker.html#data-engineering-containers" class="nav-sub"><span class="nav-sdot"></span>Containers na Eng. de Dados</a>
+        <a href="../../pages/engenharia/containers-docker.html#cases" class="nav-sub"><span class="nav-sdot"></span>Cases & Perguntas</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/data-quality.html" class="nav-a" data-page="data-quality"><span class="nav-dot" style="background:#10b981"></span>✨ Data &amp; Business Quality</a>
+        <a href="../../pages/engenharia/data-quality.html#teoria-dq" class="nav-sub"><span class="nav-sdot"></span>Conceitos Técnicos</a>
+        <a href="../../pages/engenharia/data-quality.html#business-quality" class="nav-sub"><span class="nav-sdot"></span>Business Quality (Extensivo)</a>
+        <a href="../../pages/engenharia/data-quality.html#cases-dq" class="nav-sub"><span class="nav-sdot"></span>Case: DQDL Circuit Breaker</a>
+        <a href="../../pages/engenharia/data-quality.html#crises-dq" class="nav-sub"><span class="nav-sdot"></span>Crise: Schema Drift</a>
+        <a href="../../pages/engenharia/data-quality.html#perguntas-dq" class="nav-sub"><span class="nav-sdot"></span>Simulador de Entrevista</a>
+      </div>
+
+    </div>
+
+    <!-- 4. Infraestrutura, Redes & Segurança -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('infra-seguranca-cat', this)">
+      <span>🌐 Infra, Redes &amp; Segurança</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="infra-seguranca-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/computacao-bancos.html" class="nav-a" data-page="computacao-bancos"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#ecs" class="nav-sub"><span class="nav-sdot"></span>Amazon ECS: Containers</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#eks" class="nav-sub"><span class="nav-sdot"></span>Amazon EKS: Kubernetes</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#load-balancers" class="nav-sub"><span class="nav-sdot"></span>AWS Load Balancers: ALB vs NLB</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#rds-aurora" class="nav-sub"><span class="nav-sdot"></span>RDS &amp; Aurora</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#dynamodb-deep-dive" class="nav-sub"><span class="nav-sdot"></span>Amazon DynamoDB Architecture</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#operacao" class="nav-sub"><span class="nav-sdot"></span>Guia Operacional &amp; Métricas</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#aws-databases-guide" class="nav-sub"><span class="nav-sdot"></span>Guia de Bancos de Dados AWS</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#sql-nosql-sqs" class="nav-sub"><span class="nav-sdot"></span>Matriz de Decisão de Bancos</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/networking-ingress.html" class="nav-a" data-page="networking-ingress"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#fundamentos-rede" class="nav-sub"><span class="nav-sdot"></span>Fundamentos: IP &amp; VPC</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>Route 53 &amp; CloudFront</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#api-alb" class="nav-sub"><span class="nav-sdot"></span>API Gateway &amp; ALB Integration</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#vpc-endpoints" class="nav-sub"><span class="nav-sdot"></span>VPC &amp; VPC Endpoints</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/api-gateway.html" class="nav-a" data-page="api-gateway"><span class="nav-dot" style="background:#7c3aed"></span>🔌 API Gateway Deep Dive</a>
+        <a href="../../pages/fundamentos/api-gateway.html#fundamentos" class="nav-sub"><span class="nav-sdot"></span>REST vs HTTP vs WebSockets</a>
+        <a href="../../pages/fundamentos/api-gateway.html#crud-rest" class="nav-sub"><span class="nav-sdot"></span>CRUD REST: OpenAPI &amp; Lambda</a>
+        <a href="../../pages/fundamentos/api-gateway.html#async" class="nav-sub"><span class="nav-sdot"></span>Chamadas Assíncronas</a>
+        <a href="../../pages/fundamentos/api-gateway.html#terraform" class="nav-sub"><span class="nav-sdot"></span>Terraform Completo: API Gateway</a>
+        <a href="../../pages/fundamentos/api-gateway.html#integracoes" class="nav-sub"><span class="nav-sdot"></span>Auth, CORS &amp; Rate Limiting</a>
+        <a href="../../pages/fundamentos/api-gateway.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Produção</a>
+        <a href="../../pages/fundamentos/api-gateway.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade API Gateway</a>
+        <a href="../../pages/fundamentos/api-gateway.html#diagramas" class="nav-sub"><span class="nav-sdot"></span>Diagramas de Arquitetura</a>
+        <a href="../../pages/fundamentos/api-gateway.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Questões de Entrevista</a>
+        <a href="../../pages/fundamentos/api-gateway.html#cases" class="nav-sub"><span class="nav-sdot"></span>Cases Reais de API</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/governance-security.html" class="nav-a" data-page="governance-security"><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança &amp; IaC</a>
+        <a href="../../pages/fundamentos/governance-security.html#pilares" class="nav-sub"><span class="nav-sdot"></span>Os 7 Pilares de Segurança</a>
+        <a href="../../pages/fundamentos/governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>AWS Lake Formation Security</a>
+        <a href="../../pages/fundamentos/governance-security.html#lake-cli" class="nav-sub"><span class="nav-sdot"></span>AWS Lake Formation CLI</a>
+        <a href="../../pages/fundamentos/governance-security.html#lf-abac" class="nav-sub"><span class="nav-sdot"></span>LF-TBAC: Tag-based Access Control</a>
+        <a href="../../pages/fundamentos/governance-security.html#iam-kms" class="nav-sub"><span class="nav-sdot"></span>IAM &amp; KMS Criptografia</a>
+        <a href="../../pages/fundamentos/governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>AWS Secrets Manager</a>
+        <a href="../../pages/fundamentos/governance-security.html#iam-engineering" class="nav-sub"><span class="nav-sdot"></span>IAM Avançado: Roles Cross-Account</a>
+        <a href="../../pages/fundamentos/governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade: Logs &amp; CloudTrail</a>
+        <a href="../../pages/fundamentos/governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Qualidade de Dados &amp; Contratos</a>
+        <a href="../../pages/fundamentos/governance-security.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em Governança</a>
+      </div>
+    </div>
+
+    <!-- 5. Operações & Inteligência Artificial -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('operacoes-ia-cat', this)">
+      <span>🤖 Operações &amp; IA</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="operacoes-ia-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/dataops-mlops.html" class="nav-a" data-page="dataops-mlops"><span class="nav-dot" style="background:#0d9488"></span>⚙️ DataOps &amp; MLOps</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>DataOps: Automação &amp; Linhagem</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality &amp; Observabilidade</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-contracts" class="nav-sub"><span class="nav-sdot"></span>Contratos de Dados</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-lineage" class="nav-sub"><span class="nav-sdot"></span>Linhagem de Dados (OpenLineage)</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#plataforma-testes" class="nav-sub"><span class="nav-sdot"></span>Plataforma de Testes &amp; CI/CD</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#mlops-core" class="nav-sub"><span class="nav-sdot"></span>MLOps: Ciclo de Vida do Modelo</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#mlops-feature-store" class="nav-sub"><span class="nav-sdot"></span>Feature Stores &amp; Drift</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#git-flow" class="nav-sub"><span class="nav-sdot"></span>Git Flow para Dados</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/genai.html" class="nav-a" data-page="genai"><span class="nav-dot" style="background:#a78bfa"></span>🤖 IA &amp; GenAI</a>
+        <a href="../../pages/engenharia/genai.html#genai-teoria" class="nav-sub"><span class="nav-sdot"></span>LLMs, Transformers e Embeddings</a>
+        <a href="../../pages/engenharia/genai.html#genai-pilares" class="nav-sub"><span class="nav-sdot"></span>Pilares de Arquitetura GenAI</a>
+        <a href="../../pages/engenharia/genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG &amp; Agentes na AWS</a>
+        <a href="../../pages/engenharia/genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>pgvector: Busca Semântica</a>
+        <a href="../../pages/engenharia/genai.html#bedrock-api" class="nav-sub"><span class="nav-sdot"></span>Bedrock API &amp; Boto3</a>
+        <a href="../../pages/engenharia/genai.html#prompt-engineering" class="nav-sub"><span class="nav-sdot"></span>Prompt Engineering Avançado</a>
+        <a href="../../pages/engenharia/genai.html#guardrails" class="nav-sub"><span class="nav-sdot"></span>Amazon Bedrock Guardrails</a>
+        <a href="../../pages/engenharia/genai.html#finetuning" class="nav-sub"><span class="nav-sdot"></span>Fine-tuning com SageMaker</a>
+        <a href="../../pages/engenharia/genai.html#casos" class="nav-sub"><span class="nav-sdot"></span>Casos de Uso: Dados + GenAI</a>
+        <a href="../../pages/engenharia/genai.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em GenAI</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/finops.html" class="nav-a" data-page="finops"><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
+        <a href="../../pages/engenharia/finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>Pilares de FinOps em Dados</a>
+        <a href="../../pages/engenharia/finops.html#finops-boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Engenharia</a>
+        <a href="../../pages/engenharia/finops.html#finops-analise" class="nav-sub"><span class="nav-sdot"></span>Análise de Custos Analíticos</a>
+        <a href="../../pages/engenharia/finops.html#finops-terraform" class="nav-sub"><span class="nav-sdot"></span>Tagging com Terraform</a>
+      </div>
+    </div>
+
+    <!-- 6. Prática, Cases & Simulados -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('pratica-cases-simulados-cat', this)">
+      <span>🧠 Prática &amp; Simulados</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="pratica-cases-simulados-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases.html" class="nav-a" data-page="cases"><span class="nav-dot" style="background:#059669"></span>💼 Cases de Plataformas</a>
+        <a href="../../pages/pratica/cases.html#case-streaming" class="nav-sub"><span class="nav-sdot"></span>Case 1: Eventos de Clickstream</a>
+        <a href="../../pages/pratica/cases.html#case-mesh" class="nav-sub"><span class="nav-sdot"></span>Case 2: Plataforma Financeira Mesh</a>
+        <a href="../../pages/pratica/cases.html#case-genai" class="nav-sub"><span class="nav-sdot"></span>Case 3: IA Generativa &amp; LGPD</a>
+        <a href="../../pages/pratica/cases.html#case-iot" class="nav-sub"><span class="nav-sdot"></span>Case 4: Telemetria Industrial IoT</a>
+        <a href="../../pages/pratica/cases.html#case-logistics" class="nav-sub"><span class="nav-sdot"></span>Case 5: Logística Multirregião</a>
+        <a href="../../pages/pratica/cases.html#case-recommender" class="nav-sub"><span class="nav-sdot"></span>Case 6: Feature Store Real-time</a>
+        <a href="../../pages/pratica/cases.html#case-health" class="nav-sub"><span class="nav-sdot"></span>Case 7: Health Lakehouse HIPAA</a>
+        <a href="../../pages/pratica/cases.html#case-esg" class="nav-sub"><span class="nav-sdot"></span>Case 8: Grafos ESG</a>
+        <a href="../../pages/pratica/cases.html#case-billing" class="nav-sub"><span class="nav-sdot"></span>Case 9: Billing Global</a>
+        <a href="../../pages/pratica/cases.html#case-reverse-etl" class="nav-sub"><span class="nav-sdot"></span>Case 10: Reverse ETL</a>
+        <a href="../../pages/pratica/cases.html#case-ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>Case 10.5: Ingestão de Alta Escala</a>
+        <a href="../../pages/pratica/cases.html#case-emr-eks" class="nav-sub"><span class="nav-sdot"></span>Case 11: EMR on EKS Multi-tenant</a>
+        <a href="../../pages/pratica/cases.html#case-data-quality" class="nav-sub"><span class="nav-sdot"></span>Case 11.5: Circuit Breaker de DQ</a>
+        <a href="../../pages/pratica/cases.html#case-athena-federated" class="nav-sub"><span class="nav-sdot"></span>Case 12: Athena Federated Query</a>
+        <a href="../../pages/pratica/cases.html#case-finops" class="nav-sub"><span class="nav-sdot"></span>Case 13: Otimização de Custos S3</a>
+        <a href="../../pages/pratica/cases.html#case-genai-avancado" class="nav-sub"><span class="nav-sdot"></span>Case 14: RAG Multi-modal</a>
+        <a href="../../pages/pratica/cases.html#case-ai-data-quality" class="nav-sub"><span class="nav-sdot"></span>Case 15: Detecção Inteligente de Anomalias</a>
+        <a href="../../pages/pratica/cases.html#case-polaris-flink" class="nav-sub"><span class="nav-sdot"></span>Case 16: Polaris Catalog &amp; Flink</a>
+        <a href="../../pages/pratica/cases.html#case-risco-mlops" class="nav-sub"><span class="nav-sdot"></span>Case 17: Risco MLOps</a>
+        <a href="../../pages/pratica/cases.html#case-ingress-global" class="nav-sub"><span class="nav-sdot"></span>Case 18: Ingress Analítico Global</a>
+        <a href="../../pages/pratica/cases.html#case-business-value" class="nav-sub"><span class="nav-sdot"></span>Case 19: Modernização Lakehouse</a>
+        <a href="../../pages/pratica/cases.html#case-genai-suporte" class="nav-sub"><span class="nav-sdot"></span>Case 20: Assistente RAG Suporte</a>
+        <a href="../../pages/pratica/cases.html#case-emr-iceberg-migracao" class="nav-sub"><span class="nav-sdot"></span>Case 21: Migração EMR Iceberg</a>
+        <a href="../../pages/pratica/cases.html#case-eks-karpenter-migracao" class="nav-sub"><span class="nav-sdot"></span>Case 22: Redução de Custo Karpenter</a>
+        <a href="../../pages/pratica/cases.html#case-rds-dynamo-migracao" class="nav-sub"><span class="nav-sdot"></span>Case 23: RDS para DynamoDB</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/playbook-crises.html" class="nav-a" data-page="playbook-crises"><span class="nav-dot" style="background:var(--warn)"></span>🚒 Playbook de Crises</a>
+        <a href="../../pages/pratica/playbook-crises.html#introducao" class="nav-sub"><span class="nav-sdot"></span>Framework de Crises</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-streaming" class="nav-sub"><span class="nav-sdot"></span>Crise 1: OOM em Streaming</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-kms" class="nav-sub"><span class="nav-sdot"></span>Crise 2: Lockout de Segurança</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-genai" class="nav-sub"><span class="nav-sdot"></span>Crise 3: Latência &amp; Custos LLM</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-fechamento" class="nav-sub"><span class="nav-sdot"></span>Crise 4: Quebra do Fechamento</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-duplicacao" class="nav-sub"><span class="nav-sdot"></span>Crise 5: Ingestão Duplicada</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-nulos" class="nav-sub"><span class="nav-sdot"></span>Crise 6: Perda Silenciosa</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-sla" class="nav-sub"><span class="nav-sdot"></span>Crise 7: Atraso de SLA EMR</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-schema-drift" class="nav-sub"><span class="nav-sdot"></span>Crise 8: Schema Drift</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-lgpd" class="nav-sub"><span class="nav-sdot"></span>Crise 9: Vazamento LGPD</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-corrupcao" class="nav-sub"><span class="nav-sdot"></span>Crise 10: Corrupção Lógica</a>
+        <a href="../../pages/pratica/playbook-crises.html#cenarios-conflito" class="nav-sub"><span class="nav-sdot"></span>Cenários de Conflito</a>
+        <a href="../../pages/pratica/playbook-crises.html#crise-leakage-churn" class="nav-sub"><span class="nav-sdot"></span>Crise 11: Data Leakage Churn</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/perguntas-engenharia.html" class="nav-a" data-page="perguntas-engenharia"><span class="nav-dot" style="background:#f59e0b"></span>❓ Perguntas: Engenharia</a>
+        <a href="../../pages/pratica/perguntas-engenharia.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Simulado Engenharia</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/perguntas-arquitetura.html" class="nav-a" data-page="perguntas-arquitetura"><span class="nav-dot" style="background:var(--arch)"></span>❓ Perguntas: Arquitetura</a>
+        <a href="../../pages/pratica/perguntas-arquitetura.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Simulado Arquitetura</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/perguntas-governanca.html" class="nav-a" data-page="perguntas-governanca"><span class="nav-dot" style="background:var(--muted)"></span>❓ Perguntas: Governança</a>
+        <a href="../../pages/pratica/perguntas-governanca.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Simulado Governança</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/financas-dados.html" class="nav-a" data-page="financas-dados"><span class="nav-dot" style="background:#0284c7"></span>🏦 Conhecimentos Financeiros</a>
+        <a href="../../pages/pratica/financas-dados.html#jornada" class="nav-sub"><span class="nav-sdot"></span>A Jornada do Crédito</a>
+        <a href="../../pages/pratica/financas-dados.html#matematica" class="nav-sub"><span class="nav-sdot"></span>Matemática do Contrato</a>
+        <a href="../../pages/pratica/financas-dados.html#pos-venda" class="nav-sub"><span class="nav-sdot"></span>Pós-venda e Inadimplência</a>
+        <a href="../../pages/pratica/financas-dados.html#contabilidade" class="nav-sub"><span class="nav-sdot"></span>Contabilidade Bancária</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/business-value.html" class="nav-a" data-page="business-value"><span class="nav-dot" style="background:#f59e0b"></span>💼 Business Value</a>
+        <a href="../../pages/pratica/business-value.html#conceito-ebitda" class="nav-sub"><span class="nav-sdot"></span>Conceitos Financeiros (EBITDA)</a>
+        <a href="../../pages/pratica/business-value.html#pitch-business-value" class="nav-sub"><span class="nav-sdot"></span>O Pitch de Business Value</a>
+        <a href="../../pages/pratica/business-value.html#case-refatoracao-pipeline" class="nav-sub"><span class="nav-sdot"></span>Case: Refatoração de Pipeline</a>
+      </div>
+    </div>
+  </div>
+
+</nav>
+
+<div id="main">
+  <div class="hero" style="background-color: var(--navy)">
+    <div class="hero-ey">Infraestrutura Operacional &amp; Bancos de Dados</div>
+    <h1>Containers ECS, Load Balancers &amp; RDS/Aurora</h1>
+    <p class="hero-d">Arquitetura de microsserviços orientada a dados, balanceamento de carga de alta concorrência e engines de bancos relacionais OLTP escaláveis na AWS.</p>
+  </div>
+
+  <main class="main-content">
+    
+    <!-- SECTION 1: ECS -->
+    <section class="section" id="ecs">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Amazon ECS: Teoria de Containers &amp; Launch Types</h2>
+          <p>Diferenças fundamentais entre ECS Fargate e ECS on EC2, estrutura de blueprints e segurança</p>
+        </div>
+      </div>
+
+      <p>O <strong>Amazon ECS (Elastic Container Service)</strong> é o serviço de orquestração de containers altamente escalável e de alta performance nativo da AWS. Diferente do Kubernetes (EKS), o ECS foca em simplificar o deploy eliminando a necessidade de gerenciar nós de controle complexos (Control Plane).</p>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
+          <div class="cc-tag">Launch Type</div>
+          <div class="cc-title">ECS Fargate (Serverless)</div>
+          <div class="cc-body">
+            <strong>Como funciona:</strong> A AWS gerencia toda a computação. O engenheiro declara apenas o tamanho de CPU e Memória da Task.
+            <br><strong>Tradeoffs:</strong> Menor overhead operacional, isolamento físico de segurança por task (micro-VMs Firecracker). Custo ligeiramente superior por recurso ativo e boot time mais longo.
+          </div>
+        </div>
+
+        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
+          <div class="cc-tag">Launch Type</div>
+          <div class="cc-title">ECS on EC2 (Gerenciado)</div>
+          <div class="cc-body">
+            <strong>Como funciona:</strong> O cluster ECS usa instâncias EC2 gerenciadas no seu próprio grupo de Auto Scaling como workers de container.
+            <br><strong>Tradeoffs:</strong> Controle total do sistema operacional, suporte a volumes EBS locais e GPUs dedicadas. Exige gerenciar patches do SO e agentes do ECS instalados nas máquinas.
+          </div>
+        </div>
+      </div>
+
+      <h3>Arquitetura ECS: Cluster, Service, Task &amp; Task Definition</h3>
+      <p>A tabela a seguir explica a hierarquia de objetos lógicos dentro do ecossistema do ECS:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Componente</th>
+              <th>Propósito</th>
+              <th>Análogo Físico</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Cluster</strong></td>
+              <td>Agrupamento lógico de computação (Fargate ou EC2) em subredes privadas.</td>
+              <td>Data Center Virtualizado</td>
+            </tr>
+            <tr>
+              <td><strong>Task Definition</strong></td>
+              <td>O blueprint em formato JSON definindo a imagem Docker, portas, variáveis de ambiente e volumes.</td>
+              <td>Dockerfile / Docker Compose</td>
+            </tr>
+            <tr>
+              <td><strong>Task</strong></td>
+              <td>A instância ativa e executável do container em si, rodando de forma isolada na VPC.</td>
+              <td>Container Ativo (Docker Run)</td>
+            </tr>
+            <tr>
+              <td><strong>Service</strong></td>
+              <td>Gerenciador que garante que a quantidade solicitada de Tasks esteja saudável, integrando-as ao Load Balancer.</td>
+              <td>Process Daemon / Orquestrador</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Segurança de Containers: Task Role vs. Task Execution Role</h3>
+      <p>Um erro de segurança recorrente em projetos de ECS é conceder permissões excessivas às instâncias que executam os containers. A AWS divide a identidade IAM no ECS em duas camadas de privilégio de grão fino:</p>
+      
+      <ul>
+        <li><strong>Task Execution Role:</strong> Utilizada pelo **agente do ECS** rodando na infraestrutura (antes do container iniciar). Permissões típicas: baixar a imagem do container do ECR, enviar logs de stdout para o CloudWatch, descriptografar variáveis sensíveis vindas do Secrets Manager ou System Manager Parameter Store.</li>
+        <li><strong>Task Role:</strong> Utilizada pela **sua aplicação** de fato rodando dentro do container (após a inicialização). Permissões típicas: ler/gravar dados em um bucket S3, consultar uma tabela do DynamoDB, ou publicar mensagens em um tópico SNS.</li>
+      </ul>
+
+            <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>ECS Fargate — Ingestão Customizada de Alta Escala</div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph="{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;<mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;860\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;>  <root>    <mxCell id=\&quot;0\&quot;/>    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>    <mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;860\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;title\&quot; value=\&quot;RDS VS AURORA STORAGE ARCHITECTURE\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;860\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;rds_grp\&quot; value=\&quot;AMAZON RDS TRADICIONAL\&quot; style=\&quot;rounded=1;fillColor=#02160a;strokeColor=#16a34a;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#bbf7d0;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;20\&quot; y=\&quot;50\&quot; width=\&quot;340\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;rds_p\&quot; value=\&quot;Primary Node(EC2 Compute)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;96\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;rds_s\&quot; value=\&quot;Secondary Node(Standby)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;236\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;ebs_p\&quot; value=\&quot;Amazon EBS(Data &amp;amp; Logs)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ebs;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;96\&quot; y=\&quot;240\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;ebs_s\&quot; value=\&quot;Amazon EBS(Replica)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ebs;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;236\&quot; y=\&quot;240\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;aur_grp\&quot; value=\&quot;AMAZON AURORA\&quot; style=\&quot;rounded=1;fillColor=#170802;strokeColor=#ea580c;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#fed7aa;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;420\&quot; y=\&quot;50\&quot; width=\&quot;400\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;aur_p\&quot; value=\&quot;Primary Instance\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;486\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;aur_r1\&quot; value=\&quot;Read Replica\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;616\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;aur_r2\&quot; value=\&quot;Read Replica\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;716\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;aur_sto\&quot; value=\&quot;Aurora Distributed Storage Volume(6 Copies across 3 AZs)\&quot; style=\&quot;rounded=1;fillColor=#1a0e00;strokeColor=#ea580c;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;460\&quot; y=\&quot;240\&quot; width=\&quot;320\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;e_rp_ep\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;rds_p\&quot; target=\&quot;ebs_p\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_rs_es\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;rds_s\&quot; target=\&quot;ebs_s\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ep_es\&quot; value=\&quot;SynchronousBlock Replication\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;dashed=1;fontColor=#dcfce7;fontFamily=DM Sans;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;ebs_p\&quot; target=\&quot;ebs_s\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ap_st\&quot; value=\&quot;Redo Logs\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#fed7aa;fontFamily=DM Sans;fontSize=9;exitX=0.5;exitY=1;entryX=0.15;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;aur_p\&quot; target=\&quot;aur_sto\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ar1_st\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;aur_r1\&quot; target=\&quot;aur_sto\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ar2_st\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;exitX=0.5;exitY=1;entryX=0.85;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;aur_r2\&quot; target=\&quot;aur_sto\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>  </root></mxGraphModel>&quot;}"></div>
+
+</div>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+  <strong style="color: var(--accent);">Explicação:</strong>
+  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> RDS VS AURORA STORAGE ARCHITECTURE, AMAZON RDS TRADICIONAL, Primary Node (EC2 Compute), Secondary Node (Standby), Amazon EBS (Data &amp; Logs), Amazon EBS (Replica), AMAZON AURORA, Primary Instance, Read Replica, Aurora Distributed Storage Volume (6 Copies across 3 AZs), Synchronous Block Replication, Redo Logs</li>
+    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+    <li><strong>Contexto:</strong> O diagrama "RDS VS AURORA STORAGE ARCHITECTURE" ilustra a arquitetura da solução para o tópico em questão.</li>
+  </ul>
+</div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Escrita em Quorum (Write Quorum) no Aurora</h4>
+          <p>Para otimizar escritas, o Aurora utiliza um sistema de quórum distribuído. Cada bloco de dados é segmentado e gravado em 6 instâncias de storage (2 por AZ). Uma escrita é considerada um commit válido assim que <strong>4 das 6 instâncias confirmam a gravação física (4/6 Write Quorum)</strong>. Leituras de blocos requerem a confirmação de <strong>3 de 6 cópias (3/6 Read Quorum)</strong> para reconstruir dados consistentes caso ocorram falhas parciais em storage pools.</p>
+        </div>
+        <div>
+          <h4>Multi-AZ DB Instance vs DB Cluster (RDS Tradicional)</h4>
+          <p>Se você não utiliza Aurora, a AWS oferece dois modelos de alta disponibilidade no RDS PostgreSQL/MySQL: <strong>Multi-AZ DB Instance</strong>, onde o Standby é fisicamente idêntico mas bloqueado para leitura (failover de ~60-120s); e o novo <strong>Multi-AZ DB Cluster</strong>, que usa três instâncias ativas (2 Readers e 1 Writer) e acelera commits escrevendo simultaneamente nos SSDs locais de duas réplicas legíveis, diminuindo o failover para ~35s.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Estratégias de Snapshots, Backups e RTO/RPO</h3>
+      <ul>
+        <li><strong>Automated Backups (RDS Tradicional):</strong> A AWS tira um snapshot diário do disco EBS inteiro e arquiva os <em>Transaction Logs (WAL)</em> a cada 5 minutos no S3. O RPO (Recovery Point Objective) máximo é de ~5 minutos para Point-in-Time Recovery (PiTR). Restaurações demoram o tempo necessário para provisionar e "esquentar" (hydrate) os blocos do S3 para um novo disco EBS.</li>
+        <li><strong>Continuous Backups (Aurora):</strong> No Aurora, o backup é completamente contínuo e streaming. Como a camada de storage é baseada em logs, o storage engine transfere micro-blocos para o S3 em tempo real de forma assíncrona, sem impactar a CPU do banco, atingindo impacto nulo de I/O em backups pesados.</li>
+      </ul>
+
+      <div class="grid-2" style="margin-top: 20px;">
+        <div>
+          <h4>Amazon RDS Proxy: Connection Pooling</h4>
+          <p>Microsserviços serverless esgotam rapidamente a memória (RAM) da instância RDS por conexões ociosas (o Postgres consome ~10MB por TCP inativa). O <strong>RDS Proxy</strong> gerencia um <em>Connection Pool</em>, multiplexando dezenas de clientes em poucas conexões físicas com o DB. Além disso, em caso de failover do Aurora, ele redireciona instantaneamente as chamadas HTTP para o novo Writer, mascarando a interrupção da aplicação (sem timeouts de DNS).</p>
+        </div>
+        <div>
+          <h4>Migração e CDC com AWS DMS e SCT</h4>
+          <p>Para migrar de bancos legados (ex: Oracle local ou RDS Monolítico) para Aurora sem downtime, utiliza-se o <strong>AWS Database Migration Service (DMS)</strong> acompanhado do <strong>SCT (Schema Conversion Tool)</strong>.</p>
+          <p>O DMS se conecta ao banco de origem, realiza o <em>Full Load</em> da base inicial e então ativa o <strong>CDC (Change Data Capture)</strong>. O CDC lê nativamente os transaction logs do banco de origem (ex: <code>wal2json</code> no Postgres) e aplica os <code>INSERT/UPDATES</code> na nova base Aurora. Quando o "Lag" do DMS se aproxima de 0s, a engenharia simplesmente "vira a chave" do tráfego na aplicação.</p>
+        </div>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 3.5: DYNAMODB DEEP DIVE -->
+    <section class="section" id="dynamodb-deep-dive">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#10b981">03.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#10b981"></div>
+          <h2>Amazon DynamoDB: Architecture &amp; Single-Table Design</h2>
+          <p>Modelagem NoSQL avançada, RCU/WCU, GSI, LSI e Hot Partitions</p>
+        </div>
+      </div>
+
+      <p>Bancos NoSQL corporativos como o DynamoDB diferem substancialmente do modelo relacional tradicional. Eles são otimizados para latência milissegunda consistente independente do tamanho da tabela, desde que as chaves de acesso sejam perfeitamente modeladas (Acesso em O(1)).</p>
+
+      <!-- DIAGRAMA DYNAMODB PARTITIONS -->
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>DYNAMODB PARTITIONING MODEL</div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph="{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;<mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;640\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;>  <root>    <mxCell id=\&quot;0\&quot;/>    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>    <mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;640\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;title\&quot; value=\&quot;DYNAMODB PARTITIONING MODEL\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;640\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;req\&quot; value=\&quot;Item Request(Partition Key)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;20\&quot; y=\&quot;120\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;router\&quot; value=\&quot;Request Router(MD5 Hash Function)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.endpoint;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;246\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;p1\&quot; value=\&quot;Partition 1Hash: 0000-3333\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;466\&quot; y=\&quot;40\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;p2\&quot; value=\&quot;Partition 2Hash: 3334-6666\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;466\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;p3\&quot; value=\&quot;Partition 3Hash: 6667-FFFF\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;><mxGeometry x=\&quot;466\&quot; y=\&quot;200\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/></mxCell>        <mxCell id=\&quot;e_r_ro\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;req\&quot; target=\&quot;router\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ro_p1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;router\&quot; target=\&quot;p1\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ro_p2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;router\&quot; target=\&quot;p2\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>    <mxCell id=\&quot;e_ro_p3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;router\&quot; target=\&quot;p3\&quot; parent=\&quot;1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell>  </root></mxGraphModel>&quot;}"></div>
+
+</div>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+  <strong style="color: var(--accent);">Explicação:</strong>
+  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> DYNAMODB PARTITIONING MODEL, Item Request (Partition Key), Request Router (MD5 Hash Function), Partition 1 Hash: 0000-3333, Partition 2 Hash: 3334-6666, Partition 3 Hash: 6667-FFFF</li>
+    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+    <li><strong>Contexto:</strong> O diagrama "DYNAMODB PARTITIONING MODEL" ilustra a arquitetura da solução para o tópico em questão.</li>
+  </ul>
+</div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Capacity: RCU, WCU e Modo On-Demand</h4>
+          <p>Em modo Provisionado, a métrica raiz de throughput são <strong>RCUs (Read Capacity Units)</strong> e <strong>WCUs (Write Capacity Units)</strong>. 1 WCU permite gravar 1 KB por segundo. 1 RCU permite ler 4 KB/s se a consistência for eventual, ou requer 2 RCUs para garantir <em>Strong Consistency</em>.</p>
+          <p>O modo <strong>On-Demand</strong> é recomendado quando a carga é altamente imprevisível. Você paga por requisição sem estipular limites prévios, deixando o Dynamo escalonar agressivamente por debaixo dos panos.</p>
+        </div>
+        <div>
+          <h4>Balanceamento HASH e Hot Partitions</h4>
+          <p>O throughput provisionado de uma tabela (ex: 3.000 WCU) é dividido <strong>igualmente</strong> pelo número de partições físicas SSD (ex: 3 partições = 1.000 WCU por partição). Se a sua <strong>Partition Key (PK)</strong> for uma data atual (<code>2026-06-10</code>), todas as gravações do dia cairão na mesma partição (<em>Hot Partition</em>). O Dynamo estourará um <code>ProvisionedThroughputExceededException</code> ao atingir 1.000 WCU, mesmo com 2.000 WCUs sobrando na tabela. Use Hash Sharding/UUIDs para a PK.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Modelagem: Single-Table Design, GSI e LSI</h3>
+      <ul>
+        <li><strong>Single-Table Design:</strong> Diferente do modelo Relacional (Normalização 3NF com FKs), no DynamoDB a regra de ouro é colocar <em>todos os tipos de entidades em uma única tabela física</em>. Para relacionar entidades 1:N (Ex: Usuário e seus Pedidos), você agrupa os itens empilhando as <strong>Sort Keys (SK)</strong> sob a mesma Partition Key. Exemplo: <code>PK="USER#123", SK="PROFILE"</code> para dados do usuário; <code>PK="USER#123", SK="ORDER#99"</code> para seus pedidos.</li>
+        <li><strong>Global Secondary Index (GSI):</strong> Se você precisa buscar pedidos por "Data" em vez de "Usuário", você cria um GSI. O GSI é uma tabela réplica física, mantida asíncronamente pela AWS, que escolhe novos atributos para assumirem os papéis de nova PK/SK. Cuidado: GSIs possuem seu próprio pool de RCU/WCUs e podem sofrer throttling se mal dimensionados.</li>
+        <li><strong>Local Secondary Index (LSI):</strong> Compartilha a mesma PK da tabela base, mas muda a SK. Só pode ser criado no momento de criação da tabela (limite físico de 10GB por partição).</li>
+      </ul>
+
+      <div class="callout callout-tip">
+        <strong>Integração Zero-ETL do DynamoDB com Aurora/Redshift:</strong>
+        <p>A nova feature de integração AWS permite espelhar o DynamoDB para o Amazon Redshift ou S3 (usando DynamoDB Export/Kinesis Streams) sem escrever código Lambda, habilitando queries analíticas SQL complexas (com JOINs) em tempo quase real sem prejudicar o desempenho transacional da tabela NoSQL.</p>
+      </div>
+
+      <h3 style="margin-top: 40px; margin-bottom: 15px;">Desenho de Arquitetura: Data Engineering CDC (DynamoDB &amp; RDS para Iceberg)</h3>
+      <p style="margin-bottom: 15px;">Para um engenheiro de dados, o desafio de bancos transacionais NoSQL e SQL (DynamoDB e Aurora) é que não é possível rodar queries analíticas pesadas (<code>GROUP BY</code>, <code>JOIN</code> em milhões de linhas) diretamente na origem sem derrubar a aplicação. A solução é montar um <strong>Change Data Capture (CDC)</strong> contínuo para extrair apenas o delta (o que mudou) e consolidar num formato colunar como Apache Iceberg no S3.</p>
+
+      <div class="mxgraph" style="max-width:100%;background:#080f1e;margin-top:15px;margin-bottom:30px;" data-mxgraph="{&quot;highlight&quot;: &quot;#10b981&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;880\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;880\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;t1\&quot; value=\&quot;CDC PIPELINE (OLTP para OLAP)\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;880\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;db1\&quot; value=\&quot;Amazon RDS / Aurora\\n(Transacional SQL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;60\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;db2\&quot; value=\&quot;Amazon DynamoDB\\n(Transacional NoSQL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;180\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;c1\&quot; value=\&quot;AWS DMS\\n(Lê BinLog/WAL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database_migration_service;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;60\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;c2\&quot; value=\&quot;DynamoDB Streams\\n(Eventos de Modificação)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;180\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;str\&quot; value=\&quot;Amazon Kinesis / Kafka\\n(Buffer / Tópico CDC)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;400\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;proc\&quot; value=\&quot;EMR Serverless (Spark)\\nMerge INTO (ACID)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;560\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;lake\&quot; value=\&quot;Apache Iceberg (S3)\\n(Data Lake Analítico)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;740\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;db1\&quot; target=\&quot;c1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;db2\&quot; target=\&quot;c2\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.25;\&quot; edge=\&quot;1\&quot; source=\&quot;c1\&quot; target=\&quot;str\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e4\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.75;\&quot; edge=\&quot;1\&quot; source=\&quot;c2\&quot; target=\&quot;str\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e5\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;str\&quot; target=\&quot;proc\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e6\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;proc\&quot; target=\&quot;lake\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
+
+      <div class="callout callout-tip">
+        <strong>📚 Documentação Oficial AWS:</strong>
+        <p>A AWS recomenda arquiteturas de CDC orientadas a eventos utilizando <strong>DynamoDB Streams</strong> nativo para capturar alterações em nível de item. Isso não consome WCU/RCU da tabela principal e garante ordem estrita para entrega ao Kinesis ou Lambda (<em>AWS Prescriptive Guidance: Stream data from DynamoDB to S3</em>).</p>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SECTION 4: OPERACAO & TROUBLESHOOTING -->
+    <section class="section" id="operacao">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Guia Operacional: Monitoramento &amp; Troubleshooting Avançado</h2>
+          <p>Queries SQL de tuning de bancos, comandos CLI cruciais de diagnóstico do ECS e Load Balancers</p>
+        </div>
+      </div>
+
+      <h3>CLI Cheat Sheet: Operando e Diagnosticando ECS &amp; Load Balancers</h3>
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Obter informações de tarefas rodando no ECS</span>
+aws ecs list-tasks --cluster prod-analytics-cluster
+
+<span class="c"># 2. Descrever detalhes de uma task específica (verificar se há erros de Out of Memory - OOM)</span>
+aws ecs describe-tasks \
+  --cluster prod-analytics-cluster \
+  --tasks arn:aws:ecs:us-east-1:123456789012:task/prod-analytics-cluster/99b6622
+
+<span class="c"># 3. Forçar um redesploy limpo sem alterar a Task Definition</span>
+aws ecs update-service \
+  --cluster prod-analytics-cluster \
+  --service analytics-service \
+  --force-new-deployment
+
+<span class="c"># 4. Interagir diretamente (SSH/Bash) dentro do container ECS rodando no Fargate</span>
+aws ecs execute-command \
+  --cluster prod-analytics-cluster \
+  --task 99b66223a4 \
+  --container api-container \
+  --interactive \
+  --command <span class="s">"/bin/sh"</span>
+
+<span class="c"># 5. Verificar o status de integridade do ALB Target Group</span>
+aws elbv2 describe-target-health \
+  --target-group-arn arn:aws:elasticloadbalancing:us-east-1:12345678:targetgroup/tg-ecs-analytics/bc51</pre>
+
+      <h3 style="margin-top: 30px;">SQL Diagnostics para Administradores de Bancos (PostgreSQL RDS / Aurora)</h3>
+      <p>Em momentos de travamento no banco, utilize as queries estruturadas abaixo para descobrir e encerrar locks e processos órfãos consumindo CPU:</p>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Query 1: Listar conexões ativas ordenadas por tempo de execução (identificar queries travando)</div>
+        <div class="abox-body">
+          <pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span> pid, age(query_start, clock_timestamp()), usename, state, query 
+<span class="k">FROM</span> pg_stat_activity 
+<span class="k">WHERE</span> state != <span class="s">'idle'</span> 
+<span class="k">ORDER BY</span> query_start <span class="k">ASC</span> 
+<span class="k">LIMIT</span> 10;</pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Query 2: Identificar Locks Ativos (Tabelas bloqueadas por transações pendentes)</div>
+        <div class="abox-body">
+          <pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span>
+    blocked_locks.pid     <span class="k">AS</span> blocked_pid,
+    blocked_activity.usename  <span class="k">AS</span> blocked_user,
+    blocking_locks.pid    <span class="k">AS</span> blocking_pid,
+    blocking_activity.usename <span class="k">AS</span> blocking_user,
+    blocked_activity.query    <span class="k">AS</span> blocked_statement,
+    blocking_activity.query   <span class="k">AS</span> blocking_statement
+<span class="k">FROM</span>  pg_catalog.pg_locks         blocked_locks
+<span class="k">JOIN</span> pg_catalog.pg_stat_activity blocked_activity <span class="k">ON</span> blocked_activity.pid = blocked_locks.pid
+<span class="k">JOIN</span> pg_catalog.pg_locks         blocking_locks 
+    <span class="k">ON</span> blocking_locks.locktype = blocked_locks.locktype
+    <span class="k">AND</span> blocking_locks.database <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.database
+    <span class="k">AND</span> blocking_locks.relation <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.relation
+    <span class="k">AND</span> blocking_locks.page <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.page
+    <span class="k">AND</span> blocking_locks.tuple <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.tuple
+    <span class="k">AND</span> blocking_locks.virtualxid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.virtualxid
+    <span class="k">AND</span> blocking_locks.transactionid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.transactionid
+    <span class="k">AND</span> blocking_locks.classid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.classid
+    <span class="k">AND</span> blocking_locks.objid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.objid
+    <span class="k">AND</span> blocking_locks.objsubid <span class="k">IS NOT DISTINCT FROM</span> blocked_locks.objsubid
+    <span class="k">AND</span> blocking_locks.pid != blocked_locks.pid
+<span class="k">JOIN</span> pg_catalog.pg_stat_activity blocking_activity <span class="k">ON</span> blocking_activity.pid = blocking_locks.pid
+<span class="k">WHERE</span> <span class="k">NOT</span> blocked_locks.granted;</pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Comando 3: Derrubar transação bloqueadora específica via ID do processo (PID)</div>
+        <div class="abox-body">
+          <pre style="background:#0f172a; color:#f8fafc;"><span class="c">-- Termina a query de forma limpa</span>
+<span class="k">SELECT</span> pg_cancel_backend(blocking_pid);
+
+<span class="c">-- Força o encerramento imediato da conexão física com o banco</span>
+<span class="k">SELECT</span> pg_terminate_backend(blocking_pid);</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: GUIA E COMPARAÇÃO DE BANCOS DE DADOS AWS -->
+    <section class="section" id="aws-databases-guide">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Tipos de Bancos de Dados AWS: Guia de Tomada de Decisão</h2>
+          <p>Mapeamento completo de engines de banco, tipos de dados e quando usar</p>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Banco AWS</th>
+              <th>Modelo / Engine</th>
+              <th>Vantagem Crítica</th>
+              <th>trade-offs / Limites</th>
+              <th>Caso de Uso Recomendado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Amazon RDS</strong></td>
+              <td>Relacional (OLTP) - Postgres, MySQL, Oracle, SQL Server</td>
+              <td>Compatibilidade total com drivers e bibliotecas tradicionais.</td>
+              <td>Replicação Multi-AZ lenta baseada em EBS. Dificuldade de escalar escritas globalmente.</td>
+              <td>Sistemas transacionais legados, ERPs clássicos, CRMs com relações complexas de chaves estrangeiras.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Aurora</strong></td>
+              <td>Relacional (OLTP compatível) - Postgres/MySQL</td>
+              <td>Armazenamento compartilhado atômico de log, auto-healing, failover em 3s, até 15 réplicas sem lag de leitura.</td>
+              <td>Custo superior ao RDS tradicional para instâncias muito pequenas (não analíticas).</td>
+              <td>**Sistemas transacionais modernos de altíssima concorrência** e APIs corporativas escaláveis.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon DynamoDB</strong></td>
+              <td>NoSQL (Chave-Valor / Documento)</td>
+              <td>Serverless, escala infinita com latência estável inferior a 10ms (single-digit). Latência global via Global Tables.</td>
+              <td>Não suporta joins relacionais natively. Exige modelagem rigorosa de acesso (Single-Table Design).</td>
+              <td>Carrinhos de compras, catálogo de produtos, sessão de usuários e logs de auditoria rápida.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon DocumentDB</strong></td>
+              <td>NoSQL (Documento compatível com MongoDB)</td>
+              <td>Totalmente gerenciado, escala para milhões de leituras por segundo integrando JSON nativo.</td>
+              <td>Não suporta queries de joins analíticos complexos de forma performática.</td>
+              <td>Gerenciadores de conteúdo (CMS), catálogos com atributos altamente dinâmicos e variáveis.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon ElastiCache</strong></td>
+              <td>Em Memória (Redis / Memcached)</td>
+              <td>Latência sub-milissegundo para queries repetidas e processamento de pub/sub rápido.</td>
+              <td>Dados voláteis na RAM (mesmo com persistência ligada, o custo de RAM por GB é altíssimo).</td>
+              <td>Caching de sessões HTTP, tabelas de classificação em tempo real e buffers de mensagens de alta vazão.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Neptune</strong></td>
+              <td>Grafo (RDF / Property Graph)</td>
+              <td>Armazena e navega em relacionamentos altamente interconectados com velocidade milissegunda.</td>
+              <td>Linguagens de query específicas (Gremlin, SPARQL).</td>
+              <td>Sistemas de detecção de fraude, motores de recomendação de amigos/produtos e redes sociais.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Timestream</strong></td>
+              <td>Séries Temporais (Time-Series)</td>
+              <td>Auto-scaling nativo para bilhões de métricas de IoT diárias, ciclo de vida automático (in-memory para magnetic storage).</td>
+              <td>Restrito a dados ordenados por timestamp imutáveis.</td>
+              <td>Telemetria IoT de sensores industriais, métricas de aplicações de infraestrutura, logs de cliques.</td>
+            </tr>
+            <tr>
+              <td><strong>Amazon Redshift</strong></td>
+              <td>MPP Data Warehouse (OLAP)</td>
+              <td>Armazenamento colunar com processamento massivo em paralelo para petabytes de dados analíticos.</td>
+              <td>Latência de gravação linha a linha péssima. Não deve ser usado como banco de API de microsserviços.</td>
+              <td>**Data Warehousing corporativo centralizado**, agregação histórica pesada e queries de BI corporativo.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 6: COMPARATIVO SQL VS NOSQL VS SQS -->
+    <section class="section" id="sql-nosql-sqs">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#f43f5e">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Comparativo e Matriz de Decisão: SQL vs. NoSQL vs. SQS</h2>
+          <p> trade-offs arquiteturais entre persistência transacional, escalabilidade e desacoplamento assíncrono</p>
+        </div>
+      </div>
+
+      <p>Um erro de design comum em arquiteturas distribuídas na AWS é tentar usar a mesma tecnologia para objetivos computacionais opostos. Abaixo detalhamos a comparação física e lógica das soluções:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Característica</th>
+              <th>SQL (ex: Aurora Postgres)</th>
+              <th>NoSQL (ex: DynamoDB)</th>
+              <th>SQS (Simple Queue Service)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Natureza do Serviço</strong></td>
+              <td>Banco de Dados Relacional estruturado (Tabelas/Esquemas rígidos).</td>
+              <td>Banco de Dados Não-Relacional distribuído (Chave-Valor/Documento).</td>
+              <td>Mensageria / Fila de Mensagens distribuída (Fila FIFO ou Standard).</td>
+              </tr>
+            <tr>
+              <td><strong>Garantias de Consistência</strong></td>
+              <td>Transações ACID estritas (isolação serializável, chaves estrangeiras, consistência forte imediata).</td>
+              <td>Eventualmente consistente (consistência forte sob demanda pagando taxa adicional). Sem ACID nativo multi-tabelas clássico.</td>
+              <td>Exactly-Once (em filas FIFO) ou At-Least-Once (filas Standard). Desacoplamento temporal.</td>
+            </tr>
+            <tr>
+              <td><strong>Escalabilidade de Escrita</strong></td>
+              <td>Vertical (Writer único no Aurora, escala até limites da máquina). Réplicas apenas lêem.</td>
+              <td>Horizontal infinita (auto-scaling automático adicionando partições baseadas nas PKs).</td>
+              <td>Praticamente infinita (escala automaticamente sem provisionamento prévio).</td>
+            </tr>
+            <tr>
+              <td><strong>Padrão de Consulta</strong></td>
+              <td>Queries ad-hoc altamente complexas, joins multi-tabelas, agregações arbitrárias (<code>GROUP BY</code>).</td>
+              <td>Apenas por chaves primárias e índices secundários conhecidos (GSI/LSI). Sem joins.</td>
+              <td>Apenas leitura destrutiva sequencial (consumidor lê a mensagem da fila e a deleta após processar).</td>
+            </tr>
+            <tr>
+              <td><strong>Decisão de Uso (Quando Escolher?)</strong></td>
+              <td>**Quando a integridade relacional é lei** e as queries são imprevisíveis (ex: fechamento contábil, BI flexível).</td>
+              <td>**Quando o padrão de acesso é conhecido** e você exige escala linear infinita com latência estável milissegunda.</td>
+              <td>**Para desacoplar microsserviços**, amortecer picos de carga de escrita (Buffer/Throttling) e garantir resiliência assíncrona.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 30px;">Qual a Melhor Decisão de Quando Usar? (Arquitetura de Ingress Segura)</h3>
+      <p>Em sistemas produtivos resilientes, o design de ingress combina os três serviços em um fluxo cooperativo:</p>
+
+                    <div class="drawio-wrap">
+        <div class="drawio-label"><span class="dot"></span>Arquitetura Event-Driven — SNS · SQS · EventBridge</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"380\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n      <mxCell id=\"bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"380\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"title\" value=\"ARQUITETURA EVENT-DRIVEN \u2014 SNS \u00b7 SQS \u00b7 EVENTBRIDGE\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"aurora\" value=\"Aurora DB\nPostgreSQL\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"160\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"evb\" value=\"EventBridge\nCustom Bus\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"200\" y=\"160\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_a_evb\" value=\"CDC/DMS\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"aurora\" target=\"evb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sns\" value=\"SNS\nTopic\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"380\" y=\"80\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sqs\" value=\"SQS\nQueue\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"380\" y=\"240\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_evb_sns\" value=\"Broadcast\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"evb\" target=\"sns\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_evb_sqs\" value=\"Buffer\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"evb\" target=\"sqs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_sf\" value=\"AWS STEP FUNCTIONS\" style=\"labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#7c3aed;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"550\" y=\"50\" width=\"200\" height=\"280\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sf\" value=\"Step\nFunctions\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"570\" y=\"80\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"glue\" value=\"Glue Job\nSpark\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"570\" y=\"170\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sns_err\" value=\"SNS\nAlert\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"170\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sqs_sf\" value=\"Trigger\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sqs\" target=\"sf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sf_glue\" value=\"On Success\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sf\" target=\"glue\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sf_err\" value=\"On Error\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"sf\" target=\"sns_err\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3\" value=\"S3 Silver\nParquet\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"800\" y=\"100\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"cw\" value=\"CloudWatch\nAlarms\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"800\" y=\"230\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_glue_s3\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"glue\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_err_cw\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sns_err\" target=\"cw\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"lmb\" value=\"Lambda\n(Notif)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"550\" y=\"310\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sns_lmb\" value=\"Fan-out\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"sns\" target=\"lmb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root>\n</mxGraphModel>"}'></div>
+
+</div>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+  <strong style="color: var(--accent);">Explicação:</strong>
+  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> ARQUITETURA EVENT-DRIVEN — SNS · SQS · EVENTBRIDGE, Aurora DB PostgreSQL, EventBridge Custom Bus, CDC/DMS, SNS Topic, SQS Queue, Broadcast, Buffer, AWS STEP FUNCTIONS, Step Functions, Glue Job Spark, SNS Alert, Trigger, On Success, On Error, S3 Silver Parquet, CloudWatch Alarms, Lambda (Notif), Fan-out</li>
+    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+    <li><strong>Contexto:</strong> O diagrama "Arquitetura Event-Driven — SNS · SQS · EventBridge" ilustra a arquitetura da solução para o tópico em questão.</li>
+  </ul>
+</div>
+
+      <div class="callout callout-info" style="margin-top:20px;">
+        <strong>Regra de Ouro da Arquitetura Decisória:</strong>
+        <br>1. Use **SQS** na borda (Ingress) sempre que receber dados de sensores ou eventos externos massivos de e-commerce. A fila garante que a sua API responda "202 Accepted" em milissegundos, impedindo que picos de tráfego derrubem ou gerem exaustão de conexões físicas no banco de dados.
+        <br>2. Use o **NoSQL (DynamoDB)** para dados operacionais desestruturados ou rastreamento rápido de estado de curta duração (ex: se o pagamento foi processado ou não).
+        <br>3. Use o **SQL (Aurora)** apenas quando a mensagem for validada e precisar de consistência relacional estrita (ex: alterar balanço de contas bancárias ou gerar a fatura consolidada final do cliente).
+      </div>
+    </section>
+  
+    <!-- SEÇÃO DE REFERÊNCIAS -->
+    <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--muted)">REF</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--muted)"></div>
+          <h2>Referências &amp; Notas de Curadoria</h2>
+          <p>Documentos originais e literatura técnica de referência para este módulo</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-lbl">Database Internals</div>
+          <h4>Alex Petrov (O'Reilly Media)</h4>
+          <p>Arquiteturas e estruturas de armazenamento internas de bancos de dados relacionais e não-relacionais (B-Trees, LSM-Trees, e motores de indexação).</p>
+        </div>
+        <div class="card">
+          <div class="card-lbl">Amazon DynamoDB Developer Guide</div>
+          <h4>AWS Official Documentation</h4>
+          <p>O guia de referência oficial para modelagem NoSQL single-table design, partições lógicas e consumo de RCU/WCU. <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 600;">Acessar Guia</a></p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+<script src="../../js/progress.js"></script>
+
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+</body>
+</html>
