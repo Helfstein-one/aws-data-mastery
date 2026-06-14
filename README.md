@@ -63,3 +63,13 @@ Este portal é uma **iniciativa colaborativa e viva**. Se você identificou um b
 ## 📸 Preview do Portal
 
 ![Preview da Navegação e Dashboard do Portal AWS Data Mastery](aws-data-mastery-preview.png)
+
+
+## Atualizações Recentes (v1.3.0)
+
+- 🎨 **Interface Dark Mode & AWS 2026**: Todos os diagramas e ícones utilizam as bibliotecas visuais mais modernas.
+- 📊 **Progresso Sincronizado**: Barra lateral categorizada com Macro Temas (Spark, EMR, etc.) e anéis de progresso que contabilizam automaticamente novos módulos práticos e fundamentais.
+- 📚 **Hub de Prática**: Playbooks de Crises detalhados e centenas de perguntas de entrevistas com avaliações integradas.
+
+Veja o histórico de atualizações completo no [CHANGELOG.md](CHANGELOG.md).
+
