@@ -2,6 +2,16 @@
 
 Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
 
+## [v1.4.0] - 2026-06-14
+
+### Adicionado
+- **Data Quality & Business Quality**: Criação de novas páginas completas (`data-quality.html`) englobando os conceitos essenciais da AWS (Circuit Breakers no Glue, Macie, regras Deequ) e o pilar de *Business Quality*.
+- **Gamificação no Bento Grid**: As barras de porcentagem do painel gamificado agora interagem e preenchem progressivamente de forma embutida na base de cada card do Bento Grid.
+
+### Modificado
+- **Nova Interface Bento Box**: Fusão impecável do Ecossistema Core com as Trilhas de Especialização, adotando o design assíncrono moderno (Bento Box) contendo ícones AWS de alta resolução empilhados de forma inteligente.
+- **Dashboard Global Refatorado**: O *dashboard* central de progresso e Conquistas (Badges com animação em SVG) foi reposicionado organicamente ao redor do painel de navegação (Bento Grid) mantendo a estrutura gamificada sem sobrecarregar a UX.
+
 ## [v1.3.0] - 2026-06-13
 
 ### Adicionado
