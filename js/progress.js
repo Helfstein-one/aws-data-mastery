@@ -95,6 +95,17 @@
         "processing.html#emr-erros"
       ]
     },
+    containers_docker: {
+      name: "🐳 Containers & Docker",
+      badge: "Mestre em Containers",
+      color: "#0ea5e9",
+      items: [
+        "containers-docker.html#fundamentos-docker",
+        "containers-docker.html#aws-containers-ecosystem",
+        "containers-docker.html#data-engineering-containers",
+        "containers-docker.html#cases"
+      ]
+    },
     infra_operacional: {
       name: "🏗️ Computação & Bancos",
       badge: "Mestre em Computação e Bancos",
@@ -160,6 +171,7 @@
       badge: "Mestre das Redes",
       color: "#06b6d4",
       items: [
+        "networking-ingress.html#fundamentos-rede",
         "networking-ingress.html#dns-cdn",
         "networking-ingress.html#api-alb",
         "networking-ingress.html#vpc-endpoints"
