@@ -4,10 +4,14 @@
   <meta name="author" content="Mauricio Helfstein">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Rede, Ingress &amp; Conectividade - Arquiteturas completas de tráfego, segurança e provisionamento Terraform para processamento e consumo de dados na AWS.">
-  <title>Rede &amp; Ingress - AWS Data Specialist</title>
+  <meta name="description" content="Containers &amp; Docker para Dados - AWS Data Mastery">
+  <title>Containers &amp; Docker para Dados - AWS Data Mastery</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../style.css">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
 </head>
 <body>
 
@@ -392,506 +396,158 @@
 </nav>
 
 <div id="main">
-  <div class="hero" style="background-color: var(--navy)">
-    <div class="hero-ey">Arquitetura de Conectividade</div>
-    <h1>Rede &amp; Ingress de Dados</h1>
-    <p class="hero-d">Roteamento DNS global, redes privadas VPC, balanceamento de carga, aceleração por CDN e gateways de entrada para ingestão síncrona e assíncrona.</p>
+  <div class="hero" style="background-color: #0d2a1b">
+    <div class="hero-ey">FinOps &amp; Otimização de Custos</div>
+    <h1>FinOps na <em>Engenharia de Dados</em></h1>
+    <p class="hero-d">Melhores práticas para o controle, monitoramento e otimização financeira de infraestruturas analíticas na nuvem AWS.</p>
   </div>
 
   <main class="main-content">
-    <!-- SECTION 0: Fundamentos de Redes -->
-    <section class="section" id="fundamentos-rede">
+
+<section class="section" id="fundamentos-docker">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">00</div>
+        <div class="sec-num" style="color:var(--aws)">01</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>Fundamentos: IPs, VPCs e Segurança de Rede</h2>
-          <p>O alicerce da comunicação segura e roteamento de dados na AWS</p>
+          <div class="sec-acc" style="background:var(--aws)"></div>
+          <h2>Fundamentos: Docker &amp; Containers</h2>
+          <p>Isolamento, Cgroups, Namespaces e o fim do "Na minha máquina funciona"</p>
         </div>
       </div>
 
-      <p>Antes de expor serviços para a internet (Ingress), é crucial entender a anatomia de uma rede na AWS. Todo o tráfego de dados trafega através de redes lógicas isoladas, onde o controle de acesso é definido por blocos de IP, subredes e firewalls virtuais.</p>
+      <p>Um container é uma unidade de software empacotada com todas as suas dependências — código, runtime, bibliotecas do sistema e configurações — para que o aplicativo seja executado de forma rápida e confiável em qualquer ambiente. Diferente de máquinas virtuais (VMs) que emulam o hardware completo e possuem um SO próprio (Guest OS) pesado, os containers compartilham o kernel do sistema operacional host, sendo infinitamente mais leves e rápidos de inicializar.</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Cgroups &amp; Namespaces</h4>
+          <p>O isolamento em containers Linux baseia-se em dois recursos principais do kernel: <strong>Namespaces</strong> isolam o que o processo consegue "ver" (IDs de processo, rede, pontos de montagem), enquanto <strong>Cgroups (Control Groups)</strong> limitam o que o processo consegue "usar" (CPU, Memória, I/O de disco). Se o processo tentar usar mais memória que o estipulado no cgroup, ocorrerá um <em>OOMKilled</em> (Out Of Memory).</p>
+        </div>
+        <div>
+          <h4>Imagens vs Containers</h4>
+          <p>Uma <strong>Imagem Docker</strong> é um template estático, construído em camadas read-only (Layered File System). Um <strong>Container</strong> é a instância em execução dessa imagem, possuindo uma camada adicional read-write temporária. O <code>Dockerfile</code> é a receita ("As Code") para criar essa imagem.</p>
+        </div>
+      </div>
+
+      <div class="code-block" style="background-color: var(--card-bg); border-left: 4px solid var(--accent); padding: 15px; margin-top: 20px;">
+        <h3 style="margin-top: 0; color: var(--text-heading);">Boas Práticas de Dockerfile para Dados (Python)</h3>
+        <p style="margin-bottom: 10px;">Imagens analíticas costumam ser pesadas devido às bibliotecas (Pandas, Numpy, PyArrow). Use <strong>Multi-stage builds</strong> para não carregar compiladores (gcc) para a imagem de produção e aproveite o cache das camadas instalando dependências antes de copiar o código-fonte.</p>
+        <pre><code># Estágio 1: Builder
+FROM python:3.9-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --user -r requirements.txt
+
+# Estágio 2: Produção (Runner)
+FROM python:3.9-slim
+WORKDIR /app
+# Copia apenas as bibliotecas já compiladas
+COPY --from=builder /root/.local /root/.local
+COPY . .
+ENV PATH=/root/.local/bin:$PATH
+CMD ["python", "etl_pipeline.py"]</code></pre>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <section class="section" id="aws-containers-ecosystem">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Ecossistema de Containers na AWS</h2>
+          <p>Registry (ECR), Orquestração (ECS vs EKS) e Compute (EC2 vs Fargate)</p>
+        </div>
+      </div>
+
+      <p>Na AWS, a execução de containers se divide em três grandes frentes: Onde armazenar as imagens, quem vai orquestrar a frota de containers, e qual o hardware (compute) subjacente.</p>
 
       <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">Endereçamento Lógico</div>
-          <div class="cc-title">IPs &amp; Blocos CIDR</div>
+        <div class="concept-card" style="border-top: 4px solid var(--aws);">
+          <div class="cc-tag">Registry</div>
+          <div class="cc-title">Amazon ECR</div>
           <div class="cc-body">
-            <strong>Conceito:</strong> Endereços IP (IPv4) são a identidade de rede dos recursos. O **CIDR (Classless Inter-Domain Routing)** define um intervalo de IPs disponíveis. Por exemplo, <code>10.0.0.0/16</code> fornece ~65.536 IPs. <br>
-            <strong>Prática:</strong> Dimensionar blocos CIDR corretamente evita esgotamento de IPs, um erro comum ao subir clusters grandes no EKS (onde cada Pod/Container consome um IP privado da VPC).
+            <strong>Elastic Container Registry:</strong> É o repositório privado da AWS onde suas imagens Docker ficam armazenadas. Suporta versionamento por <em>tags</em>, integração direta com IAM e varredura nativa (Scanning) para detectar vulnerabilidades CVE nas imagens antes do deploy.
           </div>
         </div>
 
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">Isolamento Lógico</div>
-          <div class="cc-title">Amazon VPC &amp; Subredes</div>
+        <div class="concept-card" style="border-top: 4px solid var(--ext);">
+          <div class="cc-tag">Orquestração</div>
+          <div class="cc-title">Amazon ECS vs EKS</div>
           <div class="cc-body">
-            A **VPC (Virtual Private Cloud)** é o seu datacenter privado na AWS. Ela é fatiada em **Subredes (Subnets)** atreladas a diferentes Zonas de Disponibilidade (AZs). Uma subrede é "pública" se possui rota para um <em>Internet Gateway (IGW)</em>, caso contrário, é "privada". Bancos de dados e instâncias de processamento analítico (EMR, Glue) <strong>nunca</strong> devem residir em subredes públicas.
+            O <strong>ECS (Elastic Container Service)</strong> é o orquestrador nativo da AWS. É extremamente simples, integrado (CloudWatch, IAM, ALB) e tem baixa carga operacional. O <strong>EKS (Elastic Kubernetes Service)</strong> é o Kubernetes gerenciado; é agnóstico de nuvem, rico em features (Helm, Service Mesh), mas com uma curva de aprendizado e overhead de gestão maiores.
           </div>
         </div>
 
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">Firewall Stateful</div>
-          <div class="cc-title">Security Groups (SGs)</div>
+        <div class="concept-card" style="border-top: 4px solid var(--ok);">
+          <div class="cc-tag">Compute</div>
+          <div class="cc-title">EC2 vs AWS Fargate</div>
           <div class="cc-body">
-            <strong>Security Groups</strong> atuam no nível da interface de rede (ENI) de cada recurso (EC2, RDS). Eles são *stateful*: se você permitir a entrada (Ingress) na porta 5432 (PostgreSQL), o tráfego de retorno (Egress) é automaticamente permitido. O padrão de segurança (Zero Trust) é fechar todas as portas e abrir apenas as estritamente necessárias.
-          </div>
-        </div>
-        
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">Distribuição de Tráfego</div>
-          <div class="cc-title">Load Balancers (ELB)</div>
-          <div class="cc-body">
-            Sistemas distribuídos não expõem servidores diretamente. Usa-se o **Application Load Balancer (ALB)** (Camada 7 - HTTP/HTTPS) para rotear com base na URL (ex: <code>/api/v1</code>) ou o **Network Load Balancer (NLB)** (Camada 4 - TCP) para altíssima performance e conexões persistentes em bancos de dados.
+            No modo <strong>EC2</strong>, você gerencia as máquinas virtuais (clusters) onde os containers rodam, otimizando custos com Spot Instances. O <strong>Fargate</strong> é o modelo Serverless de compute; a AWS provisiona o hardware dinamicamente por container. Você não gerencia servidores, focando 100% no desenvolvimento de tarefas (Tasks).
           </div>
         </div>
       </div>
     </section>
 
-    <!-- SECTION 1: DNS & CDN -->
-    <section class="section" id="dns-cdn">
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <section class="section" id="data-engineering-containers">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">01</div>
+        <div class="sec-num" style="color:var(--accent)">03</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>Route 53 &amp; CloudFront: Roteamento Global e CDNs</h2>
-          <p>Como distribuir APIs, blindar pontos de entrada e acelerar o tráfego na borda da AWS</p>
+          <div class="sec-acc" style="background:var(--accent)"></div>
+          <h2>Containers na Engenharia de Dados &amp; AI</h2>
+          <p>Desacoplamento e reprodutibilidade com Glue, EMR, MWAA e SageMaker</p>
         </div>
       </div>
 
-      <p>A primeira linha de defesa e otimização de latência para aplicações que interagem com dados analíticos reside na borda (Edge Locations) da nuvem AWS. Combinamos o **Route 53** e o **CloudFront** para balancear geograficamente as requisições e isolar a infraestrutura física de servidores.</p>
+      <p>A Engenharia de Dados moderna abandonou clusters estáticos instalados "na mão". A padronização via containers permite que equipes Data Ops entreguem produtos de dados com controle absoluto de versão.</p>
 
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">DNS Roteamento</div>
-          <div class="cc-title">Amazon Route 53</div>
-          <div class="cc-body">
-            <strong>Conceito:</strong> Serviço de DNS público e privado altamente resiliente.<br>
-            <strong>Melhores Práticas:</strong> Utilizar políticas de <em>Roteamento por Latência</em> ou <em>Geolocalização</em> para direcionar requisições analíticas ao datacenter mais próximo; configurar <em>Failover ativo-passivo</em> automático monitorando endpoints; utilizar o <em>Route 53 Resolver</em> para ligar redes locais à nuvem de forma privada.
-          </div>
-        </div>
-
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">Edge Caching</div>
-          <div class="cc-title">Amazon CloudFront</div>
-          <div class="cc-body">
-            <strong>Conceito:</strong> CDN que armazena respostas dinâmicas em cache na borda.<br>
-            <strong>Melhores Práticas:</strong> Otimizar TTLs de cache para relatórios consolidados; utilizar <em>Origin Shield</em> para centralizar requisições e reduzir chamadas ao ALB; rodar autorização rápida usando <em>CloudFront Functions</em> (latência de microssegundos) e blindar acessos com <strong>AWS WAF</strong> contra ataques de DDoS.
-          </div>
-        </div>
-      </div>
-
-      <h3>Provisionamento do CloudFront &amp; Route 53 com Terraform</h3>
-      <p>Código declarativo de provisionamento para uma distribuição CloudFront apontando para um bucket S3 privado usando OAC (Origin Access Control):</p>
-      
-      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Criação do Bucket S3 privado para armazenamento estático</span>
-resource <span class="s">"aws_s3_bucket"</span> <span class="s">"data_hosting"</span> {
-  bucket = <span class="s">"prod-analises-estaticas-host"</span>
-}
-
-<span class="c"># 2. Configuração de Origin Access Control (OAC) para blindar o bucket</span>
-resource <span class="s">"aws_cloudfront_origin_access_control"</span> <span class="s">"oac"</span> {
-  name                              = <span class="s">"s3_oac_secure"</span>
-  origin_access_control_origin_type = <span class="s">"s3"</span>
-  signing_behavior                  = <span class="s">"always"</span>
-  signing_protocol                  = <span class="s">"sigv4"</span>
-}
-
-<span class="c"># 3. Criação da Distribuição CloudFront</span>
-resource <span class="s">"aws_cloudfront_distribution"</span> <span class="s">"cdn"</span> {
-  origin {
-    domain_name              = aws_s3_bucket.data_hosting.bucket_regional_domain_name
-    origin_id                = <span class="s">"S3-DataBucket"</span>
-    origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
-  }
-
-  enabled             = true
-  is_ipv6_enabled     = true
-  default_root_object = <span class="s">"index.html"</span>
-
-  default_cache_behavior {
-    allowed_methods  = [<span class="s">"GET"</span>, <span class="s">"HEAD"</span>]
-    cached_methods   = [<span class="s">"GET"</span>, <span class="s">"HEAD"</span>]
-    target_origin_id = <span class="s">"S3-DataBucket"</span>
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = <span class="s">"none"</span>
-      }
-    }
-
-    viewer_protocol_policy = <span class="s">"redirect-to-https"</span>
-    min_ttl                = 0
-    default_ttl            = 3600  <span class="c"># Cache por 1 hora</span>
-    max_ttl                = 86400
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = <span class="s">"none"</span>
-    }
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
-}</pre>
-    </section>
-
-    <!-- SECTION 2: API & ALB -->
-    <section class="section" id="api-alb">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">02</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>API Gateway &amp; ALB: Gateways de Entrada de Dados</h2>
-          <p>Conceito de Ingress L7, Throttling e Ingestão Direta Síncrona e Assíncrona</p>
-        </div>
-      </div>
-
-      <p>As requisições de ingestão ou consumo de dados chegam aos servidores através de gateways de entrada. A escolha entre o **Amazon API Gateway** (totalmente serverless) e o **Application Load Balancer (ALB)** baseia-se em tradeoffs de latência, volumetria e lógica de roteamento.</p>
-
-      <div class="callout callout-info" style="margin: 16px 0 24px;">
-        <strong>🔌 Módulo Dedicado Disponível</strong>
-        Para um estudo aprofundado sobre API Gateway — incluindo CRUD REST completo, Terraform IaC, chamadas assíncronas com SQS/Kinesis/Step Functions, autenticação avançada (Cognito, Lambda Authorizer, IAM SigV4), WAF, observabilidade e 5 cases reais — acesse o módulo completo:
-        <br><br>
-        <a href="../../pages/fundamentos/api-gateway.html" style="color: #7c3aed; font-weight: 700; text-decoration: underline;">🔌 API Gateway Deep Dive →</a>
-      </div>
-
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">Serverless Gateway</div>
-          <div class="cc-title">Amazon API Gateway</div>
-          <div class="cc-body">
-            <strong>Conceito:</strong> Gateway de borda para expor endpoints REST/HTTP/WebSockets.<br>
-            <strong>Melhores Práticas:</strong> Ativar controle de <em>Throttling</em> via Token Bucket (para evitar negação de serviço); realizar validações sintáticas estruturadas de schemas de payloads; utilizar integração de serviço direta com SQS/Kinesis para fluxos assíncronos, pulando custos desnecessários do Lambda.
-          </div>
-        </div>
-
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">Layer 7 Load Balancing</div>
-          <div class="cc-title">Application Load Balancer (ALB)</div>
-          <div class="cc-body">
-            <strong>Conceito:</strong> Balanceador de carga gerenciado focado em HTTP/HTTPS (L7).<br>
-            <strong>Melhores Práticas:</strong> Utilizar roteamentos avançados (Listener Rules) por Headers, HTTP Methods ou caminhos de URL; configurar timeouts de requisição agressivos para liberar threads nos containers; ativar gRPC para comunicação de microsserviços de dados de altíssimo throughput.
-          </div>
-        </div>
-      </div>
-
-      <h3 style="margin-top: 30px;">Diagrama de Conectividade: Fluxos de Dados Síncronos e Assíncronos</h3>
-      <p>Este diagrama ilustra a segregação física entre caminhos síncronos (caminho crítico de baixa latência) e caminhos assíncronos (de alta vazão de ingestão desacoplada):</p>
-
-            <div class="drawio-wrap">
-        <div class="drawio-label"><span class="dot"></span>Arquitetura Event-Driven — SNS · SQS · EventBridge</div>
-        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"380\" math=\"0\" shadow=\"0\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n      <mxCell id=\"bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"380\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"title\" value=\"ARQUITETURA EVENT-DRIVEN \u2014 SNS \u00b7 SQS \u00b7 EVENTBRIDGE\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"aurora\" value=\"Aurora DB\nPostgreSQL\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"160\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"evb\" value=\"EventBridge\nCustom Bus\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"200\" y=\"160\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_a_evb\" value=\"CDC/DMS\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"aurora\" target=\"evb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sns\" value=\"SNS\nTopic\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"380\" y=\"80\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sqs\" value=\"SQS\nQueue\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"380\" y=\"240\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_evb_sns\" value=\"Broadcast\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"evb\" target=\"sns\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_evb_sqs\" value=\"Buffer\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"evb\" target=\"sqs\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"grp_sf\" value=\"AWS STEP FUNCTIONS\" style=\"labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#7c3aed;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"550\" y=\"50\" width=\"200\" height=\"280\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sf\" value=\"Step\nFunctions\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"570\" y=\"80\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"glue\" value=\"Glue Job\nSpark\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"570\" y=\"170\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"sns_err\" value=\"SNS\nAlert\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"170\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sqs_sf\" value=\"Trigger\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sqs\" target=\"sf\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sf_glue\" value=\"On Success\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sf\" target=\"glue\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sf_err\" value=\"On Error\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"sf\" target=\"sns_err\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"s3\" value=\"S3 Silver\nParquet\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"800\" y=\"100\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"cw\" value=\"CloudWatch\nAlarms\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"800\" y=\"230\" width=\"56\" height=\"56\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_glue_s3\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"glue\" target=\"s3\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_err_cw\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"sns_err\" target=\"cw\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"lmb\" value=\"Lambda\n(Notif)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"550\" y=\"310\" width=\"48\" height=\"48\" as=\"geometry\"/></mxCell>\n      <mxCell id=\"e_sns_lmb\" value=\"Fan-out\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"sns\" target=\"lmb\" parent=\"1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n  </root>\n</mxGraphModel>"}'></div>
-
-</div>
-<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> ARQUITETURA EVENT-DRIVEN — SNS · SQS · EVENTBRIDGE, Aurora DB PostgreSQL, EventBridge Custom Bus, CDC/DMS, SNS Topic, SQS Queue, Broadcast, Buffer, AWS STEP FUNCTIONS, Step Functions, Glue Job Spark, SNS Alert, Trigger, On Success, On Error, S3 Silver Parquet, CloudWatch Alarms, Lambda (Notif), Fan-out</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "Arquitetura Event-Driven — SNS · SQS · EventBridge" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
-</div>
-
-      <h3>Provisionamento do API Gateway com Integração Direta SQS no Terraform</h3>
-      <p>Este código configura uma rota pública no API Gateway que publica diretamente mensagens em uma fila SQS, otimizando drasticamente custos operacionais ao eliminar concorrência de Lambda:</p>
-
-      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Fila SQS alvo do Ingress</span>
-resource <span class="s">"aws_sqs_queue"</span> <span class="s">"ingest_queue"</span> {
-  name = <span class="s">"prod-incoming-transactions-queue"</span>
-}
-
-<span class="c"># 2. Role IAM permitindo ao API Gateway publicar no SQS</span>
-resource <span class="s">"aws_iam_role"</span> <span class="s">"apigw_sqs_role"</span> {
-  name = <span class="s">"apigw-sqs-writer-role"</span>
-
-  assume_role_policy = jsonencode({
-    Version = <span class="s">"2012-10-17"</span>
-    Statement = [{
-      Action    = <span class="s">"sts:AssumeRole"</span>
-      Effect    = <span class="s">"Allow"</span>
-      Principal = { Service = <span class="s">"apigateway.amazonaws.com"</span> }
-    }]
-  })
-}
-
-resource <span class="s">"aws_iam_role_policy"</span> <span class="s">"apigw_sqs_policy"</span> {
-  name = <span class="s">"apigw-sqs-policy"</span>
-  role = aws_iam_role.apigw_sqs_role.id
-
-  policy = jsonencode({
-    Version = <span class="s">"2012-10-17"</span>
-    Statement = [{
-      Action   = [<span class="s">"sqs:SendMessage"</span>]
-      Effect   = <span class="s">"Allow"</span>
-      Resource = aws_sqs_queue.ingest_queue.arn
-    }]
-  })
-}
-
-<span class="c"># 3. Criação da REST API e recurso</span>
-resource <span class="s">"aws_api_gateway_rest_api"</span> <span class="s">"api"</span> {
-  name = <span class="s">"IngestionAPI"</span>
-}
-
-resource <span class="s">"aws_api_gateway_resource"</span> <span class="s">"send"</span> {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
-  path_part   = <span class="s">"send"</span>
-}
-
-<span class="c"># 4. Método HTTP POST para recepção de payloads</span>
-resource <span class="s">"aws_api_gateway_method"</span> <span class="s">"post"</span> {
-  rest_api_id   = aws_api_gateway_rest_api.api.id
-  resource_id   = aws_api_gateway_resource.send.id
-  http_method   = <span class="s">"POST"</span>
-  authorization = <span class="s">"NONE"</span>
-}
-
-<span class="c"># 5. Integração com SQS - Sem Lambda intermediário</span>
-resource <span class="s">"aws_api_gateway_integration"</span> <span class="s">"integration"</span> {
-  rest_api_id             = aws_api_gateway_rest_api.api.id
-  resource_id             = aws_api_gateway_resource.send.id
-  http_method             = aws_api_gateway_method.post.http_method
-  type                    = <span class="s">"AWS"</span>
-  integration_http_method = <span class="s">"POST"</span>
-  uri                     = <span class="s">"arn:aws:apigateway:${var.region}:sqs:path/${var.account_id}/${aws_sqs_queue.ingest_queue.name}"</span>
-  credentials             = aws_iam_role.apigw_sqs_role.arn
-
-  request_parameters = {
-    <span class="s">"integration.request.header.Content-Type"</span> = <span class="s">"'application/x-www-form-urlencoded'"</span>
-  }
-
-  request_templates = {
-    <span class="s">"application/json"</span> = <span class="s">"Action=SendMessage&amp;MessageBody=$input.body"</span>
-  }
-}</pre>
-
-      <h3>Código Prático: Provisionamento de ALB para Múltiplas Aplicações (EMR no EC2 &amp; ECS Fargate)</h3>
-      <p>O exemplo abaixo demonstra como configurar em Terraform um **Application Load Balancer (ALB)** público que atua como ponto único de entrada (Ingress), roteando tráfego baseado no caminho da URL para a interface web de um cluster **EMR no EC2 (nó Master)** e para microsserviços de dados rodando em **ECS Fargate**:</p>
-
-      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Provisionamento do Application Load Balancer Público</span>
-resource <span class="s">"aws_lb"</span> <span class="s">"ingress_alb"</span> {
-  name               = <span class="s">"prod-ingress-load-balancer"</span>
-  internal           = false
-  load_balancer_type = <span class="s">"application"</span>
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = [aws_subnet.public_az1.id, aws_subnet.public_az2.id]
-  tags               = { Environment = <span class="s">"production"</span> }
-}
-
-<span class="c"># 2. Target Group para a API Analítica rodando em ECS Fargate (porta 8080)</span>
-resource <span class="s">"aws_lb_target_group"</span> <span class="s">"ecs_api_tg"</span> {
-  name        = <span class="s">"tg-prod-ecs-analytics-api"</span>
-  port        = 8080
-  protocol    = <span class="s">"HTTP"</span>
-  vpc_id      = aws_vpc.main.id
-  target_type = <span class="s">"ip"</span> # Necessário para modo awsvpc do Fargate
-
-  health_check {
-    path                = <span class="s">"/health"</span>
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 3
-    unhealthy_threshold = 3
-  }
-}
-
-<span class="c"># 3. Target Group para a Spark UI / Zeppelin rodando no Master do EMR no EC2 (porta 18080)</span>
-resource <span class="s">"aws_lb_target_group"</span> <span class="s">"emr_master_tg"</span> {
-  name        = <span class="s">"tg-prod-emr-spark-ui"</span>
-  port        = 18080
-  protocol    = <span class="s">"HTTP"</span>
-  vpc_id      = aws_vpc.main.id
-  target_type = <span class="s">"instance"</span> # Mapeamento direto de Instâncias EC2
-
-  health_check {
-    path                = <span class="s">"/jobs/"</span> # Endpoint padrão do Spark History Server
-    port                = <span class="s">"18080"</span>
-    interval            = 45
-    timeout             = 10
-  }
-}
-
-<span class="c"># 4. Listener HTTPS (Porta 443) do ALB</span>
-resource <span class="s">"aws_lb_listener"</span> <span class="s">"https"</span> {
-  load_balancer_arn = aws_lb.ingress_alb.arn
-  port              = 443
-  protocol          = <span class="s">"HTTPS"</span>
-  ssl_policy        = <span class="s">"ELBSecurityPolicy-TLS13-1-2-2021-06"</span>
-  certificate_arn   = var.ssl_certificate_arn
-
-  # Ação padrão: Direciona para a API de dados no ECS
-  default_action {
-    type             = <span class="s">"forward"</span>
-    target_group_arn = aws_lb_target_group.ecs_api_tg.arn
-  }
-}
-
-<span class="c"># 5. Regra Adicional de Roteamento para a Spark UI do EMR por Caminho (Path-Based routing)</span>
-resource <span class="s">"aws_lb_listener_rule"</span> <span class="s">"emr_spark_ui_rule"</span> {
-  listener_arn = aws_lb_listener.https.arn
-  priority     = 10 # Prioridade maior que a default rule
-
-  action {
-    type             = <span class="s">"forward"</span>
-    target_group_arn = aws_lb_target_group.emr_master_tg.arn
-  }
-
-  condition {
-    path_pattern {
-      values = [<span class="s">"/sparkhistory*"</span>, <span class="s">"/sparkhistory/*"</span>]
-    }
-  }
-}
-
-<span class="c"># 6. Associação física do nó Master do EMR no Target Group</span>
-resource <span class="s">"aws_lb_target_group_attachment"</span> <span class="s">"emr_master_attachment"</span> {
-  target_group_arn = aws_lb_target_group.emr_master_tg.arn
-  target_id        = var.emr_master_instance_id # ID da instância EC2 do nó Master do EMR
-  port             = 18080
-}</pre>
-    </section>
-
-    <!-- SECTION 3: VPC ENDPOINTS -->
-    <section class="section" id="vpc-endpoints">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">03</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>VPC &amp; VPC Endpoints: Segurança e FinOps de Rede</h2>
-          <p>Otimizando o roteamento privado, subredes e economizando milhares de dólares eliminando tráfego NAT</p>
-        </div>
-      </div>
-
-      <p>A **VPC (Virtual Private Cloud)** é a fundação de segurança lógica da AWS. Em arquiteturas analíticas e pipelines de dados de alta escala, o roteamento de rede incorreto é uma das maiores fontes de custos inesperados. O tráfego de dados de subredes privadas para o S3 ou DynamoDB através de **NAT Gateways** gera faturas altíssimas (tarifado por GB processado).</p>
-
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">Subredes Lógicas</div>
-          <div class="cc-title">VPC Subnet Topologies</div>
-          <div class="cc-body">
-            <strong>Conceito:</strong> Divisões físicas de IPs de acordo com a visibilidade de internet.<br>
-            <strong>Melhores Práticas:</strong> Isolar bases de dados e clusters Spark (Glue, EMR) em <em>Subredes Isoladas</em> (sem rota de internet); colocar NAT Gateways de forma redundante em múltiplas AZs nas subredes públicas; blindar conexões de portas usando Security Groups de grão fino e regras de NACLs nas bordas de subredes.
-          </div>
-        </div>
-
-        <div class="concept-card" style="border-top: 4px solid #06b6d4;">
-          <div class="cc-tag">FinOps de Rede</div>
-          <div class="cc-title">VPC Endpoints (PrivateLink)</div>
-          <div class="cc-body">
-            <strong>Conceito:</strong> Pontos de conexões internos de rede que evitam tráfegos públicos.<br>
-            <strong>Melhores Práticas:</strong> Criar obrigatoriamente **Gateway Endpoints** para S3 e DynamoDB (gratuitos) para associar diretamente às tabelas de rotas privadas; utilizar **Interface Endpoints** (PrivateLink) para outros serviços (Kinesis, Glue, Secrets Manager) a fim de garantir que as chaves e dados nunca transitem pela internet pública.
-          </div>
-        </div>
-      </div>
-
-      <h3 style="margin-top: 30px; margin-bottom: 15px;">Desenho de Arquitetura: Transit Gateway &amp; Data Perimeter</h3>
-      <p style="margin-bottom: 15px;">Para um arquiteto corporativo, gerenciar peerings 1-para-1 entre dezenas de VPCs e redes on-premise é insustentável. A solução é o <strong>AWS Transit Gateway (TGW)</strong>, que atua como um hub central de roteamento, interconectando VPCs Analíticas, VPCs de Aplicação e Datacenters via Direct Connect de forma simplificada. Aliado ao <em>VPC Gateway Endpoint</em>, garante-se que os dados pesados (S3) não sobrecarreguem links pagos.</p>
-
-      <div class="mxgraph" style="max-width:100%;background:#080f1e;margin-top:15px;margin-bottom:30px;" data-mxgraph="{&quot;highlight&quot;: &quot;#06b6d4&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;880\&quot; pageHeight=\&quot;340\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;880\&quot; height=\&quot;340\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;t1\&quot; value=\&quot;HUB &amp;amp; SPOKE NETWORK TOPOLOGY\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;880\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;tgw\&quot; value=\&quot;AWS Transit Gateway\\n(Hub de Roteamento)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.transit_gateway;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;416\&quot; y=\&quot;160\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;vpc1\&quot; value=\&quot;VPC: Frontend / App\\n(Spoke A)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.vpc;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;140\&quot; y=\&quot;60\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;vpc2\&quot; value=\&quot;VPC: Data Analytics\\n(Spoke B)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.vpc;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;60\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;dc\&quot; value=\&quot;Datacenter On-Premise\\n(VPN / Direct Connect)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.direct_connect;fillColor=#ef4444;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;416\&quot; y=\&quot;280\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;s3\&quot; value=\&quot;Amazon S3\\n(Data Lake)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;800\&quot; y=\&quot;160\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ep\&quot; value=\&quot;Gateway Endpoint\\n(Tráfego Privado)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.endpoints;fillColor=#06b6d4;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;160\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e1\&quot; value=\&quot;TGW Attachment\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1.5;fillColor=none;fontColor=#8b5cf6;fontFamily=DM Sans;fontSize=10;exitX=0.5;exitY=1;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;vpc1\&quot; target=\&quot;tgw\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e2\&quot; value=\&quot;TGW Attachment\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1.5;fillColor=none;fontColor=#8b5cf6;fontFamily=DM Sans;fontSize=10;exitX=0.5;exitY=1;entryX=1;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;vpc2\&quot; target=\&quot;tgw\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e3\&quot; value=\&quot;DX Connection\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1.5;fillColor=none;fontColor=#8b5cf6;fontFamily=DM Sans;fontSize=10;exitX=0.5;exitY=0;entryX=0.5;entryY=1;\&quot; edge=\&quot;1\&quot; source=\&quot;dc\&quot; target=\&quot;tgw\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e4\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#06b6d4;strokeWidth=2;fillColor=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;vpc2\&quot; target=\&quot;ep\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e5\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#06b6d4;strokeWidth=2;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;ep\&quot; target=\&quot;s3\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
-
-      <div class="callout callout-tip">
-        <strong>💸 Economia FinOps: O Custo do NAT Gateway</strong>
-        <p>Um Job PySpark no EMR que leia 50TB do S3 por mês custaria aproximadamente <strong>$2.250</strong> APENAS em taxas de processamento de rede se o tráfego passasse pelo NAT Gateway público. Com o <em>VPC Gateway Endpoint</em> associado à subrede privada, a mesma transferência custa <strong>$0</strong>. Em contas grandes, VPC Endpoints são os maiores aliados do Engenheiro de FinOps.</p>
-      </div>
-      <p>Este código provisiona uma rede corporativa contendo subredes públicas e privadas, e cria a ponte privada direta com o S3 para economizar taxas de tráfego de dados do NAT Gateway:</p>
-
-      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Criação da VPC</span>
-resource <span class="s">"aws_vpc"</span> <span class="s">"main"</span> {
-  cidr_block           = <span class="s">"10.0.0.0/16"</span>
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-  tags                 = { Name = <span class="s">"prod-analytics-vpc"</span> }
-}
-
-<span class="c"># 2. Subredes Públicas (onde residem ALBs e NAT Gateways)</span>
-resource <span class="s">"aws_subnet"</span> <span class="s">"public_az1"</span> {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = <span class="s">"10.0.1.0/24"</span>
-  availability_zone = <span class="s">"us-east-1a"</span>
-  tags              = { Name = <span class="s">"public-subnet-1a"</span> }
-}
-
-<span class="c"># 3. Subredes Privadas (onde residem EMR Serverless e Glue Jobs)</span>
-resource <span class="s">"aws_subnet"</span> <span class="s">"private_az1"</span> {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = <span class="s">"10.0.10.0/24"</span>
-  availability_zone = <span class="s">"us-east-1a"</span>
-  tags              = { Name = <span class="s">"private-subnet-1a"</span> }
-}
-
-<span class="c"># 4. Tabela de rotas para a Subrede Privada</span>
-resource <span class="s">"aws_route_table"</span> <span class="s">"private"</span> {
-  vpc_id = aws_vpc.main.id
-  tags   = { Name = <span class="s">"private-rt"</span> }
-}
-
-resource <span class="s">"aws_route_table_association"</span> <span class="s">"private"</span> {
-  subnet_id      = aws_subnet.private_az1.id
-  route_table_id = aws_route_table.private.id
-}
-
-<span class="c"># 5. VPC Gateway Endpoint para S3 - Roteamento Interno Gratuito</span>
-resource <span class="s">"aws_vpc_endpoint"</span> <span class="s">"s3"</span> {
-  vpc_id            = aws_vpc.main.id
-  service_name      = <span class="s">"com.amazonaws.us-east-1.s3"</span>
-  vpc_endpoint_type = <span class="s">"Gateway"</span>
-
-  <span class="c"># Associa automaticamente à tabela de rotas das subredes privadas</span>
-  route_table_ids = [aws_route_table.private.id]
-  tags            = { Name = <span class="s">"s3-gateway-endpoint"</span> }
-}
-
-<span class="c"># 6. Conectividade Multi-Account / Multi-VPC com Transit Gateway</span>
-<span class="c"># Quando diferentes contas da AWS precisam interagir de forma privada (ex: Conta Ingestion conectada ao Data Lake na Conta Storage)</span>
-<span class="c"># sem expor o tráfego a internet pública.</span>
-resource <span class="s">"aws_ec2_transit_gateway"</span> <span class="s">"tgw"</span> {
-  description = <span class="s">"Transit Gateway Centralizador para Roteamento Analitico Multi-Account"</span>
-  tags        = { Name = <span class="s">"central-analytics-tgw"</span> }
-}
-
-resource <span class="s">"aws_ec2_transit_gateway_vpc_attachment"</span> <span class="s">"attachment"</span> {
-  subnet_ids         = [aws_subnet.private_az1.id]
-  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
-  vpc_id             = aws_vpc.main.id
-}</pre>
-
-      <h3>Topologias VPC Multi-Account &amp; Peering de Rede</h3>
-      <p>Em grandes plataformas de dados organizadas em <strong>Data Mesh</strong> ou arquiteturas de múltiplas contas (Multi-Account Setup), as VPCs de contas diferentes (ex: Ingestion, Processamento e Serving) precisam de conexões rápidas. As duas principais abordagens de roteamento privado são:</p>
       <ul>
-        <li><strong>VPC Peering:</strong> Estabelece uma conexão direta ponto-a-ponto entre duas VPCs. O tráfego corre na infraestrutura global interna da AWS e não é cobrado por tráfego cruzado se as VPCs estiverem na mesma região e AZ. É o modelo de <strong>menor custo (zero custo de processamento, apenas tráfego inter-AZ se aplicável)</strong> e menor latência.</li>
-        <li><strong>AWS Transit Gateway (TGW):</strong> Funciona como um hub ou roteador virtual na nuvem que conecta dezenas de VPCs e redes locais (Direct Connect / VPN). É o modelo ideal para <strong>gerenciamento e escala centralizados</strong>. No entanto, o TGW possui tarifas por hora e um custo de processamento por gigabyte transitado. *Aviso FinOps:* Para pipelines massivos de ETL que movem Petabytes, o TGW pode inflar exponencialmente a fatura; prefira VPC Peering direto para as rotas principais de movimentação de dados volumosos.</li>
+        <li style="margin-bottom: 15px;"><strong>AWS Glue Custom Visuals / Custom Images:</strong> O AWS Glue permite fornecer sua própria imagem Docker. Isso é essencial quando o seu job PySpark precisa de dependências pesadas de C++ (ex: bibliotecas geoespaciais avançadas, conectores proprietários C/C++ de mainframes) que não podem ser empacotadas via ZIP/Wheel tradicional devido ao limite de tamanho ou compilação local.</li>
+        <li style="margin-bottom: 15px;"><strong>EMR on EKS (Spark no Kubernetes):</strong> Desacopla completamente a camada de armazenamento (S3) e de execução. Em vez de provisionar um cluster EMR longo e ocioso, jobs Spark são submetidos como Pods num cluster Kubernetes centralizado. Usa <em>Pod Templates</em> para garantir que o <em>Driver</em> rode em instâncias On-Demand (Garantia de Resiliência) e os milhares de <em>Executors</em> rodem em instâncias Spot (70% desconto).</li>
+        <li style="margin-bottom: 15px;"><strong>Amazon MWAA (Managed Airflow) &amp; ECS Operator:</strong> O Airflow não deve ser usado como motor de processamento pesado. O padrão de arquitetura correta é usar o <code>ECSOperator</code>. O Airflow envia o gatilho, e o processamento de Extração pesada (Crawlers customizados) roda de forma isolada em um container no ECS Fargate, não derrubando o scheduler do Airflow.</li>
+        <li style="margin-bottom: 15px;"><strong>AWS Batch para Pipelines de Imagens/Genômica:</strong> Processamento assíncrono massivo otimizado para jobs não-Spark. Lê metadados de uma fila SQS e orquestra containers ECS/EKS transparentemente para processamento pesado em GPU.</li>
+        <li style="margin-bottom: 15px;"><strong>AWS Lambda com Imagens de Container:</strong> O limite histórico do pacote ZIP do Lambda era de 250MB. Ao usar Imagens de Container armazenadas no ECR, o Lambda passa a suportar pacotes de até <strong>10 GB</strong>! Padrão ouro para deploy de inferência de modelos Serverless que exigem as pesadíssimas bibliotecas TensorFlow ou PyTorch.</li>
+        <li style="margin-bottom: 15px;"><strong>Amazon SageMaker Custom Containers:</strong> Para treinar modelos proprietários que não se encaixam nos frameworks built-in (SKLearn, XGBoost), cientistas de dados constroem uma imagem Docker customizada aderente ao contrato de APIs do SageMaker (escrevendo e lendo dos diretórios padronizados em <code>/opt/ml/</code>) e as publicam no ECR.</li>
       </ul>
+
+      <h3 style="margin-top: 40px; margin-bottom: 15px;">Desenho de Arquitetura: Hybrid Data Pipeline</h3>
+      <p style="margin-bottom: 15px;">Arquitetura orquestrada usando Airflow delegando computação efêmera e serverless via containers.</p>
+
+      <div class="mxgraph" style="max-width:100%;background:#080f1e;margin-top:15px;margin-bottom:30px;" data-mxgraph="{&quot;highlight&quot;: &quot;#ec4899&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;880\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;880\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;t1\&quot; value=\&quot;CONTAINERIZED HYBRID DATA PIPELINE\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;880\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;mwaa\&quot; value=\&quot;Amazon MWAA\\n(Airflow Orquestrador)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_workflows_for_apache_airflow;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ecr\&quot; value=\&quot;Amazon ECR\\n(Repositório de Imagens)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elastic_container_registry;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;340\&quot; y=\&quot;40\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ecs\&quot; value=\&quot;ECS Fargate Task\\n(Python Extractor)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;260\&quot; y=\&quot;200\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;eks\&quot; value=\&quot;EMR on EKS\\n(Spark Processing)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elastic_kubernetes_service;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;480\&quot; y=\&quot;200\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;s3\&quot; value=\&quot;Amazon S3\\n(Data Lake)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;740\&quot; y=\&quot;200\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e1\&quot; value=\&quot;ECSOperator\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;mwaa\&quot; target=\&quot;ecs\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e2\&quot; value=\&quot;Pull Image\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;dashed=1;exitX=0;exitY=0.5;entryX=0.5;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;ecr\&quot; target=\&quot;ecs\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e3\&quot; value=\&quot;EmrEksOperator\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=10;exitX=1;exitY=0.5;entryX=0.5;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;mwaa\&quot; target=\&quot;eks\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e4\&quot; value=\&quot;Pull Custom Image\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0.5;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;ecr\&quot; target=\&quot;eks\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e5\&quot; value=\&quot;Save Raw\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=2;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;ecs\&quot; target=\&quot;s3\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;e6\&quot; value=\&quot;Process/Write Parquet\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=2;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;eks\&quot; target=\&quot;s3\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
+
+      <div class="callout callout-warning">
+        <strong>⚠️ Antipattern Arquitetural: Airflow Worker OOM</strong>
+        <p>Um erro primário de arquitetura é carregar DataFrames do Pandas contendo milhões de registros dentro da própria "task" Python (<code>PythonOperator</code>) do Airflow. Isso esgota a memória da máquina do <em>worker</em> do MWAA (OOMKilled) e derruba as orquestrações de toda a empresa. Airflow <strong>orquestra</strong>, ele não processa dados. Sempre delegue a carga via ECS/EKS.</p>
+      </div>
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <section class="section" id="cases">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--warn)">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--warn)"></div>
+          <h2>Perguntas de Arquitetura &amp; Cases</h2>
+          <p>Testes de proficiência para o nível de Especialista/Staff</p>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">Q1. A empresa precisa executar centenas de rotinas de extração em Python concorrentemente, com tempos de execução entre 1 e 5 minutos. Atualmente, usam clusters EMR, mas os clusters demoram 5 minutos para inicializar (Cold Start), e o desperdício é alto. Qual o serviço de containers recomendado?</div>
+        <div class="qa-a"><strong>ECS Fargate</strong> orquestrado via Step Functions. O Fargate não requer provisionamento ou tempo de subida de clusters EMR e é tarifado em granularidade de segundo por container executado (Serverless). Alternativamente, o Lambda com Container Images também resolveria se os processos não passassem dos 15 minutos (limite de timeout do Lambda).</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">Q2. Você foi chamado para ajudar na migração de um parque legado Hadoop para AWS EMR. O time de infraestrutura exige isolamento perfeito multitenancy (múltiplos times no mesmo cluster para reduzir custos, mas sem conflito de bibliotecas PySpark). Como arquitetar?</div>
+        <div class="qa-a">Utilizar <strong>EMR on EKS</strong>. O Kubernetes permite rodar múltiplos jobs Spark no mesmo cluster base de hardware (EKS Worker Nodes), isolando totalmente as versões de Spark, Java e bibliotecas Python por meio de Imagens Docker customizadas, encapsulando cada job Spark num Namespace distinto do Kubernetes.</div>
+      </div>
     </section>
 
   
-    <!-- SEÇÃO DE REFERÊNCIAS -->
-    <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--muted)">REF</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Referências &amp; Notas de Curadoria</h2>
-          <p>Documentos originais e literatura técnica de referência para este módulo</p>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-lbl">AWS VPC Peering &amp; Transit Gateway Architectures</div>
-          <h4>AWS Networking Guides</h4>
-          <p>Conceitos de conexões privadas de redes virtuais e VPC Endpoints (Interface e Gateway) para roteamento de dados seguro sem internet. <a href="https://docs.aws.amazon.com/vpc/" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 600;">Acessar Documentação</a></p>
-        </div>
-      </div>
-    </section>
   </main>
 </div>
-
-<button id="scrollTop" onclick="scrollToTop()">↑</button>
-
 <script>
 function toggleNav() {
   var sb = document.getElementById('sidebar');
@@ -976,7 +632,5 @@ document.addEventListener('click', function(e) {
 });
 </script>
 <script src="../../js/progress.js"></script>
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>

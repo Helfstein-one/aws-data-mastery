@@ -62,7 +62,7 @@ Este portal é uma **iniciativa colaborativa e viva**. Se você identificou um b
 
 ## 📸 Preview do Portal
 
-![Preview da Navegação e Dashboard do Portal AWS Data Mastery](aws-data-mastery-preview.png)
+![Preview da Navegação e Dashboard do Portal AWS Data Mastery](assets/images/aws-data-mastery-preview.png)
 
 
 ## Atualizações Recentes (v1.4.0)

@@ -2,9 +2,20 @@
 
 Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
 
-## [v1.4.0] - 2026-06-14
+## [v1.5.0] - 2026-06-14
 
 ### Adicionado
+- **Módulo de Containers & Docker**: Novo hub completo focado em infraestrutura de dados moderna (`containers-docker.html`), abrangendo teorias de Cgroups/Namespaces, Fargate vs EC2, imagens customizadas e arquitetura Híbrida (MWAA + ECS Fargate + EMR on EKS).
+- **Aprofundamentos Arquiteturais de Especialista**: Dezenas de novas seções e diagramas interativos (*draw.io*) focados no nível avançado de Engenharia:
+  - **Networking Fundamental**: Blocos CIDR, VPCs Públicas/Privadas e Security Groups.
+  - **Data Perimeter**: Topologia Hub & Spoke com Transit Gateway e VPC Endpoints.
+  - **CDC & DynamoDB**: Arquitetura real-time CDC integrando RDS, DynamoDB Streams e EMR Serverless para Data Lakes (Iceberg).
+  - **FinOps Serverless**: Pipeline Preditivo de anomalias financeiras utilizando Cost Explorer ML, EventBridge e auto-remediação.
+  - **Business & Topologies**: Mapeamento do Value Stream e Topologias de Time de Dados.
+- **Novas Badges & Gameficação**: Novo SVG oficial do Docker implementado no Bento Grid, e nova conquista "*Mestre em Containers*" adicionada ao motor de rastreamento (`progress.js`).
+- **Scripts de Screenshot Automático**: Criação de automação Node.js (Playwright) para captura programática de *previews* visuais do portal para documentação no README.
+
+## [v1.4.0] - 2026-06-14### Adicionado
 - **Data Quality & Business Quality**: Criação de novas páginas completas (`data-quality.html`) englobando os conceitos essenciais da AWS (Circuit Breakers no Glue, Macie, regras Deequ) e o pilar de *Business Quality*.
 - **Gamificação no Bento Grid**: As barras de porcentagem do painel gamificado agora interagem e preenchem progressivamente de forma embutida na base de cada card do Bento Grid.
 
