@@ -663,6 +663,74 @@ resource "aws_s3_bucket" "data_lake" {
       <p><strong>Cenário:</strong> Todo novo Cientista de Dados contratado precisava abrir um ticket no Jira para que a Segurança criasse sua <em>Role</em> de acesso ao SageMaker e ao S3.</p>
       <p><strong>A Otimização:</strong> O time de Infraestrutura criou um módulo do Terraform chamado <code>aws_data_scientist_role</code>. Agora, um engenheiro só precisa adicionar o nome do cientista em uma lista de strings no `main.tf` do repositório, e o CI/CD (GitHub Actions) aplica o Terraform, gerando a role com o princípio do privilégio mínimo automaticamente.</p>
     </section>
+
+    <section class="section" id="terraform-estrutura-pastas">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#8b5cf6">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#8b5cf6"></div>
+          <h2>Boas Práticas de Modularização e Estrutura</h2>
+          <p>Organizando Repositórios Complexos na AWS</p>
+        </div>
+      </div>
+
+      <p>Um repositório Terraform mal estruturado vira um grande monolito rapidamente, tornando os processos de <em>plan</em> lerdos e arriscados (um erro pode destruir componentes que não deveriam ser tocados). A modularização inteligente é a chave.</p>
+
+      <h3>A Árvore de Pastas Perfeita (Folder Structure)</h3>
+      <p>Uma arquitetura de pastas de nível Sênior separa os Módulos (o "como fazer") das Composições/Ambientes (o "o que criar").</p>
+
+      <div class="code-block">
+        <div class="cb-hdr"><span class="cb-lang">Estrutura de Diretórios</span></div>
+        <pre><code class="language-plaintext">terraform-data-platform/
+├── modules/                         # Módulos Reutilizáveis (Lógica Genérica)
+│   ├── s3-data-lake/                # Módulo para criar buckets criptografados do Lakehouse
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   ├── emr-serverless-app/          # Módulo para o Compute Engine
+│   └── iam-data-role/               # Módulo de Governança de Perfis IAM
+│
+├── environments/                    # Uso prático dos Módulos (State separado)
+│   ├── dev/
+│   │   ├── main.tf                  # Chama os modules/* passando vars pequenas
+│   │   ├── terraform.tfvars         # Ex: instance_count = 1
+│   │   └── backend.tf               # Aponta para o State de Dev
+│   │
+│   ├── stg/
+│   │
+│   └── prod/
+│       ├── main.tf                  # Chama os mesmos modules/*
+│       ├── terraform.tfvars         # Ex: instance_count = 10 (Alta disponibilidade)
+│       └── backend.tf               # Aponta para o State de Prod
+│
+├── scripts/                         # Automações de CI/CD (GitHub Actions / GitLab CI)
+└── README.md</code></pre>
+      </div>
+
+      <div class="concept-grid" style="margin-top: 20px;">
+        <div class="concept-card">
+          <div class="cc-tag">1. Módulos Burros</div>
+          <div class="cc-title">Princípio da Injeção</div>
+          <div class="cc-body">
+            Módulos (<code>/modules</code>) não devem possuir valores <em>hardcoded</em>. Tudo (nomes, VPC IDs, tamanhos) deve vir do <code>variables.tf</code>. Eles devem ser genéricos o suficiente para serem chamados por Dev, Stg ou Prod.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">2. Estados Isolados</div>
+          <div class="cc-title">Blast Radius</div>
+          <div class="cc-body">
+            Ao usar a pasta <code>/environments</code>, cada ambiente possui seu próprio <code>terraform.tfstate</code>. Se houver corrupção no arquivo de estado de <em>Dev</em>, a plataforma de <em>Prod</em> continua intocada e operando 100%.
+          </div>
+        </div>
+        <div class="concept-card">
+          <div class="cc-tag">3. Componentes Granulares</div>
+          <div class="cc-title">State File Size</div>
+          <div class="cc-body">
+            Evite colocar IAM, Redes, S3 e EMR na mesma camada. Times muito maduros até separam o <code>environments/prod/</code> em pastas como <code>network/</code>, <code>storage/</code> e <code>compute/</code>, acelerando os *deploys*.
+          </div>
+        </div>
+      </div>
+    </section>
 </main>
 </div>
 <script>
