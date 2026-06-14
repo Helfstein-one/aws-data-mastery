@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado.">
-  <title>AWS Data Mastery - Event-Driven & Mensageria</title>
+  <title>Event-Driven & Mensageria - AWS Data Specialist</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../style.css">
 </head>
@@ -259,6 +259,12 @@
         <a href="../../pages/fundamentos/computacao-bancos.html#sql-nosql-sqs" class="nav-sub"><span class="nav-sdot"></span>Matriz de Decisão de Bancos</a>
       </div>
       <div class="nav-page-group">
+        <a href="../../pages/fundamentos/nosql-dynamodb.html" class="nav-a" data-page="nosql-dynamodb"><span class="nav-dot" style="background:#0ea5e9"></span>⚡ NoSQL &amp; DynamoDB</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/event-driven-mensageria.html" class="nav-a" data-page="event-driven-mensageria"><span class="nav-dot" style="background:#f59e0b"></span>📬 Event-Driven &amp; Mensageria</a>
+      </div>
+      <div class="nav-page-group">
         <a href="../../pages/fundamentos/networking-ingress.html" class="nav-a" data-page="networking-ingress"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
         <a href="../../pages/fundamentos/networking-ingress.html#fundamentos-rede" class="nav-sub"><span class="nav-sdot"></span>Fundamentos: IP &amp; VPC</a>
         <a href="../../pages/fundamentos/networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>Route 53 &amp; CloudFront</a>
@@ -429,6 +435,7 @@
           <span class="tag">EventBridge</span>
           <span class="tag">Decoupling</span>
           <span class="tag">Fan-out</span>
+          <span class="tag">Terraform</span>
         </div>
       </header>
 
@@ -442,101 +449,175 @@
         <p>A Arquitetura Orientada a Eventos (EDA) muda o modelo de comunicação entre serviços. Em vez de requisições síncronas bloqueantes (A liga para B e espera a resposta), os serviços operam gerando e consumindo <strong>Eventos</strong> — mudanças de estado no sistema. Isso gera tolerância a falhas, escalabilidade independente e facilidade de integração em Data Lakes.</p>
       </section>
 
-      <section class="content-section">
+      <section class="content-section" id="sqs-sns-fanout">
         <div class="section-header">
           <div class="icon-wrapper">
-            <img src="../../assets/aws-icons/SimpleQueueService.png" alt="SQS" style="width:24px;">
+            <img src="../../assets/aws-icons/SimpleNotificationService.png" alt="SNS" style="width:24px;">
           </div>
-          <h2>Amazon SQS: Desacoplamento Seguro (Filas)</h2>
+          <h2>Padrão Fan-Out (SNS + SQS)</h2>
         </div>
-        <p>O Amazon Simple Queue Service (SQS) é um serviço de fila de mensagens totalmente gerenciado que permite desacoplar componentes (Point-to-Point). Ele age como um buffer de retenção, protegendo o *downstream* contra picos abruptos de tráfego (Throttling Protection).</p>
+        <p>O <strong>Amazon SNS (Simple Notification Service)</strong> coordena a entrega push de mensagens de um Publisher para múltiplos Subscribers (Padrão Pub/Sub). Ele funciona com Throughput quase infinito e entrega de baixa latência.</p>
+        
+        <p>Ao conectar o SNS com o <strong>Amazon SQS (Simple Queue Service)</strong>, formamos o poderoso padrão <em>Fan-Out</em>: Uma única mensagem publicada em um Tópico SNS é transmitida para múltiplas filas SQS independentes simultaneamente. Isso permite processamento paralelo assíncrono seguro!</p>
+        
+        <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+          <div class="drawio-label"><span class="dot"></span>ARQUITETURA FAN-OUT</div>
+          <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/diagrams/architecture-sqs-sns.drawio"}'></div>
+        </div>
+      </section>
+
+      <section class="content-section">
+        <h2>Limites e Padrões Avançados (SNS)</h2>
+        <div class="grid-2-col">
+          <div class="card secondary-card">
+            <h3>Message Filtering</h3>
+            <p>Em vez de enviar TODAS as mensagens para todas as filas SQS inscritas, o SNS permite criar <strong>Políticas de Filtro</strong> baseadas nos atributos da mensagem. Isso economiza custos e processamento, garantindo que a fila SQS só receba os eventos relevantes para ela.</p>
+          </div>
+          <div class="card secondary-card">
+            <h3>Limites (Quotas)</h3>
+            <p>O limite de tamanho de payload no SNS e no SQS é <strong>256 KB</strong> por mensagem. O Throughput no SNS Standard é virtualmente ilimitado, mas no FIFO é de até 300 mensagens por segundo (ou 3000 em modo batched).</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section" id="claim-check">
+        <div class="section-header">
+          <div class="icon-wrapper">
+            <span class="icon">📦</span>
+          </div>
+          <h2>Padrão Claim-Check (SQS + S3)</h2>
+        </div>
+        <p>Como contornar a limitação de 256 KB do SQS? Usando o padrão <strong>Claim-Check</strong> (também conhecido como "Reference Pattern"). Em vez de enviar o payload gigante na fila, você o salva no S3 e envia apenas o ponteiro (URL) na fila.</p>
+        
+        <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+          <div class="drawio-label"><span class="dot"></span>PADRÃO CLAIM-CHECK</div>
+          <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/diagrams/pattern-claim-check.drawio"}'></div>
+        </div>
+        
+        <div class="callout callout-info">
+          <div class="callout-icon">💡</div>
+          <div class="callout-content">
+            <strong>Amazon SQS Extended Client Library</strong>
+            <p>A AWS fornece o <code>Amazon SQS Extended Client Library for Java</code> (e equivalente no Boto3 para Python via módulos open-source) que implementa esse padrão <strong>automaticamente</strong> de forma transparente. Ele joga arquivos pesados pro S3 por baixo dos panos e envia a ID na fila sem que você precise escrever código boilerplate!</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section" id="event-bridge">
+        <div class="section-header">
+          <div class="icon-wrapper">
+            <span class="icon">🚌</span>
+          </div>
+          <h2>Amazon EventBridge & Event Filtering</h2>
+        </div>
+        <p>O <strong>Amazon EventBridge</strong> atua como um verdadeiro Barramento de Serviços (Enterprise Service Bus). Enquanto o SNS é ótimo para broadcast simples, o EventBridge brilha em <strong>Roteamento Avançado baseado no Conteúdo do Payload</strong>.</p>
+        
+        <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+          <div class="drawio-label"><span class="dot"></span>EVENTBRIDGE CONTENT FILTERING</div>
+          <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/diagrams/pattern-event-filter.drawio"}'></div>
+        </div>
+        
+        <ul class="feature-list">
+          <li><strong>Regras no Conteúdo:</strong> EventBridge avalia o JSON inteiro do corpo do evento, diferente do SNS que só filtra metadados (MessageAttributes).</li>
+          <li><strong>Integração de 3os:</strong> Ingestão nativa de SaaS como Datadog, Shopify, Zendesk.</li>
+          <li><strong>Mapeamento de Target (Input Transformation):</strong> Permite transformar a estrutura do JSON do evento original antes de enviá-lo ao destino (ex: converter chaves snake_case para camelCase para o Kinesis Firehose).</li>
+        </ul>
+      </section>
+
+      <section class="content-section" id="terraform">
+        <div class="section-header">
+          <div class="icon-wrapper">
+            <img src="../../assets/aws-icons/terraform.svg" alt="Terraform" style="width:24px;">
+          </div>
+          <h2>Implementação em Terraform: SNS para SQS</h2>
+        </div>
+        <p>Provisionamento completo do padrão Fan-out usando Terraform, garantindo que a fila SQS permita recebimento de mensagens do tópico SNS por meio de Resource Policies.</p>
+        
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">main.tf (HCL)</span>
+            <button class="copy-btn">Copiar</button>
+          </div>
+          <pre><code>resource "aws_sns_topic" "orders" {
+  name = "orders-topic"
+}
+
+resource "aws_sqs_queue" "billing_queue" {
+  name                       = "billing-queue"
+  visibility_timeout_seconds = 30
+  message_retention_seconds  = 86400
+}
+
+# Assina a fila no Tópico
+resource "aws_sns_topic_subscription" "orders_sqs_target" {
+  topic_arn = aws_sns_topic.orders.arn
+  protocol  = "sqs"
+  endpoint  = aws_sqs_queue.billing_queue.arn
+}
+
+# Permite que o SNS publique na fila SQS
+resource "aws_sqs_queue_policy" "sns_to_sqs_policy" {
+  queue_url = aws_sqs_queue.billing_queue.id
+  policy    = data.aws_iam_policy_document.sns_to_sqs.json
+}
+
+data "aws_iam_policy_document" "sns_to_sqs" {
+  statement {
+    effect = "Allow"
+    actions = ["sqs:SendMessage"]
+    resources = [aws_sqs_queue.billing_queue.arn]
+
+    principals {
+      type        = "Service"
+      identifiers = ["sns.amazonaws.com"]
+    }
+
+    condition {
+      test     = "ArnEquals"
+      variable = "aws:SourceArn"
+      values   = [aws_sns_topic.orders.arn]
+    }
+  }
+}</code></pre>
+        </div>
+      </section>
+
+      <section class="content-section" id="perguntas-cases">
+        <div class="section-header">
+          <div class="icon-wrapper">
+            <span class="icon">💼</span>
+          </div>
+          <h2>Cases & Simulador de Entrevista</h2>
+        </div>
         
         <div class="table-responsive">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Característica</th>
-                <th>Standard Queue</th>
-                <th>FIFO Queue</th>
+                <th>Pergunta / Cenário</th>
+                <th>Resolução da Arquitetura</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Ordem</td>
-                <td>Best-effort (não garantida)</td>
-                <td>Garantia de ordem estrita (First-In, First-Out)</td>
+                <td><strong>Caso 1:</strong> Seu Producer gera payloads JSON de até 15MB e a API do SQS falha.</td>
+                <td>Implementar o <strong>Padrão Claim-Check</strong> usando a <em>Amazon SQS Extended Client Library</em> que delega transparentemente o armazenamento para o Amazon S3.</td>
               </tr>
               <tr>
-                <td>Entrega</td>
-                <td>Pelo menos uma vez (At-least-once)</td>
-                <td>Exatamente uma vez (Exactly-once)</td>
+                <td><strong>Caso 2:</strong> 10 microsserviços precisam receber a notificação do cadastro de um usuário, mas processam em tempos diferentes.</td>
+                <td>Padrão <strong>Fan-Out (SNS + SQS)</strong>. O Producer posta no SNS, que roteia a cópia para 10 filas SQS distintas, permitindo que cada serviço escale e processe de forma independente.</td>
               </tr>
               <tr>
-                <td>Throughput</td>
-                <td>Quase ilimitado (Milhares/seg)</td>
-                <td>Alta taxa (Até 3.000 ou 30.000 em High Throughput mode)</td>
+                <td><strong>Caso 3:</strong> Garantir que um evento bancário nunca seja processado fora de ordem ou duplicado.</td>
+                <td>Migrar de Filas Standard para <strong>SQS FIFO</strong> e habilitar <em>Content-Based Deduplication</em> (janela de 5 min) para evitar duplicações acidentais.</td>
               </tr>
               <tr>
-                <td>Use Case</td>
-                <td>Agendamento de Jobs, Buffer de Ingestão Genérico</td>
-                <td>Sistemas Financeiros, Transações Bancárias, CDC (DMS)</td>
+                <td><strong>Caso 4:</strong> Consumer falha sistematicamente em certas mensagens, criando um gargalo que bloqueia a fila.</td>
+                <td>Configurar um <em>Dead Letter Queue (DLQ)</em>. Atingido o <code>maxReceiveCount</code>, o SQS joga o "poison pill" para o DLQ, limpando a fila principal.</td>
               </tr>
             </tbody>
           </table>
         </div>
-
-        <h3>Conceitos Essenciais (SQS)</h3>
-        <ul class="feature-list">
-          <li><strong>Visibility Timeout:</strong> Tempo que uma mensagem fica "invisível" para outros consumidores após ser lida por um. Se o consumidor processar com sucesso, deve chamar o `DeleteMessage`. Caso contrário, o tempo expira e a mensagem volta para a fila.</li>
-          <li><strong>Dead-Letter Queues (DLQ):</strong> Filas secundárias para onde as mensagens "venenosas" (que falharam seguidamente em serem processadas e estouraram o <em>MaxReceiveCount</em>) são desviadas automaticamente para isolamento e debugging.</li>
-          <li><strong>Long Polling:</strong> Permite que os consumidores aguardem até 20 segundos por novas mensagens, reduzindo chamadas de API vazias e minimizando custos operacionais.</li>
-        </ul>
-      </section>
-
-      <section class="content-section">
-        <div class="section-header">
-          <div class="icon-wrapper">
-            <img src="../../assets/aws-icons/SimpleNotificationService.png" alt="SNS" style="width:24px;">
-          </div>
-          <h2>Amazon SNS: Pub/Sub e Padrão "Fan-Out"</h2>
-        </div>
-        <p>O Amazon Simple Notification Service (SNS) coordena a entrega push de mensagens de um Publisher (produtor) para múltiplos Subscribers (consumidores). É o coração dos sistemas <em>Pub/Sub</em> na AWS.</p>
-        
-        <div class="callout callout-info">
-          <div class="callout-icon">🌟</div>
-          <div class="callout-content">
-            <strong>O Padrão Fan-Out (SNS + SQS)</strong>
-            <p>Um dos padrões arquiteturais mais importantes na engenharia em nuvem. Uma única mensagem publicada em um <strong>Tópico SNS</strong> é transmitida ("Fanned out") para <strong>múltiplas filas SQS independentes</strong> simultaneamente. Isso permite processamento paralelo assíncrono! Exemplo: Um evento de <code>Novo Pedido</code> no e-commerce entra no SNS. O SNS copia esse evento para 3 filas: <code>SQS Inventário</code>, <code>SQS Faturamento</code> e <code>SQS Analytics</code>. Cada serviço consome sua cópia de forma isolada, em seu próprio ritmo e com retenção garantida por fila.</p>
-          </div>
-        </div>
-
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-lang">Arquitetura Fan-out</span>
-          </div>
-          <pre><code>(PRODUTOR) --> [ TÓPICO SNS ]
-                      |
-        +-------------+-------------+
-        |             |             |
-   [ Fila SQS ]  [ Fila SQS ]  [ Fila SQS ]
-    Worker A      Worker B      Worker C</code></pre>
-        </div>
-      </section>
-
-      <section class="content-section">
-        <div class="section-header">
-          <div class="icon-wrapper">
-            <span class="icon">🚌</span>
-          </div>
-          <h2>Amazon EventBridge</h2>
-        </div>
-        <p>Enquanto o SNS é focado em envio push (Point-to-Multipoint) e throughput gigantesco, o <strong>Amazon EventBridge</strong> atua como um verdadeiro Barramento de Serviços (Enterprise Service Bus) nativo na Nuvem, oferecendo Roteamento avançado.</p>
-
-        <ul class="feature-list">
-          <li><strong>Rules (Regras baseadas em Conteúdo):</strong> Você pode rotear eventos filtrando não apenas metadados, mas a chave real do payload (ex: se `detail.department == "Analytics"`). O SNS exige um esforço maior e assinatura nos filtros.</li>
-          <li><strong>Schedule (Cron):</strong> EventBridge é a forma recomendada de agendar tarefas (ex: Rodar um Job do Glue toda noite às 03:00AM) por meio de expressões CRON ou Rate.</li>
-          <li><strong>Integração com SaaS:</strong> Conecta de forma nativa e segura com aplicações de terceiros (Zendesk, Datadog, Shopify, etc.).</li>
-        </ul>
       </section>
 
       <footer class="content-footer">
