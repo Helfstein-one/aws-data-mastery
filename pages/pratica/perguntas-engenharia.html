@@ -105,6 +105,12 @@
     </div>
     <div id="linguagens-iac-cat" class="nav-cat-content">
       <div class="nav-page-group">
+        <a href="../../pages/linguagem/python-mastery.html" class="nav-a" data-page="python-mastery"><span class="nav-dot" style="background:#0ea5e9"></span>🐍 Python Mastery & OOP</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/linguagem/testing.html" class="nav-a" data-page="testing"><span class="nav-dot" style="background:#10b981"></span>🧪 Software Testing (E2E)</a>
+      </div>
+      <div class="nav-page-group">
         <a href="../../pages/fundamentos/data-engineering-oop.html" class="nav-a" data-page="data-engineering-oop"><span class="nav-dot" style="background:#f43f5e"></span>💻 Python &amp; OOP para Dados</a>
         <a href="../../pages/fundamentos/data-engineering-oop.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Código Python</a>
         <a href="../../pages/fundamentos/data-engineering-oop.html#oop-dados" class="nav-sub"><span class="nav-sdot"></span>Orientação a Objetos em Dados</a>
@@ -883,7 +889,32 @@ spark.memory.offHeap.size = 4g</pre>
       </div>
 
       <!-- Case 95: Athena Cost Control -->
-      </section>
+  
+      <!-- DEA Gap: Athena Query Optimization -->
+      <div class="card" id="q_dea_1" style="margin-bottom: 24px; border-left: 4px solid #0f766e;">
+        <div class="card-lbl">Questão (DEA-C01) · Athena & Otimização S3</div>
+        <h4>Uma query no Amazon Athena está demorando 15 minutos para fazer scan em uma tabela particionada no S3 que tem milhares de arquivos pequenos de 5 KB. Como otimizar o custo e o tempo de resposta?</h4>
+        <p><strong>Cenário de Prova:</strong> A prova DEA avalia constantemente o problema do Small Files e a capacidade de reduzir dados escaneados, pois o Athena cobra por TB escaneado ($5/TB).</p>
+        <p><strong>A Solução Ouro:</strong></p>
+        <ul>
+          <li><strong>Tamanho de Arquivo:</strong> Otimize (compacte) os arquivos para o target ideal de <strong>128 MB a 256 MB</strong>. Arquivos de 5 KB geram overhead extremo de abertura de conexão HTTP/S3 por parte do motor Presto do Athena.</li>
+          <li><strong>Formato Colunar:</strong> Converta dados JSON/CSV cruos para <strong>Apache Parquet ou ORC</strong> usando um Glue ETL Job. Isso permite que o Athena baixe apenas a coluna do SELECT e ignore as outras (economia de IO).</li>
+          <li><strong>Particionamento:</strong> Use <em>Partition Projection</em> se for um fluxo de streaming de alta cardinalidade temporal, para evitar consultas constantes ao Glue Data Catalog.</li>
+        </ul>
+      </div>
+
+      <!-- DEA Gap: Redshift & Migrations -->
+      <div class="card" id="q_dea_2" style="margin-bottom: 24px; border-left: 4px solid #0f766e;">
+        <div class="card-lbl">Questão (DEA-C01) · Redshift Maintenance & Migrations</div>
+        <h4>Após a exclusão e atualização (UPDATE/DELETE) de milhões de linhas em uma tabela pesada do Amazon Redshift, as queries analíticas ficaram repentinamente muito lentas. Por que isso ocorreu e qual o comando de resgate?</h4>
+        <p><strong>Cenário de Prova:</strong> O ciclo de vida dos blocos imutáveis do Redshift e a operação técnica para restabelecer performance.</p>
+        <p><strong>A Solução:</strong></p>
+        <ul>
+          <li><strong>A Causa:</strong> O Redshift não exclui fisicamente o dado do disco no momento de um `DELETE` ou `UPDATE`. Ele cria registros fantasmas ("tombstones"). Como resultado, os blocos do disco fragmentam e o otimizador lê os blocos ocultos, causando I/O inútil e quebrando as estatísticas.</li>
+          <li><strong>A Cura:</strong> O comando supremo na prova para isso é executar <code>VACUUM DELETE ONLY</code> (recupera o espaço em disco) seguido de um <code>ANALYZE</code> para atualizar as estatísticas do planejador de queries. <em>Nota: Na prova atual, o Auto-Vacuum do Redshift existe, mas em cargas super massivas, o Vacuum manual é exigido nas questões.</em></li>
+        </ul>
+      </div>
+    </section>
 
     <!-- BEHAVIORAL & CRISIS -->
     <section class="section" id="behavioral">

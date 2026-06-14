@@ -251,6 +251,27 @@
         "data-engineering-oop.html#oop-cases-perguntas"
       ]
     },
+    "python-mastery": {
+      name: "🐍 Python Mastery",
+      badge: "Mestre Python",
+      color: "#0ea5e9",
+      items: [
+        "python-mastery.html#cpython-memoria",
+        "python-mastery.html#core-types",
+        "python-mastery.html#oop-avancado",
+        "python-mastery.html#pandas-projetos"
+      ]
+    },
+    testing: {
+      name: "🧪 Software Testing",
+      badge: "Engenheiro de Qualidade",
+      color: "#10b981",
+      items: [
+        "testing.html#piramide",
+        "testing.html#code-examples",
+        "testing.html#data-quality"
+      ]
+    },
     softskills: {
       name: "🧠 Soft Skills",
       badge: "Especialista Tático",
@@ -798,8 +819,16 @@
         icon: `<circle class="badge-fin-coin" cx="32" cy="32" r="13" fill="none" stroke="url(#grad-finops)" stroke-width="2"/><text class="badge-fin-text" x="32" y="37" font-size="14" font-weight="900" font-family="'DM Sans', sans-serif" text-anchor="middle" fill="url(#grad-finops)">$</text>` 
       },
       oop: { 
-        colors: ["#38bdf8", "#fbbf24"], 
-        icon: `<path class="badge-oop-bracket" d="M24 24 L18 32 L24 40 M40 24 L46 32 L40 40" fill="none" stroke="url(#grad-oop)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line class="badge-oop-slash" x1="34" y1="20" x2="30" y2="44" stroke="url(#grad-oop)" stroke-width="2" stroke-linecap="round"/>` 
+        colors: ["#f43f5e", "#e11d48"], 
+        icon: `<path class="badge-oop-code" d="M24 24 L16 32 L24 40 M40 24 L48 32 L40 40 M36 16 L28 48" fill="none" stroke="url(#grad-oop)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
+      },
+      "python-mastery": { 
+        colors: ["#0ea5e9", "#0284c7"], 
+        icon: `<path class="badge-oop-code" d="M24 24 L16 32 L24 40 M40 24 L48 32 L40 40 M36 16 L28 48" fill="none" stroke="url(#grad-python-mastery)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
+      },
+      testing: { 
+        colors: ["#10b981", "#059669"], 
+        icon: `<path class="badge-oop-code" d="M32 16 v24 M24 24 h16 M20 40 h24" fill="none" stroke="url(#grad-testing)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
       },
       playbook: { 
         colors: ["#ef4444", "#b91c1c"], 

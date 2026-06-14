@@ -2,6 +2,14 @@
 
 Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
 
+## [Unreleased]
+### Added
+- **Python Mastery**: Nova página avançada cobrindo CPython, Heap/Stack, Garbage Collector, Magic Methods (OOP Massivo), Pandas e frameworks (`pages/linguagem/python-mastery.html`).
+- **Software Testing na Engenharia de Dados**: Nova página dissecando a pirâmide de testes para dados (Unit/Mocks, Integration via PySpark local, E2E) e Data Quality as Code (`pages/linguagem/testing.html`).
+- **AWS Certification Gaps**: Injeção de questões e cenários de prova baseados nas certificações SAA-C03 e DEA-C01 referentes a resiliência Multi-Region, Direct Connect, Athena Partition Projection e Redshift Vacuum em `perguntas-arquitetura.html` e `perguntas-engenharia.html`.
+- **Diagramas Técnicos (Draw.io)**: Adição de 3 novos diagramas ilustrativos para ciclo de vida do Python, Estrutura de Projeto em Pastas e Pirâmide de Testes.
+- **Bento Grid & Roadmap**: Atualização do mapa principal para englobar os novos temas.
+
 ## [v1.6.0] - 2026-06-14
 
 ### Adicionado

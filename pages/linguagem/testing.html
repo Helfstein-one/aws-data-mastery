@@ -4,10 +4,14 @@
   <meta name="author" content="Mauricio Helfstein">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado.">
-  <title>Event-Driven & Mensageria - AWS Data Specialist</title>
+  <meta name="description" content="Arquitetura de Dados Moderna - Padrões Lambda, Kappa, Lakehouse, Data Mesh, Mensageria, Kafka/MSK, Triggers, Orquestração, Lake Formation, Tuning, Migrações, Modelagem Dimensional, Tradeoffs de Soluções, FinOps, CI/CD, dbt, Observabilidade e Perguntas de Entrevistas Técnicas na AWS.">
+  <title>Arquitetura de Dados - AWS Data Specialist</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../style.css">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
 </head>
 <body>
 
@@ -426,359 +430,202 @@
 
 <div id="main">
   <div class="hero" style="background-color: var(--ink)">
-    <div class="hero-ey">Infraestrutura, Redes &amp; Segurança</div>
-    <h1>Event-Driven &amp; Mensageria</h1>
-    <p class="hero-d">Desenvolvendo arquiteturas desacopladas e escaláveis. Domine Filas (SQS), Pub/Sub (SNS) e Barramentos de Eventos (EventBridge) para pipelines de dados assíncronos e resilientes.</p>
+    <div class="hero-ey">Linguagem & Engenharia</div>
+    <h1>Software Testing na Engenharia de Dados</h1>
+    <p class="hero-d">Garanta a sanidade dos seus pipelines construindo uma Pirâmide de Testes robusta, do Unitário ao End-to-End, usando Pytest, Fakers, Testes Mutantes e Contratos de Dados.</p>
   </div>
 
   <main class="main-content">
+
+    <!-- 1. A PIRÂMIDE DE TESTES E CONCEITOS -->
+    <section class="section" id="piramide">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#0ea5e9">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0ea5e9"></div>
+          <h2>A Pirâmide de Testes Adaptada para Dados</h2>
+          <p>Diferenças entre Unitário, Funcional, Integração e End-to-End (E2E).</p>
+        </div>
+      </div>
+      
+      <p>Em engenharia de software clássica, a Pirâmide de Testes dita que você deve ter muitos Testes Unitários (rápidos e baratos) na base, e poucos Testes E2E (lentos e caros) no topo. Em engenharia de dados, esse conceito é adaptado porque dados possuem gravidade, volume e estado externo constante (Bancos, Storages).</p>
+
+      <div class="card" style="margin-bottom: 24px; padding:0; overflow:hidden; background: var(--slate);">
+        <div class="drawio-container" style="position:relative; width:100%; padding-bottom:50%;">
+          <iframe style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" src="https://viewer.diagrams.net/?lightbox=1&nav=1&highlight=0000ff&edit=_blank&layers=1&title=testing-pyramid.drawio#Uhttps%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2FHelfstein-one%2Faws-data-mastery%40feature%2Fpython-testing-aws-gaps%2Fassets%2Fdiagrams%2Ftesting-pyramid.drawio"></iframe>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card" style="border-left: 4px solid #047857;">
+          <h4>1. Testes Unitários e Funcionais</h4>
+          <p><strong>Isolamento Total:</strong> Testa a menor unidade lógica (ex: uma função de limpeza de CPF ou um cálculo de desconto). <em>Não toca em banco de dados nem internet.</em></p>
+          <p><strong>Comportamental (BDD):</strong> Foca na regra de negócio (se X acontecer, Y deve ser retornado). Usa bibliotecas como `pytest` e isola os componentes externos usando <code>unittest.mock</code> (Mocks & Stubs).</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #c2410c;">
+          <h4>2. Testes de Integração</h4>
+          <p><strong>Limites do Sistema:</strong> Verifica se os seus módulos conversam bem com componentes externos, como um banco de dados real. Geralmente usa containers efêmeros locais (via <code>Testcontainers</code> ou Docker Compose) para gravar em um PostgreSQL de teste e garantir que a query rodou sem quebrar schemas.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #be123c;">
+          <h4>3. Testes End-to-End (E2E)</h4>
+          <p><strong>A Jornada Completa:</strong> Pega um arquivo cru no "S3 local", processa pelo Spark job e valida a tabela final no "Redshift local". Lento, custoso e instável, mas simula o usuário final (ou o dashboard) consumindo o pipeline.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #8b5cf6;">
+          <h4>Testes Mutantes</h4>
+          <p>Uma métrica implacável. Usando a lib <code>mutmut</code>, o Python "quebra" (sofre mutação de operadores, ex: de `>` para `<`) o seu código fonte de propósito. Se os seus testes passarem mesmo com o código quebrado, significa que <strong>seus testes são cegos</strong> (falsos positivos). Os testes PRECISAM falhar diante de mutantes.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. ECOSISTEMA E EXEMPLOS DE CÓDIGO -->
+    <section class="section" id="code-examples">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#10b981">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#10b981"></div>
+          <h2>Ecossistema Python de Testes (Show me the Code!)</h2>
+          <p>Pytest, Faker e a construção das três camadas da pirâmide.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid #047857;">
+        <div class="card-lbl">1. Teste Unitário (pytest + Faker + Mocks)</div>
+        <p>A ferramenta `Faker` gera nomes e dados aleatórios para evitar hardcode.</p>
+        <pre><code>import pytest
+from faker import Faker
+from unittest.mock import patch
+from src.etl.transform import calcular_imposto
+
+fake = Faker('pt_BR')
+
+def test_calculo_imposto_positivo():
+    # Arrange (Preparação)
+    nome = fake.name()
+    salario = 5000.0
     
-    <section class="section" id="fanout">
+    # Act (Ação)
+    imposto = calcular_imposto(salario)
+    
+    # Assert (Verificação)
+    assert imposto == 500.0, f"Cálculo falhou para o usuário {nome}"
+
+# Teste com Mock (Isolando a chamada de banco de dados da função)
+@patch('src.etl.extract.obter_do_banco')
+def test_extracao_falha_graciosamente(mock_banco):
+    # Simula o banco estourando erro
+    mock_banco.side_effect = ConnectionError("Banco fora do ar")
+    
+    with pytest.raises(ConnectionError):
+         from src.etl.extract import iniciar_pipeline
+         iniciar_pipeline()
+</code></pre>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid #c2410c;">
+        <div class="card-lbl">2. Teste de Integração (PySpark Testing)</div>
+        <p>Testes no PySpark exigem a inicialização de uma `SparkSession` local. Em grandes projetos, criamos isso em um <code>conftest.py</code> como uma <em>fixture</em> de escopo "session" para não iniciar o Spark a cada novo teste (o que mataria a memória).</p>
+        <pre><code>import pytest
+from pyspark.sql import SparkSession
+from pyspark.sql import Row
+
+@pytest.fixture(scope="session")
+def spark():
+    # Inicia Spark Local de forma muito leve
+    spark = SparkSession.builder \
+        .master("local[1]") \
+        .appName("TestIntegration") \
+        .config("spark.sql.shuffle.partitions", "1") \
+        .getOrCreate()
+    yield spark
+    spark.stop()
+
+def test_agregacao_spark_integra_sucesso(spark):
+    # Dataframe MOCK Local
+    dados = [Row(id=1, val=100), Row(id=2, val=200)]
+    df = spark.createDataFrame(dados)
+    
+    # Chama a função real de transformação do ETL
+    from src.etl.transform import agregar_valores
+    df_result = agregar_valores(df)
+    
+    # Coleta e verifica (Integração Lógica do Spark Executada)
+    assert df_result.collect()[0]["soma_val"] == 300
+</code></pre>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid #be123c;">
+        <div class="card-lbl">3. Teste End-to-End (E2E) Pipeline Completo</div>
+        <p>Um teste E2E real varre todo o fluxo de ingestão e gravação, interagindo com o FileSystem ou Buckets.</p>
+        <pre><code>import os
+import pytest
+from src.pipeline_main import rodar_pipeline_diario
+
+def test_pipeline_e2e_completo(tmp_path):
+    # Setup de Pastas Temporárias (tmp_path é injetado pelo pytest)
+    entrada_dir = tmp_path / "raw"
+    saida_dir = tmp_path / "gold"
+    entrada_dir.mkdir()
+    
+    # 1. Cria dado CSV de input na ponta inicial
+    arquivo_input = entrada_dir / "vendas.csv"
+    arquivo_input.write_text("id,valor\n1,10\n2,20")
+    
+    # 2. Roda a pipeline inteira (Ação E2E)
+    rodar_pipeline_diario(source=str(entrada_dir), target=str(saida_dir))
+    
+    # 3. Valida a Ponta Final (Verifica se gerou Parquet e se tem as linhas certas)
+    arquivos_saida = list(saida_dir.glob("*.parquet"))
+    assert len(arquivos_saida) > 0, "O pipeline não gerou os arquivos parquet no final"
+    
+    # Valida conteúdo final com Pandas
+    import pandas as pd
+    df_final = pd.read_parquet(arquivos_saida[0])
+    assert df_final["valor"].sum() == 30
+</code></pre>
+      </div>
+    </section>
+
+    <!-- 3. DATA QUALITY AS CODE -->
+    <section class="section" id="data-quality">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--accent)">01</div>
+        <div class="sec-num" style="color:#f43f5e">03</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--accent)"></div>
-          <h2>Padrão Pub/Sub &amp; Fan-out com SNS e SQS</h2>
-          <p>Dilema: Como entregar o mesmo evento para múltiplos consumidores independentes?</p>
+          <div class="sec-acc" style="background:#f43f5e"></div>
+          <h2>Data Quality as Code (Contratos de Dados)</h2>
+          <p>Validações estatísticas na esteira usando Great Expectations e PyDeequ.</p>
         </div>
       </div>
-      <p>A arquitetura moderna exige Desacoplamento. Quando um arquivo entra no S3, você não pode criar uma Lambda gigantesca que extrai OCR, gera PDF e atualiza o Banco ao mesmo tempo (isso gera falha em cascata). A solução é o <strong>Padrão Fan-out</strong>: O S3 notifica um Tópico SNS (Pub/Sub), que "espalha" o evento paralelamente para múltiplas Filas SQS (Queues).</p>
       
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label"><span class="dot"></span>ARQUITETURA DE DADOS: FAN-OUT COM SNS MESSAGE FILTERING</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/pattern-sns-sqs-fanout.drawio"}'></div>
-      </div>
+      <p>Testes de código garantem que o software funciona. Mas em engenharia de dados, se o <strong>dado mudar o seu perfil silenciosamente</strong> (ex: a coluna idade começar a vir negativa), o software não quebra, mas a empresa sofre perdas financeiras (Schema/Data Drift). É aqui que entram os Testes de Contrato de Dados (Data Quality as Code).</p>
 
-      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #10b981; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
-        <h4 style="margin-top:0; color:#a7f3d0; font-size:14px;">Legenda do Diagrama</h4>
-        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
-          <li><strong>SNS Topic</strong>: Atua como Roteador (Pub/Sub). O S3 aciona o tópico passando atributos na mensagem (ex: type=csv).</li>
-          <li><strong>Filas SQS</strong>: Estão inscritas (Subscribed) no SNS. Usam <code>FilterPolicy</code> para só receber mensagens relevantes.</li>
-          <li><strong>Workers</strong>: Lambda e ECS consomem o SQS específico com segurança, sem sobrecarga de validação.</li>
-        </ul>
-      </div>
-      
-      <div class="code-block" style="margin-top:20px;">
-        <div class="code-header">
-          <span class="code-lang">Terraform: SNS Fanout com FilterPolicy</span>
-          <button class="copy-btn">Copiar</button>
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card">
+          <h4>Great Expectations</h4>
+          <p>Funciona criando "expectativas" declarativas em formato JSON. Ele lê um DataFrame Pandas/Spark ou banco relacional e gera relatórios HTML ("Data Docs") automáticos.</p>
+          <code>expect_column_values_to_not_be_null("cpf")</code><br><br>
+          <code>expect_column_values_to_be_between("idade", 0, 120)</code>
+          <p>Perfeito para criar um Circuit Breaker no Airflow e pausar o pipeline se o dado for tóxico.</p>
         </div>
-        <pre><code># 1. Cria a Fila SQS e o Tópico SNS
-resource "aws_sqs_queue" "csv_loader_queue" { name = "csv-loader-queue" }
-resource "aws_sns_topic" "event_upload" { name = "s3-event-upload" }
-
-# 2. Inscreve a Fila no SNS aplicando a Regra de Filtragem!
-resource "aws_sns_topic_subscription" "csv_sqs_target" {
-  topic_arn = aws_sns_topic.event_upload.arn
-  protocol  = "sqs"
-  endpoint  = aws_sqs_queue.csv_loader_queue.arn
-
-  # A Mágica da Economia: Filter Policy
-  filter_policy = jsonencode({
-    type = ["csv"]
-  })
-}</code></pre>
-      </div>
-
-      <div class="callout callout-info">
-        <div class="callout-icon">💡</div>
-        <div class="callout-content">
-          <strong>SNS Message Filtering (A arte da economia)</strong>
-          <p>O SNS não precisa mandar cópia de TUDO para TODAS as filas SQS. Nós usamos a <code>FilterPolicy</code> no SNS. Se o S3 envia um JSON onde <code>"type": "pdf"</code>, apenas a Fila de OCR receberá a mensagem. Isso economiza dinheiro de SQS e ciclos de processamento de Lambda, pois a filtragem ocorre no roteador (SNS) e não no código da aplicação!</p>
+        <div class="card">
+          <h4>PyDeequ (Amazon Deequ)</h4>
+          <p>Desenvolvido pela própria Amazon focado estritamente em grandes volumes via <strong>Apache Spark</strong>. Em vez de iterar linha por linha para testar o contrato, ele traduz os "testes" em instruções otimizadas do Catalyst (Engine do Spark) e faz agregação de massa (Single Pass).</p>
+          <p>Muito usado em Data Lakes severos (Petabytes) para profilamento e anomalias estatísticas sem matar o cluster EMR.</p>
         </div>
       </div>
     </section>
 
-    <section class="section" id="sqs-lifecycle">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--emr)">02</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Ciclo de Vida do SQS: Visibility Timeout &amp; DLQ</h2>
-          <p>Dilema: O que acontece se o Worker "crashar" no meio do processamento?</p>
-        </div>
-      </div>
-      <p>Ao contrário de um Barramento (EventBridge) que apenas "chuta" o evento pra frente, a Fila SQS guarda o estado do evento. Quando um Worker (Lambda, ECS) lê a mensagem (API <code>ReceiveMessage</code>), ela <strong>não é deletada</strong>! Ela fica invisível para outros workers pelo tempo do <strong>Visibility Timeout</strong>.</p>
-      
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label"><span class="dot"></span>CICLO DE VIDA DA MENSAGEM: FALHAS E DEAD LETTER QUEUE (DLQ)</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/pattern-sqs-lambda-dlq.drawio"}'></div>
-      </div>
-
-      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #e11d48; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
-        <h4 style="margin-top:0; color:#fecdd3; font-size:14px;">Legenda do Diagrama</h4>
-        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
-          <li><strong>Zonda de Invisibilidade</strong>: Tempo em que a Lambda tem posse da mensagem. Nenhuma outra Lambda pode vê-la.</li>
-          <li><strong>Falha (Crash)</strong>: Se a Lambda não rodar <code>DeleteMessage</code> antes do timeout acabar, a invisibilidade expira.</li>
-          <li><strong>DLQ Route</strong>: Após falhar 3 vezes (maxReceiveCount), a AWS remove automaticamente a mensagem para a DLQ.</li>
-        </ul>
-      </div>
-
-      <div class="code-block" style="margin-top:20px;">
-        <div class="code-header">
-          <span class="code-lang">Terraform: SQS com Dead Letter Queue</span>
-          <button class="copy-btn">Copiar</button>
-        </div>
-        <pre><code># 1. Cria a DLQ (Fila de Rejeição)
-resource "aws_sqs_queue" "dlq" {
-  name = "worker-dlq"
-}
-
-# 2. Cria a Fila Principal vinculada à DLQ
-resource "aws_sqs_queue" "main_queue" {
-  name                       = "worker-queue"
-  visibility_timeout_seconds = 30 # Tempo de Invisibilidade
-
-  # Redrive Policy: Configura a DLQ e o limite de falhas
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.dlq.arn
-    maxReceiveCount     = 3
-  })
-}</code></pre>
-      </div>
-
-      <h3>Dilemas Clássicos e Soluções</h3>
-      <ul>
-        <li><strong>A "Poison Pill" (Pílula de Veneno)</strong>: Se uma mensagem com JSON quebrado entrar na fila, a Lambda lerá, dará erro no código e não chamará <code>DeleteMessage</code>. Após os 30s de Visibility Timeout, a mensagem volta à fila. Isso gerará um loop infinito de consumo e cobrança.
-        <br><br><strong>Solução</strong>: Configurar uma <strong>DLQ (Dead Letter Queue)</strong> no SQS principal com <code>maxReceiveCount = 3</code>. Após 3 tentativas frustradas, a AWS remove a mensagem da fila primária e a guarda na DLQ para auditoria humana, salvando o sistema.</li>
-        
-        <br><li><strong>Processamento Longo &amp; Duplicidade</strong>: Sua Lambda demora 45s processando um vídeo longo, mas seu SQS Visibility Timeout está em 30s. Antes da Lambda terminar e apagar a mensagem, ela reaparece na fila e UMA SEGUNDA LAMBDA pega a mesma tarefa!
-        <br><br><strong>Solução</strong>: O Visibility Timeout sempre deve ser no mínimo <strong>6 vezes maior</strong> que o Timeout da Lambda. Se a Lambda pode durar 1 min, o Visibility Timeout da fila deve ser 6 minutos. Além disso, no código da Lambda, chame a API <code>ChangeMessageVisibility</code> para pedir mais tempo caso note que vai demorar.</li>
-      </ul>
-    </section>
-
-    <section class="section" id="triggers-integrations">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--arch)">03</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--arch)"></div>
-          <h2>Integrações, Triggers e Configurações Letais</h2>
-          <p>EventSourceMapping e as Configurações de Faturamento</p>
-        </div>
-      </div>
-      
-      <div class="grid-2-col">
-        <div class="card secondary-card">
-          <h3>SQS como Trigger de Lambda</h3>
-          <p>O SQS não "chama" a Lambda (Push). A AWS usa um serviço interno oculto chamado <strong>EventSourceMapping</strong> que fica fazendo <em>Polling</em> (Pull) na sua fila. Configurações chaves:</p>
-          <ul class="feature-list">
-            <li><strong>BatchSize:</strong> (Padrão 10). Em vez de acionar a Lambda 10 vezes, manda as 10 mensagens num array (economiza R$).</li>
-            <li><strong>MaximumBatchingWindowInSeconds:</strong> Espera até 5 minutos para encher o Batch antes de invocar a Lambda.</li>
-          </ul>
-        </div>
-        <div class="card secondary-card">
-          <h3>Polling: O Custo Invisível</h3>
-          <p>Fazer Polling contínuo em uma fila SQS vazia (Short Polling) custa muito caro. O <code>ReceiveMessageWaitTimeSeconds</code> deve ser sempre setado para <strong>20 Segundos (Long Polling)</strong>.</p>
-          <p>No Long Polling, se a fila está vazia, a conexão HTTP não é fechada imediatamente. Ela fica pendurada na nuvem por 20s. Se chegar uma mensagem no segundo 15, ele devolve e fecha. Isso derruba as requisições faturadas da API SQS em mais de 90%.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="fifo-limits">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">04</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Limites Matemáticos &amp; A Batalha FIFO vs Standard</h2>
-          <p>Onde o SQS quebra e como lidar com a ordem estrita</p>
-        </div>
-      </div>
-      
-      <div class="table-responsive">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Característica / Limite</th>
-              <th>SQS Standard</th>
-              <th>SQS FIFO (First-In, First-Out)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Throughput (TPS)</strong></td>
-              <td>Ilimitado (Scale to Infinity)</td>
-              <td>Limitado a 300 msg/s (Até 3.000 em High Throughput Mode)</td>
-            </tr>
-            <tr>
-              <td><strong>Ordenação</strong></td>
-              <td>Best-effort (A ordem não é garantida de chegada).</td>
-              <td>Garantia Absoluta na Ordem (Ideal para Event Sourcing de Contas Bancárias).</td>
-            </tr>
-            <tr>
-              <td><strong>Entrega (Delivery)</strong></td>
-              <td><em>At-Least-Once</em> (Pode ocorrer duplicação de mensagens!)</td>
-              <td><em>Exactly-Once</em> (Duplicação resolvida pela AWS).</td>
-            </tr>
-            <tr>
-              <td><strong>MessageGroupId (Dilema)</strong></td>
-              <td>Não se aplica.</td>
-              <td>Todas as mensagens com o mesmo <code>MessageGroupId</code> (ex: ID da Conta Corrente) ficam "trancadas" sequencialmente para que uma não processe antes da outra no Worker.</td>
-            </tr>
-            <tr>
-              <td><strong>Tamanho do Payload</strong></td>
-              <td>Max 256 KB.</td>
-              <td>Max 256 KB. Para arquivos de 10MB, deve-se usar o <strong>Padrão Claim-Check</strong> (S3 URL).</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="section" id="platform-hub">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--warn)">05</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--warn)"></div>
-          <h2>Plataforma Enterprise: Barramento Global</h2>
-          <p>EventBridge como Sistema Nervoso Central</p>
-        </div>
-      </div>
-      <p>Apesar do SNS ser ótimo para <em>Fan-out</em> simples de um tópico, as corporações adotaram o <strong>Amazon EventBridge</strong> (evolução do CloudWatch Events) como Barramento (Bus) da plataforma inteira. Nele, todos os SaaS (Zendesk, Datadog), ERPs e Microserviços jogam eventos no Bus central. O EventBridge usa <strong>Content Filtering Avançado</strong> (Lendo as variáveis internas do Payload JSON) para criar regras de roteamento massivas sem limite de tópicos.</p>
-      
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label"><span class="dot"></span>EVENTBRIDGE ENTERPRISE HUB ARCHITECTURE</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/platform-event-hub.drawio"}'></div>
-      </div>
-
-      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #f59e0b; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
-        <h4 style="margin-top:0; color:#fde68a; font-size:14px;">Legenda do Diagrama</h4>
-        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
-          <li><strong>Produtores</strong>: Sistemas (ERPs, SaaS) enviam eventos no formato padrão (EventBridge Schema) para o Bus Central.</li>
-          <li><strong>Regras (Rules)</strong>: Analisam o <em>Content Payload JSON</em> para rotear os eventos massivamente.</li>
-          <li><strong>Targets</strong>: EventBridge encaminha (Push) para SQS, SNS ou Kinesis Firehose baseado no matching da regra.</li>
-        </ul>
-      </div>
-
-      <div class="code-block" style="margin-top:20px;">
-        <div class="code-header">
-          <span class="code-lang">Terraform: EventBridge Content Filtering</span>
-          <button class="copy-btn">Copiar</button>
-        </div>
-        <pre><code>resource "aws_cloudwatch_event_rule" "high_value_br_orders" {
-  name        = "capture-br-high-value"
-  description = "EventBridge: Filtro de Conteúdo JSON Complexo"
-  
-  # Lógica de Roteamento baseada no valor dos campos JSON!
-  event_pattern = jsonencode({
-    "source": ["com.ecommerce.orders"],
-    "detail-type": ["OrderCreated"],
-    "detail": {
-      "country": ["BR"],
-      "amount": [{ "numeric": [">", 500] }]
-    }
-  })
-}</code></pre>
-      </div>
-
-      <div class="callout callout-warning">
-        <div class="callout-icon">🔥</div>
-        <div class="callout-content">
-          <strong>O Dilema da Idempotência Crítica no Standard!</strong>
-          <p>Lembra que o SQS Standard entrega as mensagens "Pelo menos uma vez"? Se um consumidor processa uma venda no banco de dados e morre antes de dar o DeleteMessage, outra máquina processará a venda novamente! A arquitetura exige que todo Worker consumindo SQS Standard seja <strong>Idempotente</strong>. Usamos uma Tabela de Deduplicação no DynamoDB, gravando o <code>MessageID</code> com a instrução <code>ConditionExpression: attribute_not_exists(PK)</code> para garantir que a mesma transação nunca ocorra duas vezes (Mutação Condicional SQL-less).</p>
-        </div>
-      </div>
-    </section>
-
-    <div class="nav-links">
-      <a href="nosql-dynamodb.html" class="nav-btn prev">
-        <span class="icon">←</span>
-        <span class="text">Anterior: NoSQL &amp; DynamoDB</span>
-      </a>
-      <a href="networking-ingress.html" class="nav-btn next">
-        <span class="text">Próximo: Networking &amp; Ingress</span>
-        <span class="icon">→</span>
-      </a>
-    </div>
-  </main>
+</main>
 </div>
-
-<button id="scrollTop" onclick="scrollToTop()">↑</button>
-
+<script src="../../progress.js"></script>
 <script>
-function toggleNav() {
-  var sb = document.getElementById('sidebar');
-  var hb = document.getElementById('hamburger');
-  var main = document.getElementById('main');
-  if (!sb) return;
-  
-  var isMobile = window.innerWidth <= 960;
-  if (isMobile) {
-    var isOpen = sb.classList.contains('open');
-    if (!isOpen) {
-      sb.classList.add('open');
-      if (hb) hb.innerHTML = '✕';
-    } else {
-      sb.classList.remove('open');
-      if (hb) hb.innerHTML = '☰';
-    }
-  } else {
-    var isClosed = sb.classList.contains('closed');
-    if (!isClosed) {
-      sb.classList.add('closed');
-      if (main) main.classList.add('sidebar-closed');
-      if (hb) hb.innerHTML = '☰';
-    } else {
-      sb.classList.remove('closed');
-      if (main) main.classList.remove('sidebar-closed');
-      if (hb) hb.innerHTML = '✕';
-    }
+  function toggleNav() {
+    document.getElementById('sidebar').classList.toggle('active');
   }
-}
-
-function toggleCategory(catId, headerEl) {
-  var content = document.getElementById(catId);
-  var arrow = headerEl.querySelector('.arrow');
-  if (!content) return;
-  var isOpen = content.classList.contains('open');
-  if (isOpen) {
-    content.classList.remove('open');
-    headerEl.classList.remove('active');
-    if (arrow) arrow.innerHTML = '▶';
-  } else {
-    content.classList.add('open');
-    headerEl.classList.add('active');
-    if (arrow) arrow.innerHTML = '▼';
+  function toggleCategory(id, el) {
+    var content = document.getElementById(id);
+    content.classList.toggle('active');
+    el.classList.toggle('open');
   }
-}
-
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-window.addEventListener('scroll', function() {
-  var scrollY = window.pageYOffset;
-  var btn = document.getElementById('scrollTop');
-  if (btn) {
-    if (scrollY > 400) btn.classList.add('show');
-    else btn.classList.remove('show');
-  }
-}, { passive: true });
-
-window.addEventListener('DOMContentLoaded', function() {
-  var hb = document.getElementById('hamburger');
-  var sb = document.getElementById('sidebar');
-  if (hb && sb) {
-    if (window.innerWidth > 960) {
-      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
-    } else {
-      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
-    }
-  }
-});
-
-document.addEventListener('click', function(e) {
-  var sb = document.getElementById('sidebar');
-  var hb = document.getElementById('hamburger');
-  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
-    if (sb.classList.contains('open')) {
-      sb.classList.remove('open');
-      if (hb) hb.innerHTML = '☰';
-    }
-  }
-});
 </script>
-<script src="../../js/progress.js"></script>
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>
