@@ -4,14 +4,10 @@
   <meta name="author" content="Mauricio Helfstein">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Containers &amp; Docker para Dados - AWS Data Mastery">
-  <title>Terraform para Engenharia de Dados - AWS Data Mastery</title>
+  <meta name="description" content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado.">
+  <title>NoSQL & DynamoDB - AWS Data Specialist</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../style.css">
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
-  </script>
 </head>
 <body>
 
@@ -423,415 +419,403 @@
 </nav>
 
 <div id="main">
-  
-
-  <main class="main-content">
-  <div class="hero" style="background-color: var(--navy)">
-    <div class="hero-ey">Linguagens Analíticas</div>
-    <h1>Terraform &amp; Infra as Code</h1>
-    <p class="hero-d">Arquitetura de infraestrutura como código para Engenharia de Dados. Crie Data Lakes, Buckets, roles IAM e pipelines escaláveis de forma declarativa.</p>
+  <div class="hero" style="background-color: var(--ink)">
+    <div class="hero-ey">Infraestrutura, Redes &amp; Segurança</div>
+    <h1>NoSQL &amp; Amazon DynamoDB</h1>
+    <p class="hero-d">A arquitetura definitiva de bancos Serverless: Single-Table Design, GSIs, e Change Data Capture (CDC) via Streams para alta volumetria e latência na casa dos milissegundos.</p>
   </div>
 
-    <section class="section" id="fundamentos-terraform">
+  <main class="main-content">
+    <section class="section" id="conceitos">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">01</div>
+        <div class="sec-num" style="color:var(--emr)">01</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Conceitos Básicos de Terraform</h2>
-          <p>Declarativo, Agnóstico e Gerenciamento de Estado</p>
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Conceitos Core &amp; O Paradigma NoSQL</h2>
+          <p>O DynamoDB rompe com o modelo relacional tradicional</p>
         </div>
       </div>
-
-      <p>O <strong>Terraform</strong> (desenvolvido pela HashiCorp) permite criar, alterar e gerenciar infraestrutura de forma segura e previsível usando a linguagem HCL (HashiCorp Configuration Language). Em ambientes de dados, usamos Terraform para criar S3 Buckets, IAM Roles, EMR Clusters, Glue Jobs e todo o perímetro de rede.</p>
-
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #8b5cf6;">
-          <div class="cc-tag">Providers</div>
-          <div class="cc-title">AWS Provider</div>
-          <div class="cc-body">
-            O Terraform utiliza <em>Providers</em> (plugins) para interagir com APIs de provedores de nuvem. No nosso caso, o provedor <code>aws</code> é o motor que converte o código HCL em chamadas REST para a AWS (ex: <code>CreateBucket</code>).
-          </div>
-        </div>
-
-        <div class="concept-card" style="border-top: 4px solid #8b5cf6;">
-          <div class="cc-tag">State (Estado)</div>
-          <div class="cc-title">O tfstate e o Backend</div>
-          <div class="cc-body">
-            O Terraform armazena o mapa da infraestrutura real em um arquivo chamado <code>terraform.tfstate</code>. Para colaboração em equipe, esse arquivo NUNCA deve ir para o Git. A melhor prática é usar um <strong>S3 Backend</strong> com bloqueio via <strong>DynamoDB (State Lock)</strong>.
-          </div>
-        </div>
+      <p>O Amazon DynamoDB é um banco de dados NoSQL chave-valor e de documentos, totalmente gerenciado, multi-AZ e <em>serverless</em>. Projetado por Werner Vogels (CTO da Amazon) para sobreviver a picos massivos de tráfego de E-commerce, ele garante latência de milissegundos em qualquer escala (seja 1 GB ou 100 TB).</p>
+      
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>RDBMS Clássico</th>
+              <th>DynamoDB</th>
+              <th>Definição Arquitetural</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tabela</td>
+              <td><strong>Table</strong></td>
+              <td>Coleção de Itens. Sem schema fixo, exceto pelas Chaves Primárias.</td>
+            </tr>
+            <tr>
+              <td>Linha / Registro</td>
+              <td><strong>Item</strong></td>
+              <td>Coleção de Atributos. Limite físico estrito de <strong>400 KB</strong> por item.</td>
+            </tr>
+            <tr>
+              <td>Coluna</td>
+              <td><strong>Attribute</strong></td>
+              <td>Tipos suportados: Escalares (String, Number, Binary), Documentos (List, Map) e Sets.</td>
+            </tr>
+            <tr>
+              <td>Primary Key</td>
+              <td><strong>Partition Key (PK)</strong></td>
+              <td>A PK passa por uma função de <em>Hash</em> que determina exatamente em qual partição física de armazenamento da AWS o dado residirá.</td>
+            </tr>
+            <tr>
+              <td>Composite Key</td>
+              <td><strong>PK + Sort Key (SK)</strong></td>
+              <td>A PK agrupa itens no mesmo disco (Item Collection); a SK organiza os itens de forma <em>Lexicográfica</em> (alfabética/numérica) dentro dessa partição.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
-    <section class="section" id="comandos-terraform">
+    <section class="section" id="single-table">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">02</div>
+        <div class="sec-num" style="color:var(--accent)">02</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Estrutura e Comandos Principais</h2>
-          <p>O workflow do Engenheiro IaC</p>
+          <div class="sec-acc" style="background:var(--accent)"></div>
+          <h2>Modelagem Avançada: Single-Table Design</h2>
+          <p>A Engenharia por trás do "Fim do N+1"</p>
         </div>
       </div>
+      <p>A "Regra de Ouro" da AWS para o DynamoDB é: <strong>Mantenha o número de tabelas o menor possível (idealmente 1)</strong>. O padrão Single-Table Design (STD) elimina a necessidade de <code>JOINs</code> consolidando múltiplas entidades.</p>
 
-      <p>Um projeto Terraform padrão possui os seguintes arquivos:</p>
-      <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.6; color: var(--text-light);">
-        <li><code>main.tf</code>: A lógica central e recursos.</li>
-        <li><code>variables.tf</code>: Declaração de variáveis dinâmicas (ex: env, region).</li>
-        <li><code>outputs.tf</code>: Valores que queremos exportar (ex: ARN do bucket).</li>
-        <li><code>providers.tf</code>: Configuração de backend e provider.</li>
-      </ul>
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>SINGLE-TABLE DESIGN: VISUALIZAÇÃO DE PARTICIONAMENTO</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-single-table.drawio"}'></div>
+      </div>
 
-      <div class="code-block">
-        <div class="cb-hdr">
-          <span class="cb-lang">HCL (Terraform)</span>
-        </div>
-        <pre><code class="language-hcl"># Exemplo: Criação de um Bucket S3 para o Data Lake Raw
-resource "aws_s3_bucket" "datalake_raw" {
-  bucket = "empresa-datalake-raw-${var.environment}"
-  
-  tags = {
-    Environment = var.environment
-    Team        = "Data Engineering"
-  }
-}
+      
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>DE RELACIONAL (ERD) PARA DYNAMODB (ADJACENCY LIST)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-power-designer.drawio"}'></div>
+      </div>
 
-# Bloqueio de acesso público
-resource "aws_s3_bucket_public_access_block" "block_public" {
-  bucket                  = aws_s3_bucket.datalake_raw.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #3b82f6; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#93c5fd; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>Item Collection</strong>: Toda a caixa tracejada representa uma Partição Física (disco) da AWS onde <code>PK=USER#101</code>.</li>
+          <li><strong>Adjacency List</strong>: Perfil, Pedido e Itens coexistem juntos no mesmo disco, ordenados alfabeticamente pela <code>SK</code>.</li>
+          <li><strong>Query Range</strong>: Buscar por <code>SK begins_with("ORDER")</code> retorna os pedidos na hora, eliminando JOINs relacionais.</li>
+        </ul>
+      </div>
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header"><span class="code-lang">Terraform: Tabela Genérica Single-Table</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>resource "aws_dynamodb_table" "ecommerce" {
+  name         = "ecommerce-single-table"
+  billing_mode = "PAY_PER_REQUEST" # On-Demand (Serverless Scale)
+  hash_key     = "PK"
+  range_key    = "SK"
+
+  attribute { name = "PK"; type = "S" }
+  attribute { name = "SK"; type = "S" }
 }</code></pre>
       </div>
 
-      <h3 style="margin-top: 40px;">O Workflow: Init, Plan, Apply</h3>
-      
-      <div class="concept-grid">
-        <div class="concept-card">
-          <div class="cc-tag">1. Inicialização</div>
-          <div class="cc-title">terraform init</div>
-          <div class="cc-body">
-            Faz o download dos providers (AWS) e inicializa o backend (conexão com S3 para o state).
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">2. Planejamento</div>
-          <div class="cc-title">terraform plan</div>
-          <div class="cc-body">
-            Gera um plano de execução detalhando exatamente <strong>o que será criado (+), modificado (~) ou deletado (-)</strong>.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">3. Execução</div>
-          <div class="cc-title">terraform apply</div>
-          <div class="cc-body">
-            Aplica o plano na nuvem e atualiza o <code>tfstate</code>. Em CI/CD, roda como <code>terraform apply -auto-approve</code>.
-          </div>
+      <div class="callout callout-info">
+        <div class="callout-icon">💡</div>
+        <div class="callout-content">
+          <strong>Por que modelar assim? (Adjacency List Pattern)</strong>
+          <p>Se um Banco Relacional normaliza os dados usando Chaves Estrangeiras (ERD clássico do Power Designer com 3 tabelas diferentes), o DynamoDB os <strong>desnormaliza e pre-junta</strong> em uma <em>Adjacency List</em>. Ao acessar a aplicação, você faz uma <code>Query(PK="USER#101")</code> e a rede retorna, em um único bloco, tanto o perfil do usuário quanto suas faturas e pedidos, pois todos compartilham a mesma <strong>Partição Física Exclusiva</strong>.</p>
         </div>
       </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>EXEMPLO 2: REDE SOCIAL (1:N:N) - ADJACENCY LIST AVANÇADA</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-social.drawio"}'></div>
+      </div>
+
+      <div class="callout callout-warning">
+        <div class="callout-icon">🔥</div>
+        <div class="callout-content">
+          <strong>Padrão de Acesso Massivo (Rede Social)</strong>
+          <p>Imagine carregar o Feed de um Usuário. No mundo SQL, faríamos um `SELECT * FROM Users JOIN Posts JOIN Comments`. No DynamoDB, armazenamos o Perfil, os Posts e os Comentários do Post na <strong>mesma partição</strong>. A chave `USER#alex99` agrupa tudo. Uma única Query varre a partição e devolve a tela inteira renderizada em menos de 10 milissegundos.</p>
+        </div>
+      </div>
+
+
+      <h3>Hierarquia e Padrões de SK (Sort Key)</h3>
+      <p>A chave de ordenação usa delimitadores para construir buscas hierárquicas. Exemplo: Se a SK for <code>PAIS#ESTADO#CIDADE</code> (Ex: <code>BR#SP#SAOPAULO</code>), você pode usar o operador matemático <code>begins_with("BR#SP")</code> para retornar todas as cidades de SP em uma única query otimizada.</p>
     </section>
 
-    <section class="section" id="arquitetura-terraform">
+    
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>EXEMPLO 3: IOT TIME-SERIES (SK COMO TIMESTAMP)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-iot.drawio"}'></div>
+      </div>
+      <p>Neste exemplo 3 (IoT), demonstramos como salvar leituras contínuas de sensores. Ao invés de uma Adjacency List de entidades diferentes, usamos a <strong>Sort Key como um Timestamp (ISO-8601)</strong>. Isso é fundamental pois a Sort Key suporta operadores matemáticos. Podemos fazer `Query(PK="SENSOR#T78", SK BETWEEN data1 AND data2)` e o DynamoDB agirá como uma Timeseries Database extremamente veloz.</p>
+
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>EXEMPLO 4: GAMING LEADERBOARD (GLOBAL SECONDARY INDEX)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-gaming.drawio"}'></div>
+      </div>
+
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #f59e0b; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#fde68a; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>Tabela Base</strong>: Organizada por Jogador (PK) e Jogo (SK). Ótima para ver o histórico do Jogador.</li>
+          <li><strong>GSI (Global Secondary Index)</strong>: Clona os dados invertendo a lógica: agrupa pelo Jogo (GSI_PK) e ordena pela Pontuação (GSI_SK) para gerar o Ranking Mundial nativamente.</li>
+        </ul>
+      </div>
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header"><span class="code-lang">Terraform: Criando o GSI de Leaderboard</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>resource "aws_dynamodb_table" "gaming" {
+  name         = "gaming-leaderboards"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "PK"
+  range_key    = "SK"
+
+  attribute { name = "PK"; type = "S" }
+  attribute { name = "SK"; type = "S" }
+  attribute { name = "Score"; type = "N" } # Número
+
+  # GSI: Invertendo os atributos para Placar
+  global_secondary_index {
+    name               = "LeaderboardIndex"
+    hash_key           = "SK"       # ID do Jogo vira PK
+    range_key          = "Score"    # Score vira a SK para ordenação
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["PlayerName"]
+  }
+}</code></pre>
+      </div>
+
+      <p>No Exemplo 4 (Gaming Leaderboard), entramos no território dos <strong>Global Secondary Indexes (GSI)</strong>. A Tabela Base é modelada para o Padrão de Acesso primário: Recuperar todo o histórico de um Jogador (`PK=PLAYER#ID`). Mas e se o negócio exigir um Ranking Global por Jogo? A Tabela Base falharia (exigiria um *Scan* letal).</p>
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-content">
+          <strong>A Mágica do GSI (Inversão de Índice)</strong>
+          <p>O GSI é um índice clonado em background pela AWS. Nele, nós <em>invertemos</em> a chave: A <code>GSI_PK</code> passa a ser o ID do Jogo (`GAME#ZELDA`) e a <code>GSI_SK</code> passa a ser o Score. Dessa forma, podemos realizar uma Query simples ordenando numericamente e o Leaderboard sai pronto, sem onerar a tabela primária.</p>
+        </div>
+      </div>
+
+    
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>EXEMPLO 3: IOT TIME-SERIES (SK COMO TIMESTAMP)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-iot.drawio"}'></div>
+      </div>
+      <p>Neste exemplo 3 (IoT), demonstramos como salvar leituras contínuas de sensores. Ao invés de uma Adjacency List de entidades diferentes, usamos a <strong>Sort Key como um Timestamp (ISO-8601)</strong>. Isso é fundamental pois a Sort Key suporta operadores matemáticos. Podemos fazer `Query(PK="SENSOR#T78", SK BETWEEN data1 AND data2)` e o DynamoDB agirá como uma Timeseries Database extremamente veloz.</p>
+
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>EXEMPLO 4: GAMING LEADERBOARD (GLOBAL SECONDARY INDEX)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-gaming.drawio"}'></div>
+      </div>
+
+      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #f59e0b; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+        <h4 style="margin-top:0; color:#fde68a; font-size:14px;">Legenda do Diagrama</h4>
+        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+          <li><strong>Tabela Base</strong>: Organizada por Jogador (PK) e Jogo (SK). Ótima para ver o histórico do Jogador.</li>
+          <li><strong>GSI (Global Secondary Index)</strong>: Clona os dados invertendo a lógica: agrupa pelo Jogo (GSI_PK) e ordena pela Pontuação (GSI_SK) para gerar o Ranking Mundial nativamente.</li>
+        </ul>
+      </div>
+      <div class="code-block" style="margin-top:20px;">
+        <div class="code-header"><span class="code-lang">Terraform: Criando o GSI de Leaderboard</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>resource "aws_dynamodb_table" "gaming" {
+  name         = "gaming-leaderboards"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "PK"
+  range_key    = "SK"
+
+  attribute { name = "PK"; type = "S" }
+  attribute { name = "SK"; type = "S" }
+  attribute { name = "Score"; type = "N" } # Número
+
+  # GSI: Invertendo os atributos para Placar
+  global_secondary_index {
+    name               = "LeaderboardIndex"
+    hash_key           = "SK"       # ID do Jogo vira PK
+    range_key          = "Score"    # Score vira a SK para ordenação
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["PlayerName"]
+  }
+}</code></pre>
+      </div>
+
+      <p>No Exemplo 4 (Gaming Leaderboard), entramos no território dos <strong>Global Secondary Indexes (GSI)</strong>. A Tabela Base é modelada para o Padrão de Acesso primário: Recuperar todo o histórico de um Jogador (`PK=PLAYER#ID`). Mas e se o negócio exigir um Ranking Global por Jogo? A Tabela Base falharia (exigiria um *Scan* letal).</p>
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-content">
+          <strong>A Mágica do GSI (Inversão de Índice)</strong>
+          <p>O GSI é um índice clonado em background pela AWS. Nele, nós <em>invertemos</em> a chave: A <code>GSI_PK</code> passa a ser o ID do Jogo (`GAME#ZELDA`) e a <code>GSI_SK</code> passa a ser o Score. Dessa forma, podemos realizar uma Query simples ordenando numericamente e o Leaderboard sai pronto, sem onerar a tabela primária.</p>
+        </div>
+      </div>
+
+    <section class="section" id="calculo-capacidade">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">03</div>
+        <div class="sec-num" style="color:var(--arch)">03</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Arquitetura e Integração AWS</h2>
-          <p>Como o Terraform interage com a Nuvem</p>
+          <div class="sec-acc" style="background:var(--arch)"></div>
+          <h2>Matemática de Provisionamento: RCU &amp; WCU</h2>
+          <p>Entendendo a cobrança por trás das operações do banco</p>
         </div>
       </div>
+      <p>A diferença do DynamoDB para RDBMS é que você não escolhe instâncias de servidor (CPU/RAM). Você provisiona <strong>Capacidade de Leitura e Escrita</strong> baseada em requisições por segundo e tamanho do Payload em KB.</p>
 
-      <p>A arquitetura abaixo demonstra o fluxo de deploy via CI/CD (GitHub Actions) utilizando <strong>OIDC (OpenID Connect)</strong> para assumir uma role efêmera na AWS sem a necessidade de chaves de acesso estáticas, e o backend centralizado no S3/DynamoDB.</p>
-      
-      <div class="mxgraph" style="margin-top:20px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
-        <div data-mxgraph="{&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom layers tags lightbox&quot;,&quot;edit&quot;:&quot;_blank&quot;,&quot;xml&quot;:&quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;24.4.10\&quot;&gt;&lt;diagram name=\&quot;Terraform OIDC\&quot; id=\&quot;tf_oidc\&quot;&gt;&lt;mxGraphModel dx=\&quot;1422\&quot; dy=\&quot;746\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;827\&quot; pageHeight=\&quot;1169\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot; /&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot; /&gt;&lt;mxCell id=\&quot;2\&quot; value=\&quot;GitHub Actions (CI/CD)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;200\&quot; height=\&quot;60\&quot; x=\&quot;80\&quot; y=\&quot;160\&quot; /&gt;&lt;mxCell id=\&quot;3\&quot; value=\&quot;AWS IAM (OIDC Provider)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#b91c1c;strokeColor=#991b1b;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;200\&quot; height=\&quot;60\&quot; x=\&quot;360\&quot; y=\&quot;160\&quot; /&gt;&lt;mxCell id=\&quot;4\&quot; value=\&quot;Terraform Backend State (S3)\&quot; style=\&quot;shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#0284c7;strokeColor=#0369a1;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;160\&quot; height=\&quot;80\&quot; x=\&quot;640\&quot; y=\&quot;280\&quot; /&gt;&lt;mxCell id=\&quot;5\&quot; value=\&quot;DynamoDB (State Lock)\&quot; style=\&quot;shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#4f46e5;strokeColor=#4338ca;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;160\&quot; height=\&quot;80\&quot; x=\&quot;640\&quot; y=\&quot;120\&quot; /&gt;&lt;mxCell id=\&quot;6\&quot; value=\&quot;AWS APIs (Resources)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=#0d9488;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot; width=\&quot;200\&quot; height=\&quot;60\&quot; x=\&quot;360\&quot; y=\&quot;320\&quot; /&gt;&lt;mxCell id=\&quot;7\&quot; value=\&quot;1. Autenticação OIDC\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;2\&quot; target=\&quot;3\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=2;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;8\&quot; value=\&quot;2. Check/Lock State\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;2\&quot; target=\&quot;5\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;9\&quot; value=\&quot;3. Get/Update State\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;2\&quot; target=\&quot;4\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;180\&quot; y=\&quot;320\&quot; /&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;10\&quot; value=\&quot;4. Create Resources\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;2\&quot; target=\&quot;6\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#10b981;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;180\&quot; y=\&quot;350\&quot; /&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}"></div>
+      <div class="grid-2-col">
+        <div class="card secondary-card">
+          <h3>Read Capacity Unit (RCU)</h3>
+          <p>1 RCU permite ler 1 item de até <strong>4 KB</strong> por segundo (em consistência Forte).</p>
+          <ul class="feature-list">
+            <li><strong>Strongly Consistent:</strong> 1 leitura = 1 RCU (até 4KB).</li>
+            <li><strong>Eventually Consistent:</strong> 2 leituras = 1 RCU (metade do preço!).</li>
+            <li><strong>Transactional:</strong> 1 leitura = 2 RCUs (o dobro do preço).</li>
+          </ul>
+          <div class="code-block" style="margin-top:10px;">
+            <p style="color:var(--warn);font-size:0.9em;margin:0;">Ex: Ler 10 itens de 3KB via Query Forte:</p>
+            <p style="color:var(--ok);font-size:0.9em;margin:0;">R: (10 * (4KB arredondado)) / 4 = 10 RCUs.</p>
+          </div>
+        </div>
+        <div class="card secondary-card">
+          <h3>Write Capacity Unit (WCU)</h3>
+          <p>1 WCU permite escrever 1 item de até <strong>1 KB</strong> por segundo.</p>
+          <ul class="feature-list">
+            <li><strong>Standard Write:</strong> 1 escrita = 1 WCU (até 1KB).</li>
+            <li><strong>Transactional Write:</strong> 1 escrita = 2 WCUs.</li>
+            <li>O tamanho é sempre arredondado para cima. Se você escrever 1.5 KB, custará 2 WCUs.</li>
+          </ul>
+          <div class="code-block" style="margin-top:10px;">
+            <p style="color:var(--warn);font-size:0.9em;margin:0;">Ex: Escrever 5 itens de 2.5KB:</p>
+            <p style="color:var(--ok);font-size:0.9em;margin:0;">R: (2.5 -> 3KB). 5 * 3 = 15 WCUs.</p>
+          </div>
+        </div>
       </div>
     </section>
-  
-    <section class="section" id="terraform-avancado">
+
+    <section class="section" id="cdc-streams">
       <div class="sec-hdr">
         <div class="sec-num" style="color:#8b5cf6">04</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Boas Práticas: Módulos e Meta-Argumentos</h2>
-          <p>Escrevendo código DRY (Don't Repeat Yourself) para a Plataforma</p>
+          <h2>DynamoDB Streams &amp; Integração Lakehouse</h2>
+          <p>O Change Data Capture (CDC) do NoSQL da AWS</p>
         </div>
       </div>
+      <p>O DynamoDB Streams captura uma sequência cronológica de eventos de mutação na tabela (INSERT, MODIFY, REMOVE) e garante a retenção em shard por <strong>24 horas</strong>. É a principal mecânica de integração Event-Driven do banco.</p>
 
-      <p>Quando a infraestrutura de dados cresce, manter tudo num único arquivo `main.tf` torna-se impossível. Engenheiros Seniores utilizam <strong>Módulos</strong> para encapsular lógicas e <strong>Meta-Argumentos</strong> para criar recursos dinamicamente.</p>
-
-      <div class="drawio-container">
-        <div class="drawio-diagram" data-mxgraph='{"highlight":"#8b5cf6","nav":true,"resize":true,"toolbar":"zoom layers lightbox","xml":"<mxfile host=&quot;app.diagrams.net&quot; agent=&quot;Mozilla/5.0&quot; version=&quot;24.4.10&quot;>
-  <diagram name=&quot;Terraform Modules&quot; id=&quot;m1n2b3&quot;>
-    <mxGraphModel dx=&quot;1000&quot; dy=&quot;800&quot; grid=&quot;1&quot; gridSize=&quot;10&quot; guides=&quot;1&quot; tooltips=&quot;1&quot; connect=&quot;1&quot; arrows=&quot;1&quot; fold=&quot;1&quot; page=&quot;1&quot; pageScale=&quot;1&quot; pageWidth=&quot;827&quot; pageHeight=&quot;1169&quot; math=&quot;0&quot; shadow=&quot;0&quot;>
-      <root>
-        <mxCell id=&quot;0&quot; />
-        <mxCell id=&quot;1&quot; parent=&quot;0&quot; />
-        <!-- Root Module -->
-        <mxCell id=&quot;root&quot; value=&quot;&lt;b&gt;Root Module (Main)&lt;/b&gt;&lt;br&gt;main.tf&lt;br&gt;variables.tf&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;align=center;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
-          <mxGeometry x=&quot;350&quot; y=&quot;50&quot; width=&quot;160&quot; height=&quot;80&quot; as=&quot;geometry&quot; />
-        </mxCell>
-        <!-- S3 Module -->
-        <mxCell id=&quot;mod_s3&quot; value=&quot;&lt;b&gt;Module: Data Lake&lt;/b&gt;&lt;hr&gt;S3 Buckets&lt;br&gt;KMS Keys&lt;br&gt;Bucket Policies&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
-          <mxGeometry x=&quot;150&quot; y=&quot;250&quot; width=&quot;140&quot; height=&quot;100&quot; as=&quot;geometry&quot; />
-        </mxCell>
-        <!-- EMR Module -->
-        <mxCell id=&quot;mod_emr&quot; value=&quot;&lt;b&gt;Module: Compute&lt;/b&gt;&lt;hr&gt;EMR Serverless&lt;br&gt;IAM Roles&lt;br&gt;Security Groups&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
-          <mxGeometry x=&quot;550&quot; y=&quot;250&quot; width=&quot;140&quot; height=&quot;100&quot; as=&quot;geometry&quot; />
-        </mxCell>
-        <!-- DynamoDB Lock -->
-        <mxCell id=&quot;dyn&quot; value=&quot;&lt;b&gt;Remote State&lt;/b&gt;&lt;hr&gt;S3 Backend&lt;br&gt;DynamoDB Lock&quot; style=&quot;shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
-          <mxGeometry x=&quot;650&quot; y=&quot;40&quot; width=&quot;120&quot; height=&quot;100&quot; as=&quot;geometry&quot; />
-        </mxCell>
-        <!-- Edges -->
-        <mxCell id=&quot;e1&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;root&quot; target=&quot;mod_s3&quot;>
-          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;>
-            <Array as=&quot;points&quot;>
-              <mxPoint x=&quot;430&quot; y=&quot;180&quot; />
-              <mxPoint x=&quot;220&quot; y=&quot;180&quot; />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id=&quot;e2&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;root&quot; target=&quot;mod_emr&quot;>
-          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;>
-            <Array as=&quot;points&quot;>
-              <mxPoint x=&quot;430&quot; y=&quot;180&quot; />
-              <mxPoint x=&quot;620&quot; y=&quot;180&quot; />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id=&quot;e3&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;root&quot; target=&quot;dyn&quot;>
-          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot; />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-</mxfile>"}'></div>
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>ARQUITETURA DE CDC COM DYNAMODB STREAMS</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight":"#FF6B00","nav":true,"resize":true,"toolbar":"zoom layers tags lightbox","edit":"_blank","url":"https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/feature/aws-certifications/assets/diagrams/dynamo-cdc-streams.drawio"}'></div>
       </div>
-
-      <h3>Meta-Argumentos em Ação</h3>
-      <div class="concept-grid">
-        <div class="concept-card">
-          <div class="cc-tag">for_each</div>
-          <div class="cc-title">Criação Iterativa</div>
-          <div class="cc-body">
-            Ao invés de duplicar blocos para criar 3 buckets diferentes, passamos um mapa ou lista de strings para a propriedade <code>for_each</code>, e o Terraform cria um recurso por item iterado.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">dynamic</div>
-          <div class="cc-title">Blocos Dinâmicos</div>
-          <div class="cc-body">
-            Ideal para criar listas de regras dentro de um recurso (ex: liberar 5 portas em um <em>Security Group</em>). O <code>dynamic block</code> age como um "for loop" dentro da definição de um recurso.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">data sources</div>
-          <div class="cc-title">Leitura de Estado</div>
-          <div class="cc-body">
-            Quando você precisa referenciar uma VPC que já existe na AWS e <em>não</em> foi criada por você via Terraform, você usa blocos <code>data "aws_vpc"</code> para importar seus atributos (como o ID) e anexar ao seu novo recurso.
-          </div>
-        </div>
-      </div>
-
-      <div class="code-block" style="margin-top: 20px;">
-        <div class="cb-hdr"><span class="cb-lang">Terraform - for_each no Data Lake</span></div>
-        <pre><code class="language-hcl">locals {
-  buckets = ["raw", "trusted", "refined"]
-}
-
-resource "aws_s3_bucket" "data_lake" {
-  for_each      = toset(local.buckets)
-  bucket        = "mycompany-datalake-${each.key}-us-east-1"
-  force_destroy = false
-}
-
-# Isso criará 3 buckets com um único bloco de código!</code></pre>
       
-
-      <h3 style="margin-top: 40px;">Anatomia de um Componente de Dados</h3>
-      <p>Quando desenvolvemos um módulo complexo (como um Cluster EMR ou um Data Lakehouse S3), quebrar a infraestrutura em múltiplos arquivos `.tf` melhora drasticamente a legibilidade em vez de colocar tudo em um <code>main.tf</code> de mil linhas. Abaixo a estrutura ideal de arquivos para um componente:</p>
-
-      <div class="concept-grid">
-        <div class="concept-card">
-          <div class="cc-tag">1. providers.tf & backend.tf</div>
-          <div class="cc-title">Conexão & Estado</div>
-          <div class="cc-body">
-            <code>providers.tf</code> define as versões dos provedores (AWS, Random) e a região. <code>backend.tf</code> informa onde o <em>state</em> será salvo (Bucket S3) e o controle de <em>lock</em> (DynamoDB).
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">2. variables.tf & outputs.tf</div>
-          <div class="cc-title">Entradas e Saídas</div>
-          <div class="cc-body">
-            <code>variables.tf</code> declara os parâmetros aceitos pelo componente (tamanho da máquina, ambiente). <code>outputs.tf</code> devolve dados (ARNs, IDs) para que outros módulos possam consumir essa infraestrutura.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">3. locals.tf</div>
-          <div class="cc-title">Variáveis Calculadas</div>
-          <div class="cc-body">
-            Diferente das <em>variables</em> (que vêm de fora), os <code>locals</code> armazenam lógica interna, formatações de string e tags comuns geradas em tempo de execução para evitar repetição.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">4. main.tf</div>
-          <div class="cc-title">Recurso Principal</div>
-          <div class="cc-body">
-            Reserva-se o <code>main.tf</code> estritamente para o coração do componente. Se for um módulo de banco de dados, aqui fica o <code>aws_db_instance</code>. O resto vai para arquivos secundários.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">5. iam.tf</div>
-          <div class="cc-title">Identidade & Permissões</div>
-          <div class="cc-body">
-            Centraliza todas as Roles, Policies e assumable roles (`aws_iam_role`, `aws_iam_policy`). Separar o IAM previne que engenheiros cometam acidentes de segurança ao misturar permissões com recursos computacionais.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">6. security.tf & vpc.tf</div>
-          <div class="cc-title">Redes e Proteção</div>
-          <div class="cc-body">
-            <code>vpc.tf</code> para criação/importação de Subnets, Route Tables e Gateways. <code>security.tf</code> abriga os <em>Security Groups</em>, NACLs e chaves de criptografia KMS.
-          </div>
-        </div>
-
-        <div class="concept-card">
-          <div class="cc-tag">7. versions.tf</div>
-          <div class="cc-title">Travamento de Versão</div>
-          <div class="cc-body">
-            Garante a imutabilidade do código fixando as versões permitidas do binário do Terraform e dos <em>Providers</em> (ex: AWS), prevenindo quebras catastróficas por atualizações de dependências.
-          </div>
-        </div>
-
-      </div>
-</div>
+      <p>Você pode configurar o Stream com opções de <code>StreamViewType</code>, como:</p>
+      <ul>
+        <li><code>KEYS_ONLY</code>: Apenas a PK e SK do item modificado.</li>
+        <li><code>NEW_IMAGE</code>: Todo o estado do item após a modificação.</li>
+        <li><code>OLD_IMAGE</code>: O estado do item antes da modificação.</li>
+        <li><code>NEW_AND_OLD_IMAGES</code>: O *antes* e o *depois*, perfeito para detecção de anomalias com Lambdas.</li>
+      </ul>
     </section>
 
-    <section class="section" id="terraform-cases">
+    <section class="section" id="terraform">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">05</div>
+        <div class="sec-num" style="color:var(--emr)">05</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Cases Reais: A Plataforma Self-Service</h2>
-          <p>Como a Engenharia de Dados habilita Analistas de forma segura</p>
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Implementação em Terraform: Billing &amp; TTL</h2>
+          <p>Provisionamento Enterprise via HCL</p>
         </div>
       </div>
-
-      <h3>Case 1: Ambientes Separados (Workspaces vs Pastas)</h3>
-      <p><strong>Cenário:</strong> O time de dados precisava replicar a infraestrutura de Produção para um ambiente de <em>Staging</em> para testar novas versões do Airflow sem quebrar as dags ativas.</p>
-      <p><strong>Ação:</strong> Em vez de criar um código Terraform isolado, foi arquitetada uma estrutura baseada em pastas separadas para cada ambiente (<code>/env/prod</code> e <code>/env/stg</code>), onde ambas invocam o mesmo <strong>Módulo</strong> raiz (<code>/modules/airflow</code>), apenas passando um arquivo <code>.tfvars</code> diferente (com o tamanho reduzido de EC2 para Staging).</p>
-
-      <h3>Case 2: Automação de Roles (IAM) via Módulo</h3>
-      <p><strong>Cenário:</strong> Todo novo Cientista de Dados contratado precisava abrir um ticket no Jira para que a Segurança criasse sua <em>Role</em> de acesso ao SageMaker e ao S3.</p>
-      <p><strong>A Otimização:</strong> O time de Infraestrutura criou um módulo do Terraform chamado <code>aws_data_scientist_role</code>. Agora, um engenheiro só precisa adicionar o nome do cientista em uma lista de strings no `main.tf` do repositório, e o CI/CD (GitHub Actions) aplica o Terraform, gerando a role com o princípio do privilégio mínimo automaticamente.</p>
-    </section>
-
-    <section class="section" id="terraform-estrutura-pastas">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">06</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Boas Práticas de Modularização e Estrutura</h2>
-          <p>Organizando Repositórios Complexos na AWS</p>
-        </div>
-      </div>
-
-      <p>Um repositório Terraform mal estruturado vira um grande monolito rapidamente, tornando os processos de <em>plan</em> lerdos e arriscados (um erro pode destruir componentes que não deveriam ser tocados). A modularização inteligente é a chave.</p>
-
-      <h3>A Árvore de Pastas Perfeita (Folder Structure)</h3>
-      <p>Uma arquitetura de pastas de nível Sênior separa os Módulos (o "como fazer") das Composições/Ambientes (o "o que criar").</p>
-
+      <p>Abaixo, a configuração padrão para inicializar uma tabela com Auto-scaling (PAY_PER_REQUEST), habilitando o Time To Live (TTL) para exclusão automática de registros antigos (sem consumir WCU), e o GSI.</p>
+      
       <div class="code-block">
-        <div class="cb-hdr"><span class="cb-lang">Estrutura de Diretórios</span></div>
-        <pre><code class="language-plaintext">terraform-data-platform/
-├── modules/                         # Módulos Reutilizáveis (Lógica Genérica)
-│   ├── s3-data-lake/                # Módulo para criar buckets criptografados do Lakehouse
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   ├── emr-serverless-app/          # Módulo para o Compute Engine
-│   └── iam-data-role/               # Módulo de Governança de Perfis IAM
-│
-├── environments/                    # Uso prático dos Módulos (State separado)
-│   ├── dev/
-│   │   ├── main.tf                  # Chama os modules/* passando vars pequenas
-│   │   ├── terraform.tfvars         # Ex: instance_count = 1
-│   │   └── backend.tf               # Aponta para o State de Dev
-│   │
-│   ├── stg/
-│   │
-│   └── prod/
-│       ├── main.tf                  # Chama os mesmos modules/*
-│       ├── terraform.tfvars         # Ex: instance_count = 10 (Alta disponibilidade)
-│       └── backend.tf               # Aponta para o State de Prod
-│
-├── scripts/                         # Automações de CI/CD (GitHub Actions / GitLab CI)
-└── README.md</code></pre>
-      </div>
+        <div class="code-header">
+          <span class="code-lang">main.tf (HCL)</span>
+          <button class="copy-btn">Copiar</button>
+        </div>
+        <pre><code>resource "aws_dynamodb_table" "ecommerce" {
+  name         = "ecommerce-single-table"
+  billing_mode = "PAY_PER_REQUEST" # On-Demand, escala até 40K WCUs sem provisionamento
+  hash_key     = "PK"
+  range_key    = "SK"
 
-      <div class="concept-grid" style="margin-top: 20px;">
-        <div class="concept-card">
-          <div class="cc-tag">1. Módulos Burros</div>
-          <div class="cc-title">Princípio da Injeção</div>
-          <div class="cc-body">
-            Módulos (<code>/modules</code>) não devem possuir valores <em>hardcoded</em>. Tudo (nomes, VPC IDs, tamanhos) deve vir do <code>variables.tf</code>. Eles devem ser genéricos o suficiente para serem chamados por Dev, Stg ou Prod.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">2. Estados Isolados</div>
-          <div class="cc-title">Blast Radius</div>
-          <div class="cc-body">
-            Ao usar a pasta <code>/environments</code>, cada ambiente possui seu próprio <code>terraform.tfstate</code>. Se houver corrupção no arquivo de estado de <em>Dev</em>, a plataforma de <em>Prod</em> continua intocada e operando 100%.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">3. Componentes Granulares</div>
-          <div class="cc-title">State File Size</div>
-          <div class="cc-body">
-            Evite colocar IAM, Redes, S3 e EMR na mesma camada. Times muito maduros até separam o <code>environments/prod/</code> em pastas como <code>network/</code>, <code>storage/</code> e <code>compute/</code>, acelerando os *deploys*.
-          </div>
-        </div>
+  attribute { name = "PK"; type = "S" }
+  attribute { name = "SK"; type = "S" }
+  attribute { name = "GSI1PK"; type = "S" }
+  attribute { name = "GSI1SK"; type = "S" }
+
+  # Apaga itens velhos de graça se eles contiverem o atributo unix timestamp "ExpirationTime"
+  ttl {
+    attribute_name = "ExpirationTime"
+    enabled        = true
+  }
+
+  global_secondary_index {
+    name               = "GSI1"
+    hash_key           = "GSI1PK"
+    range_key          = "GSI1SK"
+    projection_type    = "INCLUDE"
+    non_key_attributes = ["Status", "TotalValue"]
+  }
+
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
+}</code></pre>
       </div>
     </section>
 
-    
-    <!-- SEÇÃO DE REFERÊNCIAS -->
-    <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+    <section class="section" id="cases">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--muted)">REF</div>
+        <div class="sec-num" style="color:var(--warn)">06</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Referências & Bibliografia</h2>
-          <p>Materiais Oficiais e Leituras Recomendadas para este módulo</p>
+          <div class="sec-acc" style="background:var(--warn)"></div>
+          <h2>Simulador de Entrevista &amp; Boas Práticas</h2>
+          <p>Resolvendo Problemas Críticos de Modelagem</p>
         </div>
       </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-lbl">HashiCorp Developer</div>
-          <h4><a href="https://developer.hashicorp.com/terraform/language" target="_blank" style="color:var(--aws)">Terraform Language Docs</a></h4>
-          <p>Guia definitivo sobre a sintaxe HCL e meta-argumentos (for_each, dynamic).</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">Best Practices</div>
-          <h4><a href="https://developer.hashicorp.com/terraform/tutorials/modules/module" target="_blank" style="color:var(--aws)">Modules Tutorial</a></h4>
-          <p>Orientações oficiais de como componentizar repositórios e usar o registry.</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">AWS Registry</div>
-          <h4><a href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs" target="_blank" style="color:var(--aws)">AWS Provider</a></h4>
-          <p>Documentação da provider da AWS com todos os componentes mapeados.</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">Livro Recomendado</div>
-          <h4>Terraform: Up & Running</h4>
-          <p>Por Yevgeniy Brikman. Referência mundial sobre Infra como Código.</p>
-        </div>
+      
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Cenário Corporativo (Desafio)</th>
+              <th>Padrão Arquitetural / Solução</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1. "Hot Partition": Uma eleição fez com que a chave <code>PK=VOTO#CANDIDATO_X</code> recebesse 5.000 requisições/seg. Ocorreu Throttling.</td>
+              <td>Implementar <strong>Write Sharding</strong>. Adicionamos um sufixo aleatório na PK (ex: <code>VOTO#CANDIDATO_X_1</code> a <code>_10</code>). Isso espalha a carga por 10 partições físicas, resolvendo o afunilamento térmico do hardware.</td>
+            </tr>
+            <tr>
+              <td>2. Precisamos buscar todos os usuários por Data de Criação, algo que não está na PK base da tabela.</td>
+              <td>Criar um <strong>GSI (Global Secondary Index)</strong> onde a Partition Key pode ser algo global (ex: <code>USER_GROUP</code>) e a Sort Key é a <code>CreatedAt</code>, projetando os atributos desejados da tabela original.</td>
+            </tr>
+            <tr>
+              <td>3. Qual a diferença letal entre <code>Scan</code> e <code>Query</code> no seu script de faturamento?</td>
+              <td>A <strong>Query</strong> busca apenas a partição específica e é RCU-eficiente (ex: 2 RCUs). O <strong>Scan</strong> lê a tabela inteira (mesmo que haja filtros pós-leitura), podendo consumir milhares de RCUs atoa e causar pico de fatura. Regra: Jamais use Scan em produção.</td>
+            </tr>
+            <tr>
+              <td>4. O DynamoDB tem limite de 400KB por item. O usuário subiu um JSON de metadados de 2MB. O que fazer?</td>
+              <td>Usar o padrão <strong>S3 Offloading</strong>. Salvar o payload grande no S3 e gravar apenas a URL do objeto no atributo do item no DynamoDB.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
-</main>
+
+    <div class="nav-links">
+      <a href="computacao-bancos.html" class="nav-btn prev">
+        <span class="icon">←</span>
+        <span class="text">Anterior: Containers &amp; Bancos</span>
+      </a>
+      <a href="event-driven-mensageria.html" class="nav-btn next">
+        <span class="text">Próximo: Event-Driven Mensageria</span>
+        <span class="icon">→</span>
+      </a>
+    </div>
+  </main>
 </div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
 <script>
 function toggleNav() {
   var sb = document.getElementById('sidebar');
@@ -916,5 +900,7 @@ document.addEventListener('click', function(e) {
 });
 </script>
 <script src="../../js/progress.js"></script>
+
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>
