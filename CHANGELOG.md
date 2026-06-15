@@ -2,13 +2,21 @@
 
 Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
 
-## [Unreleased]
-### Added
-- **Python Mastery**: Nova página avançada cobrindo CPython, Heap/Stack, Garbage Collector, Magic Methods (OOP Massivo), Pandas e frameworks (`pages/linguagem/python-mastery.html`).
+## [v1.7.0] - 2026-06-14
+
+### Adicionado
+- **Python Legend**: Nova página avançada cobrindo Boas Práticas, OOP Massivo e Design Patterns aplicados à Engenharia de Dados (`pages/fundamentos/python-legend.html`).
 - **Software Testing na Engenharia de Dados**: Nova página dissecando a pirâmide de testes para dados (Unit/Mocks, Integration via PySpark local, E2E) e Data Quality as Code (`pages/linguagem/testing.html`).
+- **SQL Mastery**: Adição oficial do módulo ao portal e integração profunda no menu lateral na aba de Linguagem e IaC (`pages/fundamentos/sql-mastery.html`).
+- **FinOps AWS Cost Explorer**: Nova seção aprofundada com trade-offs entre serviços S3, DynamoDB, EMR e Redshift; dicas de taggeamento e anomalias financeiras.
 - **AWS Certification Gaps**: Injeção de questões e cenários de prova baseados nas certificações SAA-C03 e DEA-C01 referentes a resiliência Multi-Region, Direct Connect, Athena Partition Projection e Redshift Vacuum em `perguntas-arquitetura.html` e `perguntas-engenharia.html`.
 - **Diagramas Técnicos (Draw.io)**: Adição de 3 novos diagramas ilustrativos para ciclo de vida do Python, Estrutura de Projeto em Pastas e Pirâmide de Testes.
-- **Bento Grid & Roadmap**: Atualização do mapa principal para englobar os novos temas.
+
+### Modificado
+- **Linguagem & IaC Taxonomy**: Menu lateral reestruturado. Python Legend, SQL Mastery, Testes com Pytest e Terraform agora dividem o mesmo pilar no sidebar para fluidez de estudos.
+- **Layout Reference Cards**: Padronização arquitetural da seção de "Referências Bibliográficas" de `testing.html` utilizando o modelo `grid-2` com cartões customizados.
+- **Bento Grid & Roadmap**: Atualização do mapa principal (`index.html`) para englobar as novas rotas. O cartão de Prática & Cases foi reduzido para um tamanho modular simétrico, equilibrando o layout da homepage.
+- **Progresso e Telemetria**: Injeção sistêmica do motor `progress.js` nas novas páginas de GenAI e Testes que estavam sem rastreamento de progresso do usuário.
 
 ## [v1.6.0] - 2026-06-14
 
