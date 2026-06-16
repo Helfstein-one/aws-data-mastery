@@ -970,6 +970,60 @@ spark.memory.offHeap.size = 4g</pre>
     </section>
   
     <!-- SEÇÃO DE REFERÊNCIAS -->
+    
+    <!-- NOVA PERGUNTA: S3 SMALL FILES -->
+    <div class="card">
+      <h3 class="card-title">Paradoxo do S3: Por que 10.000 arquivos de 1KB são piores que 1 arquivo de 10MB? (Small Files Problem)</h3>
+      <div class="card-content">
+        <p><strong>A Pergunta:</strong> Por que o Spark sofre tanto em performance e custos quando consome milhares de arquivos pequenos do Amazon S3, e como a engenharia resolve isso?</p>
+        <div class="callout callout-warning">
+          <strong>A Causa:</strong> O Amazon S3 é um Object Store com latência RESTful. Abrir uma conexão e baixar o metadado do objeto leva cerca de 30 a 50ms. Se o Spark precisa ler 10.000 pequenos arquivos, o tempo perdido abrindo conexões HTTP é astronomicamente maior que a leitura real de dados, causando <em>Network Bottleneck</em>.
+        </div>
+        <div class="callout callout-tip">
+          <strong>A Solução:</strong> Implementar <strong>Compactação Contínua</strong> (via AWS Glue ou Apache Iceberg/Hudi) para agrupar esses arquivos minúsculos (geralmente vindos de streaming) em arquivos Parquet robustos de 128MB a 256MB.
+        </div>
+        <!-- DIAGRAM 3 -->
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>The Small Files Problem in S3</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background="#080f1e" dx="1" dy="1" grid="0" gridSize="10" guides="0" tooltips="1" connect="0" arrows="0" fold="0" page="0" pageScale="1" pageWidth="600" pageHeight="300" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="bg" value="" style="labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;" vertex="1" parent="1"><mxGeometry width="600" height="300" as="geometry"/></mxCell><mxCell id="title" value="THE SMALL FILES PROBLEM (S3 METADATA OVERHEAD)" style="labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;" vertex="1" parent="1"><mxGeometry y="8" width="600" height="24" as="geometry"/></mxCell><mxCell id="spark" value="Apache Spark\n(EMR / Glue)" style="labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="80" y="100" width="60" height="60" as="geometry"/></mxCell><mxCell id="s3bad" value="S3 (Uncompacted)\n10,000 files of 5KB" style="labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#ef4444;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="360" y="40" width="60" height="60" as="geometry"/></mxCell><mxCell id="s3good" value="S3 (Compacted)\n1 file of 50MB" style="labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="360" y="180" width="60" height="60" as="geometry"/></mxCell><mxCell id="e1" value="10,000 GET requests (Slow)" edge="1" parent="1" source="spark" target="s3bad" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fontColor=#ef4444;fontSize=9;"/><mxCell id="e2" value="1 GET request (Fast)" edge="1" parent="1" source="spark" target="s3good" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fontColor=#10b981;fontSize=9;"/></root></mxGraphModel>"}'></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOVA PERGUNTA: DATA SKEW -->
+    <div class="card">
+      <h3 class="card-title">Desbalanço em Clusters (Data Skew): Como usar Salting Key no Spark?</h3>
+      <div class="card-content">
+        <p><strong>A Pergunta:</strong> Seu job no AWS Glue (Spark) trava em 99% na fase de <em>Reduce</em>/<em>Join</em> por horas, gerando erros de OOM (Out Of Memory). Como a técnica de "Salting" resolve o Data Skew?</p>
+        <div class="callout callout-tip">
+          <strong>A Solução: Salting Key</strong>
+          <p>O <em>Data Skew</em> ocorre quando uma chave de agrupamento/join (ex: "São Paulo") tem 90% dos dados, forçando apenas 1 nó worker do cluster a processar quase tudo. A técnica de <strong>Salting</strong> adiciona um valor randômico à chave (ex: "São Paulo_01" a "São Paulo_10") antes do Shuffle. Isso força o Spark a distribuir os dados igualmente entre múltiplos workers, paralelizando o gargalo.</p>
+        </div>
+        <!-- DIAGRAM 4 -->
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>Data Skew and Salting Technique</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background="#080f1e" dx="1" dy="1" grid="0" gridSize="10" guides="0" tooltips="1" connect="0" arrows="0" fold="0" page="0" pageScale="1" pageWidth="600" pageHeight="300" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="bg" value="" style="labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;" vertex="1" parent="1"><mxGeometry width="600" height="300" as="geometry"/></mxCell><mxCell id="title" value="DATA SKEW &amp; SALTING IN SPARK" style="labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;" vertex="1" parent="1"><mxGeometry y="8" width="600" height="24" as="geometry"/></mxCell><mxCell id="data" value="Raw Data\n(Skewed by &#39;City&#39;)" style="labelBackgroundColor=none;rounded=1;fillColor=#3b82f6;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="40" y="100" width="100" height="50" as="geometry"/></mxCell><mxCell id="w1" value="Worker 1 (NY)" style="labelBackgroundColor=none;rounded=1;fillColor=#ef4444;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="240" y="40" width="100" height="80" as="geometry"/></mxCell><mxCell id="w2" value="Worker 2 (Other)" style="labelBackgroundColor=none;rounded=1;fillColor=#10b981;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="240" y="160" width="100" height="30" as="geometry"/></mxCell><mxCell id="salt" value="Salted Data\n(&#39;City_01&#39;, &#39;City_02&#39;)" style="labelBackgroundColor=none;rounded=1;fillColor=#8b5cf6;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;" vertex="1" parent="1"><mxGeometry x="440" y="100" width="120" height="50" as="geometry"/></mxCell><mxCell id="e1" value="Shuffle (OOM)" edge="1" parent="1" source="data" target="w1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fontColor=#ef4444;fontSize=9;"/><mxCell id="e2" value="Shuffle" edge="1" parent="1" source="data" target="w2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fontColor=#10b981;fontSize=9;"/><mxCell id="e3" value="Salting Distributes Load" edge="1" parent="1" source="w1" target="salt" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1.5;fontColor=#8b5cf6;fontSize=9;dashed=1;"/></root></mxGraphModel>"}'></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOVA PERGUNTA: ML DATA PREP -->
+    <div class="card">
+      <h3 class="card-title">Pipeline de Machine Learning: Data Prep com EMR e SageMaker</h3>
+      <div class="card-content">
+        <p><strong>A Pergunta:</strong> Como arquitetar pipelines pesados de preparação de dados e Feature Engineering antes de treinar modelos de Machine Learning na AWS?</p>
+        <div class="callout callout-tip">
+          <strong>A Integração:</strong>
+          <p>Normalmente o pré-processamento de Terabytes de dados (Limpeza, Imputação, Transformações vetoriais) é muito custoso se feito em Python nativo. Usamos o <strong>Amazon EMR (Spark MLlib)</strong> para transformar massas de dados do S3 paralelamente. Os dados já tratados são então injetados no <strong>SageMaker Feature Store</strong>, que serve as variáveis (features) com latência submilisegundo para inferência em tempo real ou em lote.</p>
+        </div>
+        <!-- DIAGRAM 5 -->
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>ML Data Preparation Pipeline</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#0ea5e9", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "<mxGraphModel background="#080f1e" dx="1" dy="1" grid="0" gridSize="10" guides="0" tooltips="1" connect="0" arrows="0" fold="0" page="0" pageScale="1" pageWidth="600" pageHeight="300" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="bg" value="" style="labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;" vertex="1" parent="1"><mxGeometry width="600" height="300" as="geometry"/></mxCell><mxCell id="title" value="ML DATA PREPARATION PIPELINE" style="labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;" vertex="1" parent="1"><mxGeometry y="8" width="600" height="24" as="geometry"/></mxCell><mxCell id="s3" value="S3\n(Data Lake)" style="labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="60" y="100" width="60" height="60" as="geometry"/></mxCell><mxCell id="emr" value="EMR\n(Spark MLlib)" style="labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="240" y="100" width="60" height="60" as="geometry"/></mxCell><mxCell id="fs" value="SageMaker\nFeature Store" style="labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="440" y="100" width="60" height="60" as="geometry"/></mxCell><mxCell id="e1" value="Extract &amp; Clean" edge="1" parent="1" source="s3" target="emr" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;"/><mxCell id="e2" value="Vectorize &amp; Encode" edge="1" parent="1" source="emr" target="fs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;"/></root></mxGraphModel>"}'></div>
+        </div>
+      </div>
+    </div>
+
     <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--muted)">REF</div>
