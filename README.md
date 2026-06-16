@@ -65,11 +65,12 @@ Este portal é uma **iniciativa colaborativa e viva**. Se você identificou um b
 ![Preview da Navegação e Dashboard do Portal AWS Data Mastery](assets/images/aws-data-mastery-preview.png)
 
 
-## Atualizações Recentes (v1.4.0)
+## Atualizações Recentes (v1.7.1)
 
-- 📦 **Novo Layout Bento Box**: Uma nova interface moderna consolidando o Ecossistema Core com as Trilhas de Especialização em formato de grade inteligente (Bento Grid).
-- 🏆 **Gamificação Integrada**: Todo o dashboard gamificado e a grade de *Badges de Conquistas* foram incorporados diretamente no layout central, preenchendo as barras de porcentagem individualmente na base de cada card da trilha.
-- 🎨 **Interface Dark Mode & AWS 2026**: Todos os diagramas e ícones utilizam as bibliotecas visuais mais modernas.
+- 🩺 **Playbook de Crises Refatorado**: Padronização e adição de Matrizes de Comunicação Executiva para todas as crises, garantindo uma resposta padronizada para stakeholders técnicos e de negócio.
+- 🗣️ **Comunicação e Liderança**: O template RFO (Reason For Outage) agora possui seu local dedicado no hub de Soft Skills do portal.
+- 📦 **Novo Layout Bento Box & Gamificação**: Nova interface moderna consolidando as Trilhas de Especialização em formato de grade (Bento Grid) com *Badges de Conquistas* integradas nativamente.
+- 🎨 **Interface Dark Mode & AWS 2026**: Aprimoramento da iconografia oficial nos diagramas de Arquitetura.
 
 Veja o histórico de atualizações completo no [CHANGELOG.md](CHANGELOG.md).
 
