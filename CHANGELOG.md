@@ -2,6 +2,15 @@
 
 Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
 
+## [v1.7.1] - 2026-06-15
+
+### Modificado
+- **Playbook de Crises (Refatoração UX & Consistência)**: 
+  - Adição de Matrizes de Comunicação Executiva para todos os cenários de crises avançados (DynamoDB Hot Partitions, Athena Cost Explosion, SQS Poison Pill, Ransomware).
+  - Reclassificação visual e arquitetural da crise de Ransomware (agora padronizada como *Crise 15*).
+  - O Template de Comunicação *RFO (Reason For Outage)* foi deslocado do playbook técnico para o módulo de Soft Skills & Liderança, respeitando a taxonomia do portal.
+- **Iconografia Arquitetural**: Corrigidos bugs visuais nos diagramas; *DynamoDB Streams* e *AWS KMS* agora utilizam a correta sintaxe e os ícones oficiais do pacote `mxgraph.aws4`.
+
 ## [v1.7.0] - 2026-06-14
 
 ### Adicionado
