@@ -65,12 +65,12 @@ Este portal é uma **iniciativa colaborativa e viva**. Se você identificou um b
 ![Preview da Navegação e Dashboard do Portal AWS Data Mastery](assets/images/aws-data-mastery-preview.png)
 
 
-## Atualizações Recentes (v1.7.1)
+## Atualizações Recentes (v1.8.0)
 
-- 🩺 **Playbook de Crises Refatorado**: Padronização e adição de Matrizes de Comunicação Executiva para todas as crises, garantindo uma resposta padronizada para stakeholders técnicos e de negócio.
-- 🗣️ **Comunicação e Liderança**: O template RFO (Reason For Outage) agora possui seu local dedicado no hub de Soft Skills do portal.
-- 📦 **Novo Layout Bento Box & Gamificação**: Nova interface moderna consolidando as Trilhas de Especialização em formato de grade (Bento Grid) com *Badges de Conquistas* integradas nativamente.
-- 🎨 **Interface Dark Mode & AWS 2026**: Aprimoramento da iconografia oficial nos diagramas de Arquitetura.
+- 🚀 **Mega Case Interdisciplinar**: Adição de um desafio épico que consolida arquiteturas reais envolvendo MLOps, DataOps, FinOps, Streaming e Batch. Novos Casos Avançados (como Health Lakehouse HIPAA) também foram injetados.
+- 🎨 **Refatoração Visual Extrema de Diagramas**: Todos os diagramas *placeholder* antigos de perguntas técnicas foram substituídos por arquiteturas ricas, utilizando estritamente a biblioteca vetorial `mxgraph.aws4`.
+- 🛠️ **Bug Fixes em Draw.io Parsing**: Varredura e correção sistêmica em dezenas de matrizes JSON inválidas (`data-mxgraph`) e arestas sem atributos espaciais (`mxGeometry`), garantindo 100% de confiabilidade na renderização de linhas, setas e ícones do portal.
+- 🗣️ **Aprofundamento de Respostas Práticas**: Injeção minuciosa de validações teóricas sobre Lake Formation Cell-Level ACL, DMS DDL Evolution e RAG OpenSearch Consistency.
 
 Veja o histórico de atualizações completo no [CHANGELOG.md](CHANGELOG.md).
 
