@@ -2,6 +2,17 @@
 
 Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
 
+## [v1.8.0] - 2026-06-16
+
+### Adicionado
+- **Novos Cases Avançados e Mega Case**: Injeção de novos cenários arquiteturais na aba Prática & Cases (incluindo Health Lakehouse HIPAA e Real-time Fraud Detection), coroados por um **Mega Case** interdisciplinar que engloba desafios práticos simultâneos de MLOps, DataOps, FinOps, Streaming e Batch Processing.
+- **Aprofundamento em Respostas Interativas**: Expansão e refinamento técnico das respostas em Perguntas de Engenharia e Governança, explorando conceitos como OpenSearch Vector Store RAG, DMS Schema Evolution (DDL), Lake Formation Cell-Level Security e Flink Unaligned Checkpoints.
+
+### Modificado
+- **Refatoração Massiva de Diagramas (Draw.io)**: Substituição de diversos diagramas "placeholder" (que continham apenas retângulos cinzas genéricos) por topologias completas de rede e infraestrutura utilizando rigorosamente o pacote vetorial atualizado `mxgraph.aws4`.
+- **Renderização e Parsing XML**: Correção sistêmica de erros de sintaxe (aspas não escapadas, quebras de linha irregulares e falta de `&quot;`) em dezenas de instâncias `data-mxgraph` que causavam a "tela branca" ou desaparecimento de diagramas na árvore DOM.
+- **Restauração de Conectores (Edges)**: Injeção programática de tags `<mxGeometry>` ausentes em todos os nós de conexão do Draw.io, restaurando o roteamento visual das setas entre os ícones da arquitetura.
+
 ## [v1.7.1] - 2026-06-15
 
 ### Modificado
