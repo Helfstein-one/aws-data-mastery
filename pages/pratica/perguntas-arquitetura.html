@@ -216,9 +216,6 @@
       <div class="nav-page-group">
         <a href="../../pages/fundamentos/computacao-bancos.html" class="nav-a" data-page="computacao-bancos"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#ecs" class="nav-sub"><span class="nav-sdot"></span>Amazon ECS: Containers</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#eks" class="nav-sub"><span class="nav-sdot"></span>Amazon EKS: Kubernetes</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#load-balancers" class="nav-sub"><span class="nav-sdot"></span>AWS Load Balancers: ALB vs NLB</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#rds-aurora" class="nav-sub"><span class="nav-sdot"></span>RDS &amp; Aurora</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#dynamodb-deep-dive" class="nav-sub"><span class="nav-sdot"></span>Amazon DynamoDB Architecture</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#operacao" class="nav-sub"><span class="nav-sdot"></span>Guia Operacional &amp; Métricas</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#aws-databases-guide" class="nav-sub"><span class="nav-sdot"></span>Guia de Bancos de Dados AWS</a>
@@ -596,7 +593,7 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
         <p><strong>Cenário de Segurança:</strong> Ao expor uma tabela analítica para que consultorias parceiras ou engines de terceiros (como Snowflake) leiam dados físicos do S3, entregar chaves IAM fixas com permissão de Admin do S3 é um grave risco. Se a chave for roubada, todo o bucket S3 estará comprometido.</p>
         <div class="callout callout-info">
           <strong>A Solução: Credential Vending com OAuth2 no Polaris</strong>
-          <p>Mantenha o S3 privado e registre a tabela no Apache Polaris REST Catalog. Quando o Snowflake precisa ler a tabela, ele faz uma requisição HTTP REST ao Polaris enviando um token de autenticação **OAuth2**:</p>
+          <p>Mantenha o S3 privado e registre a tabela no Apache Polaris REST Catalog. Quando o Snowflake precisa ler a tabela, ele faz uma requisição HTTP REST ao Polaris enviando um token de autenticação <strong>OAuth2</strong>:</p>
           </ol>
         </div>
       </div>
@@ -665,7 +662,7 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
       <div class="card" id="q71" style="margin-bottom: 24px;">
         <div class="card-lbl">Questão 71 · Apache Iceberg Concorrência &amp; CommitFailedException</div>
         <h4>Durante escritas simultâneas de pipelines de streaming (Flink/Spark) e jobs batch de compactação periódica na mesma tabela Apache Iceberg no S3, o Spark lança frequentemente CommitFailedException. Como funciona o Controle de Concorrência Otimista (OCC) do Iceberg e como mitigar estes erros em produção?</h4>
-        <p><strong>Mecanismo de Conflito de Commit:</strong> O Apache Iceberg utiliza **Controle de Concorrência Otimista (OCC)**. Quando um escritor tenta commitar um novo Snapshot, ele lê os metadados mais recentes, cria as alterações físicas no S3 e tenta atualizar o ponteiro do metadado atual (via DynamoDB lock ou Glue Catalog). Se outro escritor (ex: compactação de arquivos) commitar um snapshot antes, o escritor atual falha se houver sobreposição nos dados alterados.</p>
+        <p><strong>Mecanismo de Conflito de Commit:</strong> O Apache Iceberg utiliza <strong>Controle de Concorrência Otimista (OCC)</strong>. Quando um escritor tenta commitar um novo Snapshot, ele lê os metadados mais recentes, cria as alterações físicas no S3 e tenta atualizar o ponteiro do metadado atual (via DynamoDB lock ou Glue Catalog). Se outro escritor (ex: compactação de arquivos) commitar um snapshot antes, o escritor atual falha se houver sobreposição nos dados alterados.</p>
         <div class="callout callout-tip">
           <strong>Ações de Resolução de Conflitos:</strong>
           <ul>
@@ -687,7 +684,7 @@ ALTER TABLE prod.trusted.vendas SET TBLPROPERTIES (
         <div class="callout callout-tip">
           <strong>Estratégia Recomendada para o Redshift:</strong>
           <ul>
-            <li><strong>Preferência pelo Star Schema:</strong> O **Star Schema é amplamente preferido** em relação ao Snowflake no Redshift. Por possuir dimensões desnormalizadas e achatadas, as queries analíticas exigem apenas um nível de join (Fato ➔ Dimensão). Isso diminui drasticamente a necessidade de shuffles de rede complexos e agiliza a execução da query.</li>
+            <li><strong>Preferência pelo Star Schema:</strong> O <strong>Star Schema é amplamente preferido</strong> em relação ao Snowflake no Redshift. Por possuir dimensões desnormalizadas e achatadas, as queries analíticas exigem apenas um nível de join (Fato ➔ Dimensão). Isso diminui drasticamente a necessidade de shuffles de rede complexos e agiliza a execução da query.</li>
             <li><strong>O Problema do Snowflake no Redshift:</strong> No Snowflake, a normalização fragmenta os dados em múltiplas tabelas (Fato ➔ Cliente ➔ Cidade ➔ Estado). Queries analíticas básicas exigem joins em cascata. O otimizador de plano do Redshift precisará mover dados de várias dimensões entre nós para resolver a query, gerando congestionamento na rede interna do cluster.</li>
             <li><strong>Otimização com Chaves de Distribuição:</strong> No Star Schema, configure a chave de distribuição (<code>DISTKEY</code>) da tabela Fato e da maior dimensão (ex: Cliente) com o mesmo campo ID. O Redshift executará o join localmente sem mover dados de nó em nó. Para as demais dimensões menores (como Tempo e Categoria), use <code>DISTSTYLE ALL</code> para clonar as tabelas em todos os nós, garantindo joins de latência zero.</li>
           </ul>

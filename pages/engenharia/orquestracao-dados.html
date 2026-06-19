@@ -216,9 +216,6 @@
       <div class="nav-page-group">
         <a href="../../pages/fundamentos/computacao-bancos.html" class="nav-a" data-page="computacao-bancos"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#ecs" class="nav-sub"><span class="nav-sdot"></span>Amazon ECS: Containers</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#eks" class="nav-sub"><span class="nav-sdot"></span>Amazon EKS: Kubernetes</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#load-balancers" class="nav-sub"><span class="nav-sdot"></span>AWS Load Balancers: ALB vs NLB</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#rds-aurora" class="nav-sub"><span class="nav-sdot"></span>RDS &amp; Aurora</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#dynamodb-deep-dive" class="nav-sub"><span class="nav-sdot"></span>Amazon DynamoDB Architecture</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#operacao" class="nav-sub"><span class="nav-sdot"></span>Guia Operacional &amp; Métricas</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#aws-databases-guide" class="nav-sub"><span class="nav-sdot"></span>Guia de Bancos de Dados AWS</a>
@@ -497,8 +494,8 @@
 
       <div class="abox note">
         <strong>Pontos de Atenção (Gotchas de Custo Silencioso):</strong>
-        <br>• <strong>MWAA NAT Gateway Costs:</strong> O MWAA exige subredes privadas com NAT Gateway para baixar pacotes do PyPI e comunicar com o control plane da AWS. Se a sua DAG exporta gigabytes de dados pela internet pública através de conexões não otimizadas, a taxa de tráfego de dados do NAT Gateway pode superar o custo de processamento do Airflow. Habilite obrigatoriamente **VPC Endpoints** (S3, Glue, Athena, KMS) na VPC do MWAA.
-        <br>• <strong>State Machine Loop Limits:</strong> Rodar loops infinitos ou processamento de milhares de itens um a um no Step Functions Standard pode inflar drasticamente o custo por transição de estado. Use o modo **Express State Machines** para fluxos rápidos orientados a eventos, e o modo **Standard** exclusivamente para fluxos de longa duração com dependência de aprovações humanas.
+        <br>• <strong>MWAA NAT Gateway Costs:</strong> O MWAA exige subredes privadas com NAT Gateway para baixar pacotes do PyPI e comunicar com o control plane da AWS. Se a sua DAG exporta gigabytes de dados pela internet pública através de conexões não otimizadas, a taxa de tráfego de dados do NAT Gateway pode superar o custo de processamento do Airflow. Habilite obrigatoriamente <strong>VPC Endpoints</strong> (S3, Glue, Athena, KMS) na VPC do MWAA.
+        <br>• <strong>State Machine Loop Limits:</strong> Rodar loops infinitos ou processamento de milhares de itens um a um no Step Functions Standard pode inflar drasticamente o custo por transição de estado. Use o modo <strong>Express State Machines</strong> para fluxos rápidos orientados a eventos, e o modo <strong>Standard</strong> exclusivamente para fluxos de longa duração com dependência de aprovações humanas.
       </div>
     </section>
 
@@ -515,7 +512,7 @@
         </div>
       </div>
 
-      <p>O <strong>AWS Step Functions</strong> orquestra workflows serverless distribuídos. Sua grande vantagem reside no suporte nativo ao padrão **SDK Integration**, permitindo chamar serviços (como Glue, ECS, Athena) de forma direta e assíncrona usando o sufixo <code>.sync</code>, fazendo a State Machine aguardar a conclusão do Job de forma transparente e resiliente.</p>
+      <p>O <strong>AWS Step Functions</strong> orquestra workflows serverless distribuídos. Sua grande vantagem reside no suporte nativo ao padrão <strong>SDK Integration</strong>, permitindo chamar serviços (como Glue, ECS, Athena) de forma direta e assíncrona usando o sufixo <code>.sync</code>, fazendo a State Machine aguardar a conclusão do Job de forma transparente e resiliente.</p>
 
       <h3>Visual do Fluxo de Orquestração de ETL</h3>
             <div class="drawio-wrap">
@@ -740,7 +737,7 @@ with DAG(
           <div class="cc-title">Disparos de Pipelines Baseados em Eventos Multi-Conta</div>
           <div class="cc-body">
             <strong>Desafio:</strong> O time de ingestão na Conta A carrega arquivos no S3. O pipeline de transformação reside na Conta B (Step Functions + EMR). Como iniciar o processamento na Conta B instantaneamente após a gravação na Conta A sem polling constante?<br>
-            <strong>Solução:</strong> Configuração de uma regra de **Amazon EventBridge** na Conta A que intercepta eventos do S3 (via CloudTrail/S3 Event Notifications) e despacha o JSON do evento diretamente para um Barramento de Eventos (Event Bus) customizado na Conta B. Na Conta B, uma regra do EventBridge escuta o barramento e dispara o Step Functions com o payload do arquivo recebido, garantindo orquestração 100% orientada a eventos em milissegundos de latência.
+            <strong>Solução:</strong> Configuração de uma regra de <strong>Amazon EventBridge</strong> na Conta A que intercepta eventos do S3 (via CloudTrail/S3 Event Notifications) e despacha o JSON do evento diretamente para um Barramento de Eventos (Event Bus) customizado na Conta B. Na Conta B, uma regra do EventBridge escuta o barramento e dispara o Step Functions com o payload do arquivo recebido, garantindo orquestração 100% orientada a eventos em milissegundos de latência.
           </div>
         </div>
 
@@ -749,7 +746,7 @@ with DAG(
           <div class="cc-title">Recuperação de Falhas de Partição em Lote (Backfill)</div>
           <div class="cc-body">
             <strong>Desafio:</strong> Uma regra incorreta corrompeu as partições analíticas da camada Silver dos últimos 30 dias. O reprocessamento sequencial manual demoraria 24 horas e correria risco de race conditions (múltiplas execuções gravando ao mesmo tempo no mesmo diretório S3).<br>
-            <strong>Solução:</strong> Utilização da Step Functions configurando o estado **Map State em modo Distribuído (Distributed Map)**. A State Machine lê a lista dos 30 diretórios corrompidos a partir de um JSON no S3 e lança sub-execuções paralelas isoladas com limite de concorrência fixado em 5 runs simultâneos (para não estourar o limite de CPU do cluster EMR). O backfill é executado de forma segura e paralela, reduzindo o tempo de recuperação de 24 horas para 1.5 horas.
+            <strong>Solução:</strong> Utilização da Step Functions configurando o estado <strong>Map State em modo Distribuído (Distributed Map)</strong>. A State Machine lê a lista dos 30 diretórios corrompidos a partir de um JSON no S3 e lança sub-execuções paralelas isoladas com limite de concorrência fixado em 5 runs simultâneos (para não estourar o limite de CPU do cluster EMR). O backfill é executado de forma segura e paralela, reduzindo o tempo de recuperação de 24 horas para 1.5 horas.
           </div>
         </div>
       </div>
@@ -759,14 +756,14 @@ with DAG(
       <div class="abox">
         <div class="abox-hdr" style="background: var(--navy)">Pergunta 1: Como mitigar gargalos de latência de agendamento (Scheduling Overhead) ao rodar milhares de micro-tarefas rápidas no Airflow?</div>
         <div class="abox-body">
-          <p><strong>Resposta Esperada:</strong> O Apache Airflow não foi projetado para tarefas com latência de milissegundos devido à frequência de varredura do Scheduler (loop de parse das DAGs). Rodar milhares de micro-tarefas rápidas satura a CPU do banco de dados metastore e gera latência acumulada insustentável. A melhor prática de design é delegar as micro-tarefas rápidas e sequenciais para uma **State Machine no AWS Step Functions (Express Mode)** e usar o Airflow apenas para disparar e monitorar a State Machine como um único bloco lógico. Isso reduz a carga no scheduler do Airflow e diminui os custos de infraestrutura.</p>
+          <p><strong>Resposta Esperada:</strong> O Apache Airflow não foi projetado para tarefas com latência de milissegundos devido à frequência de varredura do Scheduler (loop de parse das DAGs). Rodar milhares de micro-tarefas rápidas satura a CPU do banco de dados metastore e gera latência acumulada insustentável. A melhor prática de design é delegar as micro-tarefas rápidas e sequenciais para uma <strong>State Machine no AWS Step Functions (Express Mode)</strong> e usar o Airflow apenas para disparar e monitorar a State Machine como um único bloco lógico. Isso reduz a carga no scheduler do Airflow e diminui os custos de infraestrutura.</p>
         </div>
       </div>
 
       <div class="abox">
         <div class="abox-hdr" style="background: var(--navy)">Pergunta 2: O que acontece com a execução de uma State Machine do Step Functions se o payload de dados lidos exceder o limite físico de 256 KB?</div>
         <div class="abox-body">
-          <p><strong>Resposta Esperada:</strong> A execução falhará imediatamente com um erro do tipo <code>States.DataLimitExceeded</code>. Para contornar essa limitação física de payload em pipelines que processam grandes listas de dados, a arquitetura deve utilizar o padrão **Claim Check**: a tarefa grava o payload volumoso temporariamente em um arquivo JSON no Amazon S3 e passa apenas a URI do S3 (o ponteiro) como string no payload da State Machine. As tarefas downstream leem a URI, buscam o arquivo do S3, realizam o processamento e salvam as saídas atualizadas no S3, preservando a State Machine limpa e abaixo do limite de 256KB.</p>
+          <p><strong>Resposta Esperada:</strong> A execução falhará imediatamente com um erro do tipo <code>States.DataLimitExceeded</code>. Para contornar essa limitação física de payload em pipelines que processam grandes listas de dados, a arquitetura deve utilizar o padrão <strong>Claim Check</strong>: a tarefa grava o payload volumoso temporariamente em um arquivo JSON no Amazon S3 e passa apenas a URI do S3 (o ponteiro) como string no payload da State Machine. As tarefas downstream leem a URI, buscam o arquivo do S3, realizam o processamento e salvam as saídas atualizadas no S3, preservando a State Machine limpa e abaixo do limite de 256KB.</p>
         </div>
       </div>
 

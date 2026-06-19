@@ -216,9 +216,6 @@
       <div class="nav-page-group">
         <a href="../../pages/fundamentos/computacao-bancos.html" class="nav-a" data-page="computacao-bancos"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#ecs" class="nav-sub"><span class="nav-sdot"></span>Amazon ECS: Containers</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#eks" class="nav-sub"><span class="nav-sdot"></span>Amazon EKS: Kubernetes</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#load-balancers" class="nav-sub"><span class="nav-sdot"></span>AWS Load Balancers: ALB vs NLB</a>
-        <a href="../../pages/fundamentos/computacao-bancos.html#rds-aurora" class="nav-sub"><span class="nav-sdot"></span>RDS &amp; Aurora</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#dynamodb-deep-dive" class="nav-sub"><span class="nav-sdot"></span>Amazon DynamoDB Architecture</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#operacao" class="nav-sub"><span class="nav-sdot"></span>Guia Operacional &amp; Métricas</a>
         <a href="../../pages/fundamentos/computacao-bancos.html#aws-databases-guide" class="nav-sub"><span class="nav-sdot"></span>Guia de Bancos de Dados AWS</a>
@@ -476,7 +473,7 @@
       <div class="card" id="q10" style="margin-bottom: 24px;">
         <div class="card-lbl">Questão 10 · Data Quality</div>
         <h4>Como implementar um pipeline de qualidade de dados (Data Quality) de forma serverless e como tratar linhas corrompidas sem parar o pipeline?</h4>
-        <p><strong>Solução com AWS Glue Data Quality:</strong> Usamos a linguagem de regras declarativas **DQDL (Data Quality Definition Language)** do Glue. O Glue Job executa as regras em tempo de execução e marca cada linha com o resultado do teste.</p>
+        <p><strong>Solução com AWS Glue Data Quality:</strong> Usamos a linguagem de regras declarativas <strong>DQDL (Data Quality Definition Language)</strong> do Glue. O Glue Job executa as regras em tempo de execução e marca cada linha com o resultado do teste.</p>
         <div class="callout callout-info">
           <strong>Case: Isolando dados inválidos em Quarentena</strong>
           <p>Escrevemos regras DQDL e filtramos o resultado do DataFrame Spark para desviar registros corrompidos para um bucket de auditoria, permitindo que os registros saudáveis continuem o fluxo rumo à camada Silver:</p>
@@ -625,8 +622,8 @@ rules = """
         <div class="callout callout-tip">
           <strong>Tradeoff e Tomada de Decisão:</strong>
           <ul>
-            <li><strong>Volume Baixo/Ad-Hoc:</strong> Se os dados analisados totalizam menos que 2 TB por dia, use **Amazon Athena**. Você não paga nada se não rodar queries, economizando custos de setup e idle time.</li>
-            <li><strong>Volume Alto/Pipelines Recorrentes:</strong> Acima do ponto de cruzamento de volume (crossover point), compensa financeiramente agendar jobs no **EMR Serverless** com alocação otimizada de recursos. O EMR fará o scan mais rápido sob recursos dedicados sem risco de throttling ou custos lineares gigantes do Athena.</li>
+            <li><strong>Volume Baixo/Ad-Hoc:</strong> Se os dados analisados totalizam menos que 2 TB por dia, use <strong>Amazon Athena</strong>. Você não paga nada se não rodar queries, economizando custos de setup e idle time.</li>
+            <li><strong>Volume Alto/Pipelines Recorrentes:</strong> Acima do ponto de cruzamento de volume (crossover point), compensa financeiramente agendar jobs no <strong>EMR Serverless</strong> com alocação otimizada de recursos. O EMR fará o scan mais rápido sob recursos dedicados sem risco de throttling ou custos lineares gigantes do Athena.</li>
           </ul>
         </div>
       </div>
@@ -656,7 +653,7 @@ rules = """
 
         <p><strong>Arquitetura na AWS:</strong> Para viabilizar esta governança de maneira automatizada e assíncrona:</p>
         <ul>
-          <li><strong>Mecanismo de Validação:</strong> O microsserviço produtor serializa as mensagens usando formatos binários autopredicativos (como Apache Avro ou Protocol Buffers) ou schemas JSON, registrando-os no **AWS Glue Schema Registry**. O produtor valida cada payload localmente antes do envio. Se a estrutura violar o contrato ativo, a publicação falha imediatamente.</li>
+          <li><strong>Mecanismo de Validação:</strong> O microsserviço produtor serializa as mensagens usando formatos binários autopredicativos (como Apache Avro ou Protocol Buffers) ou schemas JSON, registrando-os no <strong>AWS Glue Schema Registry</strong>. O produtor valida cada payload localmente antes do envio. Se a estrutura violar o contrato ativo, a publicação falha imediatamente.</li>
           <li><strong>GitOps e CI/CD do Contrato:</strong> Os esquemas dos contratos são declarados em arquivos JSON Schema no repositório Git. Qualquer modificação no contrato passa por um pipeline de pull-request onde o GitHub Actions faz a validação de compatibilidade retroativa contra o Glue Schema Registry usando a AWS CLI (modo de validação <code>BACKWARD</code>, impedindo remoção de campos requeridos ou mudança de tipos).</li>
           <li><strong>Circuit Breaker Downstream:</strong> Caso um payload fora do formato passe por brechas (como migrações desordenadas), o Spark Streaming ou AWS Lambda de ingestão na camada Bronze utiliza o Schema Registry para decodificar a mensagem. Em caso de erro de deserialização, a mensagem corrompida é desviada para um bucket de quarentena no S3 para análise e alertas são enviados via Amazon SNS para o canal de engenharia.</li>
         </ul>
@@ -666,7 +663,7 @@ rules = """
       <div class="card" id="q18" style="margin-bottom: 24px;">
         <div class="card-lbl">Questão 18 · Computação &amp; Balanceamento</div>
         <h4>Como arquitetar uma ingestão serverless de dados em tempo real tolerante a falhas utilizando Amazon ECS (Fargate) e Application Load Balancer (ALB) sob picos de tráfego extremos?</h4>
-        <p><strong>Arquitetura e Desafio Técnico:</strong> Quando expomos endpoints de recebimento de webhooks analíticos ou APIs de telemetria externa, precisamos tolerar picos violentos de acesso concorrente sem sobrecarregar ou perder mensagens. O uso de **AWS Lambda** pode esbarrar em custos de computação sob tráfego estável contínuo e em timeouts sob carga. O **Amazon ECS com Fargate** atua como uma camada computacional baseada em contêineres gerenciados e escaláveis, ideal para lidar com conexões persistentes e fluxos de alta vazão.</p>
+        <p><strong>Arquitetura e Desafio Técnico:</strong> Quando expomos endpoints de recebimento de webhooks analíticos ou APIs de telemetria externa, precisamos tolerar picos violentos de acesso concorrente sem sobrecarregar ou perder mensagens. O uso de <strong>AWS Lambda</strong> pode esbarrar em custos de computação sob tráfego estável contínuo e em timeouts sob carga. O <strong>Amazon ECS com Fargate</strong> atua como uma camada computacional baseada em contêineres gerenciados e escaláveis, ideal para lidar com conexões persistentes e fluxos de alta vazão.</p>
         
               <div class="drawio-wrap">
         <div class="drawio-label"><span class="dot"></span>ECS ALB Serverless Architecture</div>
@@ -684,9 +681,9 @@ rules = """
 
         <p><strong>Configuração de Produção e Boas Práticas:</strong></p>
         <ul>
-          <li><strong>Distribuição do ALB e SSL Termination:</strong> O **ALB (Application Load Balancer)** fica exposto publicamente nas sub-redes públicas, executando a terminação SSL/TLS (poupando processamento das tarefas do ECS). Ele executa roteamento de requisições por round-robin ou conexões mínimas para as **ECS Tasks** que rodam em sub-redes privadas seguras.</li>
+          <li><strong>Distribuição do ALB e SSL Termination:</strong> O <strong>ALB (Application Load Balancer)</strong> fica exposto publicamente nas sub-redes públicas, executando a terminação SSL/TLS (poupando processamento das tarefas do ECS). Ele executa roteamento de requisições por round-robin ou conexões mínimas para as <strong>ECS Tasks</strong> que rodam em sub-redes privadas seguras.</li>
           <li><strong>Graceful Shutdown (Desligamento Suave):</strong> Containers expostos ao tráfego podem perder requisições em andamento durante atualizações ou autoscaling se forem desligados de forma brusca. No ECS, configure o parâmetro <code>stopTimeout</code> (padrão 30s) e certifique-se de que a aplicação em Python/FastAPI ou Go escuta o sinal <code>SIGTERM</code> enviado pelo ECS, parando de aceitar novas requisições HTTP, efetuando o flush do buffer de dados para o Kinesis e, finalmente, finalizando a tarefa de forma controlada.</li>
-          <li><strong>Estratégia de Auto-scaling Eficaz:</strong> Configure uma política de **Target Tracking Scaling** no ECS Service baseada em <code>ALBRequestCountPerTarget</code> em vez de CPU genérica. Isso permite antecipar picos de tráfego escalando contêineres Fargate antes que a CPU atinja 100% de uso, o que causaria timeout nas conexões.</li>
+          <li><strong>Estratégia de Auto-scaling Eficaz:</strong> Configure uma política de <strong>Target Tracking Scaling</strong> no ECS Service baseada em <code>ALBRequestCountPerTarget</code> em vez de CPU genérica. Isso permite antecipar picos de tráfego escalando contêineres Fargate antes que a CPU atinja 100% de uso, o que causaria timeout nas conexões.</li>
         </ul>
       </div>
 
@@ -694,7 +691,7 @@ rules = """
       <div class="card" id="q19" style="margin-bottom: 24px;">
         <div class="card-lbl">Questão 19 · Observabilidade &amp; Datadog</div>
         <h4>Como configurar uma observabilidade avançada de pipelines de dados analíticos na AWS usando o Datadog para monitoramento de latência e qualidade?</h4>
-        <p><strong>Monitoramento além do CloudWatch:</strong> Embora as métricas padrão da AWS (como uso de CPU no EMR ou contagem de erros de Lambda) ajudem, elas não são suficientes para diagnosticar lentidões complexas em pipelines analíticos de múltiplos estágios (Ex: Spark -> S3 -> Redshift -> Athena). O **Datadog** unifica logs, traces distribuídos e métricas personalizadas em um único plano de visualização.</p>
+        <p><strong>Monitoramento além do CloudWatch:</strong> Embora as métricas padrão da AWS (como uso de CPU no EMR ou contagem de erros de Lambda) ajudem, elas não são suficientes para diagnosticar lentidões complexas em pipelines analíticos de múltiplos estágios (Ex: Spark -> S3 -> Redshift -> Athena). O <strong>Datadog</strong> unifica logs, traces distribuídos e métricas personalizadas em um único plano de visualização.</p>
         
         <div class="callout callout-info">
           <strong>Padrão de Monitoramento de Engenharia no Datadog:</strong>
@@ -733,8 +730,8 @@ rules = """
         <div class="callout callout-warn">
           <strong>Arquitetura de Contingência e Mitigação:</strong>
           <ul>
-            <li><strong>Políticas de Retry e Jitter na API de Ingestão:</strong> Para evitar o efeito manada (Thundering Herd Problem) ao chamar as APIs do Kinesis a partir dos contêineres ECS, o código Python/FastAPI deve implementar retentativas usando **Backoff Exponencial com Jitter aleatório**. Isso espalha as chamadas no tempo e evita picos artificiais de requisições.</li>
-            <li><strong>Memória Bufferizada e Ring-Buffering no ECS:</strong> Se as chamadas ao Kinesis falharem repetidamente, o contêiner não deve retornar erro imediatamente para o ALB. Em vez disso, a tarefa do ECS armazena os eventos temporariamente em uma estrutura de fila circular na memória RAM do contêiner (como **Ring Buffer** em memória) ou escreve em disco local efémero do Fargate (armazenamento montado de até 200 GB) e responde <code>202 Accepted</code> para o cliente. Uma thread em segundo plano tenta re-enviar os dados acumulados ao Kinesis assim que o throughput aliviar.</li>
+            <li><strong>Políticas de Retry e Jitter na API de Ingestão:</strong> Para evitar o efeito manada (Thundering Herd Problem) ao chamar as APIs do Kinesis a partir dos contêineres ECS, o código Python/FastAPI deve implementar retentativas usando <strong>Backoff Exponencial com Jitter aleatório</strong>. Isso espalha as chamadas no tempo e evita picos artificiais de requisições.</li>
+            <li><strong>Memória Bufferizada e Ring-Buffering no ECS:</strong> Se as chamadas ao Kinesis falharem repetidamente, o contêiner não deve retornar erro imediatamente para o ALB. Em vez disso, a tarefa do ECS armazena os eventos temporariamente em uma estrutura de fila circular na memória RAM do contêiner (como <strong>Ring Buffer</strong> em memória) ou escreve em disco local efémero do Fargate (armazenamento montado de até 200 GB) e responde <code>202 Accepted</code> para o cliente. Uma thread em segundo plano tenta re-enviar os dados acumulados ao Kinesis assim que o throughput aliviar.</li>
             <li><strong>Split Automático de Shards no Kinesis:</strong> Configure um alarme do CloudWatch monitorando a métrica <code>ReadProvisionedThroughputExceeded</code> ou <code>WriteProvisionedThroughputExceeded</code>. O alarme engatilha uma função AWS Lambda que executa a API <code>SplitShard</code> do Kinesis de forma dinâmica, dividindo os shards estrangulados em dois e dobrando o limite de escrita imediatamente.</li>
           </ul>
         </div>
@@ -763,8 +760,8 @@ rules = """
         <div class="callout callout-info">
           <strong>A Solução Padrão de Produção (KMS Delegation):</strong>
           <ol>
-            <li><strong>Registro de Localização de Dados com Credenciais Gerenciadas:</strong> A conta produtora registra a localização do S3 no AWS Lake Formation usando a opção de **Criação de Função de Serviço Gerenciada**. A função de serviço do Lake Formation tem permissões explícitas no IAM para acessar o bucket S3 e ler/descriptografar dados usando a chave KMS produtora.</li>
-            <li><strong>Compartilhamento Federado Cross-Account:</strong> A conta produtora concede permissões da tabela do Glue (usando tags TBAC ou controle de grão fino) para a conta do consumidor via **AWS RAM** (gerenciado internamente pelo Lake Formation).</li>
+            <li><strong>Registro de Localização de Dados com Credenciais Gerenciadas:</strong> A conta produtora registra a localização do S3 no AWS Lake Formation usando a opção de <strong>Criação de Função de Serviço Gerenciada</strong>. A função de serviço do Lake Formation tem permissões explícitas no IAM para acessar o bucket S3 e ler/descriptografar dados usando a chave KMS produtora.</li>
+            <li><strong>Compartilhamento Federado Cross-Account:</strong> A conta produtora concede permissões da tabela do Glue (usando tags TBAC ou controle de grão fino) para a conta do consumidor via <strong>AWS RAM</strong> (gerenciado internamente pelo Lake Formation).</li>
             <li><strong>Fluxo de Credential Vending (Sem chaves expostas):</strong> Quando a conta consumidora roda uma query no Athena, o Athena na conta do consumidor solicita credenciais de acesso temporárias ao Lake Formation. O Lake Formation age como um *Credential Vending Machine*, gerando chaves de acesso temporárias do IAM (STS Token) associadas à função de serviço do Lake Formation da conta produtora.</li>
             <li>O Athena lê os arquivos do S3 e descriptografa os dados de forma transparente na memória usando as credenciais temporárias do Lake Formation produtor. A conta consumidora nunca recebe a chave KMS e não precisa ter acesso à chave KMS nas suas políticas IAM, reduzindo riscos de segurança de dados.</li>
           </ol>
@@ -797,8 +794,8 @@ rules = """
           <strong>Estratégias Avançadas de Resolução:</strong>
           <ul>
             <li><strong>Athena Query Result Reuse (Reuso de Resultados):</strong> Ative o parâmetro de reuso de resultados no Athena (Result Reuse). Se a mesma query exata for executada por differentes usuários e os dados de origem não mudaram nas últimas horas, o Athena retorna o resultado salvo no S3 em milissegundos sem re-executar a query física e sem cobrar taxas adicionais de escaneamento de dados.</li>
-            <li><strong>Isolamento via Workgroups Dedicados:</strong> Divida o tráfego da API e do QuickSight em **Athena Workgroups** separados (ex: <code>wg_apidata</code> e <code>wg_quicksight</code>). O uso de Workgroups dedicados garante que queries de relatórios pesados de analistas não interfiram na concorrência de queries operacionais da API de Serving.</li>
-            <li><strong>Materialização Pré-calculada (Padrão Ouro):</strong> Para dashboards operacionais com SLAs rígidos, evite queries diretas ao Athena por requisição do cliente. Crie um pipeline assíncrono onde o dbt ou Spark condensa e resume os dados e os grava no **DynamoDB** (ou **Amazon DocumentDB**). A API de dados lê diretamente do DynamoDB com concorrência ilimitada e sub-segundo, eliminando o Athena do caminho de serving crítico.</li>
+            <li><strong>Isolamento via Workgroups Dedicados:</strong> Divida o tráfego da API e do QuickSight em <strong>Athena Workgroups</strong> separados (ex: <code>wg_apidata</code> e <code>wg_quicksight</code>). O uso de Workgroups dedicados garante que queries de relatórios pesados de analistas não interfiram na concorrência de queries operacionais da API de Serving.</li>
+            <li><strong>Materialização Pré-calculada (Padrão Ouro):</strong> Para dashboards operacionais com SLAs rígidos, evite queries diretas ao Athena por requisição do cliente. Crie um pipeline assíncrono onde o dbt ou Spark condensa e resume os dados e os grava no <strong>DynamoDB</strong> (ou <strong>Amazon DocumentDB</strong>). A API de dados lê diretamente do DynamoDB com concorrência ilimitada e sub-segundo, eliminando o Athena do caminho de serving crítico.</li>
           </ul>
         </div>
       </div>
@@ -828,9 +825,9 @@ rules = """
         <div class="callout callout-info">
           <strong>Solução Arquitetural de Larga Escala:</strong>
           <ul>
-            <li><strong>Semantic Caching (Cache Semântico com ElastiCache Redis):</strong> Em vez de rodar o fluxo completo de embeddings e LLM para cada pergunta, o Lambda Orchestrator armazena as perguntas dos usuários e as respostas finais geradas em um cluster **Amazon ElastiCache Redis**. Para novas perguntas, o Lambda calcula o embedding e executa uma busca rápida de similaridade de cosseno no Redis contra as chaves de perguntas cacheadas. Se a similaridade for superior a 95% (ex: "Como reseto a máquina?" vs "Como fazer o reset do aparelho?"), a resposta do cache é retornada instantaneamente, reduzindo custos de API do Bedrock a zero para essa chamada.</li>
-            <li><strong>Busca Híbrida (Hybrid Search) &amp; RRF:</strong> No OpenSearch Serverless, combine a busca KNN vetorial com a busca textual léxica tradicional (BM25) usando o algoritmo **RRF (Reciprocal Rank Fusion)**. A busca vetorial captura a semântica da pergunta enquanto a busca textual captura palavras-chave exatas (como códigos de erros específicos ou nomes de peças). Isso melhora drasticamente a relevância do contexto fornecido ao modelo.</li>
-            <li><strong>Filtros de Segurança com Bedrock Guardrails:</strong> Configure **Amazon Bedrock Guardrails** no fluxo de serving. O Guardrail monitora o prompt de entrada e a resposta gerada pela LLM (Claude 3.5), bloqueando a exibição de dados sensíveis corporativos que vazaram por falha do contexto ou palavras ofensivas geradas na alucinação do modelo.</li>
+            <li><strong>Semantic Caching (Cache Semântico com ElastiCache Redis):</strong> Em vez de rodar o fluxo completo de embeddings e LLM para cada pergunta, o Lambda Orchestrator armazena as perguntas dos usuários e as respostas finais geradas em um cluster <strong>Amazon ElastiCache Redis</strong>. Para novas perguntas, o Lambda calcula o embedding e executa uma busca rápida de similaridade de cosseno no Redis contra as chaves de perguntas cacheadas. Se a similaridade for superior a 95% (ex: "Como reseto a máquina?" vs "Como fazer o reset do aparelho?"), a resposta do cache é retornada instantaneamente, reduzindo custos de API do Bedrock a zero para essa chamada.</li>
+            <li><strong>Busca Híbrida (Hybrid Search) &amp; RRF:</strong> No OpenSearch Serverless, combine a busca KNN vetorial com a busca textual léxica tradicional (BM25) usando o algoritmo <strong>RRF (Reciprocal Rank Fusion)</strong>. A busca vetorial captura a semântica da pergunta enquanto a busca textual captura palavras-chave exatas (como códigos de erros específicos ou nomes de peças). Isso melhora drasticamente a relevância do contexto fornecido ao modelo.</li>
+            <li><strong>Filtros de Segurança com Bedrock Guardrails:</strong> Configure <strong>Amazon Bedrock Guardrails</strong> no fluxo de serving. O Guardrail monitora o prompt de entrada e a resposta gerada pela LLM (Claude 3.5), bloqueando a exibição de dados sensíveis corporativos que vazaram por falha do contexto ou palavras ofensivas geradas na alucinação do modelo.</li>
           </ul>
         </div>
       </div>
@@ -860,7 +857,7 @@ rules = """
         <div class="callout callout-warn">
           <strong>A Solução Suprema de Produção:</strong>
           <ul>
-            <li><strong>Uso do RDS Proxy:</strong> Interponha o **Amazon RDS Proxy** entre o Spark e o banco de dados. O RDS Proxy gerencia um pool persistente de conexões com o PostgreSQL e multiplexa as conexões concorrentes dos executores Spark. O RDS Proxy se integra diretamente ao AWS Secrets Manager para buscar e validar credenciais.</li>
+            <li><strong>Uso do RDS Proxy:</strong> Interponha o <strong>Amazon RDS Proxy</strong> entre o Spark e o banco de dados. O RDS Proxy gerencia um pool persistente de conexões com o PostgreSQL e multiplexa as conexões concorrentes dos executores Spark. O RDS Proxy se integra diretamente ao AWS Secrets Manager para buscar e validar credenciais.</li>
             <li><strong>Tratamento de Rotação sem Interrupção:</strong> Quando as credenciais são rotacionadas no Secrets Manager, o RDS Proxy gerencia a alteração de forma transparente. Ele abre conexões usando a nova senha de forma gradual enquanto esvazia e fecha as conexões antigas, evitando falhas de autenticação de transações em andamento na Lambda ou no Spark.</li>
             <li><strong>Pooling Local e Retries com Jitter:</strong> No código Spark, utilize bibliotecas de pooling como HikariCP se a conexão for executada dentro de UDFs, e configure a propriedade de retentativa JDBC <code>loginTimeout</code> e mecanismos de backoff exponencial com Jitter para tolerar micro-indisponibilidades durante a rotação.</li>
           </ul>
@@ -897,8 +894,8 @@ rules = """
         <div class="callout callout-info">
           <strong>A Solução Padrão de Produção (KMS Delegation):</strong>
           <ol>
-            <li><strong>Registro de Localização de Dados com Credenciais Gerenciadas:</strong> A conta produtora registra a localização do S3 no AWS Lake Formation usando a opção de **Criação de Função de Serviço Gerenciada**. A função de serviço do Lake Formation tem permissões explícitas no IAM para acessar o bucket S3 e ler/descriptografar dados usando a chave KMS produtora.</li>
-            <li><strong>Compartilhamento Federado Cross-Account:</strong> A conta produtora concede permissões da tabela do Glue (usando tags TBAC ou controle de grão fino) para a conta do consumidor via **AWS RAM** (gerenciado internamente pelo Lake Formation).</li>
+            <li><strong>Registro de Localização de Dados com Credenciais Gerenciadas:</strong> A conta produtora registra a localização do S3 no AWS Lake Formation usando a opção de <strong>Criação de Função de Serviço Gerenciada</strong>. A função de serviço do Lake Formation tem permissões explícitas no IAM para acessar o bucket S3 e ler/descriptografar dados usando a chave KMS produtora.</li>
+            <li><strong>Compartilhamento Federado Cross-Account:</strong> A conta produtora concede permissões da tabela do Glue (usando tags TBAC ou controle de grão fino) para a conta do consumidor via <strong>AWS RAM</strong> (gerenciado internamente pelo Lake Formation).</li>
             <li><strong>Fluxo de Credential Vending (Sem chaves expostas):</strong> Quando a conta consumidora roda uma query no Athena, o Athena na conta do consumidor solicita credenciais de acesso temporárias ao Lake Formation. O Lake Formation age como um *Credential Vending Machine*, gerando chaves de acesso temporárias do IAM (STS Token) associadas à função de serviço do Lake Formation da conta produtora.</li>
             <li>O Athena lê os arquivos do S3 e descriptografa os dados de forma transparente na memória usando as credenciais temporárias do Lake Formation produtor. A conta consumidora nunca recebe a chave KMS e não precisa ter acesso à chave KMS nas suas políticas IAM, reduzindo riscos de segurança de dados.</li>
           </ol>
@@ -1112,10 +1109,10 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
       <div class="card" id="q47" style="margin-bottom: 24px;">
         <div class="card-lbl">Questão 47 · FinOps &amp; Networking</div>
         <h4>Como auditar custos ocultos de Data Transfer e NAT Gateway gerados por tarefas analíticas no EMR/Glue que processam dados do S3 em subredes privadas, e qual a solução arquitetural ideal de custo zero?</h4>
-        <p><strong>A Pegadinha das Redes na AWS:</strong> Quando executores do EMR ou Glue rodam em subredes privadas de uma VPC, por padrão, qualquer chamada à internet ou serviços AWS (incluindo o S3) é roteada através do **NAT Gateway** da subrede. A AWS cobra uma tarifa por gigabyte processado (Data Processing charge) no NAT Gateway. Varrer 10 TB de dados no S3 geraria cerca de $450 apenas em tarifas de transferência de rede no NAT Gateway.</p>
+        <p><strong>A Pegadinha das Redes na AWS:</strong> Quando executores do EMR ou Glue rodam em subredes privadas de uma VPC, por padrão, qualquer chamada à internet ou serviços AWS (incluindo o S3) é roteada através do <strong>NAT Gateway</strong> da subrede. A AWS cobra uma tarifa por gigabyte processado (Data Processing charge) no NAT Gateway. Varrer 10 TB de dados no S3 geraria cerca de $450 apenas em tarifas de transferência de rede no NAT Gateway.</p>
         <div class="callout callout-info">
           <strong>A Solução Suprema: Gateway VPC Endpoint para S3</strong>
-          <p>Crie um **VPC Endpoint do tipo Gateway** para o S3 na tabela de roteamento da sua VPC privada. Essa configuração cria uma rota interna privada direta e gratuita entre os recursos da subrede privada e o S3, desviando do NAT Gateway e reduzindo o custo de transferência de dados desse tráfego para **zero**.</p>
+          <p>Crie um <strong>VPC Endpoint do tipo Gateway</strong> para o S3 na tabela de roteamento da sua VPC privada. Essa configuração cria uma rota interna privada direta e gratuita entre os recursos da subrede privada e o S3, desviando do NAT Gateway e reduzindo o custo de transferência de dados desse tráfego para <strong>zero</strong>.</p>
         </div>
       </div>
 
@@ -1126,7 +1123,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
         <p><strong>Cenário de Desperdício:</strong> Em aplicações de RAG corporativo ou de buscas internas em linguagem natural, múltiplos usuários realizam perguntas semanticamente muito similares (ex: "Qual é o faturamento de vendas de maio de 2026?" vs "Quanto faturamos nas vendas em maio de 26?"). Processar cada uma enviando-a ao Bedrock Sonnet consome milhares de tokens e eleva a latência.</p>
         <div class="callout callout-info">
           <strong>A Solução: Cache de Vetores com Distância de Cosseno no Redis</strong>
-          <p>Ao receber uma pergunta, calcule seu embedding. Execute uma busca KNN baseada em distância de Cosseno contra uma base de perguntas e respostas já cacheadas no **Amazon ElastiCache Redis** (usando o tipo de dados nativo de busca vetorial). Se a similaridade semântica for acima de um limiar rígido (ex: &gt; 95%), retorne a resposta salva no cache de forma instantânea (latência &lt; 10ms) sem invocar o modelo de linguagem, gerando 100% de economia de custo em tokens para aquela requisição.</p>
+          <p>Ao receber uma pergunta, calcule seu embedding. Execute uma busca KNN baseada em distância de Cosseno contra uma base de perguntas e respostas já cacheadas no <strong>Amazon ElastiCache Redis</strong> (usando o tipo de dados nativo de busca vetorial). Se a similaridade semântica for acima de um limiar rígido (ex: &gt; 95%), retorne a resposta salva no cache de forma instantânea (latência &lt; 10ms) sem invocar o modelo de linguagem, gerando 100% de economia de custo em tokens para aquela requisição.</p>
         </div>
       </div>
 
@@ -1151,7 +1148,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
         <p><strong>O Problema da Caixa Preta:</strong> Pipelines RAG falham silenciosamente: o banco vetorial pode trazer contexto correto mas o LLM ignora (Falta de Fidelidade), ou o banco traz contexto errado e o LLM alucina. Avaliar manualmente é lento e inviável em larga escala.</p>
         <div class="callout callout-info">
           <strong>A Solução: Framework Ragas (Retrieval Augmented Generation Assessment)</strong>
-          <p>Implemente rotinas automatizadas no SageMaker rodando o framework **Ragas** que usa LLMs potentes (ex: Claude 3.5 Sonnet) como avaliadores imparciais. Avalie o pipeline sob três pilares numéricos chave de 0 a 1:</p>
+          <p>Implemente rotinas automatizadas no SageMaker rodando o framework <strong>Ragas</strong> que usa LLMs potentes (ex: Claude 3.5 Sonnet) como avaliadores imparciais. Avalie o pipeline sob três pilares numéricos chave de 0 a 1:</p>
           <ul>
             <li><strong>Faithfulness (Fidelidade):</strong> Mede se a resposta gerada é inteiramente derivada do contexto recuperado (evita alucinações de conhecimento prévio do modelo).</li>
             <li><strong>Answer Relevance (Relevância da Resposta):</strong> Mede se o texto gerado realmente responde à pergunta formulada pelo usuário (evita respostas genéricas ou evasivas).</li>
@@ -1168,9 +1165,9 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
         <div class="callout callout-info">
           <strong>Arquitetura para Ingestão e Baixa Latência:</strong>
           <ul>
-            <li><strong>Fluxo de Processamento (MSK + Flink):</strong> Os eventos de transações entram no **Amazon MSK**. O **Managed Service for Apache Flink** consome as mensagens em tempo real e calcula agregações deslizantes (sliding windows) em memória com estado.</li>
-            <li><strong>Ingestão no Feature Store Online:</strong> O Flink envia o resultado agregado usando chamadas simultâneas `PutRecord` para o **Amazon SageMaker Feature Store (Online Store)**. O Feature Store Online escreve estes valores em tabelas do DynamoDB gerenciadas internamente, garantindo latências de leitura inferiores a 10ms na inferência do modelo.</li>
-            <li><strong>Persistência no Feature Store Offline:</strong> Automaticamente, o SageMaker sincroniza estes registros para a **Offline Store** (no S3 como Parquet) para que os cientistas de dados re-treinem os modelos em batch usando dados históricos consolidados.</li>
+            <li><strong>Fluxo de Processamento (MSK + Flink):</strong> Os eventos de transações entram no <strong>Amazon MSK</strong>. O <strong>Managed Service for Apache Flink</strong> consome as mensagens em tempo real e calcula agregações deslizantes (sliding windows) em memória com estado.</li>
+            <li><strong>Ingestão no Feature Store Online:</strong> O Flink envia o resultado agregado usando chamadas simultâneas `PutRecord` para o <strong>Amazon SageMaker Feature Store (Online Store)</strong>. O Feature Store Online escreve estes valores em tabelas do DynamoDB gerenciadas internamente, garantindo latências de leitura inferiores a 10ms na inferência do modelo.</li>
+            <li><strong>Persistência no Feature Store Offline:</strong> Automaticamente, o SageMaker sincroniza estes registros para a <strong>Offline Store</strong> (no S3 como Parquet) para que os cientistas de dados re-treinem os modelos em batch usando dados históricos consolidados.</li>
           </ul>
         </div>
       </div>
@@ -1185,7 +1182,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
           <ol>
             <li><strong>Ingestão via API Gateway/Kinesis:</strong> Os payloads chegam no Kinesis Data Streams. Uma tarefa Fargate ou Lambda lê os registros da fila.</li>
             <li><strong>Validação de Contrato com JSON Schema:</strong> O script Python aciona uma biblioteca de validação rápida (como `jsonschema`) e compara o JSON contra o arquivo de contrato de dados mantido no S3.</li>
-            <li><strong>Separação de Rotas:</strong> Registros em conformidade recebem um hash de sucesso e continuam para o pipeline de dados analíticos Bronze. Registros que falharem na auditoria são etiquetados com a mensagem de erro da causa e encaminhados para uma pasta **Quarentena** no S3, acionando um alerta de quebra de contrato no Slack/CloudWatch.</li>
+            <li><strong>Separação de Rotas:</strong> Registros em conformidade recebem um hash de sucesso e continuam para o pipeline de dados analíticos Bronze. Registros que falharem na auditoria são etiquetados com a mensagem de erro da causa e encaminhados para uma pasta <strong>Quarentena</strong> no S3, acionando um alerta de quebra de contrato no Slack/CloudWatch.</li>
           </ol>
         </div>
       </div>
@@ -1197,7 +1194,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
         <p><strong>Desafio de Precisão:</strong> Em buscas híbridas, a distância de cosseno dos embeddings lida mal com termos exatos (ex: códigos de produtos), enquanto a busca léxica clássica (BM25) não entende sinônimos. Como unificar as notas de forma balanceada?</p>
         <div class="callout callout-tip">
           <strong>Ajuste Operacional (RRF Tuning):</strong>
-          <p>Utilize o algoritmo **Reciprocal Rank Fusion (RRF)** no OpenSearch. Configure o parâmetro de ponderação de relevância inicial (normalmente pesos como 0.7 para embeddings semânticos para cobrir intenções amplas, e 0.3 para palavras-chave para assegurar acertos técnicos de termos específicos). Ajuste a constante de suavização (rank constant `k`, tipicamente configurado em 60) para impedir que documentos de baixa relevância em uma busca ganhem prioridade excessiva na junção final dos resultados.</p>
+          <p>Utilize o algoritmo <strong>Reciprocal Rank Fusion (RRF)</strong> no OpenSearch. Configure o parâmetro de ponderação de relevância inicial (normalmente pesos como 0.7 para embeddings semânticos para cobrir intenções amplas, e 0.3 para palavras-chave para assegurar acertos técnicos de termos específicos). Ajuste a constante de suavização (rank constant `k`, tipicamente configurado em 60) para impedir que documentos de baixa relevância em uma busca ganhem prioridade excessiva na junção final dos resultados.</p>
         </div>
       </div>
 
@@ -1246,7 +1243,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
         <p><strong>Gargalo Operacional:</strong> A remoção abrupta de um nó Spot que estava hospedando resultados intermediários de map-reduce força o Spark a reprocessar estágios (stages) inteiros. Se os metadados forem perdidos de forma recorrente, o job falha por timeout ou contagem máxima de tentativas de stage excedida.</p>
         <div class="callout callout-info">
           <strong>Configuração de Alta Resiliência:</strong>
-          <p>Para contornar o problema, ative o **Graceful Decommissioning** no YARN e configure as diretivas do Spark:</p>
+          <p>Para contornar o problema, ative o <strong>Graceful Decommissioning</strong> no YARN e configure as diretivas do Spark:</p>
           <ol>
             <li><strong>YARN Decommissioning Timeout:</strong> Defina <code>yarn.resourcemanager.decommissioning.timeout</code> (ex: 300 segundos). Isso dá tempo para que o nó em processo de terminação transfira seus dados de shuffle local para nós persistentes (Core Nodes) antes de cair.</li>
             <li><strong>Spark Decommissioning:</strong> Ative <code>spark.decommission.enabled = true</code> e <code>spark.storage.decommission.enabled = true</code>. O Spark proativamente migrará blocos de RDD armazenados em cache e arquivos de shuffle persistidos no disco local do executor sendo finalizado para outros executores ativos no cluster.</li>
@@ -1274,7 +1271,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
           <strong>Benefícios da Arquitetura OOP em Dados:</strong>
           <ul>
             <li><strong>Reutilização e Manutenibilidade (Abstração &amp; Herança):</strong> A lógica de conexão e persistência reside em classes base (ex: <code>DataConnector</code>). Mudar a origem de arquivos locais para o S3 exige apenas trocar a classe especializada (ex: instanciar <code>S3Connector</code>), sem tocar no código de transformação.</li>
-            <li><strong>Desacoplamento por Design Patterns:</strong> Com o **Factory Pattern**, a fábrica decide qual conector instanciar baseando-se em parâmetros do scheduler de orquestração. Com o **Builder Pattern**, encadeamos transformações de forma isolada, limpa e legível (Clean Code), facilitando mocks e testes de regressão automatizados em CI/CD.</li>
+            <li><strong>Desacoplamento por Design Patterns:</strong> Com o <strong>Factory Pattern</strong>, a fábrica decide qual conector instanciar baseando-se em parâmetros do scheduler de orquestração. Com o <strong>Builder Pattern</strong>, encadeamos transformações de forma isolada, limpa e legível (Clean Code), facilitando mocks e testes de regressão automatizados em CI/CD.</li>
           </ul>
         </div>
       </div>
@@ -1287,8 +1284,8 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
         <div class="callout callout-info">
           <strong>Arquitetura BGP de Resiliência:</strong>
           <ul>
-            <li><strong>Tráfego de Saída da AWS (Outbound):</strong> Configure o atributo BGP **Local Preference** no roteador virtual da AWS. Defina um valor de Local Preference maior para a sessão BGP do Direct Connect (ex: 200) e um valor menor para a conexão BGP da VPN (ex: 100). A AWS preferirá sempre o caminho com maior Local Preference para enviar dados ao seu data center.</li>
-            <li><strong>Tráfego de Entrada na AWS (Inbound):</strong> Para forçar a AWS a preferir o DX ao enviar dados para a origem, anuncie os prefixos on-premises com **AS PATH Prepend** na sessão BGP da VPN Site-to-Site (adicionando o seu ASN local repetidas vezes, ex: 3 a 5 vezes). A AWS preferirá o caminho do DX porque ele apresentará um AS PATH menor (caminho mais curto). Alternativamente, utilize comunidades BGP suportadas pela AWS (como <code>7224:7100</code> para baixa preferência na VPN).</li>
+            <li><strong>Tráfego de Saída da AWS (Outbound):</strong> Configure o atributo BGP <strong>Local Preference</strong> no roteador virtual da AWS. Defina um valor de Local Preference maior para a sessão BGP do Direct Connect (ex: 200) e um valor menor para a conexão BGP da VPN (ex: 100). A AWS preferirá sempre o caminho com maior Local Preference para enviar dados ao seu data center.</li>
+            <li><strong>Tráfego de Entrada na AWS (Inbound):</strong> Para forçar a AWS a preferir o DX ao enviar dados para a origem, anuncie os prefixos on-premises com <strong>AS PATH Prepend</strong> na sessão BGP da VPN Site-to-Site (adicionando o seu ASN local repetidas vezes, ex: 3 a 5 vezes). A AWS preferirá o caminho do DX porque ele apresentará um AS PATH menor (caminho mais curto). Alternativamente, utilize comunidades BGP suportadas pela AWS (como <code>7224:7100</code> para baixa preferência na VPN).</li>
           </ul>
         </div>
       </div>
@@ -1329,7 +1326,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
       <div class="card" id="q75" style="margin-bottom: 24px;">
         <div class="card-lbl">Questão 75 · Segurança Cross-Account em Data Lake: Bucket Policy + KMS Key Policy</div>
         <h4>Em um cenário Data Mesh, um job PySpark rodando na Conta Consumidora A precisa ler dados analíticos Parquet salvos no S3 na Conta Produtora B. Os dados estão encriptados via chave KMS CMK customizada na Conta B. Como devem interagir as políticas IAM da Role da Conta A, a Bucket Policy da Conta B e a Key Policy do KMS da Conta B para permitir o acesso de menor privilégio?</h4>
-        <p><strong>Desafio de Avaliação de Políticas Cross-Account:</strong> Em acessos na mesma conta, basta a Role ter permissão no IAM. Em acessos cross-account (contas diferentes), a AWS exige autorização explícita **em ambos os lados**: na política de identidade do chamador e nas políticas de recurso do proprietário do recurso (Bucket Policy e KMS Key Policy).</p>
+        <p><strong>Desafio de Avaliação de Políticas Cross-Account:</strong> Em acessos na mesma conta, basta a Role ter permissão no IAM. Em acessos cross-account (contas diferentes), a AWS exige autorização explícita <strong>em ambos os lados</strong>: na política de identidade do chamador e nas políticas de recurso do proprietário do recurso (Bucket Policy e KMS Key Policy).</p>
         <div class="callout callout-tip">
           <strong>Arquitetura de Concessão Cross-Account:</strong>
           <ol>
@@ -1342,7 +1339,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
   "Resource": ["arn:aws:s3:::bucket-conta-b", "arn:aws:s3:::bucket-conta-b/*"]
 }</code></pre>
             </li>
-            <li><strong>KMS Key Policy na Conta Produtora B (Resource-Based):</strong> A política da chave KMS customizada na Conta B deve conter um statement autorizando o ARN da Role da Conta A a realizar a descriptografia (<code>kms:Decrypt</code>, <code>kms:DescribeKey</code>). **Sem este passo, o Spark baixará os bytes do S3 mas falhará em decodificar o Parquet, gerando erro de I/O.**</li>
+            <li><strong>KMS Key Policy na Conta Produtora B (Resource-Based):</strong> A política da chave KMS customizada na Conta B deve conter um statement autorizando o ARN da Role da Conta A a realizar a descriptografia (<code>kms:Decrypt</code>, <code>kms:DescribeKey</code>). <strong>Sem este passo, o Spark baixará os bytes do S3 mas falhará em decodificar o Parquet, gerando erro de I/O.</strong></li>
           </ol>
         </div>
       </div>
@@ -1355,7 +1352,7 @@ Root\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon
         <div class="callout callout-info">
           <strong>Solução IaC com Permission Boundary:</strong>
           <ul>
-            <li><strong>Fronteiras de Permissão do IAM:</strong> O administrador de segurança da AWS cria uma política limite chamada **Permission Boundary** (que descreve as ações máximas que qualquer recurso de dados pode rodar, ex: ler S3, gravar logs, ler Glue, sem acessos administrativos de rede ou billing).</li>
+            <li><strong>Fronteiras de Permissão do IAM:</strong> O administrador de segurança da AWS cria uma política limite chamada <strong>Permission Boundary</strong> (que descreve as ações máximas que qualquer recurso de dados pode rodar, ex: ler S3, gravar logs, ler Glue, sem acessos administrativos de rede ou billing).</li>
             <li><strong>Vinculação via Políticas IAM:</strong> Na política IAM dos engenheiros de dados, a permissão <code>iam:CreateRole</code> só é concedida sob a condição estrita de que a nova Role criada venha associada à Permission Boundary predefinida:
               <pre><code class="language-json">{
   "Effect": "Allow",
