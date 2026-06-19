@@ -2,6 +2,13 @@
 
 Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
 
+## [v1.8.1] - Unreleased
+
+### Adicionado
+- **Case 36: Arquitetura de Dados para Captação Líquida**: Adicionado novo case avançado explorando a dualidade entre Speed Layer (Intraday Streaming com Kinesis/MSK e Flink) e Batch Layer (Processamento massivo e oficial de 2TB com EMR Serverless e Iceberg).
+- **Data Product 'Captação Líquida'**: Incorporação do README simulado com Dicionário de Dados e Contrato de Dados (dbt) detalhando métricas financeiras (Aportes e Resgates) validadas.
+- **Business Value Pitch**: Detalhamento do valor de negócio focado na melhoria de resposta comercial (Intraday) e conciliação regulatória.
+
 ## [v1.8.0] - 2026-06-16
 
 ### Adicionado
