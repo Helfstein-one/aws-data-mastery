@@ -7,6 +7,20 @@
 (function() {
   // Configuração das trilhas e suas respectivas seções/hashes para cálculo de progresso
   const MODULES = {
+    pmo: {
+      name: "📊 PMO & Sustentação",
+      badge: "Gerente de Dados",
+      color: "#f43f5e",
+      items: [
+        "pmo-sme-dados.html#visao-geral",
+        "pmo-sme-dados.html#gestao-agil",
+        "pmo-sme-dados.html#negociacao-backlog",
+        "pmo-sme-dados.html#sustentacao",
+        "pmo-sme-dados.html#pareto-incidentes",
+        "pmo-sme-dados.html#fluxo-sustentacao",
+        "pmo-sme-dados.html#roadmap"
+      ]
+    },
     architecture: {
       name: "📐 Arquitetura & Padrões",
       badge: "Arquiteto de Dados",
@@ -74,6 +88,10 @@
         "processing.html#spark-joins",
         "processing.html#spark-cache",
         "processing.html#spark-streaming",
+        
+        "processing.html#pyspark-dataframe-api",
+        "processing.html#pyspark-functions",
+        "processing.html#spark-sql-api",
         "processing.html#spark-tuning",
         "processing.html#spark-debug",
         "processing.html#spark-erros",
@@ -814,7 +832,11 @@
       oop: { 
         colors: ["#f43f5e", "#e11d48"], 
         icon: `<path class="badge-oop-code" d="M24 24 L16 32 L24 40 M40 24 L48 32 L40 40 M36 16 L28 48" fill="none" stroke="url(#grad-oop)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
-      },,
+      },
+      pmo: { 
+        colors: ["#f43f5e", "#be123c"], 
+        icon: `<rect x="18" y="24" width="8" height="16" rx="1" fill="url(#grad-pmo)"/><rect x="28" y="16" width="8" height="24" rx="1" fill="url(#grad-pmo)"/><rect x="38" y="8" width="8" height="32" rx="1" fill="url(#grad-pmo)"/><path d="M14 42 L50 42" stroke="url(#grad-pmo)" stroke-width="2" stroke-linecap="round"/>` 
+      },,,
       testing: { 
         colors: ["#10b981", "#059669"], 
         icon: `<path class="badge-oop-code" d="M32 16 v24 M24 24 h16 M20 40 h24" fill="none" stroke="url(#grad-testing)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 

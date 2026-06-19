@@ -30,6 +30,17 @@
       <div class="nav-page-group">
         <a href="../../index.html" class="nav-a" data-page="index"><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
       </div>
+      
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/pmo-sme-dados.html" class="nav-a" data-page="pmo-sme-dados"><span class="nav-dot" style="background:#f43f5e"></span>📊 PMO &amp; Sustentação</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#visao-geral" class="nav-sub"><span class="nav-sdot"></span>PMO e SME para Dados</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#gestao-agil" class="nav-sub"><span class="nav-sdot"></span>Gestão Ágil: PMO e Squads</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#negociacao-backlog" class="nav-sub"><span class="nav-sdot"></span>Negociação e Backlog</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#sustentacao" class="nav-sub"><span class="nav-sdot"></span>Sustentação (RUN)</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#pareto-incidentes" class="nav-sub"><span class="nav-sdot"></span>Identificação &amp; Pareto</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#fluxo-sustentacao" class="nav-sub"><span class="nav-sdot"></span>Fluxo de Sustentação</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#roadmap" class="nav-sub"><span class="nav-sdot"></span>Roadmap do Projeto</a>
+      </div>
       <div class="nav-page-group">
         <a href="../../pages/fundamentos/soft-skills.html" class="nav-a" data-page="soft-skills"><span class="nav-dot" style="background:var(--spark)"></span>🧠 Soft Skills & Liderança</a>
         <a href="../../pages/fundamentos/soft-skills.html#personas" class="nav-sub"><span class="nav-sdot"></span>Personas do Ecossistema</a>
@@ -1351,7 +1362,122 @@ df_final = df_bucket1.join(df_bucket2, "user_id") # Executa instantaneamente!</c
     </div>
   </section>
 
-    <section class="section" id="spark-cache">
+    
+  <section class="section" id="pyspark-dataframe-api" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+    <div class="sec-hdr">
+      <div class="sec-num" style="color:var(--emr)">9.5</div>
+      <div class="sec-meta">
+        <div class="sec-acc" style="background:var(--emr)"></div>
+        <h2>Guia Definitivo: DataFrame API & Boas Práticas</h2>
+        <p>Como escrever código PySpark sustentável, de alta performance e legível</p>
+      </div>
+    </div>
+
+    <p>A <strong>DataFrame API</strong> é a espinha dorsal do PySpark moderno. Diferente dos antigos RDDs, o DataFrame se beneficia do <em>Catalyst Optimizer</em>, construindo um plano lógico de execução que otimiza agregações e joins por baixo dos panos. Abaixo estão os padrões cruciais para engenharia de dados.</p>
+
+    <div class="callout callout-tip" style="margin-top:20px;">
+      <strong>Evite Encadeamento Infinito (Chaining):</strong> Embora seja possível encadear 20 <code>.withColumn()</code>, isso estoura a pilha de recursão do Java e destrói o <em>Lineage</em> do Spark, gerando <em>StackOverflowErrors</em> no driver. Use a função <code>.select()</code> com expressões múltiplas sempre que possível.
+    </div>
+
+    <div class="code-block" style="margin-top:20px;">
+      <div class="code-header">
+        <span class="code-lang">python</span>
+      </div>
+      <pre><code># ❌ Anti-Pattern: Chaining excessivo e recálculo
+df_bad = df \
+    .withColumn("ano", F.year("data_venda")) \
+    .withColumn("mes", F.month("data_venda")) \
+    .withColumn("dia", F.dayofmonth("data_venda")) \
+    .withColumn("total_com_imposto", F.col("valor") * 1.15)
+
+# ✅ Best Practice: Projeção única e limpa
+df_good = df.select(
+    "*",
+    F.year("data_venda").alias("ano"),
+    F.month("data_venda").alias("mes"),
+    F.dayofmonth("data_venda").alias("dia"),
+    (F.col("valor") * 1.15).alias("total_com_imposto")
+)</code></pre>
+    </div>
+
+    <h3 style="margin-top:30px;" id="pyspark-functions">Funções PySpark (pyspark.sql.functions) Essenciais</h3>
+    <p>O módulo <code>pyspark.sql.functions</code> (comumente importado como <code>F</code>) possui funções nativas implementadas em Scala. <strong>Nunca use UDFs (User Defined Functions) em Python</strong> a menos que seja estritamente necessário (ou use Pandas UDF), pois UDFs tradicionais quebram a execução do Tungsten e forçam a serialização/deserialização (Pickle) entre JVM e Python.</p>
+    
+    <div class="bento-grid" style="margin-top:20px;">
+      <div class="card">
+        <div class="card-lbl">Controle de Fluxo (when/otherwise)</div>
+        <p>A estrutura condicional nativa do Spark. Evite criar colunas baseadas em ifs de Python puros iterando sobre linhas.</p>
+        <pre style="background:#0f172a; padding:10px; border-radius:5px; color:#fff; font-size:0.8em; margin-top:10px; overflow-x: auto;"><code>df.withColumn(
+  "status_compra",
+  F.when(F.col("valor") > 1000, "VIP")
+   .when(F.col("valor") > 500, "Premium")
+   .otherwise("Standard")
+)</code></pre>
+      </div>
+      <div class="card">
+        <div class="card-lbl">Estruturas Complexas (explode & arrays)</div>
+        <p>Processamento de JSONs aninhados. O <code>explode</code> desmembra arrays em múltiplas linhas, multiplicando os registros do DataFrame.</p>
+        <pre style="background:#0f172a; padding:10px; border-radius:5px; color:#fff; font-size:0.8em; margin-top:10px; overflow-x: auto;"><code># Transforma [1, 2, 3] em três linhas distintas
+df_exploded = df.select(
+  "user_id",
+  F.explode("lista_compras").alias("item")
+)</code></pre>
+      </div>
+      <div class="card">
+        <div class="card-lbl">Tratamento de Nulos (coalesce vs na.fill)</div>
+        <p><code>F.coalesce</code> retorna a primeira coluna não-nula entre várias. <code>na.fill</code> substitui nulos em colunas específicas.</p>
+        <pre style="background:#0f172a; padding:10px; border-radius:5px; color:#fff; font-size:0.8em; margin-top:10px; overflow-x: auto;"><code>df.withColumn(
+  "telefone_principal", 
+  F.coalesce(F.col("celular"), F.col("fixo"), F.lit("Sem Contato"))
+)</code></pre>
+      </div>
+      <div class="card">
+        <div class="card-lbl">Window Functions</div>
+        <p>Operações analíticas sobre partições sem agrupar (reduzir) as linhas. Essencial para CTEs, running totals e deduplicação.</p>
+        <pre style="background:#0f172a; padding:10px; border-radius:5px; color:#fff; font-size:0.8em; margin-top:10px; overflow-x: auto;"><code>from pyspark.sql.window import Window
+windowSpec = Window.partitionBy("user_id").orderBy(F.desc("data"))
+# Deduplica mantendo a última compra
+df.withColumn("rn", F.row_number().over(windowSpec)) \
+  .filter(F.col("rn") == 1)</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="spark-sql-api" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+    <h3 style="margin-top:30px;">Spark.sql: Integração de Queries e Catalyst Optimizer</h3>
+    <p>O Spark permite executar 100% de queries SQL ANSI puras através do método <code>spark.sql()</code>. Quando um analista roda uma query SQL ou um engenheiro escreve código PySpark, o <strong>Catalyst Optimizer</strong> converte ambos para a mesma árvore sintática exata (AST). Portanto, não há perda de performance teórica entre SQL e DataFrame API.</p>
+
+    <div class="code-block" style="margin-top:20px;">
+      <div class="code-header">
+        <span class="code-lang">python</span>
+      </div>
+      <pre><code># Registra o DataFrame como uma tabela temporária em memória
+df_bronze.createOrReplaceTempView("bronze_vendas")
+
+# Executa lógica SQL complexa (ideal para analistas migrando para DE)
+df_silver = spark.sql("""
+    SELECT 
+        loja_id,
+        DATE_TRUNC('month', data_venda) as mes,
+        SUM(valor) as receita_total
+    FROM bronze_vendas
+    WHERE status = 'CONCLUIDO'
+    GROUP BY 1, 2
+    HAVING SUM(valor) > 10000
+""")</code></pre>
+    </div>
+
+    <div class="callout callout-warn" style="margin-top:20px;">
+      <strong>Trade-offs: DataFrame API vs Spark SQL</strong>
+      <ul>
+        <li><strong>Vantagem do DataFrame API:</strong> Verificação de sintaxe em tempo de compilação (IDE aponta o erro de digitação), facilidade de modularização, passagem de parâmetros dinâmicos de forma elegante sem concatenar strings propensas a SQL Injection.</li>
+        <li><strong>Vantagem do Spark SQL:</strong> Curva de aprendizado zero para profissionais de dados tradicionais, facilidade de portar queries complexas gigantes (ex: do Teradata ou Oracle) diretamente para o Lake.</li>
+        <li><strong>Melhor Prática:</strong> Utilize DataFrame API para ingestão, leitura, partições dinâmicas e tipagem estrita de colunas. Utilize Spark SQL para agregações complexas de negócios que mudam frequentemente, encapsuladas em blocos configuráveis (ou dbt).</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="spark-cache">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--spark)">08</div>
         <div class="sec-meta">

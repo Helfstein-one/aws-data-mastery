@@ -769,6 +769,98 @@ quadrantChart
   </section>
 
   <!-- REFERÊNCIAS -->
+  
+  <section class="section" id="sustentacao" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+    <div class="sec-hdr">
+      <div class="sec-num" style="color:var(--aws)">4</div>
+      <div class="sec-meta">
+        <div class="sec-acc" style="background:var(--aws)"></div>
+        <h2>Sustentação de Projetos de Dados (RUN)</h2>
+        <p>A transição de BUILD para RUN e a manutenção contínua do ecossistema analítico</p>
+      </div>
+    </div>
+
+    <p>O ciclo de vida de um produto de dados não termina no "Deploy". A fase de <strong>Sustentação (RUN)</strong> é responsável por garantir que as esteiras de dados, modelos e dashboards operem dentro do SLA acordado. A sustentação em ambientes de Cloud e Big Data é altamente complexa, exigindo automação, monitoramento proativo e processos bem definidos de resolução de incidentes.</p>
+
+    <div class="callout callout-info" style="margin-top:20px;">
+      <strong>O Custo Oculto do "Build-Only":</strong>
+      <p>Organizações que negligenciam o "RUN" tendem a gerar <em>Technical Debt</em> maciço. Sem uma equipe dedicada (ou tempo dedicado das squads de Build) para sustentação, novos projetos são paralisados pelas constantes falhas na produção legada.</p>
+    </div>
+
+    <h3 style="margin-top:30px;" id="pareto-incidentes">Identificação de Problemas e Tratamento de Incidentes</h3>
+    <p>Na sustentação de dados, um "incidente" geralmente se enquadra em três categorias críticas:</p>
+    <ul>
+      <li><strong>Data Quality & Schema Drift:</strong> A origem (banco transacional, API, fornecedor) mudou um tipo de dado ou inseriu nulos, causando quebra no parser do Spark ou no crawler do Glue.</li>
+      <li><strong>Resource & Performance Issues:</strong> Um job que processava 10GB agora tenta processar 1TB, estourando memória (OOM - Out of Memory) ou derrubando SLAs de entrega.</li>
+      <li><strong>Infraestrutura & Permissões:</strong> Mudanças inadvertidas no IAM, expiração de tokens ou indisponibilidade temporária de um serviço (Ex: KMS limit excedido).</li>
+    </ul>
+
+    <h3 style="margin-top:30px;">Gestão Baseada no Teorema de Pareto (Regra 80/20)</h3>
+    <p>Um dos maiores desafios do PMO de Dados na Sustentação é o volume de "chamados". Para otimizar recursos, utilizamos o <strong>Teorema de Pareto</strong>:</p>
+    <div class="bento-grid" style="margin-top:20px;">
+      <div class="card">
+        <div class="card-lbl">Análise de Causa Raiz (RCA)</div>
+        <p>Geralmente, <strong>80% dos incidentes de sustentação são causados por apenas 20% dos componentes</strong>. Um script legado mal otimizado ou um banco de origem problemático pode ser responsável por dezenas de alertas semanais.</p>
+      </div>
+      <div class="card">
+        <div class="card-lbl">Ação e Priorização</div>
+        <p>A equipe de RUN não deve focar apenas em religar o serviço (Workaround). Após categorizar os incidentes do mês, os top 20% ofensores são escalados para a equipe de BUILD como <em>"Refatoração Crítica"</em> (Bug-Fix permanente).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="fluxo-sustentacao" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+    <h3 style="margin-top:30px;">Fluxo de Sustentação (Níveis de Atendimento)</h3>
+    <p>A estrutura padrão de resposta a incidentes de dados obedece à pirâmide de níveis de suporte:</p>
+    
+    <div class="drawio-wrap" style="margin-top: 30px;">
+      <div class="drawio-label"><span class="dot"></span>Triage & Escalation Flow</div>
+      <div class="mermaid" style="background:#0f172a; padding: 20px; border-radius:8px; border: 1px solid var(--border); text-align: center;">
+        graph TD
+        A([Alerta / Chamado do Usuário]) --> B[Nível 1 (N1) - Triage &amp; Monitoramento]
+        B -->|Retrabalho Manual / Reprocessamento| C(Solução Simples)
+        B -->|Falha Complexa / Bug| D[Nível 2 (N2) - Análise de Dados / Eng. Pleno]
+        D -->|Workaround / Hotfix SQL| E(Solução e Documentação)
+        D -->|Alteração Arquitetural / OOM| F[Nível 3 (N3) - Eng. Especialista / Arquiteto]
+        F --> G(Bug Fix em Código Fonte / Refactoring)
+        G --> H([Deploy em Produção])
+        
+        classDef n1 fill:#1e293b,stroke:#cbd5e1,stroke-width:2px,color:#f8fafc
+        classDef n2 fill:#f97316,stroke:#ea580c,stroke-width:2px,color:#fff
+        classDef n3 fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+        class B n1
+        class D n2
+        class F n3
+      </div>
+    </div>
+    
+    <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+      <strong style="color: var(--accent);">Níveis de Sustentação:</strong>
+      <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+        <li style="margin-bottom: 4px;"><strong>Nível 1 (Triage):</strong> Equipe focada em painéis de monitoramento (Ex: Datadog, CloudWatch). Resolve falhas comuns reiniciando jobs ou reprocessando datas perdidas.</li>
+        <li style="margin-bottom: 4px;"><strong>Nível 2 (Engenharia Operacional):</strong> Investigação de dados inconsistentes, criação de queries de contorno e entendimento da falha técnica superficial.</li>
+        <li style="margin-bottom: 4px;"><strong>Nível 3 (Especialistas):</strong> Correção profunda de código (PySpark, SQL, Terraform) e alteração estrutural no projeto.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="roadmap" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+    <h3 style="margin-top:30px;">Roadmap de Implementação de Projeto (com RUN)</h3>
+    <p>O planejamento de um projeto analítico via PMO moderno engloba todas as fases desde a concepção até a passagem de bastão para a sustentação. Ignorar a fase de <em>Hypercare</em> costuma ser a causa número um de colapso nos primeiros dias pós-deploy.</p>
+    
+    <div style="margin-top:20px; padding:20px; background:#1e293b; border-radius:8px; border: 1px solid var(--border);">
+      <ol style="line-height: 1.8; color: var(--text);">
+        <li><strong>Fase 1: Discovery &amp; Assessment (Semanas 1-2):</strong> Levantamento de requisitos de negócio, análise das fontes de dados, definição de SLAs e aprovação da arquitetura inicial.</li>
+        <li><strong>Fase 2: Build &amp; Development (Semanas 3-10):</strong> Codificação dos pipelines (Ingestão, Processamento, Serving). Execução em sprints ágeis.</li>
+        <li><strong>Fase 3: Quality Assurance &amp; UAT (Semanas 11-12):</strong> Testes de volume, stress (Performance Testing) e aprovação pelo usuário final (UAT - User Acceptance Testing).</li>
+        <li><strong>Fase 4: Deploy &amp; Cutover (Semana 13):</strong> Subida em produção (Deploy Blue/Green ou Go-Live programado), carga histórica de dados.</li>
+        <li><strong>Fase 5: Hypercare (Semanas 14-15):</strong> A equipe de BUILD monitora ativamente a produção dia a dia. É o período de ajustes finos, tuning de recursos e estabilização de bugs inesperados.</li>
+        <li><strong>Fase 6: Transition to RUN (Handover):</strong> Repasse de conhecimento, documentação final, runbooks de erros conhecidos e transição definitiva para a equipe de Sustentação.</li>
+      </ol>
+    </div>
+  </section>
+
+
   <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
     <div class="sec-hdr">
       <div class="sec-num" style="color:var(--muted)">REF</div>
