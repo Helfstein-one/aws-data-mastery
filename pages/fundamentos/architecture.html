@@ -2009,6 +2009,28 @@ df_compactado.write \
 <span class="k">INSERT INTO</span> dim_cliente (id_cliente, nome, cidade, data_inicio, data_fim, flag_ativo)
 <span class="k">VALUES</span> (42, <span class="s">'Mauricio Helfstein'</span>, <span class="s">'Rio de Janeiro'</span>, <span class="s">'2026-06-03'</span>, <span class="k">NULL</span>, <span class="k">TRUE</span>);</pre>
 
+      <div class="callout" style="border-left: 4px solid var(--arch); background: rgba(217,70,239,0.05); padding: 15px; border-radius: 4px; margin-bottom: 20px; margin-top: 20px;">
+        <h4 style="margin-top: 0; color: var(--arch);">🌟 Aprofundamento: Cases e Trade-offs (Star vs Snowflake)</h4>
+        <p style="margin-bottom: 10px; font-size: 0.95em;">Enquanto o <strong>Star Schema</strong> foca na desnormalização (tabelas mais largas) para otimizar a velocidade de leitura, o <strong>Snowflake Schema</strong> foca na normalização rígida para evitar redundância e economizar espaço. Na nuvem moderna (ex: Amazon Redshift ou Athena com S3), o custo de armazenamento é marginal e o <em>Star Schema</em> é o vencedor indiscutível para performance. Abaixo, dois cases clássicos:</p>
+        
+        <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; font-size: 0.95em; margin-bottom: 0;">
+          <li><strong>Case Varejo E-commerce:</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Fato (Ação Central):</em> <code>fato_vendas</code> (com métricas como quantidade, receita, custo de frete).</li>
+              <li><em>Dimensões (Contexto):</em> <code>dim_cliente</code>, <code>dim_produto</code>, <code>dim_tempo</code>.</li>
+              <li><em>A Vantagem Star:</em> Uma query para descobrir o "Total de Vendas no Black Friday por Faixa Etária" exige apenas dois JOINs rápidos (Fato com Cliente, Fato com Tempo). O Amazon Redshift consegue processar isso varrendo apenas os blocos colunares necessários.</li>
+            </ul>
+          </li>
+          <li style="margin-top: 8px;"><strong>Case Plataforma de Streaming de Vídeo:</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Fato:</em> <code>fato_visualizacoes</code> (minutos assistidos, porcentagem concluída, bitrate médio).</li>
+              <li><em>Dimensões:</em> <code>dim_usuario</code> (plano atual), <code>dim_dispositivo</code> (app, OS), <code>dim_conteudo</code> (Série, Gênero, Diretor, Estúdio).</li>
+              <li><em>O Perigo do Snowflake:</em> Se o modelo fosse Snowflake, os dados de conteúdo se espalhariam (<code>dim_conteudo -&gt; dim_estudio -&gt; dim_pais_origem</code>). Isso forçaria o motor MPP do banco a fazer 3 JOINs encadeados em grandes massas de dados. O pior inimigo da performance analítica distribuída é o "Shuffle" (movimentação de dados entre nós pela rede). O Star Schema "achata" Estúdio e País dentro da própria <code>dim_conteudo</code>, aceitando a repetição de strings em troca da eliminação do Shuffle.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
       <h3>O Teorema CAP nos Bancos de Dados AWS</h3>
       <p>O <strong>Teorema CAP</strong> dita que um sistema distribuído pode garantir apenas duas de três propriedades simultaneamente:</p>
       
@@ -2039,6 +2061,26 @@ df_compactado.write \
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="callout" style="border-left: 4px solid var(--accent); background: rgba(129,140,248,0.05); padding: 15px; border-radius: 4px; margin-bottom: 20px; margin-top: 20px;">
+        <h4 style="margin-top: 0; color: var(--accent);">⚖️ Aprofundamento: Trade-offs do CAP e a Extensão PACELC</h4>
+        <p style="margin-bottom: 10px; font-size: 0.95em;">Na computação em nuvem, a Partição de Rede (P) é uma realidade inegável (cabos se rompem, switches falham). Portanto, não se "escolhe" duas letras livremente. Você assume P e precisa escolher entre <strong>CP</strong> (Consistência) ou <strong>AP</strong> (Disponibilidade). O Teorema <strong>PACELC</strong> complementa essa visão: <em>Se houver Partição (P), escolha A ou C. Senão (Else - E), escolha entre Latência (L) e Consistência (C).</em></p>
+        
+        <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; font-size: 0.95em; margin-bottom: 0;">
+          <li><strong>Case CP (Consistência Forte em Partições):</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Exemplo:</em> Amazon RDS Multi-AZ em evento de Failover.</li>
+              <li><em>Explicação:</em> Se a Zona de Disponibilidade A cai, ocorre uma partição de rede. O sistema imediatamente rejeita escritas da aplicação (sacrifica a Disponibilidade - A) por cerca de 60 segundos até que o banco Standby Síncrono na Zona B assuma como Master. Isso garante que não ocorra <em>split-brain</em> e os dados transacionais fiquem consistentes. Casos de uso: Saldo bancário, processamento de pagamentos.</li>
+            </ul>
+          </li>
+          <li style="margin-top: 8px;"><strong>Case AP (Alta Disponibilidade com Consistência Eventual):</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Exemplo:</em> Amazon DynamoDB (Global Tables) e Amazon S3.</li>
+              <li><em>Explicação:</em> Se a rede entre duas regiões globais ficar intermitente (Partição), o DynamoDB não para de aceitar escritas. Ele prefere garantir uptime de 99.999% devolvendo um OK instantâneo para o usuário (A), e resolve as divergências depois usando o log de replicação assíncrono (sacrificando a Consistência imediata). Casos de uso: Feed de redes sociais, histórico de carrinho de compras de e-commerce e catálogo de produtos.</li>
+            </ul>
+          </li>
+        </ul>
       </div>
     </section>
 
