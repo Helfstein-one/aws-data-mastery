@@ -1595,6 +1595,55 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "bronze_encryption
 </div>
     </section>
 
+    
+    <!-- 10B.0 MODELAGEM TRANSACIONAL OLTP E ERDS -->
+    <section class="section" id="modelagem-transacional-oltp">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--aws)">10B.0</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--aws)"></div>
+          <h2>Modelagem Transacional Avançada (OLTP) - Padrões de ERD</h2>
+          <p>Entity-Relationship Diagrams para Bancos Relacionais Normalizados (Amazon RDS / Aurora)</p>
+        </div>
+      </div>
+
+      <p>Diferente da Modelagem Dimensional (focada em leitura analítica massiva), a modelagem Transacional (OLTP - Online Transaction Processing) exige normalização severa (3NF) para evitar anomalias de atualização (Update Anomalies) e garantir o rigoroso isolamento ACID.</p>
+
+      <h3>1. RDS ERD: E-Commerce Clássico (1:N)</h3>
+      <p>O caso mais comum de normalização. Um Cliente pode ter múltiplos Pedidos (1:N), e um Pedido possui Itens.</p>
+      
+      <div class="drawio-wrap" style="margin-top: 20px;">
+        <div class="drawio-label"><span class="dot"></span>ERD 1: E-Commerce 1:N</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;:&quot;#0ea5e9&quot;,&quot;lightbox&quot;:false,&quot;nav&quot;:false,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom&quot;,&quot;page&quot;:0,&quot;xml&quot;:&quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;800\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry width=\&quot;800\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t1\&quot; value=\&quot;&lt;b&gt;tb_cliente&lt;/b&gt;&lt;br&gt;&lt;br&gt;PK id_cliente&lt;br&gt;nm_cliente&lt;br&gt;ds_email\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;80\&quot; width=\&quot;140\&quot; height=\&quot;120\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t2\&quot; value=\&quot;&lt;b&gt;tb_pedido&lt;/b&gt;&lt;br&gt;&lt;br&gt;PK id_pedido&lt;br&gt;FK id_cliente&lt;br&gt;dt_pedido&lt;br&gt;vl_total\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#10b981;strokeWidth=2;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;300\&quot; y=\&quot;80\&quot; width=\&quot;140\&quot; height=\&quot;120\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e1\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;t1\&quot; target=\&quot;t2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#e2e8f0;strokeWidth=1.5;endArrow=classic;endFill=1;startArrow=none;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+      </div>
+      <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+        <strong style="color: var(--accent);">Trade-off:</strong> Updates são imediatos (muda o email do cliente em um só lugar), mas leituras analíticas forçam <code>JOIN</code> entre <code>tb_pedido</code> e <code>tb_cliente</code> penalizando performance OLAP.
+      </div>
+
+      <h3 style="margin-top:40px;">2. RDS ERD: ERP Inventário (Junction Table N:N)</h3>
+      <p>Quando um Pedido pode ter vários Produtos, e um Produto pode estar em vários Pedidos, criamos um relacionamento N:N (Muitos para Muitos). Bancos Relacionais não suportam colunas de Arrays nativamente em chaves estrangeiras, exigindo uma <strong>Tabela Associativa (Junction Table)</strong>.</p>
+      
+      <div class="drawio-wrap" style="margin-top: 20px;">
+        <div class="drawio-label"><span class="dot"></span>ERD 2: Junction Table (N:N)</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;:&quot;#0ea5e9&quot;,&quot;lightbox&quot;:false,&quot;nav&quot;:false,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom&quot;,&quot;page&quot;:0,&quot;xml&quot;:&quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;800\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry width=\&quot;800\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t1\&quot; value=\&quot;&lt;b&gt;tb_pedido&lt;/b&gt;&lt;br&gt;&lt;br&gt;PK id_pedido\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#10b981;strokeWidth=2;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;80\&quot; width=\&quot;120\&quot; height=\&quot;100\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t2\&quot; value=\&quot;&lt;b&gt;tb_pedido_item&lt;/b&gt;&lt;br&gt;&lt;br&gt;PK/FK id_pedido&lt;br&gt;PK/FK id_produto&lt;br&gt;qt_produto\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#3b293b;strokeColor=#ec4899;strokeWidth=2;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;280\&quot; y=\&quot;80\&quot; width=\&quot;140\&quot; height=\&quot;120\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t3\&quot; value=\&quot;&lt;b&gt;tb_produto&lt;/b&gt;&lt;br&gt;&lt;br&gt;PK id_produto&lt;br&gt;ds_produto\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#f59e0b;strokeWidth=2;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;520\&quot; y=\&quot;80\&quot; width=\&quot;120\&quot; height=\&quot;100\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e1\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;t1\&quot; target=\&quot;t2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#e2e8f0;strokeWidth=1.5;endArrow=classic;endFill=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e2\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;t3\&quot; target=\&quot;t2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#e2e8f0;strokeWidth=1.5;endArrow=classic;endFill=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+      </div>
+      <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+        <strong style="color: var(--accent);">Mecanismo Crítico:</strong> A chave primária (PK) de <code>tb_pedido_item</code> é COMPOSTA por duas chaves estrangeiras. Isso impede que o mesmo produto seja inserido duas vezes no mesmo pedido.
+      </div>
+
+      <h3 style="margin-top:40px;">3. RDS ERD: Recursos Humanos (Self-Referencing)</h3>
+      <p>E quando um funcionário tem um gerente... e o gerente é também um funcionário? Usamos o modelo de *Self-Referencing Table* onde uma chave estrangeira aponta para a chave primária da PRÓPRIA TABELA.</p>
+      
+      <div class="drawio-wrap" style="margin-top: 20px;">
+        <div class="drawio-label"><span class="dot"></span>ERD 3: Self-Referencing (Hierarquia)</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;:&quot;#0ea5e9&quot;,&quot;lightbox&quot;:false,&quot;nav&quot;:false,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom&quot;,&quot;page&quot;:0,&quot;xml&quot;:&quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;800\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry width=\&quot;800\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t1\&quot; value=\&quot;&lt;b&gt;tb_funcionario&lt;/b&gt;&lt;br&gt;&lt;br&gt;PK id_funcionario&lt;br&gt;nm_funcionario&lt;br&gt;FK id_gerente&lt;br&gt;&lt;br&gt;&lt;i&gt;id_gerente REFERENCES&lt;br&gt;id_funcionario&lt;/i&gt;\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;80\&quot; width=\&quot;200\&quot; height=\&quot;160\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e1\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;t1\&quot; target=\&quot;t1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#e2e8f0;strokeWidth=1.5;endArrow=classic;endFill=1;curved=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;380\&quot; y=\&quot;100\&quot;/&gt;&lt;mxPoint x=\&quot;380\&quot; y=\&quot;200\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+      </div>
+      <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+        <strong style="color: var(--accent);">Como Consultar:</strong> Essa hierarquia infinita é péssima para ser consultada com SQL padrão. Para descobrir todos os níveis hierárquicos, você precisaria de um número desconhecido de JOINs ou o uso obrigatório de funções avançadas como as <strong>CTE Recursivas</strong> (<code>WITH RECURSIVE</code>).
+      </div>
+    </section>
+
+
     <!-- 10B.1 MODELAGEM DIMENSIONAL PROFUNDA: OLAP VS OLTP & STAR VS SNOWFLAKE -->
     <section class="section" id="modelagem-dimensional-profunda">
       <div class="sec-hdr">
@@ -2039,6 +2088,20 @@ df_compactado.write \
               <li><em>O Perigo do Snowflake:</em> Se o modelo fosse Snowflake, os dados de conteúdo se espalhariam (<code>dim_conteudo -&gt; dim_estudio -&gt; dim_pais_origem</code>). Isso forçaria o motor MPP do banco a fazer 3 JOINs encadeados em grandes massas de dados. O pior inimigo da performance analítica distribuída é o "Shuffle" (movimentação de dados entre nós pela rede). O Star Schema "achata" Estúdio e País dentro da própria <code>dim_conteudo</code>, aceitando a repetição de strings em troca da eliminação do Shuffle.</li>
             </ul>
           </li>
+          <li style="margin-top: 8px;"><strong>Case Setor Bancário / Risco de Crédito (Factless Fact Tables):</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Fato:</em> <code>fato_acesso_conta</code> (Tabela sem fatos/métricas puras, apenas o registro de um evento acontecendo no tempo).</li>
+              <li><em>Dimensões:</em> <code>dim_cliente</code>, <code>dim_dispositivo</code>, <code>dim_geolocalizacao</code>, <code>dim_tempo</code>.</li>
+              <li><em>A Vantagem Star:</em> Em modelos de prevenção a fraude, precisamos saber se um mesmo usuário logou de dois dispositivos diferentes em continentes diferentes em menos de 5 minutos. Uma Fato sem métrica cruza essas chaves estrangeiras com alta velocidade, permitindo agregações de contagem (COUNT) ultra-rápidas para bloquear o cartão.</li>
+            </ul>
+          </li>
+          <li style="margin-top: 8px;"><strong>Case Supply Chain & Logística (Achatamento de Redes Complexas):</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Fato:</em> <code>fato_entrega_pacote</code> (peso, distância, tempo em trânsito, custo do pedágio).</li>
+              <li><em>Dimensões:</em> <code>dim_veiculo</code>, <code>dim_motorista</code>, <code>dim_rota</code>, <code>dim_centro_distribuicao</code>.</li>
+              <li><em>O Perigo do Snowflake:</em> A rota e o veículo pertencem a empresas terceirizadas diferentes, e a modelagem normalizada forçaria a separar <code>dim_veiculo -&gt; dim_transportadora -&gt; dim_contrato</code>. Em Data Warehousing (como Amazon Redshift), esse design força um "Shuffle" massivo. O Star Schema achata todos os dados da transportadora na <code>dim_veiculo</code>, otimizando o "Broadcast Join" e resolvendo a query localmente no nó de processamento.</li>
+            </ul>
+          </li>
         </ul>
       </div>
 
@@ -2089,6 +2152,24 @@ df_compactado.write \
             <ul style="margin-top: 4px; padding-left: 20px;">
               <li><em>Exemplo:</em> Amazon DynamoDB (Global Tables) e Amazon S3.</li>
               <li><em>Explicação:</em> Se a rede entre duas regiões globais ficar intermitente (Partição), o DynamoDB não para de aceitar escritas. Ele prefere garantir uptime de 99.999% devolvendo um OK instantâneo para o usuário (A), e resolve as divergências depois usando o log de replicação assíncrono (sacrificando a Consistência imediata). Casos de uso: Feed de redes sociais, histórico de carrinho de compras de e-commerce e catálogo de produtos.</li>
+            </ul>
+          </li>
+          <li style="margin-top: 8px;"><strong>Case Apache Kafka e Mensageria (CP vs AP Ajustável):</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Exemplo:</em> Amazon MSK (Managed Streaming for Apache Kafka).</li>
+              <li><em>Explicação:</em> O Kafka é flexível. Se você configura <code>acks=all</code> e <code>min.insync.replicas=2</code>, ele se torna um sistema <strong>CP</strong> (Consistente e Tolerante a Partições). Se um broker cai e a replicação não é possível, ele prefere rejeitar a mensagem do Produtor (sacrifica Disponibilidade) para não perder o dado. Se você configura <code>acks=1</code> ou <code>acks=0</code>, ele age como um sistema <strong>AP</strong>, aceitando dados o mais rápido possível, mas com risco de perda se o broker principal morrer antes de replicar.</li>
+            </ul>
+          </li>
+          <li style="margin-top: 8px;"><strong>Case Semantic Caches (RAG/Redis/GenAI):</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Exemplo:</em> Amazon ElastiCache (Redis) para aplicações de Inteligência Artificial.</li>
+              <li><em>Explicação:</em> Em sistemas voltados a usuário (LLM Chatbots), a latência é inaceitável. Escolhe-se sacrificar quase toda a Consistência (C) e focar em Disponibilidade e Baixa Latência (A+L no PACELC). Um usuário que faz uma pergunta repetida recebe uma resposta do cache instantaneamente, mesmo que o modelo de fundação em background tenha acabado de atualizar sua base de conhecimento há 2 segundos.</li>
+            </ul>
+          </li>
+          <li style="margin-top: 8px;"><strong>Case Aurora Global Database (Síncrono vs Assíncrono):</strong>
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li><em>Exemplo:</em> Replicação entre us-east-1 (N. Virginia) e sa-east-1 (São Paulo).</li>
+              <li><em>Explicação:</em> O PACELC brilha aqui. Dentro da mesma região, o Aurora usa quorum síncrono (6 cópias em 3 AZs) priorizando Consistência. No entanto, através do oceano (Global Database), ele replica as páginas de armazenamento <em>assincronamente</em>. Ele assume o "E" (Else) do PACELC: Quando não há partição, escolha Latência ou Consistência. O Aurora Global escolhe Baixa Latência (L) local para escritas, aceitando Consistência eventual (C) na região secundária, com um lag típico de ~1 segundo.</li>
             </ul>
           </li>
         </ul>
@@ -2530,6 +2611,32 @@ EOF
     <!-- Perguntas movidas para perguntas.html -->
 
   
+    
+    <!-- 20. TÓPICOS AVANÇADOS -->
+    <section class="section" id="topicos-avancados-arquitetura">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--aws)">15</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--aws)"></div>
+          <h2>Tópicos Avançados: Observabilidade, Proxy e Consistência Vetorial</h2>
+          <p>Mecanismos essenciais para plataformas corporativas de dados rodando em missão crítica.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top:20px; color:var(--aws);">Datadog Data Pipeline Observability</h3>
+      <p>Em pipelines massivos, usar CloudWatch básico não fornece visibilidade de "Data Lineage" ponta a ponta. A integração do <strong>Datadog</strong> no ecossistema AWS permite injetar o SDK do Datadog dentro dos jobs de Spark (EMR/Glue) e nas Lambdas. O resultado é um mapa de <em>Distributed Tracing</em> (APM), onde o engenheiro enxerga o gargalo exato (ex: a query no RDS demorou 5s, o Lambda demorou 1s, o Glue enfileirou por 10s).</p>
+
+      <h3 style="margin-top:40px; color:var(--aws);">RAG & OpenSearch Consistency</h3>
+      <p>Bancos Vetoriais não oferecem transações ACID por padrão. Quando um texto no S3 é deletado (Para atender requisições de LGPD - Direito ao Esquecimento), o vetor correspondente no Amazon OpenSearch precisa ser purgado. O gap arquitetural é a <em>Eventual Consistency</em>. O pipeline deve usar <strong>AWS Step Functions</strong> acoplado com SQS (Dead Letter Queues) para garantir o rollback ou o retry da deleção no OpenSearch se a API falhar no momento do tombamento.</p>
+
+      <h3 style="margin-top:40px; color:var(--aws);">RDS Proxy & AWS Secrets Manager</h3>
+      <p>Múltiplas Lambdas consultando o Amazon RDS concorrentemente esgotam os "Connection Sockets" do Postgres em segundos, derrubando o banco (<em>Connection Exhaustion</em>). O <strong>Amazon RDS Proxy</strong> atua como um pooler de conexões na frente do banco, multiplexando dezenas de milhares de requisições de Lambda em apenas 50 conexões abertas no Postgres. Aliado ao <strong>AWS Secrets Manager</strong>, as senhas rotacionam automaticamente a cada 30 dias sem quebrar o código de conexão.</p>
+
+      <h3 style="margin-top:40px; color:var(--aws);">DMS Schema Evolution (DDL Replication)</h3>
+      <p>O AWS Database Migration Service (DMS) faz CDC (Change Data Capture) maravilhoso para comandos DML (Insert, Update, Delete). Mas e se o DBA adicionar uma nova coluna (DDL - Alter Table) na fonte? Sem configuração nativa, a task do DMS falha. É imperativo configurar o <code>HandleDDL</code> no AWS DMS para permitir que ele gere eventos de evolução de schema para o AWS Glue Schema Registry ou propague a alteração DDL diretamente para as tabelas espelho (Iceberg ou Redshift), tornando o pipeline resiliente a quebras de contrato.</p>
+    </section>
+
+
     <!-- SEÇÃO DE REFERÊNCIAS -->
     <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
       <div class="sec-hdr">
