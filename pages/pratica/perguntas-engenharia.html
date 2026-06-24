@@ -1094,6 +1094,117 @@ INNER JOIN dim_clientes c
           </ul>
         </div>
       </div>
+
+      <!-- Case Especialista 11: SQL CTE e Spill -->
+      <div class="card" id="q_exp_11" style="margin-bottom: 24px; border-left: 4px solid #3b82f6;">
+        <div class="card-lbl">Questão de Especialista 11 · Avaliação de Código (SQL - CTEs &amp; Spill)</div>
+        <h4>Entrevista (Code Review): Um analista criou uma query no Amazon Athena com 8 níveis de CTEs (Common Table Expressions) encadeadas. A query sempre falha com o erro "Query exhausted resources at this scale factor". Qual é o problema arquitetural e como reescrever?</h4>
+        <pre><code class="language-sql">WITH level_1 AS (SELECT * FROM logs WHERE status='ERROR'),
+level_2 AS (SELECT user_id, COUNT(*) as c FROM level_1 GROUP BY user_id),
+level_3 AS (SELECT l1.*, l2.c FROM level_1 l1 JOIN level_2 l2 ON l1.user_id = l2.user_id)
+-- ... [Mais 5 níveis cruzando level_1 e level_3 repetidas vezes] ...
+SELECT * FROM level_8;
+</code></pre>
+        <div class="callout callout-warn">
+          <strong>A Análise de Nível Sênior:</strong>
+          <ul>
+            <li><strong>Mito das CTEs:</strong> CTEs em motores como Presto/Athena não são "tabelas temporárias salvas no disco". Elas são apenas atalhos sintáticos. Se você referencia <code>level_1</code> três vezes ao longo das CTEs subsequentes, a engine re-avaliará (re-escaneará do S3) a consulta inteira de <code>level_1</code> três vezes, causando um gargalo insano de I/O de rede e sobrecarregando a memória dos nós operários (Memory Spill).</li>
+            <li><strong>Solução:</strong> Se uma CTE gigante precisa ser lida múltiplas vezes em cruzamentos complexos, quebre o script. Crie uma tabela intermediária temporária física no S3 (usando <code>CREATE TABLE AS SELECT - CTAS</code>). Leia a tabela física na segunda fase do processo. O acesso será infinitamente mais rápido, pois a tabela CTAS já estará otimizada, particionada e em formato Parquet columnar.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case Especialista 12: AQE vs Salting -->
+      <div class="card" id="q_exp_12" style="margin-bottom: 24px; border-left: 4px solid #8b5cf6;">
+        <div class="card-lbl">Questão de Especialista 12 · Teoria e Código (PySpark Skew Join)</div>
+        <h4>Entrevista: O cluster do EMR possui o AQE (Adaptive Query Execution) ativado. Mesmo assim, ao rodar a query abaixo, o job trava em 99% na fase de Shuffle por causa de "Data Skew". Por que o AQE não salvou o pipeline e qual a técnica manual que falta?</h4>
+        <pre><code class="language-python"># Configurações do ambiente:
+spark.conf.set("spark.sql.adaptive.enabled", "true")
+spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
+
+# Join problemático travando num executor:
+df_resultado = df_fato_bilionaria.join(df_dimensao_grande, "id_cliente", "inner")
+</code></pre>
+        <div class="callout callout-info">
+          <strong>O Limite da Otimização Automática:</strong>
+          <ul>
+            <li><strong>A Pegadinha do AQE:</strong> O AQE (Skew Join Optimization) atua <em>dividindo uma partição problemática em sub-partições menores no lado da tabela A e duplicando os blocos da tabela B</em>. No entanto, se o desbalanceamento for tão monstruoso (ex: O cliente "Consumidor Padrão" representa 2 TB de dados cru), a fase de leitura original ou a fase de Map que envia o shuffle pela rede pode estourar a memória (OOM) <em>antes</em> que o AQE consiga intervir e dividir as tarefas do lado do Reduce. A engine não faz mágica.</li>
+            <li><strong>O Fallback (O "Salting" Manual):</strong> O candidato deve escrever a solução raiz. Adicionar uma nova coluna na Tabela Fato contendo um número randômico de 0 a 10 (O "Sal"): <code>F.concat(F.col("id_cliente"), F.lit("_"), F.floor(F.rand() * 10))</code>. Na Tabela Dimensão, explodir as linhas 10 vezes com os mesmos sufixos numéricos. O Join ocorrerá não por "id_cliente", mas por "id_cliente_0", "id_cliente_1"... Dividindo os 2 TB perfeitamente através de 10 nós executores distribuídos.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case Especialista 13: Repartition vs Coalesce -->
+      <div class="card" id="q_exp_13" style="margin-bottom: 24px; border-left: 4px solid #ea580c;">
+        <div class="card-lbl">Questão de Especialista 13 · Avaliação de Código (PySpark I/O)</div>
+        <h4>Entrevista (Code Review): Um analista júnior quis salvar o output de um pipeline massivo de 10 Terabytes em um único e limpo arquivo CSV no S3, executando o código abaixo. Aponte os dois motivos catastróficos pelos quais o cluster EMR desabou instantaneamente.</h4>
+        <pre><code class="language-python">df_resultado_final.repartition(1).write.mode("overwrite").csv("s3://bucket/relatorio_final/")
+</code></pre>
+        <div class="callout callout-warn">
+          <strong>A Análise da Destruição Física:</strong>
+          <ol>
+            <li><strong>O Suicídio do Executor (OOM Distribuído):</strong> <code>repartition(1)</code> instrui toda a frota do cluster (100 nós executores espalhados na AWS) a iniciar um Shuffle pesado na rede, despachando as partes dos seus 10 Terabytes para <strong>um único e solitário nó executor</strong>. Esse nó tentará concentrar os 10 TB de memória no seu hardware, resultando em <em>Out Of Memory</em> imediato e morte da JVM. <em>Correção Primária: Se a intenção era apenas diminuir o tamanho dos arquivos gerados sem causar Shuffle massivo na rede, deveria ter usado <code>coalesce()</code>, que funde partições localmente no nó sem rede.</em></li>
+            <li><strong>O Anti-Padrão do Big Data (Single File Bottleneck):</strong> Nunca se salva "1 único CSV" em Big Data. O Amazon S3 e o formato Parquet são arquitetados para leituras massivamente paralelas. Ao forçar 1 partição, o próximo software que tentar ler este CSV (ex: Athena) não conseguirá paralelizar a varredura e usará apenas 1 CPU. Salve em centenas de arquivos Parquet e deixe a engine lidar com a descoberta paralela.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Case Especialista 14: SQL Gaps and Islands -->
+      <div class="card" id="q_exp_14" style="margin-bottom: 24px; border-left: 4px solid #3b82f6;">
+        <div class="card-lbl">Questão de Especialista 14 · Live Coding (SQL Avançado: Gaps &amp; Islands)</div>
+        <h4>Entrevista: "Temos uma tabela simples de logings com `user_id` e `data_login` (dia exato). Como você escreve uma query SQL que mostre as datas de início e fim dos períodos em que um usuário fez login ininterruptamente todos os dias (as 'ilhas' de atividade), agrupando os dias seguidos?"</h4>
+        <p><strong>A Lógica do Problema (Gaps and Islands):</strong> Um clássico atemporal para separar os especialistas de SQL do resto. Não existe função nativa `GROUP_CONTINUOUSLY`.</p>
+        <pre><code class="language-sql">WITH rank_dates AS (
+  SELECT 
+    user_id,
+    data_login,
+    -- DICA SÊNIOR: A mágica matemática.
+    -- Se eu subtrair o Número da Linha (1, 2, 3) da Data do Login (Dia 1, Dia 2, Dia 3), 
+    -- o resultado (data base) permanece EXATAMENTE O MESMO para dias consecutivos!
+    DATE_SUB('day', ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY data_login), data_login) as grp_ilha
+  FROM log_acessos
+)
+SELECT 
+  user_id,
+  MIN(data_login) as inicio_sequencia_ininterrupta,
+  MAX(data_login) as fim_sequencia_ininterrupta,
+  COUNT(data_login) as total_dias_consecutivos
+FROM rank_dates
+GROUP BY user_id, grp_ilha
+ORDER BY user_id, inicio_sequencia_ininterrupta;
+</code></pre>
+        <div class="callout callout-tip">
+          <strong>A Mágica da Matemática (Ilhas Constantes):</strong>
+          <p>O truque repousa na constância. Considere os logins: 10/Jan, 11/Jan, 12/Jan. O <code>ROW_NUMBER()</code> gera: 1, 2, 3. <br>
+          10/Jan menos 1 dia = 09/Jan.<br>
+          11/Jan menos 2 dias = 09/Jan.<br>
+          12/Jan menos 3 dias = 09/Jan.<br>
+          Todos os dias consecutivos geram a MESMA DATA MATRIZ (09/Jan). Usamos essa data invisível como âncora do nosso <code>GROUP BY</code>. Brilhante e resolve em uma varredura paralela.</p>
+        </div>
+      </div>
+
+      <!-- Case Especialista 15: Python UDF Internals -->
+      <div class="card" id="q_exp_15" style="margin-bottom: 24px; border-left: 4px solid #8b5cf6;">
+        <div class="card-lbl">Questão de Especialista 15 · Avaliação de Código (PySpark UDF Internals)</div>
+        <h4>Entrevista: O que acontece fisicamente na arquitetura cliente-servidor do Apache Spark ao longo do tempo quando um desenvolvedor aplica uma função customizada em Python (UDF tradicional) numa tabela de bilhões de linhas?</h4>
+        <pre><code class="language-python">from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+
+@udf(StringType())
+def mascara_telefone(tel):
+    return tel[:4] + "****" + tel[-2:]
+
+df_result = df.withColumn("tel_secreto", mascara_telefone(df["telefone"]))
+</code></pre>
+        <div class="callout callout-warn">
+          <strong>A Anatomia do Desastre da Serialização (Socket Pickle):</strong>
+          <ul>
+            <li><strong>O Abismo da JVM x CPython:</strong> O Spark roda nativamente em uma JVM (Java/Scala) extremamente otimizada. A engine lê a UDF e entende que não possui binários C++/Java para rodar esse código do usuário. Ela precisa abrir processos de retaguarda (Worker Daemons) em Python (CPython) no sistema operacional de cada nó executor.</li>
+            <li><strong>O Funil do Pickle:</strong> Pior do que abrir os processos Python, a JVM é forçada a "serializar" cada uma das bilhões de linhas (converter objetos Java num fluxo binário de rede conhecido como Pickle), trafegar via Socket Local para o processo Python, processar a máscara *lentamente linha a linha sem usar múltiplos threads*, re-serializar a resposta (Pickle out), e enviar de volta à JVM.</li>
+            <li><strong>A Resolução Esperada pelo Especialista:</strong> Nunca utilize UDFs em Python se existir uma função equivalente na lib <code>pyspark.sql.functions</code> (Neste caso, <code>F.regexp_replace</code> nativo operaria 100x mais rápido usando o JIT e Tungsten na JVM). Caso a lógica seja incrivelmente customizada (Machine Learning, NumPy pesado), deve-se usar as <strong>Pandas UDFs</strong>, onde a JVM não usa o horrendo Pickle por socket, mas transfere blocos colunares inteiros na memória compartilhada usando o protocolo <strong>Apache Arrow</strong>.</li>
+          </ul>
+        </div>
+      </div>
       <!-- DEA Gap: Redshift & Migrations -->
       <div class="card" id="q_dea_2" style="margin-bottom: 24px; border-left: 4px solid #0f766e;">
         <div class="card-lbl">Questão (DEA-C01) · Redshift Maintenance & Migrations</div>
