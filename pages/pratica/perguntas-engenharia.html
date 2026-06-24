@@ -920,6 +920,110 @@ spark.memory.offHeap.size = 4g</pre>
         </ul>
       </div>
 
+
+      <!-- EXPERT DEEP DIVE: GLUE, EMR E SPARK -->
+      <div class="sec-hdr" style="margin-top: 40px; border-top: 1px solid #334155; padding-top: 40px;">
+        <div class="sec-num" style="color:#0ea5e9">EXPERT</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0ea5e9"></div>
+          <h2>Troubleshooting &amp; Deep Dive Especialista</h2>
+          <p>As perguntas que separam os plenos dos arquitetos sêniores de dados</p>
+        </div>
+      </div>
+
+      <!-- Case Especialista 1: Glue Travando -->
+      <div class="card" id="q_exp_1" style="margin-bottom: 24px; border-left: 4px solid #f59e0b;">
+        <div class="card-lbl">Questão de Especialista 1 · AWS Glue &amp; OOM</div>
+        <h4>Você foi acionado de madrugada porque um job crucial do AWS Glue está "travando" em produção (roda por 10 horas e falha). Qual o seu framework exato de troubleshooting?</h4>
+        <p><strong>Cenário Real:</strong> O Glue não mostra o erro nativamente no console além de `Command failed with exit code X`. O especialista não tenta adivinhar, ele segue um framework.</p>
+        <div class="callout callout-info">
+          <strong>Framework de Resolução:</strong>
+          <ol>
+            <li><strong>Métricas do CloudWatch:</strong> Acesso a aba "Metrics" do Job. Observo os gráficos de uso de memória (<em>glue.driver.jvm.heap.usage</em> e <em>glue.executor.jvm.heap.usage</em>). Se o Executor chegou a 99% antes de cair, é Data Skew ou broadcast forçado gigante. Se o Driver estourou, o desenvolvedor tentou dar <code>.collect()</code> num DataFrame massivo ou ler milhões de arquivos pequenos de uma vez.</li>
+            <li><strong>Inspeção do Log Continuous Logging:</strong> Abro o log de Error no CloudWatch. Procuro especificamente por <code>java.lang.OutOfMemoryError: Java heap space</code> ou <code>GC overhead limit exceeded</code>.</li>
+            <li><strong>Spark History Server (Ativado via Glue):</strong> Se o cluster não estourou memória, mas travou horas no mesmo stage, eu abro o Spark History Server UI (criado rodando um container Docker local apontando pros logs do S3). Avalio o tempo de execução por task. Se 199 tasks terminaram em 2 segundos e 1 task está rodando há 8 horas, <strong>o diagnóstico é claro: Skewness (Desbalanceamento)</strong>.</li>
+            <li><strong>Ação Corretiva Rápida:</strong> Troco o worker type de <code>G.1X</code> para <code>G.2X</code> para ganhar 32GB de memória, e configuro o parâmetro <code>--conf spark.sql.shuffle.partitions=X</code> (onde X = 2 a 3 vezes o número de cores totais do cluster). Para a correção definitiva, aplico a técnica de <em>Salting</em> no código.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Case Especialista 2: EMR x Glue -->
+      <div class="card" id="q_exp_2" style="margin-bottom: 24px; border-left: 4px solid #7c3aed;">
+        <div class="card-lbl">Questão de Especialista 2 · Decisão de Arquitetura</div>
+        <h4>EMR vs AWS Glue: Você precisa modernizar o processamento de uma empresa. Quando usar cada um e qual o impacto orçamentário?</h4>
+        <p><strong>Visão Executiva:</strong> A decisão nunca é "qual é o mais rápido", mas qual resolve o problema com menor overhead operacional versus restrições de custo e customização.</p>
+        <div class="callout callout-tip">
+          <strong>A Decisão do Arquiteto:</strong>
+          <ul>
+            <li><strong>Usamos AWS Glue quando:</strong> A prioridade é <em>Zero-Ops</em>. O time é enxuto, não há engenheiros de DevOps para focar em YARN/EKS, os jobs rodam em lote (noite/madrugada) e são altamente irregulares. O Glue cuida do scaling (Dynamic Allocation nativo) e desligamento. <em>Contras:</em> Custo por DPU-hora é premium (caro) e o tempo de inicialização (cold start) pode demorar minutos (embora o Glue Ray ou G.1X ajude). Não aceita instâncias SPOT nativamente na interface comum.</li>
+            <li><strong>Usamos EMR (EC2 ou EKS) quando:</strong> O volume é brutal (PetaBytes), precisamos de latências mínimas (Streaming 24/7), ou necessitamos baixar drasticamente o custo usando <strong>EC2 Spot Instances</strong> e processadores <strong>Graviton (ARM)</strong>. O EMR permite customizar completamente o ecossistema (Hive, Presto, Flink, Spark) e bibliotecas de baixo nível do SO. <em>Contras:</em> Alto overhead. O time precisa orquestrar steps, gerenciar Bootstrap actions e monitorar a saúde do cluster.</li>
+            <li><strong>Meio termo (EMR Serverless):</strong> Para workloads do Spark/Hive que querem a velocidade de submissão do EMR com instâncias customizadas, mas sem gerenciar instâncias master/core/task.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case Especialista 3: Configurando EMR -->
+      <div class="card" id="q_exp_3" style="margin-bottom: 24px; border-left: 4px solid #059669;">
+        <div class="card-lbl">Questão de Especialista 3 · EMR Setup</div>
+        <h4>Como funciona a arquitetura de nós (Master, Core, Task) no Amazon EMR e como você configuraria um cluster altamente otimizado para custos usando Instance Fleets?</h4>
+        <p><strong>A Arquitetura Interna:</strong> Um cluster EMR tradicional no EC2 é composto por três tipos de nós:</p>
+        <ul>
+          <li><strong>Master Node:</strong> Roda o YARN ResourceManager e o HDFS NameNode. É o cérebro. Se ele cair, o cluster morre. <em>Best Practice:</em> Instância On-Demand com Multi-Master para HA (Alta Disponibilidade).</li>
+          <li><strong>Core Nodes:</strong> Rodam o YARN NodeManager (para processar tasks do Spark) E armazenam os dados do HDFS DataNode. <em>Best Practice:</em> Instâncias On-Demand. Se um core spot for desligado, o HDFS perde blocos, causando lentidão para replicar o dado.</li>
+          <li><strong>Task Nodes:</strong> Rodam APENAS o processamento (YARN NodeManager). Não armazenam HDFS. <em>Best Practice:</em> 100% <strong>Spot Instances</strong>. Se caírem, o YARN apenas refaz o processamento em outro nó sem perda de dados permanentes.</li>
+        </ul>
+        <div class="callout callout-warn">
+          <strong>Configuração Avançada (Instance Fleets):</strong>
+          <p>Para maximizar a economia no Task Node, usamos <strong>Instance Fleets</strong> em vez de Instance Groups. No Fleet, eu configuro 5 tipos diferentes de famílias de EC2 (ex: m5.2xlarge, m5a.2xlarge, r5.2xlarge) e peço "Capacidade Alvo". O EMR busca automaticamente no mercado de Spot da AWS qual dessas instâncias está mais barata e com menor risco de interrupção naquele exato segundo, criando um cluster de "frankenstein" ultra barato (até 80% de desconto) e altamente resiliente à perda de Spot em massa de uma única AZ ou família.</p>
+        </div>
+      </div>
+
+      <!-- Case Especialista 4: Democratização Dynamo/RDS -->
+      <div class="card" id="q_exp_4" style="margin-bottom: 24px; border-left: 4px solid #be123c;">
+        <div class="card-lbl">Questão de Especialista 4 · Democratização de Dados (Lakehouse)</div>
+        <h4>Como você resolve o problema de engenharia onde dezenas de analistas de BI estão executando queries pesadas diretamente contra o Amazon RDS (PostgreSQL) transacional e o DynamoDB da aplicação, quase derrubando o sistema?</h4>
+        <p><strong>O Risco Crítico:</strong> Analistas usam conectores diretos via PowerBI ou Tableau rodando `SELECT *` e agrupamentos massivos, competindo por I/O e CPU com os inserts transacionais da aplicação que atende os clientes. Em NoSQL (DynamoDB), consultas de agregação (Scans) consomem a capacidade RCUs em segundos, derrubando a API.</p>
+        <div class="callout callout-info">
+          <strong>Soluções de Desacoplamento (Modern Data Architecture):</strong>
+          <ol>
+            <li><strong>Zero-ETL (O estado da arte):</strong> Atualmente, configuro o <em>Amazon Aurora Zero-ETL to Redshift</em> (ou RDS to Redshift Zero-ETL). Os dados transacionais são replicados nos bastidores em segundos (sem pipelines no Glue ou Kafka) para o Redshift. O time de BI aponta o PowerBI para o endpoint do Redshift e consulta SQL analítico lá, isolando a carga.</li>
+            <li><strong>Exportação Contínua (DynamoDB):</strong> Para o DynamoDB, evito criar pipelines caros. Habilito o recurso nativo de <em>DynamoDB Export to S3</em> (Formato Parquet). O Dynamo exporta o snapshot completo assincronamente (sem gastar RCUs da tabela) para o Data Lake. Em seguida, catalogo no Glue e o BI consulta usando o <strong>Amazon Athena</strong>, pagando por GB escaneado.</li>
+            <li><strong>Federated Query (Para Queries Menores):</strong> Se o objetivo é ler raramente tabelas muito específicas (ex: configuração de app), configuro um <em>Athena Federated Query Connector (Lambda)</em>. O usuário escreve SQL no Athena, e o Athena faz o push-down inteligente pro RDS usando Replica de Leitura (Read Replica).</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Case Especialista 5: Tuning & Salting -->
+      <div class="card" id="q_exp_5" style="margin-bottom: 24px; border-left: 4px solid #14b8a6;">
+        <div class="card-lbl">Questão de Especialista 5 · Tuning PySpark Avançado</div>
+        <h4>Como você realiza o "Tunning" de uma pipeline de dados em Spark lidando com Skewness extremo (um cliente gigante causa gargalo em 1 partição) e uso de Joins?</h4>
+        <p><strong>A Sintomatologia do Skewness:</strong> O Job do Spark tem 200 partições. 199 terminam rapidamente e 1 partição fica travada calculando. Isso acontece porque a chave do Join/GroupBy não é uniformemente distribuída (ex: `id_empresa = Matriz_Gigante` gera 5 bilhões de registros, outras 10 mil empresas geram 100 registros cada).</p>
+        <div class="callout callout-warn">
+          <strong>A Estratégia de Guerra (Tuning Toolkit):</strong>
+          <ul>
+            <li><strong>Ataque 1: Broadcast Hash Join.</strong> Se eu estiver cruzando essa tabela distorcida com uma tabela pequena de clientes, eu evito completamente o shuffle (onde o erro ocorre) envelopando a pequena no `broadcast(df)`. O Spark cria tabelas hash na memória de todos os nós.</li>
+            <li><strong>Ataque 2: Salting (A cartada final).</strong> Se ambas as tabelas forem gigantes e o Broadcast for impossível (OOM), o shuffle (Sort-Merge) vai engasgar naquela chave monstruosa. 
+                <br><br><em>Como fazer o Salting:</em> Adicionamos um número aleatório (de 0 a N, como um "sal") ao final da chave na tabela distorcida (`id_empresa_salt = Matriz_Gigante_5`). Na tabela secundária, explodimos cada registro N vezes com os respectivos sais. Agora o Spark fará o JOIN distribuído perfeitamente através de N executores separados, quebrando o gargalo!</li>
+            <li><strong>Ataque 3: AQE (Adaptive Query Execution).</strong> Garanto que `spark.sql.adaptive.enabled = true` e `spark.sql.adaptive.skewJoin.enabled = true`. No Spark 3, ele tenta resolver dinamicamente o skew particionando a chave pesada em múltiplas tasks durante a execução (runtime optimization).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case Especialista 6: Observabilidade Proativa -->
+      <div class="card" id="q_exp_6" style="margin-bottom: 24px; border-left: 4px solid #0d9488;">
+        <div class="card-lbl">Questão de Especialista 6 · Data Observability</div>
+        <h4>Como você implementaria a Observabilidade Proativa de Dados para que a engenharia descubra anomalias nos dados ANTES do CEO abrir o dashboard?</h4>
+        <p><strong>A Virada de Chave:</strong> Observabilidade de software alerta sobre <em>infraestrutura</em> (CPU 100%). Observabilidade de dados alerta sobre o <em>significado</em> (A coluna de "vendas_br" veio cheia de NULLs hoje).</p>
+        <div class="callout callout-tip">
+          <strong>Arquitetura Proativa:</strong>
+          <ol>
+            <li><strong>Circuit Breakers na Ingestão:</strong> Nenhum dado cru entra na camada Silver/Gold sem passar por checagens de Data Quality (AWS Glue Data Quality ou Great Expectations). Regras imperativas: <code>Completeness "user_id" = 1.0</code>.</li>
+            <li><strong>Dead Letter Queues de Negócio:</strong> Se o DQ falhar, o pipeline NÃO para (pois SLAs de outras tabelas importam), mas desvia os registros errados para uma tabela de "Quarentena".</li>
+            <li><strong>Event-Driven Alerts:</strong> As métricas de DQ geram logs estruturados no CloudWatch Logs. Configuro filtros de métricas que enviam alertas pro Amazon EventBridge, que aciona o AWS Chatbot notificando o Slack da engenharia em minutos.</li>
+            <li><strong>Machine Learning para Drift:</strong> Uso Amazon Lookout for Metrics ou logs do dbt para monitorar anomalias volumétricas. Se todo dia recebo 1 milhão de PIX, e hoje só recebi 100 mil às 14h, um alerta preditivo é disparado (Volume Anomaly Drift).</li>
+          </ol>
+        </div>
+      </div>
       <!-- DEA Gap: Redshift & Migrations -->
       <div class="card" id="q_dea_2" style="margin-bottom: 24px; border-left: 4px solid #0f766e;">
         <div class="card-lbl">Questão (DEA-C01) · Redshift Maintenance & Migrations</div>

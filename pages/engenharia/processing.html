@@ -166,6 +166,7 @@
          <a href="../../pages/engenharia/processing.html#spark-cache" class="nav-sub"><span class="nav-sdot"></span>Níveis de Persistência</a>
          <a href="../../pages/engenharia/processing.html#spark-streaming" class="nav-sub"><span class="nav-sdot"></span>Spark Structured Streaming</a>
          <a href="../../pages/engenharia/processing.html#spark-tuning" class="nav-sub"><span class="nav-sdot"></span>Tuning do Spark: Guia Completo</a>
+         <a href="../../pages/engenharia/processing.html#spark-code-masterclass" class="nav-sub"><span class="nav-sdot"></span>Masterclass: Código PySpark/SQL</a>
 
          <div class="nav-sub-lbl">DEBUGGING &amp; DIAGNÓSTICO</div>
          <a href="../../pages/engenharia/processing.html#spark-ui-deepdive" class="nav-sub"><span class="nav-sdot"></span>Guia Prático Spark UI</a>
@@ -1258,124 +1259,80 @@ write_optimized_lake_table(df_vendas_finais, "s3://meu-lake/silver/vendas/")</co
       <div class="sec-num" style="color:var(--spark)">07</div>
       <div class="sec-meta">
         <div class="sec-acc" style="background:var(--spark)"></div>
-        <h2>Estratégias de Join no Spark</h2>
-        <p>Mapeamento de cruzamentos analíticos em nível de rede e disco</p>
+        <h2>Estratégias Físicas de Join no Spark</h2>
+        <p>Mapeamento profundo de cruzamentos analíticos em nível de rede, memória e disco</p>
       </div>
     </div>
+
+    <p>Diferente de bancos de dados relacionais em um único servidor, um <strong>Join Distribuído</strong> no Spark é a operação mais custosa que existe, pois exige que dados relacionados que estão espalhados em dezenas de servidores (Executors) trafeguem pela rede para a mesma máquina a fim de serem cruzados. O Catalyst Optimizer escolhe automaticamente entre três algoritmos físicos principais, baseando-se no tamanho (em bytes) estimado das tabelas.</p>
 
     <div class="join-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
       <div class="jc">
         <div class="jc-name">Broadcast Hash Join (BHJ)</div>
-        <span class="jtag ns">✓ Sem Shuffle</span>
-        <div class="jc-desc">Copia e envia a tabela pequena inteira para todos os executores na memória. Elimina totalmente a movimentação de rede. Indicado para tabelas de dimensões pequenas.</div>
+        <span class="jtag ns">✓ Sem Shuffle de Rede Pesado</span>
+        <div class="jc-desc">Copia a tabela inteira e envia para todos os executores na memória. Elimina totalmente o embaralhamento de chaves na rede. Padrão Ouro para Dimensões.</div>
       </div>
       <div class="jc">
         <div class="jc-name">Sort-Merge Join (SMJ)</div>
-        <span class="jtag sh">Shuffle</span>
-        <div class="jc-desc">Ordena dados de ambas as tabelas após redistribuir partições pela chave. Extremamente robusto e seguro para conjuntos massivos que excedem a RAM do executor.</div>
+        <span class="jtag sh">Forte Shuffle</span>
+        <div class="jc-desc">Lê, faz o Hash, trafega pela rede, Ordena (Sort) no disco local e depois mescla os ponteiros iterativamente. Extremamente robusto para cruzamentos Massivos x Massivos.</div>
       </div>
       <div class="jc">
         <div class="jc-name">Shuffle Hash Join (SHJ)</div>
-        <span class="jtag sh">Shuffle</span>
-        <div class="jc-desc">Distribui as chaves em hash maps locais. Consome muita RAM no executor para manter o mapeamento ativo durante a fase de busca.</div>
-      </div>
-      <div class="jc">
-        <div class="jc-name">Broadcast Nested Loop (BNLJ)</div>
-        <span class="jtag lt" style="background: var(--warn); color: #000;">⚠️ Muito Lento</span>
-        <div class="jc-desc">Fallback automático do Spark para joins sem condição de igualdade (non-equality joins como <code style="color: #000;">&lt;</code>, <code style="color: #000;">&gt;</code> ou <code style="color: #000;">BETWEEN</code>). Faz broadcast de uma tabela e varre a outra em loop completo.</div>
-      </div>
-      <div class="jc">
-        <div class="jc-name">Cartesian (Cross) Join</div>
-        <span class="jtag lt" style="background: var(--err); color: #fff;">❌ Perigoso</span>
-        <div class="jc-desc">CROSS JOIN explícito. Multiplica cada linha da Tabela A por todas as linhas da Tabela B (M x N). Altíssimo potencial de travamento de cluster para tabelas grandes.</div>
+        <span class="jtag sh">Shuffle &amp; RAM Pesada</span>
+        <div class="jc-desc">Distribui e mapeia os blocos via Rede e constrói HashMaps parciais na memória. Usado quando a tabela menor é maior que o broadcast, mas caberá num bucket hash isolado de um único executor.</div>
       </div>
     </div>
 
-    <h3>Tradeoffs Físicos de Execução de Joins no Spark</h3>
-    <p>Abaixo estão descritos os comportamentos de rede, memória e processamento para cada algoritmo de join disponível no motor Catalyst:</p>
-
-    <!-- DIAGRAMA: BROADCAST VS SORT-MERGE JOIN -->
-                <div class="drawio-wrap" style="margin-top: 30px;">
-        <div class="drawio-label"><span class="dot"></span>BROADCAST VS SORT-MERGE JOIN</div>
-        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;:&quot;#FF6B00&quot;,&quot;lightbox&quot;:false,&quot;nav&quot;:false,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom&quot;,&quot;page&quot;:0,&quot;xml&quot;:&quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;880\&quot; pageHeight=\&quot;360\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot; /&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot; /&gt;&lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;880\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;title\&quot; value=\&quot;BROADCAST VS SORT-MERGE JOIN\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;880\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;bc_grp\&quot; value=\&quot;BROADCAST HASH JOIN (Small Table &amp;lt; 10MB)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#02160a;strokeColor=#16a34a;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#bbf7d0;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;50\&quot; width=\&quot;380\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dim_table\&quot; value=\&quot;Dimension Table\\n(Small)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;100\&quot; width=\&quot;100\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;driver\&quot; value=\&quot;Spark Driver\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;160\&quot; y=\&quot;90\&quot; width=\&quot;100\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;exec_bc1\&quot; value=\&quot;Executor 1\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;280\&quot; y=\&quot;160\&quot; width=\&quot;100\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;exec_bc2\&quot; value=\&quot;Executor 2\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;280\&quot; y=\&quot;240\&quot; width=\&quot;100\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;fact_table\&quot; value=\&quot;Fact Table\\n(Huge)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;200\&quot; width=\&quot;100\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;smj_grp\&quot; value=\&quot;SORT-MERGE JOIN (Two Large Tables)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#2e1005;strokeColor=#b45309;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#fde68a;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;440\&quot; y=\&quot;50\&quot; width=\&quot;400\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t1\&quot; value=\&quot;Table A (Large)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;100\&quot; width=\&quot;100\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t2\&quot; value=\&quot;Table B (Large)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;200\&quot; width=\&quot;100\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;shuffle\&quot; value=\&quot;Shuffle &amp;amp; Sort Phase\\n(Heavy Network / Disk I/O)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;590\&quot; y=\&quot;150\&quot; width=\&quot;100\&quot; height=\&quot;100\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;merge\&quot; value=\&quot;Merge Phase\\n(Executors)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;720\&quot; y=\&quot;150\&quot; width=\&quot;100\&quot; height=\&quot;100\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_dim_dr\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=2;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;dim_table\&quot; target=\&quot;driver\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_dr_e1\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=2;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;driver\&quot; target=\&quot;exec_bc1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_dr_e2\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=2;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;driver\&quot; target=\&quot;exec_bc2\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_fact_e1\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;fact_table\&quot; target=\&quot;exec_bc1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_fact_e2\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;fact_table\&quot; target=\&quot;exec_bc2\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_t1_sh\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;t1\&quot; target=\&quot;shuffle\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_t2_sh\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;t2\&quot; target=\&quot;shuffle\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_sh_me\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;shuffle\&quot; target=\&quot;merge\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
-
-</div>
-<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> BROADCAST VS SORT-MERGE JOIN, BROADCAST HASH JOIN (Small Table &lt; 10MB), Dimension Table (Small), Spark Driver, Executor 1, Executor 2, Fact Table (Huge), SORT-MERGE JOIN (Two Large Tables), Table A (Large), Table B (Large), Shuffle &amp; Sort Phase (Heavy Network / Disk I/O), Merge Phase (Executors)</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "BROADCAST VS SORT-MERGE JOIN" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
-</div>
+    <div class="drawio-wrap" style="margin-top: 30px;">
+      <div class="drawio-label"><span class="dot"></span>BROADCAST VS SORT-MERGE JOIN FÍSICO</div>
+      <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;:&quot;#0ea5e9&quot;,&quot;lightbox&quot;:false,&quot;nav&quot;:false,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom&quot;,&quot;page&quot;:0,&quot;xml&quot;:&quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;350\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry width=\&quot;900\&quot; height=\&quot;350\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t_bhj\&quot; value=\&quot;BROADCAST HASH JOIN (Small Table &amp;lt; 10MB)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=10;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;400\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b_dim\&quot; value=\&quot;Dimension Table&amp;#xa;(Small)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0369a1;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;50\&quot; width=\&quot;100\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b_drv\&quot; value=\&quot;Spark Driver\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#FF6B00;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;170\&quot; y=\&quot;50\&quot; width=\&quot;90\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e1_bhj\&quot; value=\&quot;Executor 1\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#334155;strokeColor=#475569;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;310\&quot; y=\&quot;30\&quot; width=\&quot;90\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e2_bhj\&quot; value=\&quot;Executor 2\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#334155;strokeColor=#475569;fontColor=#fff;fontFamily=DM Sans;fontSize=10;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;310\&quot; y=\&quot;80\&quot; width=\&quot;90\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b_fact\&quot; value=\&quot;Fact Table&amp;#xa;(Huge)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1d4ed8;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;120\&quot; width=\&quot;100\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_bd1\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;b_dim\&quot; target=\&quot;b_drv\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_bd2\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;b_drv\&quot; target=\&quot;e1_bhj\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_bd3\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;b_drv\&quot; target=\&quot;e2_bhj\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_bf1\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#94a3b8;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;b_fact\&quot; target=\&quot;e1_bhj\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;250\&quot; y=\&quot;140\&quot;/&gt;&lt;mxPoint x=\&quot;250\&quot; y=\&quot;50\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_bf2\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#94a3b8;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;b_fact\&quot; target=\&quot;e2_bhj\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;250\&quot; y=\&quot;140\&quot;/&gt;&lt;mxPoint x=\&quot;250\&quot; y=\&quot;100\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sep\&quot; value=\&quot;\&quot; style=\&quot;line;strokeWidth=2;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=#334155;dashed=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;170\&quot; width=\&quot;840\&quot; height=\&quot;10\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;t_smj\&quot; value=\&quot;SORT-MERGE JOIN (Two Large Tables)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=10;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;190\&quot; width=\&quot;400\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;smj_a\&quot; value=\&quot;Table A (Large)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1d4ed8;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;230\&quot; width=\&quot;100\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;smj_b\&quot; value=\&quot;Table B (Large)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1d4ed8;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;280\&quot; width=\&quot;100\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;s_phase\&quot; value=\&quot;Shuffle &amp;amp; Sort Phase&amp;#xa;(Heavy Network / Disk I/O)\&quot; style=\&quot;labelBackgroundColor=none;shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#451a03;strokeColor=#b45309;fontColor=#fde68a;fontFamily=DM Sans;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;180\&quot; y=\&quot;230\&quot; width=\&quot;160\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;m_phase\&quot; value=\&quot;Merge Phase&amp;#xa;(Executors)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#064e3b;strokeColor=#059669;fontColor=#a7f3d0;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;400\&quot; y=\&quot;230\&quot; width=\&quot;100\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_sa\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;smj_a\&quot; target=\&quot;s_phase\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_sb\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;smj_b\&quot; target=\&quot;s_phase\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e_sm\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#059669;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;s_phase\&quot; target=\&quot;m_phase\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+    </div>
+    <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+      <strong style="color: var(--accent);">Explicação:</strong>
+      <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+        <li style="margin-bottom: 4px;"><strong>Componentes:</strong> BROADCAST VS SORT-MERGE JOIN, BROADCAST HASH JOIN (Small Table &lt; 10MB), Dimension Table (Small), Spark Driver, Executor 1, Executor 2, Fact Table (Huge), SORT-MERGE JOIN (Two Large Tables), Table A (Large), Table B (Large), Shuffle &amp; Sort Phase (Heavy Network / Disk I/O), Merge Phase (Executors)</li>
+        <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+        <li><strong>Contexto:</strong> O diagrama "BROADCAST VS SORT-MERGE JOIN" ilustra a arquitetura da solução para o tópico em questão.</li>
+      </ul>
+    </div>
 
     <div class="tbl-wrap" style="margin-top: 15px; margin-bottom: 25px;">
       <table>
         <thead>
           <tr>
             <th>Algoritmo de Join</th>
-            <th>Requisito de Memória</th>
-            <th>Custo de Shuffle de Rede</th>
-            <th>Sensibilidade a Data Skew (Assimetria)</th>
-            <th>Quando Usar / Limitações</th>
+            <th>Mecânica de Funcionamento Interno</th>
+            <th>Sensibilidade a Data Skew</th>
+            <th>Quando Usar / Forçar no Código</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td><strong>Broadcast Hash Join (BHJ)</strong></td>
-            <td>Alto no Driver (coleta) e em todos os Executors (RAM local para hash table da tabela copiada).</td>
-            <td>Baixo (apenas envio inicial do Driver para os executores; sem shuffle de re-particionamento).</td>
-            <td>Nenhuma (não reagrupa pela chave de join).</td>
-            <td>Uso ideal quando uma das tabelas é pequena (padrão &lt; 10 MB, configurado em <code>spark.sql.autoBroadcastJoinThreshold</code>). *Perigo:* Se a tabela exceder a RAM do Driver, ocorre Java Heap Space OOM no Driver.</td>
+            <td>O Driver puxa a tabela pequena (Dimensão), cria uma tabela Hash (Chave/Valor) na memória JVM e empurra via rede uma cópia exata para a RAM de <em>cada</em> executor que possui pedaços da tabela gigante. As tarefas vasculham a Hash localmente, <strong>sem embaralhar a tabela gigante pela rede</strong>.</td>
+            <td>Baixa. Como o dado cruza localmente em memória, se uma chave pesada existir na tabela gigante, ela não vai travar um único executor aguardando transferências.</td>
+            <td>Tabelas menores que 10MB (Default configurado via <code>spark.sql.autoBroadcastJoinThreshold</code>). Para forçar: <code>df1.join(F.broadcast(df_small), "id")</code>. Cuidado com OOM no Driver se a tabela crescer subitamente.</td>
           </tr>
           <tr>
             <td><strong>Sort-Merge Join (SMJ)</strong></td>
-            <td>Baixo e Previsível (apenas buffers de leitura das páginas ordenadas em disco/RAM).</td>
-            <td>Muito Alto (força um shuffle de redistribuição completa pela chave de join em ambas as tabelas).</td>
-            <td>Altíssima (se houverem muitas chaves nulas ou repetidas, o executor que receber essa chave sofrerá Spill to Disk e OOM).</td>
-            <td>Algoritmo padrão do Spark para joins entre tabelas grandes e gigantescas. É o mais robusto contra estouro de memória física.</td>
+            <td><ol><li><strong>Shuffle Phase:</strong> Avalia as chaves de ambas as tabelas gigantes. Usa partições Hash e move os registros pela rede para que chaves idênticas de ambas as tabelas caiam no exato mesmo nó.</li><li><strong>Sort Phase:</strong> Se a memória encher (inevitável em Petabytes), salva os dados temporários no disco local (Spill) e <em>Ordena</em> os registros em cada partição por chave.</li><li><strong>Merge Phase:</strong> Escaneia os dois conjuntos ordenados iterativamente lado a lado usando ponteiros combinando-os.</li></ol></td>
+            <td>Extrema. Se o cliente ID=99 for a "Amazon" e possuir 10 bilhões de registros de vendas, todos os 10 bilhões irão para a rede em direção ao <em>mesmo executor singular</em>. Esse executor fará "Spill to Disk" constante, travando por 10 horas enquanto os outros 199 executores terminam em 1 minuto.</td>
+            <td>O SMJ é o rei indiscutível para cruzar Tabelas Fato x Fato (Massivo x Massivo). É ativado por padrão se o Spark deduzir que ambas são grandes. Exige alta capacidade de I/O em discos temporários EBS (gp3/NVMe) dos nós Worker.</td>
           </tr>
           <tr>
             <td><strong>Shuffle Hash Join (SHJ)</strong></td>
-            <td>Médio-Alto (exige espaço em RAM para construir uma hash table em memória para uma das partições da tabela).</td>
-            <td>Muito Alto (força um shuffle de redistribuição completa em rede de ambas as tabelas).</td>
-            <td>Alta (partições muito grandes da tabela menor que entra no hash map podem estourar a RAM do executor).</td>
-            <td>Usado quando as tabelas são grandes, mas as partições geradas após o shuffle são pequenas o suficiente para caberem em um hash map local de forma estável.</td>
-          </tr>
-          <tr>
-            <td><strong>Broadcast Nested Loop (BNLJ)</strong></td>
-            <td>Altíssimo (broadcast de uma tabela inteira e leitura repetitiva de blocos em loop aninhado).</td>
-            <td>Baixo (apenas envio inicial da tabela transmitida).</td>
-            <td>Nenhuma (não executa redistribuição baseada em chaves).</td>
-            <td>Executado como último recurso pelo Catalyst em junções de desigualdade. Deve ser evitado em produção remodelando a lógica ou pré-filtrando agressivamente.</td>
-          </tr>
-          <tr>
-            <td><strong>Cartesian (Cross) Join</strong></td>
-            <td>Altíssimo (produz M x N linhas intermediárias).</td>
-            <td>Extremo se houver shuffle; caso contrário, satura totalmente a CPU gerando trilhões de combinações.</td>
-            <td>Nenhuma.</td>
-            <td> CROSS JOINs devem ser habilitados explicitamente com <code>spark.sql.crossJoin.enabled = true</code>. *Perigo:* Junções cartesianas acidentais de tabelas de 1M de linhas geram 1 trilhão de registros, causando OOM fatal instantâneo.</td>
+            <td>Semelhante ao SMJ, faz o Shuffle de ambas as tabelas para mapeá-las fisicamente na rede por chave. Contudo, ele pula a etapa de Sort e simplesmente cria Tabelas Hash em memória na partição para a menor tabela. É OOM na certa se a tabela for muito maior que a RAM do executor alocado para aquela partição.</td>
+            <td>Alta. Mesmos problemas do SMJ no shuffle, mas falhará abruptamente (OOM) em vez de gravar no disco lentamente (como faz o Sort-Merge) porque não faz Spill da árvore de chaves.</td>
+            <td>Ideal quando a tabela é grande demais para caber inteira no Driver (abortando o Broadcast), mas depois de shufflada, as partições resultantes cabem tranquilamente na memória de um Executor sem dar Spill. O Catalyst do Spark 3 com AQE costuma migrar para SMJ automaticamente se pressentir falta de RAM.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="abox note" style="margin-bottom: 25px;">
-      <strong>💡 Bucketing: Eliminando Shuffles em Joins Recorrentes</strong>
-      <br>Se você realiza Joins diários pesados entre as mesmas tabelas gigantes com a mesma chave (ex: <code>user_id</code>), pode salvar as tabelas já ordenadas e pré-particionadas no S3 usando <strong>Bucketing</strong>. O Spark lê diretamente os buckets correspondentes sem necessidade de fazer qualquer Shuffle na rede:
-      <pre><code class="language-python"># Salva a tabela particionada e ordenada fisicamente no disco/S3
-df_large.write \
-    .bucketBy(200, "user_id") \
-    .sortBy("user_id") \
-    .format("parquet") \
-    .saveAsTable("tabela_gigante_bucketed")
-
-# Joins futuros com outra tabela bucketada com o mesmo número de buckets (200) 
-# e mesma chave eliminam o estágio de shuffle (Zero Shuffle Join!)
-df_bucket1 = spark.table("tabela_gigante_bucketed")
-df_bucket2 = spark.table("outra_tabela_bucketed")
-
-df_final = df_bucket1.join(df_bucket2, "user_id") # Executa instantaneamente!</code></pre>
+    <div class="abox note">
+      <strong>⚠️ Warning Especialista: Cartesian / Cross Joins e a Explosão de RAM</strong>
+      <p>Um join sem critério de filtro claro ou usando predicados não equitativos (ex: <code>df1.join(df2, df1.data > df2.data)</code>) não consegue aplicar os algoritmos baseados em Hash. O Spark degrada a performance para um <em>Broadcast Nested Loop Join (BNLJ)</em> ou, pior, lança uma exceção pedindo ao usuário que autorize o produto cartesiano <code>spark.sql.crossJoin.enabled=true</code>. Um Cross Join O(N*M) entre duas tabelas de 10 milhões de linhas tentará processar 100 Trilhões de combinações, aniquilando qualquer cluster Cloud instantaneamente.</p>
     </div>
   </section>
 
@@ -1554,62 +1511,78 @@ df_silver = spark.sql("""
         <div class="sec-num" style="color:var(--spark)">09</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Spark Structured Streaming</h2>
+          <h2>Spark Structured Streaming &amp; Stateful Processing</h2>
           <p>Pipelines de dados continuados exactly-once tolerantes a falhas</p>
         </div>
       </div>
 
-      <p>Diferente de sistemas como o Flink, o <strong>Spark Structured Streaming</strong> opera nativamente sob o modelo de <strong>Micro-Batching</strong>. A engine aguarda um intervalo de trigger configurável (ex: 10 segundos), coleta as mensagens que chegaram no Kafka/Kinesis nesse intervalo, e as processa usando o mesmo motor otimizado do Spark SQL (Catalyst/Tungsten) como se fossem um DataFrame estático convencional.</p>
+      <p>Diferente de sistemas puramente contínuos (como o Flink), o <strong>Spark Structured Streaming</strong> opera nativamente sob o modelo de <strong>Micro-Batching</strong>. A engine aguarda um intervalo de trigger configurável (ex: 10 segundos), coleta as mensagens que chegaram no Kafka/Kinesis nesse intervalo, e as processa usando o mesmo motor otimizado do Spark SQL (Catalyst/Tungsten) como se fossem um DataFrame estático convencional. Esse design unifica a API Batch e Streaming.</p>
 
+      <h3>O Core da Semântica Temporal</h3>
       <div class="grid-2">
         <div class="card" style="border-left: 3px solid var(--spark);">
-          <h4>💧 Watermarking & "Late-arriving Data"</h4>
-          <p>Em operações <em>Stateful</em> (agregações baseadas em janelas temporais), o Spark precisa manter na RAM o estado parcial das agregações. Em IoT, a rede falha e um sensor pode enviar hoje um evento que aconteceu ontem ("Late Data").</p>
-          <p>Se o Spark mantiver a janela de ontem aberta para sempre, a RAM estoura (OOM). O <strong>Watermark</strong> resolve isso definindo o atraso máximo tolerado. Ex: <code>withWatermark("event_time", "10 minutes")</code>. Quando o evento mais recente chega às 12:00, o Watermark global avança para 11:50. Qualquer registro atrasado com <code>event_time &lt; 11:50</code> é ignorado, permitindo que a Engine decole agressivamente o estado velho da memória para limpar a RAM.</p>
+          <h4>⏱️ Event Time vs Processing Time</h4>
+          <p>Em processamento de streaming, a confusão entre tempos gera corrupção analítica severa:</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>Event Time:</strong> O exato momento em que o evento ocorreu no mundo físico (ex: o usuário clicou no botão às 10:00). Embutido no payload (JSON). É a única métrica confiável para agregações de negócio.</li>
+            <li><strong>Processing Time:</strong> O momento em que o nó do Spark recebeu e começou a processar o registro (ex: 10:15 devido a um atraso de rede). Se você agrupar por Processing Time, um pico de latência no Kafka agrupará cliques das 10:00 junto com os das 10:15, falsificando a curva de tráfego.</li>
+          </ul>
         </div>
+
         <div class="card" style="border-left: 3px solid var(--spark);">
-          <h4>🔄 Checkpoints & Write-Ahead Logs (WAL)</h4>
-          <p>Garantir semântica <strong>Exactly-Once</strong> contra falhas de hardware requer mais do que tentar de novo. O Spark utiliza um diretório de Checkpoint no S3 ou HDFS composto por dois artefatos: o <em>Offsets Log</em> e o <em>Write-Ahead Log (WAL)</em>.</p>
-          <p>Antes de começar o batch, o Spark anota no Offsets Log as exatas IDs (ex: Kafka offsets) que lerá. O estado intermediário é compactado via RocksDB e salvo periodicamente no WAL. Se um EC2 Spot morrer no meio do batch, o executor substituto consulta o WAL, ignora mensagens duplicadas, baixa o estado parcial e continua a computação cirurgicamente do exato ponto de interrupção, mantendo a atomicidade perfeita.</p>
+          <h4>💧 Watermarking &amp; "Late-arriving Data"</h4>
+          <p>Em operações <em>Stateful</em> (agregações baseadas em janelas temporais baseadas no <strong>Event Time</strong>), o Spark precisa manter na RAM (State Store) o estado parcial das agregações. Se um celular ficar sem sinal, um evento de ontem pode chegar hoje (Late Data).</p>
+          <p>Para evitar que a memória do Spark estoure guardando todas as janelas do passado infinitamente (OOM), usamos o <strong>Watermark</strong>. Ele define o <strong>Allowed Lateness</strong> (Atraso Permitido).
+          <br><br>Ex: <code>.withWatermark("event_time", "10 minutes")</code>. Se o evento mais recente processado tiver o Event Time 12:00, o Watermark avança para 11:50. Se um evento atrasado chegar com tempo 11:45, a janela correspondente já foi ejetada da RAM e finalizada para o sink; o evento atrasado é <strong>descartado silenciosamente</strong> para proteger o cluster.</p>
         </div>
       </div>
 
-      <div class="grid-2" style="margin-top: 20px;">
-        <div style="grid-column: 1 / -1;">
-          <h4>Trade-off de Arquitetura: Micro-batching vs Continuous Processing</h4>
-          <p>O Spark Streaming provê o <strong>Micro-batch mode</strong> (padrão) e o <strong>Continuous Processing mode</strong> (experimental). No Micro-batch, a latência mínima física costuma ser de 100ms a 500ms devido ao overhead estrutural de escalonar Tasks no YARN/K8s para cada trigger. Em contrapartida, ele atinge throughput massivo (milhões de eventos/seg).</p>
-          <p>Se a arquitetura exigir latência extrema inferior a 10 milissegundos (ex: detecção de fraude de cartão de crédito em catraca), o <em>Continuous Mode</em> altera o comportamento do Spark, deixando os executores ouvindo a rede ativamente (polling síncrono). No entanto, perde-se as agregações stateful complexas, tornando soluções dedicadas como o Apache Flink mais maduras para baixa latência determinística.</p>
+      <h3>Mecanismos Avançados de Streaming</h3>
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🗂️ Windowing &amp; Stateful Processing</h4>
+          <p>Spark suporta três tipos de agrupamentos temporais para agregar o stream infinito de dados:</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>Tumbling Windows (Janelas Fixas):</strong> Não sobrepostas. Ex: Das 10:00 às 10:05, das 10:05 às 10:10. Cada evento pertence a uma única janela.</li>
+            <li><strong>Sliding Windows (Janelas Deslizantes):</strong> Sobrepostas. Ex: Tamanho de 10 minutos, deslizando a cada 5 minutos. Um evento das 10:03 participará da janela [09:55-10:05] e [10:00-10:10].</li>
+            <li><strong>Session Windows:</strong> Baseada na inatividade. Ex: Agrupa os cliques do usuário 123. Se ele ficar 30 minutos sem clicar, a janela fecha. Requer intenso uso do State Store.</li>
+          </ul>
         </div>
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🔄 Garantias de Entrega (Delivery Guarantees) &amp; Checkpoints</h4>
+          <p>Sistemas distribuídos falham. O Spark garante semântica <strong>Exactly-Once</strong> (fim a fim) combinando sinks idempotentes (como Delta Lake) com seu mecanismo rigoroso de <strong>Checkpoints &amp; Write-Ahead Logs (WAL)</strong>.</p>
+          <p>Antes de iniciar um micro-batch, o Spark escreve de forma síncrona no HDFS/S3 os exatos offsets do Kafka que vai ler. Se um nó Spot morrer durante o processamento, o Spark levanta a tarefa em outro nó, lê o WAL do S3, descobre exatamente em qual offset a falha ocorreu e reprocessa cirurgicamente sem perder ou duplicar dados.</p>
+        </div>
+      </div>
+
+      <div class="abox note" style="margin-top:20px; margin-bottom:20px;">
+        <strong>⚠️ Backpressure &amp; Throttling (Proteção de Carga)</strong>
+        <br>Se o tráfego do Kafka explodir 100x na Black Friday, o Spark tentará puxar todos os milhões de registros para um único micro-batch, estourando a RAM (OOM) instantaneamente. Para gerenciar o <strong>Backpressure</strong>, o Spark não sinaliza ativamente ao Kafka para "parar", mas restringe o consumo na ponta do leitor via limites de trigger:
+        <br><code>.option("maxOffsetsPerTrigger", "50000")</code> - Força o Spark a ler, no máximo, 50 mil mensagens por micro-batch, limitando o throughput e mantendo o processamento estável mesmo sob pico severo.
       </div>
 
       <h3>Arquitetura End-to-End: Kafka para Delta Lake</h3>
       <p>Abaixo, um pipeline prático arquitetural que consome de um tópico de mensageria escalável e grava num formato Lakehouse garantindo atomicidade:</p>
 
       <pre><code class="language-python"># 1. Leitura: Processamento incremental com backpressure controlado
-df_stream = spark.readStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", "broker:9092") \
-    .option("subscribe", "telemetria") \
-    .option("startingOffsets", "earliest") \
-    .option("maxOffsetsPerTrigger", "50000") \
-    .load() # maxOffsetsPerTrigger evita OOM limitando a vazão por batch
+df_stream = spark.readStream     .format("kafka")     .option("kafka.bootstrap.servers", "broker:9092")     .option("subscribe", "telemetria")     .option("startingOffsets", "earliest")     .option("maxOffsetsPerTrigger", "50000")     .load() # maxOffsetsPerTrigger controla o backpressure
 
-# 2. Transformação e Watermark
-df_parsed = df_stream.selectExpr("CAST(value AS STRING) as json_data") \
-    ... # lógicas de transformação
-    .withWatermark("event_time", "10 minutes")
+# 2. Transformação, Windowing e Watermark
+import pyspark.sql.functions as F
+df_parsed = df_stream.selectExpr("CAST(value AS STRING) as json_data")     .withColumn("event_time", F.col("json_data.timestamp").cast("timestamp"))     .withWatermark("event_time", "10 minutes")     .groupBy(F.window("event_time", "5 minutes"), "json_data.sensor_id")     .agg(F.avg("json_data.temperatura").alias("media_temp"))
 
-# 3. Escrita: Gravação Delta idempotente
-df_parsed.writeStream \
-    .format("delta") \
-    .outputMode("append") \
-    .option("checkpointLocation", "s3://bucket/checkpoints/telemetria/") \
-    .trigger(processingTime="10 seconds") \
-    .start("s3://bucket/tabela_delta/")</code></pre>
+# 3. Escrita: Gravação Delta idempotente usando Triggers
+# OutputModes: "append" (novos), "update" (alterados), "complete" (tabela inteira)
+df_parsed.writeStream     .format("delta")     .outputMode("append")     .option("checkpointLocation", "s3://bucket/checkpoints/telemetria_agg/")     .trigger(processingTime="1 minute")     .start("s3://bucket/tabela_delta_agreggada/")</code></pre>
 
       <div class="abox info">
-        <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
-        <p>A adoção do Spark Structured Streaming reduz o risco de fraude e atraso operacional entregando insights em "near real-time" (Time-to-Market imediato). A integração direta com o Delta Lake e garantias de "Exactly-Once" via checkpoints eliminam a necessidade de caros processos noturnos de reconciliação de dados (redução de OPEX) e evitam perdas financeiras geradas por duplicação de métricas.</p>
+        <strong>⚡ Modos de Trigger</strong>
+        <p>A diretiva <code>.trigger()</code> determina quando o motor vai verificar por novos dados:</p>
+        <ul>
+          <li><code>trigger(processingTime="10 seconds")</code>: Executa micro-batches periodicamente a cada 10s. O mais usado.</li>
+          <li><code>trigger(availableNow=True)</code>: Modo <strong>Batch Híbrido</strong>. Consome todos os dados pendentes no Kafka de uma vez, mas quebrando em micro-batches em background para evitar OOM, e depois desliga o cluster. Ideal para orquestração noturna que precisa da resiliência dos checkpoints de streaming.</li>
+          <li><code>trigger(continuous="1 second")</code>: Ignora o micro-batching. Cada tarefa puxa mensagens em polling contínuo da origem. Menor latência (~1ms), mas perde a capacidade de agregação stateful.</li>
+        </ul>
       </div>
     </section>
 
@@ -2677,6 +2650,155 @@ GROUP BY
           <p>Livro que fundamenta os conceitos avançados de otimização de shuffles no Spark, mitigação de Data Skew (salting de chaves) e estratégias de Broadcast joins.</p>
         </div>
       </div>
+    </section>
+
+    <!-- 19. MASTERCLASS CÓDIGO -->
+    <section class="section" id="spark-code-masterclass">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">19</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Masterclass: PySpark &amp; SQL Code</h2>
+          <p>Trechos avançados abordando transformações, window functions e lógicas stateful</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">1. Window Functions Avançadas (Sessões &amp; Gaps)</div>
+        <h4>Identificação de Sessões de Usuários baseadas em Inatividade (Gaps > 30 min)</h4>
+        <p><strong>Desafio:</strong> Agrupar eventos de clique em uma "Sessão" se ocorrerem a menos de 30 minutos um do outro. Muito pedido em entrevistas de Data Engineering.</p>
+        <pre><code class="language-python">from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+# 1. Ordena os eventos por usuário e tempo
+w_user_time = Window.partitionBy("user_id").orderBy("event_timestamp")
+
+# 2. Pega o timestamp do evento anterior daquele usuário
+df_lag = df_events.withColumn("prev_timestamp", F.lag("event_timestamp").over(w_user_time))
+
+# 3. Calcula os minutos de diferença (Gap). Se > 30 ou for o primeiro, é uma nova sessão (1). Senão (0).
+df_gap = df_lag.withColumn(
+    "is_new_session",
+    F.when(F.col("prev_timestamp").isNull(), 1)
+     .when((F.col("event_timestamp").cast("long") - F.col("prev_timestamp").cast("long")) > 30*60, 1)
+     .otherwise(0)
+)
+
+# 4. Cria o ID da sessão fazendo uma soma cumulativa dos "is_new_session"
+w_cumulative = Window.partitionBy("user_id").orderBy("event_timestamp").rowsBetween(Window.unboundedPreceding, Window.currentRow)
+df_sessions = df_gap.withColumn("session_id", F.sum("is_new_session").over(w_cumulative))
+
+df_sessions.show(truncate=False)</code></pre>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">2. Explode &amp; JSON Parsing Complexo</div>
+        <h4>Achatando arrays de JSONs alinhados (Flatten)</h4>
+        <p>Achatamento de estruturas profundamente aninhadas oriundas de APIs REST (ex: DynamoDB ou MongoDB dumps).</p>
+        <pre><code class="language-python"># Exemplo de Schema: 
+# root
+#  |-- company_id: string
+#  |-- employees: array
+#  |    |-- element: struct
+#  |    |    |-- emp_id: string
+#  |    |    |-- details: struct
+#  |    |    |    |-- role: string
+#  |    |    |    |-- skills: array (string)
+
+df_flat = df_raw.withColumn("employee", F.explode("employees")) \
+    .withColumn("emp_id", F.col("employee.emp_id")) \
+    .withColumn("role", F.col("employee.details.role")) \
+    .withColumn("skill", F.explode_outer("employee.details.skills")) \
+    .drop("employees", "employee")
+
+# SQL Equivalente (Athena / Spark SQL)
+'''
+SELECT 
+    company_id,
+    emp.emp_id,
+    emp.details.role as role,
+    skill
+FROM raw_table
+LATERAL VIEW explode(employees) AS emp
+LATERAL VIEW explode(emp.details.skills) AS skill
+'''
+</code></pre>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">3. Agregações Dinâmicas (Pivot &amp; Rollup)</div>
+        <h4>Pivot Dinâmico para Matrizes e Totais em múltiplos níveis (Rollup)</h4>
+        <p><strong>Desafio:</strong> Criar uma tabela dinâmica onde as colunas são as categorias de produtos e criar totais gerais por dimensão simultaneamente.</p>
+        <pre><code class="language-python"># 1. PIVOT: Transforma valores de linhas em Colunas Agregadas
+df_pivot = df_sales.groupBy("region", "store_id") \
+    .pivot("product_category", ["Eletronicos", "Roupas", "Casa"]) \
+    .agg(F.sum("revenue").alias("total_rev"), F.avg("revenue").alias("avg_rev")) \
+    .fillna(0)
+
+# 2. ROLLUP: Cria subtotais automáticos para cada hierarquia. 
+# Ex: Total da Loja X, Total da Região Y, Total Global.
+df_rollup = df_sales.rollup("region", "store_id") \
+    .agg(F.sum("revenue").alias("total_revenue")) \
+    .orderBy("region", "store_id")
+
+# SQL Equivalente para Pivot (Modern SQL)
+'''
+SELECT * FROM (
+  SELECT region, store_id, product_category, revenue
+  FROM sales
+)
+PIVOT (
+  SUM(revenue) AS total_rev
+  FOR product_category IN ('Eletronicos', 'Roupas', 'Casa')
+)
+'''
+</code></pre>
+      </div>
+
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">4. Deduplicação Avançada e SCD Tipo 2</div>
+        <h4>Manter o histórico dimensional (SCD Tipo 2) usando PySpark Window Functions</h4>
+        <pre><code class="language-python"># Identificando a linha mais recente se houver múltiplas atualizações do mesmo usuário no lote
+w_dedup = Window.partitionBy("user_id").orderBy(F.col("updated_at").desc())
+
+df_latest = df_updates.withColumn("row_num", F.row_number().over(w_dedup)) \
+    .filter(F.col("row_num") == 1) \
+    .drop("row_num")
+
+# Lógica de Fechamento de Janela (SCD Type 2) na mão (quando não usamos Delta/Hudi/Iceberg)
+w_history = Window.partitionBy("user_id").orderBy("valid_from")
+
+# Calcula o valid_to pegando o valid_from do PRÓXIMO registro do mesmo user_id. Se for o último, fica NULL.
+df_scd2 = df_history.withColumn(
+    "valid_to",
+    F.lead("valid_from").over(w_history)
+)
+</code></pre>
+      </div>
+      
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">5. UDFs Otimizadas: Pandas UDF (Apache Arrow)</div>
+        <h4>Migrando UDF lenta para Pandas UDF Vetorizado</h4>
+        <p><strong>Por que?</strong> UDFs Python puras forçam a JVM a serializar os dados linha a linha (Pickle) para um processo Python Worker (overhead gigante). Pandas UDFs usam Apache Arrow para trafegar blocos de dados em memória columnar de uma vez, rodando C/C++ por baixo através do Numpy/Pandas.</p>
+        <pre><code class="language-python">import pandas as pd
+from pyspark.sql.functions import pandas_udf
+from pyspark.sql.types import DoubleType
+
+# Modo Antigo (LENTO - Executa linha a linha)
+# def math_complex_udf(val):
+#     return val * 3.1415 + 42
+# spark.udf.register("math_complex", math_complex_udf)
+
+# Modo Novo Vetorizado (RÁPIDO - Executa em blocos Arrow)
+@pandas_udf(DoubleType())
+def math_complex_pandas_udf(val_series: pd.Series) -> pd.Series:
+    # A série inteira é calculada nativamente em C via Pandas
+    return val_series * 3.1415 + 42
+
+df_result = df.withColumn("calculo_pesado", math_complex_pandas_udf("valor_bruto"))
+</code></pre>
+      </div>
+
     </section>
   </main>
 </div>
