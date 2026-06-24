@@ -1024,6 +1024,76 @@ spark.memory.offHeap.size = 4g</pre>
           </ol>
         </div>
       </div>
+
+      <!-- Case Especialista 7: Streaming OOM -->
+      <div class="card" id="q_exp_7" style="margin-bottom: 24px; border-left: 4px solid #ea580c;">
+        <div class="card-lbl">Questão de Especialista 7 · Streaming &amp; State Store</div>
+        <h4>Um job de Spark Structured Streaming processando eventos do Kinesis roda estável por 3 dias, mas então a memória dos executores começa a inchar e resulta em falha cataclísmica (OOM). Qual é a provável causa raiz e a solução arquitetural?</h4>
+        <p><strong>A Pegadinha:</strong> Jobs de streaming puros não estouram RAM do nada a menos que haja acúmulo de estado contínuo.</p>
+        <div class="callout callout-info">
+          <strong>A Causa e Resolução:</strong>
+          <ul>
+            <li><strong>O Problema:</strong> O desenvolvedor aplicou uma agregação contínua (<em>Stateful Processing</em>) baseada em janela temporal (ex: contagem de cliques por minuto), mas não configurou um <strong>Watermark</strong> restrito. O Spark foi obrigado a manter as janelas de segunda-feira, terça-feira e quarta-feira <em>inteiras abertas na memória (State Store)</em> aguardando infinitamente por dados atrasados (Late Data). Após 3 dias, o acúmulo destruiu a RAM (Heap JVM).</li>
+            <li><strong>A Resolução:</strong> Inserir a diretiva <code>.withWatermark("timestamp_coluna", "15 minutes")</code> <em>antes</em> do <code>groupBy</code>. Isso diz à engine: "Feche a janela e ejete os dados da memória após 15 minutos do evento mais recente. Se um evento chegar com atraso maior que 15 minutos, jogue fora". A memória estabilizará em um patamar constante e previsível.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case Especialista 8: Desmembramento de Backpressure -->
+      <div class="card" id="q_exp_8" style="margin-bottom: 24px; border-left: 4px solid #f97316;">
+        <div class="card-lbl">Questão de Especialista 8 · Streaming Backpressure</div>
+        <h4>Durante a Black Friday, a vazão de mensagens no seu tópico Kafka salta de 1.000 msg/s para 500.000 msg/s em um minuto. Seu pipeline Spark Streaming tenta consumir e cai imediatamente por falta de recursos. Como blindar o pipeline sem precisar alocar um cluster milionário?</h4>
+        <p><strong>Sintoma de Falha:</strong> Por padrão, o Spark tenta engolir <em>todas as mensagens disponíveis</em> no Kafka em cada micro-batch. Num pico de 100x, o batch fica infinitamente pesado.</p>
+        <div class="callout callout-tip">
+          <strong>Contenção de Danos (Throttling):</strong>
+          <p>Você não mexe na arquitetura de rede, você mexe na porta de entrada do Spark configurando o limite rígido de offsets por gatilho: <code>.option("maxOffsetsPerTrigger", "100000")</code>. Ao invés do Spark tentar ler 5 milhões de mensagens de uma vez e morrer (OOM), ele lerá de 100 em 100 mil. Os micro-batches demorarão o tempo normal. A latência geral (lag) do tópico Kafka vai subir durante a madrugada, mas o pipeline continuará vivo e estável processando incansavelmente, e zerará o lag naturalmente quando a febre da Black Friday passar pela manhã.</p>
+        </div>
+      </div>
+
+      <!-- Case Especialista 9: Code Review PySpark -->
+      <div class="card" id="q_exp_9" style="margin-bottom: 24px; border-left: 4px solid #8b5cf6;">
+        <div class="card-lbl">Questão de Especialista 9 · Avaliação de Código (PySpark)</div>
+        <h4>Entrevista (Live Coding / Review): Leia o trecho de código abaixo. Explique o que ele faz em termos de negócio e aponte o grave gargalo de performance de engenharia que o desenvolvedor cometeu.</h4>
+        <pre><code class="language-python">from pyspark.sql.window import Window
+import pyspark.sql.functions as F
+
+w_pedidos = Window.partitionBy("filial_id").orderBy(F.col("data_atualizacao").desc())
+
+df_resultado = df_transacoes.withColumn("rank_interno", F.row_number().over(w_pedidos)) \
+    .filter(F.col("rank_interno") == 1) \
+    .drop("rank_interno")
+</code></pre>
+        <div class="callout callout-warn">
+          <strong>A Análise de Nível Sênior:</strong>
+          <ul>
+            <li><strong>Intenção de Negócio:</strong> É uma rotina de <strong>Deduplicação Determinística</strong> (ou fechamento de última foto). Ela retorna a última transação (a mais recente, baseada na data de atualização decrescente) ocorrida dentro de CADA filial, descartando o resto.</li>
+            <li><strong>O Gargalo Físico (O Erro):</strong> O particionamento está ocorrendo por <code>filial_id</code>. Se for a filial <em>Matriz Global</em>, ela pode ter 800 milhões de registros de transações. O <code>Window.partitionBy()</code> força o Spark a realizar um <em>Shuffle</em> na rede para jogar todos os 800 milhões de registros da filial Matriz no exato mesmo nó (Executor). Isso causará um severo <strong>Data Skew (Desbalanceamento)</strong> e uma eventual falha de OOM (ou Spill eterno em disco) nesse pobre executor isolado. <em>Janelas em chaves pouco distribuídas (baixa cardinalidade) são letais no Spark.</em></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case Especialista 10: Code Review SQL -->
+      <div class="card" id="q_exp_10" style="margin-bottom: 24px; border-left: 4px solid #3b82f6;">
+        <div class="card-lbl">Questão de Especialista 10 · Avaliação de Código (SQL Avançado)</div>
+        <h4>Entrevista (Code Review): A analista de negócio reclamou que a query SQL abaixo no Amazon Athena travou e custou milhares de dólares por escaneamento massivo, mesmo as tabelas tendo poucos gigabytes. Qual é o erro arquitetural silencioso?</h4>
+        <pre><code class="language-sql">SELECT 
+  t.id_transacao,
+  t.valor,
+  c.nome_cliente
+FROM fato_transacoes t
+INNER JOIN dim_clientes c 
+  ON t.data_compra >= c.data_inicio_vigencia 
+  AND t.data_compra <= c.data_fim_vigencia
+</code></pre>
+        <div class="callout callout-warn">
+          <strong>A Análise Preditiva do Motor SQL:</strong>
+          <ul>
+            <li><strong>O Erro (Non-Equi Join):</strong> Esta não é uma junção equitativa (onde uma chave é EXATAMENTE IGUAL a outra com <code>ON t.id = c.id</code>). A junção ocorre exclusivamente através de operadores de desigualdade (<code>>=</code> e <code><=</code>).</li>
+            <li><strong>Impacto Físico de Banco de Dados:</strong> Na ausência de uma chave hash exata para cruzar (Equi-Join), o otimizador distribuído do Trino/Athena/Spark não consegue usar algoritmos rápidos como Hash Join ou Sort-Merge. Ele se rebaixa (fallback) para um <strong>Broadcast Nested Loop Join (Produto Cartesiano Restrito)</strong>. Se a tabela fato tem 10 milhões de linhas e a dimensão tem 100 mil, a engine iterará $10.000.000 	imes 100.000$ vezes (1 Trilhão de combinações lógicas) na memória, travando completamente os clusters do Athena e gerando custos obscenos de timeout.</li>
+            <li><strong>A Resolução:</strong> O desenvolvedor deve obrigatoriamente adicionar a chave relacional primeira: <code>ON t.id_cliente = c.id_cliente AND t.data_compra >= ...</code> O <em>Equi-join</em> limitará a pesquisa primeiro via Hash, e as desigualdades de tempo servirão apenas como filtro secundário ultrarrápido (Pushdown predicate) dentro dos lotes restritos do mesmo cliente.</li>
+          </ul>
+        </div>
+      </div>
       <!-- DEA Gap: Redshift & Migrations -->
       <div class="card" id="q_dea_2" style="margin-bottom: 24px; border-left: 4px solid #0f766e;">
         <div class="card-lbl">Questão (DEA-C01) · Redshift Maintenance & Migrations</div>
