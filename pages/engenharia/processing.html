@@ -2658,147 +2658,315 @@ GROUP BY
         <div class="sec-num" style="color:var(--spark)">19</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Masterclass: PySpark &amp; SQL Code</h2>
-          <p>Trechos avançados abordando transformações, window functions e lógicas stateful</p>
+          <h2>Masterclass Exaustiva: Código PySpark &amp; SQL</h2>
+          <p>Mergulho profundo na teoria e prática de transformações complexas, análise temporal e engenharia de features em grande escala.</p>
         </div>
       </div>
 
+      <p>Nesta masterclass, destrinchamos os conceitos mais desafiadores exigidos por empresas de ponta (FAANG, big techs). A transição de um engenheiro júnior para sênior frequentemente se reflete na habilidade de resolver problemas complexos com o <strong>mínimo de shuffles</strong>, evitando UDFs padrão e utilizando os motores nativos (Catalyst/Tungsten) através de <em>Higher-Order Functions</em> e <em>Window Functions</em>.</p>
+
+      <!-- TEMA 1: WINDOW FUNCTIONS E SESSÕES -->
       <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
-        <div class="card-lbl">1. Window Functions Avançadas (Sessões &amp; Gaps)</div>
-        <h4>Identificação de Sessões de Usuários baseadas em Inatividade (Gaps > 30 min)</h4>
-        <p><strong>Desafio:</strong> Agrupar eventos de clique em uma "Sessão" se ocorrerem a menos de 30 minutos um do outro. Muito pedido em entrevistas de Data Engineering.</p>
-        <pre><code class="language-python">from pyspark.sql import functions as F
+        <div class="card-lbl">Tema 1 · Teoria: Window Functions &amp; Sessionization</div>
+        <h4>O Paradigma do Deslocamento Temporal e Construção de Sessões</h4>
+        
+        <p><strong>A Física da Operação:</strong> Diferente de um <code>GROUP BY</code> tradicional que comprime (esmaga) milhões de registros em uma única linha (ex: somatório global), uma <strong>Window Function</strong> permite realizar operações de agregação (Soma, Média) ou navegação (Lag, Lead) <em>mantendo a granularidade original das linhas</em>. O Spark cria "janelas" lógicas deslizantes na memória para cada registro, olhando para trás e para frente num contexto delimitado por uma chave (<code>PARTITION BY</code>) e uma ordenação (<code>ORDER BY</code>). O maior perigo físico aqui é a exceção <code>OutOfMemory (OOM)</code> se uma única janela (ex: um usuário muito ativo) for maior que a RAM de um único executor.</p>
+
+        <p><strong>O Problema Prático (Sessionization):</strong> Precisamos mapear as jornadas de usuários num site. Se o usuário ficou 30 minutos inativo, consideramos que a sessão antiga "fechou" e qualquer clique futuro abrirá uma "nova sessão". Isso é resolvido rastreando a distância temporal (Gap) entre um clique e o anterior.</p>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 1.1: Identificação de Gaps e Sessões (PySpark)</h5>
+          <pre><code class="language-python">from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
-# 1. Ordena os eventos por usuário e tempo
+# 1. Definimos a Janela Particionada por Usuário e Ordenada pelo Tempo Cronológico
 w_user_time = Window.partitionBy("user_id").orderBy("event_timestamp")
 
-# 2. Pega o timestamp do evento anterior daquele usuário
+# 2. LAG: Busca o exato momento do clique anterior. Se for o primeiro clique, retorna NULL.
 df_lag = df_events.withColumn("prev_timestamp", F.lag("event_timestamp").over(w_user_time))
 
-# 3. Calcula os minutos de diferença (Gap). Se > 30 ou for o primeiro, é uma nova sessão (1). Senão (0).
+# 3. Cálculo do GAP e Flag de Nova Sessão
+# Lógica: Se o tempo atual menos o tempo anterior for maior que 1800 segundos (30 min), marcamos com '1' (início).
 df_gap = df_lag.withColumn(
     "is_new_session",
     F.when(F.col("prev_timestamp").isNull(), 1)
-     .when((F.col("event_timestamp").cast("long") - F.col("prev_timestamp").cast("long")) > 30*60, 1)
+     .when((F.col("event_timestamp").cast("long") - F.col("prev_timestamp").cast("long")) > 1800, 1)
      .otherwise(0)
 )
 
-# 4. Cria o ID da sessão fazendo uma soma cumulativa dos "is_new_session"
-w_cumulative = Window.partitionBy("user_id").orderBy("event_timestamp").rowsBetween(Window.unboundedPreceding, Window.currentRow)
+# 4. Criação do ID único da sessão via SOMA CUMULATIVA
+# A janela avança linha a linha desde o início (unboundedPreceding) até a linha atual (currentRow)
+w_cumulative = Window.partitionBy("user_id").orderBy("event_timestamp")\
+    .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+
 df_sessions = df_gap.withColumn("session_id", F.sum("is_new_session").over(w_cumulative))
 
-df_sessions.show(truncate=False)</code></pre>
-      </div>
+# Para gerar um ID Global único, podemos concatenar o usuário com o número da sessão local
+df_final = df_sessions.withColumn("global_session_id", F.concat_ws("_", F.col("user_id"), F.col("session_id")))
+</code></pre>
+        </div>
 
-      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
-        <div class="card-lbl">2. Explode &amp; JSON Parsing Complexo</div>
-        <h4>Achatando arrays de JSONs alinhados (Flatten)</h4>
-        <p>Achatamento de estruturas profundamente aninhadas oriundas de APIs REST (ex: DynamoDB ou MongoDB dumps).</p>
-        <pre><code class="language-python"># Exemplo de Schema: 
-# root
-#  |-- company_id: string
-#  |-- employees: array
-#  |    |-- element: struct
-#  |    |    |-- emp_id: string
-#  |    |    |-- details: struct
-#  |    |    |    |-- role: string
-#  |    |    |    |-- skills: array (string)
-
-df_flat = df_raw.withColumn("employee", F.explode("employees")) \
-    .withColumn("emp_id", F.col("employee.emp_id")) \
-    .withColumn("role", F.col("employee.details.role")) \
-    .withColumn("skill", F.explode_outer("employee.details.skills")) \
-    .drop("employees", "employee")
-
-# SQL Equivalente (Athena / Spark SQL)
-'''
+        <div class="callout callout-tip">
+          <h5>Exemplo 1.2: A Solução Elegante usando SQL (Trino/Athena/SparkSQL)</h5>
+          <pre><code class="language-sql">WITH lags AS (
+  SELECT 
+    user_id,
+    event_timestamp,
+    LAG(event_timestamp) OVER (PARTITION BY user_id ORDER BY event_timestamp) as prev_timestamp
+  FROM raw_events
+),
+flags AS (
+  SELECT 
+    user_id,
+    event_timestamp,
+    -- Converte timestamp pra EPOCH (segundos) para achar a diferença de 30 min
+    CASE 
+      WHEN prev_timestamp IS NULL THEN 1
+      WHEN UNIX_TIMESTAMP(event_timestamp) - UNIX_TIMESTAMP(prev_timestamp) > 1800 THEN 1
+      ELSE 0
+    END as is_new_session
+  FROM lags
+)
 SELECT 
-    company_id,
-    emp.emp_id,
-    emp.details.role as role,
-    skill
-FROM raw_table
-LATERAL VIEW explode(employees) AS emp
-LATERAL VIEW explode(emp.details.skills) AS skill
-'''
+  user_id,
+  event_timestamp,
+  -- Soma cumulativa atuando como gerador sequencial de IDs de sessão
+  SUM(is_new_session) OVER (PARTITION BY user_id ORDER BY event_timestamp ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as session_id
+FROM flags;
 </code></pre>
-      </div>
+        </div>
 
-      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
-        <div class="card-lbl">3. Agregações Dinâmicas (Pivot &amp; Rollup)</div>
-        <h4>Pivot Dinâmico para Matrizes e Totais em múltiplos níveis (Rollup)</h4>
-        <p><strong>Desafio:</strong> Criar uma tabela dinâmica onde as colunas são as categorias de produtos e criar totais gerais por dimensão simultaneamente.</p>
-        <pre><code class="language-python"># 1. PIVOT: Transforma valores de linhas em Colunas Agregadas
-df_pivot = df_sales.groupBy("region", "store_id") \
-    .pivot("product_category", ["Eletronicos", "Roupas", "Casa"]) \
-    .agg(F.sum("revenue").alias("total_rev"), F.avg("revenue").alias("avg_rev")) \
-    .fillna(0)
-
-# 2. ROLLUP: Cria subtotais automáticos para cada hierarquia. 
-# Ex: Total da Loja X, Total da Região Y, Total Global.
-df_rollup = df_sales.rollup("region", "store_id") \
-    .agg(F.sum("revenue").alias("total_revenue")) \
-    .orderBy("region", "store_id")
-
-# SQL Equivalente para Pivot (Modern SQL)
-'''
-SELECT * FROM (
-  SELECT region, store_id, product_category, revenue
-  FROM sales
-)
-PIVOT (
-  SUM(revenue) AS total_rev
-  FOR product_category IN ('Eletronicos', 'Roupas', 'Casa')
-)
-'''
-</code></pre>
-      </div>
-
-      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
-        <div class="card-lbl">4. Deduplicação Avançada e SCD Tipo 2</div>
-        <h4>Manter o histórico dimensional (SCD Tipo 2) usando PySpark Window Functions</h4>
-        <pre><code class="language-python"># Identificando a linha mais recente se houver múltiplas atualizações do mesmo usuário no lote
-w_dedup = Window.partitionBy("user_id").orderBy(F.col("updated_at").desc())
-
-df_latest = df_updates.withColumn("row_num", F.row_number().over(w_dedup)) \
-    .filter(F.col("row_num") == 1) \
-    .drop("row_num")
-
-# Lógica de Fechamento de Janela (SCD Type 2) na mão (quando não usamos Delta/Hudi/Iceberg)
-w_history = Window.partitionBy("user_id").orderBy("valid_from")
-
-# Calcula o valid_to pegando o valid_from do PRÓXIMO registro do mesmo user_id. Se for o último, fica NULL.
-df_scd2 = df_history.withColumn(
-    "valid_to",
-    F.lead("valid_from").over(w_history)
+        <div class="callout callout-warn">
+          <h5>Exemplo 1.3: Running Totals (Faturamento Acumulado) - PySpark</h5>
+          <p>Outro uso comum de Window. Calcule a receita acumulada diária sem agrupar toda a tabela.</p>
+          <pre><code class="language-python">w_running = Window.partitionBy("ano_mes").orderBy("data_venda")\
+    .rangeBetween(Window.unboundedPreceding, Window.currentRow)
+    
+df_running = df_faturamento.withColumn(
+    "receita_acumulada_mes", 
+    F.sum("valor_venda").over(w_running)
 )
 </code></pre>
+        </div>
       </div>
-      
+
+      <!-- TEMA 2: ESTRUTURAS COMPLEXAS E JSON -->
       <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
-        <div class="card-lbl">5. UDFs Otimizadas: Pandas UDF (Apache Arrow)</div>
-        <h4>Migrando UDF lenta para Pandas UDF Vetorizado</h4>
-        <p><strong>Por que?</strong> UDFs Python puras forçam a JVM a serializar os dados linha a linha (Pickle) para um processo Python Worker (overhead gigante). Pandas UDFs usam Apache Arrow para trafegar blocos de dados em memória columnar de uma vez, rodando C/C++ por baixo através do Numpy/Pandas.</p>
-        <pre><code class="language-python">import pandas as pd
+        <div class="card-lbl">Tema 2 · Teoria: Parseamento de Estruturas Aninhadas (Complex Types)</div>
+        <h4>Explode, Lateral Views e Navegação em Grafo de JSONs</h4>
+        
+        <p><strong>A Mecânica Estrutural:</strong> Dados provenientes de bancos NoSQL (como MongoDB ou DynamoDB) e de APIs modernas não são tabulares (planos). Eles vêm no formato de árvores, com Tipos Complexos do Spark: <code>ArrayType</code> (Listas) e <code>StructType</code> (Objetos aninhados). O processamento analítico (como o envio para um Data Warehouse columnar) exige que essas árvores sejam transformadas em um modelo relacional (Flattening). A operação mais custosa dessa etapa é o <code>explode()</code>, pois ela atua como um multiplicador cartesiano restrito: se um usuário tiver 5 compras num Array, a linha do usuário é duplicada (achatada) em 5 linhas individuais herdando as características da raiz.</p>
+
+        <p><strong>Diferença de Performance:</strong> O <code>explode()</code> puro ignora a linha raiz se o array estiver vazio ou nulo (Perda de dados). Em pipelines Enterprise, utilizamos estritamente o <code>explode_outer()</code> (ou <code>LEFT JOIN LATERAL</code>) para garantir que um usuário que fez um cadastro mas não comprou nada seja mantido na tabela (ficará com campos nulos nas colunas de compras).</p>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 2.1: Achatamento Massivo de Array de Structs (PySpark)</h5>
+          <pre><code class="language-python"># Imagine o JSON: {"order_id": "123", "items": [{"id": 1, "price": 10}, {"id": 2, "price": 20}]}
+# Schema: StructType(StructField("order_id", String), StructField("items", ArrayType(StructType(id, price))))
+
+# Passo 1: Explodir o Array para gerar uma linha por Item, preservando orders sem items (explode_outer)
+df_exploded = df_orders.withColumn("item_obj", F.explode_outer("items"))
+
+# Passo 2: Navegar no Struct interno usando notação de ponto (Dot Notation)
+df_flat = df_exploded.select(
+    F.col("order_id"),
+    F.col("item_obj.id").alias("product_id"),
+    F.col("item_obj.price").alias("product_price")
+)
+
+# Passo 3: Drop do array original super pesado da memória
+df_final = df_flat.drop("items", "item_obj")
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 2.2: O Motor SQL e as Views Laterais (LATERAL VIEW)</h5>
+          <p>O SQL padrão antigo não sabe lidar com Arrays de tamanho variável por linha. O Hive introduziu e o Spark absorveu a sintaxe de exibição lateral, que atua como um cross join da linha com os itens do array da própria linha.</p>
+          <pre><code class="language-sql">SELECT 
+  o.order_id,
+  item.id AS product_id,
+  item.price AS product_price
+FROM raw_orders o
+-- EXPLODE_OUTER garante que pedimos LEFT OUTER JOIN, preservando ordens vazias
+LATERAL VIEW OUTER explode(o.items) exploded_table AS item;
+
+-- No PostgreSQL ou Athena mais modernos, a sintaxe de desdobramento (UNNEST) é comum:
+SELECT 
+  o.order_id,
+  item.id AS product_id,
+  item.price AS product_price
+FROM raw_orders o
+LEFT JOIN UNNEST(o.items) AS t(item);
+</code></pre>
+        </div>
+      </div>
+
+      <!-- TEMA 3: AGREGAÇÕES DINÂMICAS E ROLLUP -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">Tema 3 · Teoria: Multi-Dimensional Aggregation (Cubes, Rollups, Pivots)</div>
+        <h4>Engenharia de Cubos Analíticos no Motor de Dados</h4>
+        
+        <p><strong>A Ciência da Agregação:</strong> Fazer milhares de Group Bys para alimentar um Dashboard gera custos enormes se cada consulta varrer a tabela fato crua. Técnicas avançadas calculam <em>todas as combinações hierárquicas possíveis em uma única varredura dos dados</em> usando os operadores <code>ROLLUP</code>, <code>CUBE</code>, e <code>GROUPING SETS</code>.</p>
+        <ul>
+          <li><strong>ROLLUP:</strong> Cria subtotais hierárquicos focados (Direcional). Ex: Se você rodar Rollup por (País, Estado, Cidade), ele criará agrupamentos para (País, Estado, Cidade), depois (País, Estado, NULL) que é o total do estado, depois (País, NULL, NULL) que é o total do País, e (NULL, NULL, NULL) que é o total global. Custo de computação linear `N+1`.</li>
+          <li><strong>CUBE:</strong> Computa absolutamente todas as permutações cruzadas. Criará os totais do ROLLUP, mas também combinações isoladas como (NULL, Estado, NULL), quebrar por estado independente de país. Custo muito mais pesado `2^N`.</li>
+          <li><strong>PIVOT:</strong> Transposição de valores literais de uma coluna-linha para virarem os nomes físicos das colunas. Essencial para transformar séries temporais (uma linha por mês) em colunas tabulares (Jan_Revenue, Feb_Revenue...).</li>
+        </ul>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 3.1: Construindo Tabelas Dinâmicas Transpostas (PIVOT) em PySpark</h5>
+          <pre><code class="language-python"># Cenário: Tabela com colunas [Loja, Mes, Faturamento]. Queremos [Loja, Fat_Jan, Fat_Fev, Fat_Mar]
+
+df_pivot = df_vendas.groupBy("loja_id") \
+    .pivot("mes", ["Janeiro", "Fevereiro", "Marco", "Abril"]) \
+    .agg(
+        F.sum("faturamento").alias("total"), 
+        F.count("transacoes").alias("qnt_vendas")
+    ) \
+    .fillna(0) # Remove Nulos de meses que não tiveram venda
+
+# Atenção (Otimização OOM): SEMPRE forneça a lista de valores literais no método pivot([...]). 
+# Se você deixar vazio, o Spark fará um "Scan Distribuído Extra" na tabela inteira apenas 
+# para descobrir os valores distintos antes de pivotar, dobrando o tempo de processamento.
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 3.2: O SQL Poderoso para Grouping Sets e Rollup</h5>
+          <p>O SQL moderno permite flexibilidade insana no planejamento de totais parciais e cruzamentos, essencial para materialização rápida do Tableau/PowerBI.</p>
+          <pre><code class="language-sql">-- Rollup: Hierarquia rígida (Ano -> Mes -> Dia)
+SELECT 
+  ano, 
+  mes, 
+  dia, 
+  SUM(receita) as faturamento_total
+FROM fato_vendas
+GROUP BY ROLLUP (ano, mes, dia);
+
+-- Grouping Sets: Total controle de quais "Group Bys" rodar de uma vez só no mesmo Dataset Resultante
+SELECT 
+  categoria,
+  marca,
+  regiao,
+  SUM(vendas) as total
+FROM produtos
+GROUP BY GROUPING SETS (
+  (categoria, marca),  -- Visão de concorrência por categoria
+  (regiao),            -- Visão macro territorial isolada
+  ()                   -- Total Global da Tabela
+);
+</code></pre>
+        </div>
+      </div>
+
+      <!-- TEMA 4: DEDUPLICAÇÃO E SCD -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">Tema 4 · Teoria: Deduplicação Resiliente e Histórico Dimensional (SCD Tipo 2)</div>
+        <h4>Isolando a Verdade Num Mar de Eventos Duplicados</h4>
+        
+        <p><strong>A Raiz do Problema:</strong> Sistemas de ingestão como Kafka/Kinesis garantem <em>At-Least-Once Delivery</em>. Portanto, a duplicação no Data Lake é certa. Além disso, quando o status de um pedido muda de "Aguardando" para "Pago" para "Enviado", cada mudança é um evento separado. Como saber a foto atual do pedido sem descartar a história de como ele chegou lá?</p>
+        <p>Abordamos de duas formas: (A) Deduplicação lógica de última foto mantendo só o mais recente. (B) Criação de uma Tabela Dimensional Slowly Changing Dimension Tipo 2 (SCD-2), que insere controle de vigência usando colunas temporais <code>Data_Inicio_Validade</code> e <code>Data_Fim_Validade</code> (sendo a linha ativa marcada com <code>NULL</code> ou data no infinito 9999-12-31).</p>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 4.1: Deduplicação Extremamente Otimizada de Última Foto (PySpark)</h5>
+          <pre><code class="language-python"># O método .dropDuplicates(["user_id"]) é "Não determinístico" na nuvem (você não escolhe qual linha ele mantém).
+# Para manter a linha mais recente com exatidão garantida, usamos row_number().
+
+w_dedup = Window.partitionBy("user_id").orderBy(F.col("update_timestamp").desc())
+
+# Pega o primeiro evento (mais recente) de cada usuário e joga fora o resto.
+df_gold_latest = df_silver_events.withColumn("rank", F.row_number().over(w_dedup)) \
+    .filter(F.col("rank") == 1) \
+    .drop("rank")
+</code></pre>
+        </div>
+
+        <div class="callout callout-warn">
+          <h5>Exemplo 4.2: Construção manual do Histórico SCD-2 (Tratando Eventos Históricos)</h5>
+          <p>O <code>lead()</code> olha para o futuro na sua partição, roubando o timestamp do próximo evento para fechar a sua janela atual valid_to.</p>
+          <pre><code class="language-python"># Ordenamos os eventos do usuário do mais antigo pro mais novo.
+w_hist = Window.partitionBy("pedido_id").orderBy("data_evento")
+
+df_scd2 = df_status_pedidos.withColumn(
+    "data_inicio_vigencia", F.col("data_evento")
+).withColumn(
+    "data_fim_vigencia", F.lead("data_evento", 1).over(w_hist)
+).withColumn(
+    "is_active", F.when(F.col("data_fim_vigencia").isNull(), True).otherwise(False)
+)
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 4.3: O Motor MERGE (Upsert Lakehouse) em SQL Delta/Iceberg</h5>
+          <p>O paradigma Lakehouse moderno realiza o SCD e o Upsert via ACID transactions em SQL, sem precisar reescrever a tabela inteira (Técnica do Merge on Read/Write).</p>
+          <pre><code class="language-sql">-- Sincronizando tabela alvo com dados vindos de staging usando UPSERT (Update/Insert)
+MERGE INTO gold_users AS target
+USING staging_users_cdc AS source
+ON target.user_id = source.user_id
+WHEN MATCHED AND source.op = 'DELETE' THEN 
+  DELETE -- Deleta se a origem informou remoção
+WHEN MATCHED AND source.update_timestamp > target.update_timestamp THEN 
+  UPDATE SET * -- Atualiza só se a origem for mais recente que o alvo
+WHEN NOT MATCHED THEN 
+  INSERT * -- Insere o cadastro inteiramente novo
+</code></pre>
+        </div>
+      </div>
+
+      <!-- TEMA 5: HIGHER-ORDER FUNCTIONS E PANDAS UDF -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">Tema 5 · Teoria: Fuga das UDFs Padrões e Otimização Nativa</div>
+        <h4>Evitando a Morte da Serialização na JVM: Apache Arrow e Expressões Nativas</h4>
+        
+        <p><strong>O Pesadelo da UDF Python:</strong> Quando você escreve uma <code>@udf</code> em Python e aplica em um DataFrame, o Spark é obrigado a pausar o processamento ultra-otimizado (C++/Tungsten), serializar a linha via Socket (Pickle), enviar para um processo filho Python, aguardar o processamento monothread lento do Python e retornar. Isso é uma tragédia de performance. Regra #1 da arquitetura Spark: Evite UDFs como se fossem pragas. Use funções nativas. Se precisar interagir com Arrays internamente, use <strong>Higher-Order Functions</strong> (SQL native lambda functions). Se precisar MUITO de Python (ex: rodar um modelo Scikit-Learn ou cálculo matemático denso), use <strong>Pandas UDF</strong> que trabalha vetorialmente movendo blocos em memória via Apache Arrow sem serialização ineficiente.</p>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 5.1: Operações em Array SEM UDF usando Higher-Order Functions (Spark 2.4+)</h5>
+          <p>Multiplicando todos os números de um array interno do DataFrame sem escrever Python customizado.</p>
+          <pre><code class="language-python"># Imagine um DataFrame com uma coluna array_col = [10, 20, 30]
+
+# O método F.transform aplica uma função anônima lambda diretamente no código C++ da engine.
+df_dobrado = df.withColumn(
+    "array_multiplicado", 
+    F.transform("array_col", lambda item: item * 2)
+)
+
+# O método F.filter limpa lixo de dentro de um array do DataFrame sem explodir ele.
+df_filtrado = df_dobrado.withColumn(
+    "array_somente_maior_25",
+    F.filter("array_multiplicado", lambda item: item > 25)
+)
+</code></pre>
+          <pre><code class="language-sql">-- Equivalente SQL Avançado: Lambda puro
+SELECT 
+  id,
+  TRANSFORM(array_col, x -> x * 2) as array_multiplicado,
+  FILTER(array_col, x -> x > 25) as array_somente_maior_25
+FROM tabela_complexa
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 5.2: O Refúgio Vetorizado (Pandas UDF Series)</h5>
+          <p>Quando a transformação é impossível de fazer via Spark SQL puro (ex: aplicar modelo de IA nos dados, regex monstruosos, bibliotecas C), usamos o Pandas UDF do tipo SCALAR. O código recebe não uma linha, mas uma <code>pd.Series</code> (coluna do Pandas com 10.000 linhas) em memória Arrow (Zero-Copy) e retorna 10.000 linhas de uma vez.</p>
+          <pre><code class="language-python">import pandas as pd
 from pyspark.sql.functions import pandas_udf
-from pyspark.sql.types import DoubleType
+from pyspark.sql.types import StringType
 
-# Modo Antigo (LENTO - Executa linha a linha)
-# def math_complex_udf(val):
-#     return val * 3.1415 + 42
-# spark.udf.register("math_complex", math_complex_udf)
+# O decorador informa que a saída é String. 
+# Tipagem forte com pandas Series (pd.Series)
+@pandas_udf(StringType())
+def mascara_cpf_vetorizada_udf(cpf_series: pd.Series) -> pd.Series:
+    # A operação string do Pandas é vetorizada (roda compilada em C por baixo)
+    # Extrema velocidade substituindo regex linha a linha por operação matricial.
+    return cpf_series.str.replace(r'(\d{3})(\d{3})(\d{3})(\d{2})', r'***..-**', regex=True)
 
-# Modo Novo Vetorizado (RÁPIDO - Executa em blocos Arrow)
-@pandas_udf(DoubleType())
-def math_complex_pandas_udf(val_series: pd.Series) -> pd.Series:
-    # A série inteira é calculada nativamente em C via Pandas
-    return val_series * 3.1415 + 42
-
-df_result = df.withColumn("calculo_pesado", math_complex_pandas_udf("valor_bruto"))
+# Aplicação simples, como se fosse uma função padrão nativa
+df_anonimizado = df_banco.withColumn("cpf_ofuscado", mascara_cpf_vetorizada_udf(F.col("cpf_cru")))
 </code></pre>
+        </div>
       </div>
-
     </section>
   </main>
 </div>
