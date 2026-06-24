@@ -1229,6 +1229,54 @@ df_result = df.withColumn("tel_secreto", mascara_telefone(df["telefone"]))
         </div>
       </div>
 
+
+      <!-- Case Comportamental A: ROI e Risco Operacional -->
+      <div class="card" id="q-beh-cases-1" style="margin-bottom: 24px; border-left: 4px solid var(--arch);">
+        <div class="card-lbl">Questão Comportamental (Case Real) · Comunicação com C-Level</div>
+        <h4>Entrevista: "Sua equipe sugeriu refatorar e retirar a geração de relatórios de Swaps e Debêntures (que iam para o motor de VaR) do Mainframe/Excel, reconstruindo tudo no Cluster Hadoop. Como você justificou o alto custo (ROI) desse projeto para a diretoria, dado que a rotina antiga 'aparentemente funcionava'?"</h4>
+        <p><strong>Cenário:</strong> O entrevistador quer avaliar sua visão de negócio. Engenheiros seniores não vendem apenas "código limpo" ou "tecnologia moderna", eles vendem mitigação de riscos e lucratividade.</p>
+        <div class="callout callout-tip">
+          <strong>Resposta Esperada (Método STAR baseada no Case Real):</strong>
+          <ul>
+            <li><strong>Situação:</strong> A geração de arquivos críticos para os motores de Marcação a Mercado (MTM) e Risco (VaR) era um Frankenstein de extrações do DB2 via <em>Shadow IT</em> e macros no Excel.</li>
+            <li><strong>Tarefa:</strong> Convencer o C-Level a aprovar o budget para migrar o cálculo e a geração estruturada (Flattening) para o ecossistema Hadoop.</li>
+            <li><strong>Ação:</strong> Não falei de Spark, MapReduce ou Parquet na reunião executiva. Apresentei o conceito de <strong>Risco Operacional e Risco Regulatório</strong>. Mostrei que decisões financeiras na casa dos bilhões estavam sendo tomadas sobre <em>inputs</em> frágeis e suscetíveis a erros humanos. Demonstrei que multas do Banco Central por cálculos de Hedge errados superavam o custo da equipe de dados inteira.</li>
+            <li><strong>Resultado:</strong> Aprovação imediata do orçamento executivo ao atrelar o projeto à proteção de capital e eliminação de falhas sistêmicas críticas.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case Comportamental B: Arquitetura Orientada a Metadados e Gestão de Escopo -->
+      <div class="card" id="q-beh-cases-2" style="margin-bottom: 24px; border-left: 4px solid var(--arch);">
+        <div class="card-lbl">Questão de Crise/Gestão (Case Real) · Requisitos Caóticos e Dívida Técnica</div>
+        <h4>Entrevista: "A área de Risco Financeiro informou que os motores legados precisam de arquivos TXT e CSV. Porém, cada produto (Swap de Juros, Debêntures, Termo de Ações) exige um layout radicalmente diferente. Pior ainda, a área de Risco altera os cálculos e os layouts desejados todos os meses. Como você planeja a engenharia para que sua equipe não vire uma 'Fábrica de Hardcode' correndo atrás da área de negócios?"</h4>
+        <p><strong>Cenário:</strong> Foco brutal em escalabilidade do esforço humano e não deixar a equipe se queimar com mudanças constantes (Scope Creep).</p>
+        <div class="callout callout-tip">
+          <strong>Resposta Esperada (Método STAR baseada no Case Real):</strong>
+          <ul>
+            <li><strong>Situação:</strong> Necessidade de gerar centenas de formatos complexos que mudam rapidamente de acordo com regulamentações externas.</li>
+            <li><strong>Tarefa:</strong> Proteger o roadmap do time de engenharia de dados contra uma avalanche de tickets de "alteração de layout".</li>
+            <li><strong>Ação:</strong> Abandonei a abordagem imperativa (escrever scripts Spark para cada layout) e projetei uma <strong>Arquitetura Orientada a Metadados</strong> e <strong>Contratos de Dados (Data Contracts)</strong>. A engenharia construiu uma engine genérica. A área de negócios foi instruída a preencher tabelas de configuração (os metadados) definindo a ordem das colunas, os delimitadores e as regras de negócio de cada produto.</li>
+            <li><strong>Resultado:</strong> Quebramos a "Caixa Preta". Quando a regra de um Swap mudava, a própria equipe de Risco atualizava a tabela de metadados, e nosso motor Hadoop simplesmente lia a nova configuração e gerava o arquivo correto. Eliminamos a Dívida Técnica (Zero Hardcode) e reduzimos o tempo de alteração de 2 semanas para 15 minutos.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case de Crise C: O Problema dos Arquivos Pequenos -->
+      <div class="card" id="q-beh-cases-3" style="margin-bottom: 24px; border-left: 4px solid #be123c;">
+        <div class="card-lbl">Questão de Crise Técnica (Case Real) · Small Files Problem em Produção</div>
+        <h4>Entrevista: "Sexta-feira à noite. O projeto que gera os TXTs e CSVs financeiros entrou em produção. O Hadoop (Spark) rodou maravilhosamente rápido. Mas, ao tentar gerar 1 arquivo por Fundo de Investimento, o seu pipeline criou 200.000 arquivos minúsculos (50KB cada) no HDFS. O NameNode do cluster colapsou por falta de memória RAM devido ao rastreamento de tantos metadados e toda a empresa parou. Como você liderou a contenção do incêndio?"</h4>
+        <p><strong>Cenário:</strong> O infame "Small Files Problem". Avalia se você entra em pânico, se propõe soluções impraticáveis sob pressão (reescrever o Data Lake inteiro) ou se conhece ações táticas de engenharia.</p>
+        <div class="callout callout-warn">
+          <strong>Resposta Esperada (Método STAR baseada no Case Real):</strong>
+          <ul>
+            <li><strong>Situação:</strong> O cluster analítico colapsou pois o NameNode armazena o mapeamento de blocos na RAM, e 200 mil arquivos de 50KB exauriram a memória da JVM.</li>
+            <li><strong>Tarefa:</strong> Restaurar a estabilidade do cluster imediatamente e corrigir o código para que a rotina noturna seguinte não causasse o mesmo efeito.</li>
+            <li><strong>Ação:</strong> Para apagar o incêndio imediato, escrevi um script shell rápido agrupando arquivos antigos em diretórios frios. Para a correção em código (Hotfix), não reescrevi o modelo lógico de negócios. Eu intervim apenas na camada de <em>Sink</em> (escrita) do PySpark/Hive. Inseri a instrução <code>coalesce()</code> com número otimizado calculando blocos de 128 MB a 256 MB antes do método <code>write</code>.</li>
+            <li><strong>Resultado:</strong> Na noite seguinte, em vez de cuspir milhares de pedaços quebrados por cada partição da rede local, os executores consolidaram os blocos na memória de forma controlada e escreveram apenas os arquivos consolidados. A pressão sobre o NameNode despencou em 99% e o sistema estabilizou definitivamente.</li>
+          </ul>
+        </div>
+      </div>
       <div class="card" id="q-beh-1" style="margin-bottom: 24px;">
         <div class="card-lbl">Questão 95 · Transparência em Incidentes de Dados</div>
         <h4>Conte-me sobre uma vez em que um pipeline que você construiu corrompeu dados em produção. Como você descobriu o erro, como conteve o problema e como reportou à área de negócios?</h4>
