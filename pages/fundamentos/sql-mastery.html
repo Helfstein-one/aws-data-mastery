@@ -612,8 +612,8 @@ StoreRanking AS (
 SELECT * FROM StoreRanking WHERE rank_per_day <= 3;</code></pre>
       </div>
 
-      <h3 style="margin-top: 40px;">Window Functions (Funções de Janela)</h3>
-      <p>As <em>Window Functions</em> permitem calcular agregações relativas a uma linha atual, mantendo o nível de detalhe da linha (ao contrário do <code>GROUP BY</code>, que colapsa os dados). É essencial para calcular médias móveis, ranking e valores de D-1 (Lead/Lag).</p>
+      <h3 style="margin-top: 40px;">Window Functions (Funções de Janela) & Funções Estatísticas</h3>
+      <p>As <em>Window Functions</em> permitem calcular agregações relativas a uma linha atual, mantendo o nível de detalhe da linha (ao contrário do <code>GROUP BY</code>, que colapsa os dados). Juntamente com estatísticas avançadas, formam o arsenal essencial de um Cientista e Engenheiro de Dados.</p>
       
       <div class="concept-grid">
         <div class="concept-card">
@@ -625,11 +625,84 @@ SELECT * FROM StoreRanking WHERE rank_per_day <= 3;</code></pre>
         </div>
         <div class="concept-card">
           <div class="cc-tag">Ranking</div>
-          <div class="cc-title">ROW_NUMBER() e RANK()</div>
+          <div class="cc-title">ROW_NUMBER(), RANK(), DENSE_RANK()</div>
           <div class="cc-body">
-            Gera numeração ou classificação. Amplamente utilizado para <strong>Deduplicação</strong> (pegar o evento mais recente particionado pelo <code>user_id</code> ordenado pela data decrescente e manter apenas <code>rn = 1</code>).
+            Gera numeração ou classificação. Essencial para <strong>Deduplicação</strong> (Top N registros) e para encontrar os campeões de vendas em cada categoria.
           </div>
         </div>
+      </div>
+
+      <div class="code-block" style="margin-top: 25px;">
+        <div class="cb-hdr">
+          <span class="cb-lang">SQL - Ranking & Deduplicação</span>
+        </div>
+        <pre><code class="language-sql">SELECT 
+    user_id,
+    purchase_amount,
+    -- ROW_NUMBER: Numeração estrita e única (1, 2, 3, 4...). Ideal para deduplicar.
+    ROW_NUMBER() OVER(PARTITION BY category ORDER BY purchase_amount DESC) as rn,
+    
+    -- RANK: Pula números em caso de empate (1, 1, 3, 4...)
+    RANK() OVER(PARTITION BY category ORDER BY purchase_amount DESC) as rnk,
+    
+    -- DENSE_RANK: Não pula números no empate (1, 1, 2, 3...)
+    DENSE_RANK() OVER(PARTITION BY category ORDER BY purchase_amount DESC) as dense_rnk
+FROM transactions;</code></pre>
+      </div>
+
+      <h3 style="margin-top: 40px;">Agregações Analíticas (MAX, MIN, COUNT, STDDEV, PERCENTILE)</h3>
+      <p>Além das agregações básicas, motores como Snowflake, Redshift e Spark SQL oferecem cálculos estatísticos essenciais para análise exploratória e detecção de anomalias.</p>
+
+      <div class="code-block" style="margin-top: 25px;">
+        <div class="cb-hdr">
+          <span class="cb-lang">SQL - Estatística Descritiva</span>
+        </div>
+        <pre><code class="language-sql">SELECT 
+    store_id,
+    COUNT(1) as total_transactions,
+    MAX(amount) as max_ticket,
+    MIN(amount) as min_ticket,
+    
+    -- Desvio Padrão (STDDEV): Indica a dispersão/volatilidade dos valores.
+    -- Se o STDDEV for muito alto, a média (AVG) não é representativa.
+    STDDEV(amount) as ticket_volatility,
+    
+    -- Percentil 90: O valor em que 90% das transações estão abaixo dele.
+    -- Muito mais robusto que a Média (AVG) para ignorar outliers milionários.
+    PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY amount) as p90_ticket
+FROM sales
+GROUP BY store_id
+HAVING COUNT(1) > 1000; -- Aplica as estatísticas apenas a lojas com volume (Filtro Pós-Agregação)</code></pre>
+      </div>
+
+      <h3 style="margin-top: 40px;">Lógica Condicional Inline (CASE WHEN)</h3>
+      <p>O <code>CASE WHEN</code> é frequentemente subutilizado. Ele não serve apenas para criar novas colunas, mas também para <strong>agregações condicionais (Pivot)</strong> dentro de um único <code>SUM()</code> ou <code>COUNT()</code>, economizando múltiplos <code>JOINs</code>.</p>
+
+      <div class="code-block" style="margin-top: 25px;">
+        <div class="cb-hdr">
+          <span class="cb-lang">SQL - CASE WHEN em Agregação (Pivoting)</span>
+        </div>
+        <pre><code class="language-sql">SELECT 
+    customer_id,
+    -- Conta apenas compras acima de 100, no mesmo GROUP BY
+    COUNT(CASE WHEN amount > 100 THEN transaction_id ELSE NULL END) as high_value_purchases,
+    
+    -- Soma o valor gasto, mas atribui peso 2 para finais de semana
+    SUM(
+        CASE 
+            WHEN day_of_week IN ('SAT', 'SUN') THEN amount * 2 
+            ELSE amount 
+        END
+    ) as weighted_spend,
+    
+    -- Categorização inline baseada em múltiplas condições
+    CASE 
+        WHEN SUM(amount) > 5000 THEN 'Platinum'
+        WHEN SUM(amount) > 1000 THEN 'Gold'
+        ELSE 'Silver' 
+    END as customer_tier
+FROM transactions
+GROUP BY customer_id;</code></pre>
       </div>
     </section>
 
