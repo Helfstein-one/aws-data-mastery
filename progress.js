@@ -420,41 +420,110 @@
         "perguntas-governanca.html#q91"
       ]
     },
-    cases: {
-      name: "💼 Cases de Plataformas",
-      badge: "Resolvedor de Cases",
-      color: "var(--ext)",
+    
+    
+    cases_streaming: {
+      name: "💼 System Design: Streaming",
+      badge: "Mestre do Streaming",
+      color: "#059669",
       items: [
-        "cases.html#case-streaming",
-        "cases.html#case-mesh",
-        "cases.html#case-genai",
-        "cases.html#case-genai-avancado",
-        "cases.html#case-ai-data-quality",
-        "cases.html#case-polaris-flink",
-        "cases.html#case-iot",
-        "cases.html#case-reverse-etl"
+        "cases-streaming.html#case-streaming",
+        "cases-streaming.html#case-iot",
+        "cases-streaming.html#case-recommender",
+        "cases-streaming.html#case-ecs-fargate",
+        "cases-streaming.html#case-athena-federated",
+        "cases-streaming.html#case-risco-mlops",
+        "cases-streaming.html#case-ingress-global",
+        "cases-streaming.html#case-ia-cambio"
       ]
     },
-    playbook: {
-      name: "🚒 Playbook de Crises",
-      badge: "Gerenciador de Crises",
+    cases_batch: {
+      name: "💼 System Design: Batch & Lakehouse",
+      badge: "Mestre do Lakehouse",
+      color: "#059669",
+      items: [
+        "cases-batch-lakehouse.html#case-health",
+        "cases-batch-lakehouse.html#case-billing",
+        "cases-batch-lakehouse.html#case-emr-eks",
+        "cases-batch-lakehouse.html#case-finops",
+        "cases-batch-lakehouse.html#case-genai-avancado",
+        "cases-batch-lakehouse.html#case-emr-iceberg-migracao",
+        "cases-batch-lakehouse.html#case-eks-karpenter-migracao",
+        "cases-batch-lakehouse.html#case-advanced-33"
+      ]
+    },
+    cases_ecosistema: {
+      name: "💼 System Design: Ecosistema",
+      badge: "Arquiteto de Ecosistemas",
+      color: "#059669",
+      items: [
+        "cases-ecosistema.html#case-banco-digital",
+        "cases-ecosistema.html#case-mesh",
+        "cases-ecosistema.html#case-logistics",
+        "cases-ecosistema.html#case-esg",
+        "cases-ecosistema.html#case-data-quality",
+        "cases-ecosistema.html#case-polaris-flink",
+        "cases-ecosistema.html#case-business-value",
+        "cases-ecosistema.html#case-genai-suporte",
+        "cases-ecosistema.html#case-rds-dynamo-migracao",
+        "cases-ecosistema.html#case-advanced-31",
+        "cases-ecosistema.html#case-advanced-32",
+        "cases-ecosistema.html#case-advanced-34",
+        "cases-ecosistema.html#case-advanced-35",
+        "cases-ecosistema.html#case-captacao-liquida",
+        "cases-ecosistema.html#case-ia-oficios"
+      ]
+    },
+    cases_dataops: {
+      name: "💼 System Design: DataOps & IA",
+      badge: "Engenheiro de IA",
+      color: "#059669",
+      items: [
+        "cases-dataops-ia.html#case-genai",
+        "cases-dataops-ia.html#case-reverse-etl",
+        "cases-dataops-ia.html#case-ai-data-quality",
+        "cases-dataops-ia.html#case-ia-cadastro"
+      ]
+    },
+    playbook_kinesis: {
+      name: "🚒 Playbook: Kinesis & Spark",
+      badge: "SRE de Streaming",
       color: "var(--warn)",
       items: [
-        "playbook-crises.html#introducao",
-        "playbook-crises.html#crise-streaming",
-        "playbook-crises.html#crise-kms",
-        "playbook-crises.html#crise-genai",
-        "playbook-crises.html#crise-fechamento",
-        "playbook-crises.html#crise-duplicacao",
-        "playbook-crises.html#crise-nulos",
-        "playbook-crises.html#crise-sla",
-        "playbook-crises.html#crise-schema-drift",
-        "playbook-crises.html#crise-lgpd",
-        "playbook-crises.html#crise-corrupcao",
-        "playbook-crises.html#cenarios-conflito",
-        "playbook-crises.html#crise-leakage-churn"
+        "playbook-kinesis-spark.html#crise-streaming",
+        "playbook-kinesis-spark.html#crise-sla",
+        "playbook-kinesis-spark.html#crise-schema-drift",
+        "playbook-kinesis-spark.html#crise-dynamo",
+        "playbook-kinesis-spark.html#crise-sqs-poison"
+      ]
+    },
+    playbook_governanca: {
+      name: "🚒 Playbook: Gov & FinOps",
+      badge: "Guardião de Custos",
+      color: "var(--warn)",
+      items: [
+        "playbook-governanca-finops.html#crise-kms",
+        "playbook-governanca-finops.html#crise-genai",
+        "playbook-governanca-finops.html#crise-lgpd",
+        "playbook-governanca-finops.html#crise-leakage-churn",
+        "playbook-governanca-finops.html#crise-athena-custo",
+        "playbook-governanca-finops.html#ransomware-p1"
+      ]
+    },
+    playbook_data_quality: {
+      name: "🚒 Playbook: Data Quality",
+      badge: "Xerife da Qualidade",
+      color: "var(--warn)",
+      items: [
+        "playbook-data-quality.html#introducao",
+        "playbook-data-quality.html#crise-fechamento",
+        "playbook-data-quality.html#crise-duplicacao",
+        "playbook-data-quality.html#crise-nulos",
+        "playbook-data-quality.html#crise-corrupcao",
+        "playbook-data-quality.html#cenarios-conflito"
       ]
     }
+
 };
 
   // Carrega progresso do localStorage
@@ -789,7 +858,7 @@
         colors: ["#fbbf24", "#f59e0b"], 
         icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas)" stroke-width="1.8" stroke-linecap="round"/>` 
       },
-      cases: { 
+      cases_streaming: { 
         colors: ["#34d399", "#059669"], 
         icon: `<path class="badge-case-rocket" d="M32 16 L38 28 L38 38 L32 44 L26 38 L26 28 z M26 38 L22 42 M38 38 L42 42 M32 44 L32 48" fill="none" stroke="url(#grad-cases)" stroke-width="2" stroke-linejoin="round"/><path class="badge-case-fire" d="M30 45 L32 51 L34 45 Z" fill="#ef4444" opacity="0"/>` 
       },
@@ -841,7 +910,7 @@
         colors: ["#10b981", "#059669"], 
         icon: `<path class="badge-oop-code" d="M32 16 v24 M24 24 h16 M20 40 h24" fill="none" stroke="url(#grad-testing)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
       },
-      playbook: { 
+      playbook_kinesis: { 
         colors: ["#ef4444", "#b91c1c"], 
         icon: `<path class="badge-play-siren" d="M22 42 L42 42 L38 26 C38 20, 26 20, 26 26 z" fill="url(#grad-playbook)"/><rect class="badge-play-base" x="18" y="42" width="28" height="4" rx="1.5" fill="url(#grad-playbook)"/>` 
       },
