@@ -297,131 +297,53 @@
         "soft-skills.html#cfo-pitch"
       ]
     },
-    perguntas_arquitetura: {
-      name: "❓ Perguntas: Arquitetura",
-      badge: "Mestre das Arquiteturas",
-      color: "var(--arch)",
-      items: [
-        "perguntas-arquitetura.html#perguntas",
-        "perguntas-arquitetura.html#q4",
-        "perguntas-arquitetura.html#q9",
-        "perguntas-arquitetura.html#q26",
-        "perguntas-arquitetura.html#q30",
-        "perguntas-arquitetura.html#q34",
-        "perguntas-arquitetura.html#q41",
-        "perguntas-arquitetura.html#q52",
-        "perguntas-arquitetura.html#q53",
-        "perguntas-arquitetura.html#q60",
-        "perguntas-arquitetura.html#q63",
-        "perguntas-arquitetura.html#q67",
-        "perguntas-arquitetura.html#q69",
-        "perguntas-arquitetura.html#q71",
-        "perguntas-arquitetura.html#q78",
-        "perguntas-arquitetura.html#q80",
-        "perguntas-arquitetura.html#q82",
-        "perguntas-arquitetura.html#q89",
-        "perguntas-arquitetura.html#q90",
-        "perguntas-arquitetura.html#q95",
-        "perguntas-arquitetura.html#q96",
-        "perguntas-arquitetura.html#q97",
-        "perguntas-arquitetura.html#q98",
-        "perguntas-arquitetura.html#q99"
-      ]
-    },
-    perguntas_engenharia: {
-      name: "❓ Perguntas: Engenharia",
+    
+    
+    
+    
+    
+    
+    perguntas_engenharia_core: {
+      name: "❓ Engenharia (Processing)",
       badge: "Mestre dos Pipelines",
-      color: "#f59e0b",
+      color: "#eab308",
       items: [
-        "perguntas-engenharia.html#perguntas",
-        "perguntas-engenharia.html#q1",
-        "perguntas-engenharia.html#q2",
-        "perguntas-engenharia.html#q3",
-        "perguntas-engenharia.html#q6",
-        "perguntas-engenharia.html#q7",
-        "perguntas-engenharia.html#q14",
-        "perguntas-engenharia.html#q20",
-        "perguntas-engenharia.html#q28",
-        "perguntas-engenharia.html#q31",
-        "perguntas-engenharia.html#q32",
-        "perguntas-engenharia.html#q33",
-        "perguntas-engenharia.html#q46",
-        "perguntas-engenharia.html#q51",
-        "perguntas-engenharia.html#q62",
-        "perguntas-engenharia.html#q64",
-        "perguntas-engenharia.html#q68",
-        "perguntas-engenharia.html#q72",
-        "perguntas-engenharia.html#q86",
-        "perguntas-engenharia.html#q87",
-        "perguntas-engenharia.html#q88",
-        "perguntas-engenharia.html#q92",
-        "perguntas-engenharia.html#q93",
-        "perguntas-engenharia.html#q94"
+        "perguntas-engenharia-core.html#q3", "perguntas-engenharia-core.html#q6", "perguntas-engenharia-core.html#q62", "perguntas-engenharia-core.html#q64", "perguntas-engenharia-core.html#q68", "perguntas-engenharia-core.html#q87", "perguntas-engenharia-core.html#q94", "perguntas-engenharia-core.html#q11", "perguntas-engenharia-core.html#q42", "perguntas-engenharia-core.html#q58", "perguntas-engenharia-core.html#q65", "perguntas-engenharia-core.html#q70"
       ]
     },
-    perguntas_governanca: {
-      name: "❓ Perguntas: Governança",
-      badge: "Mestre da Governança",
-      color: "var(--muted)",
+    perguntas_arquitetura_db: {
+      name: "❓ Arquitetura & Bancos",
+      badge: "Mestre das Arquiteturas",
+      color: "#10b981",
       items: [
-        "perguntas-governanca.html#perguntas",
-        "perguntas-governanca.html#q5",
-        "perguntas-governanca.html#q8",
-        "perguntas-governanca.html#q10",
-        "perguntas-governanca.html#q11",
-        "perguntas-governanca.html#q12",
-        "perguntas-governanca.html#q13",
-        "perguntas-governanca.html#q15",
-        "perguntas-governanca.html#q16",
-        "perguntas-governanca.html#q17",
-        "perguntas-governanca.html#q18",
-        "perguntas-governanca.html#q19",
-        "perguntas-governanca.html#q21",
-        "perguntas-governanca.html#q22",
-        "perguntas-governanca.html#q23",
-        "perguntas-governanca.html#q24",
-        "perguntas-governanca.html#q25",
-        "perguntas-governanca.html#q27",
-        "perguntas-governanca.html#q29",
-        "perguntas-governanca.html#q35",
-        "perguntas-governanca.html#q36",
-        "perguntas-governanca.html#q37",
-        "perguntas-governanca.html#q38",
-        "perguntas-governanca.html#q39",
-        "perguntas-governanca.html#q40",
-        "perguntas-governanca.html#q42",
-        "perguntas-governanca.html#q43",
-        "perguntas-governanca.html#q44",
-        "perguntas-governanca.html#q45",
-        "perguntas-governanca.html#q47",
-        "perguntas-governanca.html#q48",
-        "perguntas-governanca.html#q49",
-        "perguntas-governanca.html#q50",
-        "perguntas-governanca.html#q54",
-        "perguntas-governanca.html#q55",
-        "perguntas-governanca.html#q56",
-        "perguntas-governanca.html#q57",
-        "perguntas-governanca.html#q58",
-        "perguntas-governanca.html#q59",
-        "perguntas-governanca.html#q61",
-        "perguntas-governanca.html#q65",
-        "perguntas-governanca.html#q66",
-        "perguntas-governanca.html#q70",
-        "perguntas-governanca.html#q73",
-        "perguntas-governanca.html#q74",
-        "perguntas-governanca.html#q75",
-        "perguntas-governanca.html#q76",
-        "perguntas-governanca.html#q77",
-        "perguntas-governanca.html#q79",
-        "perguntas-governanca.html#q81",
-        "perguntas-governanca.html#q83",
-        "perguntas-governanca.html#q84",
-        "perguntas-governanca.html#q85",
-        "perguntas-governanca.html#q91"
+        "perguntas-arquitetura-db.html#q60", "perguntas-arquitetura-db.html#q97", "perguntas-arquitetura-db.html#q98", "perguntas-arquitetura-db.html#q100", "perguntas-arquitetura-db.html#q18", "perguntas-arquitetura-db.html#q59", "perguntas-arquitetura-db.html#q79"
       ]
     },
-    
-    
+    perguntas_storage_lakehouse: {
+      name: "❓ Storage & Lakehouse",
+      badge: "Mestre do Storage",
+      color: "#0ea5e9",
+      items: [
+        "perguntas-storage-lakehouse.html#q28", "perguntas-storage-lakehouse.html#q33", "perguntas-storage-lakehouse.html#q92", "perguntas-storage-lakehouse.html#q26", "perguntas-storage-lakehouse.html#q34", "perguntas-storage-lakehouse.html#q52", "perguntas-storage-lakehouse.html#q71", "perguntas-storage-lakehouse.html#q80", "perguntas-storage-lakehouse.html#q89", "perguntas-storage-lakehouse.html#q15", "perguntas-storage-lakehouse.html#q23", "perguntas-storage-lakehouse.html#q77"
+      ]
+    },
+    perguntas_governanca_finops: {
+      name: "❓ Governança & FinOps",
+      badge: "Guardião da Governança",
+      color: "#64748b",
+      items: [
+        "perguntas-governanca-finops.html#q1", "perguntas-governanca-finops.html#q2", "perguntas-governanca-finops.html#q31", "perguntas-governanca-finops.html#q46", "perguntas-governanca-finops.html#q51", "perguntas-governanca-finops.html#q72", "perguntas-governanca-finops.html#q86", "perguntas-governanca-finops.html#q88", "perguntas-governanca-finops.html#q93", "perguntas-governanca-finops.html#q9", "perguntas-governanca-finops.html#q41", "perguntas-governanca-finops.html#q53", "perguntas-governanca-finops.html#q69", "perguntas-governanca-finops.html#q95", "perguntas-governanca-finops.html#q99", "perguntas-governanca-finops.html#q101", "perguntas-governanca-finops.html#q5", "perguntas-governanca-finops.html#q8", "perguntas-governanca-finops.html#q13", "perguntas-governanca-finops.html#q16", "perguntas-governanca-finops.html#q22", "perguntas-governanca-finops.html#q25", "perguntas-governanca-finops.html#q29", "perguntas-governanca-finops.html#q35", "perguntas-governanca-finops.html#q36", "perguntas-governanca-finops.html#q37", "perguntas-governanca-finops.html#q38", "perguntas-governanca-finops.html#q39", "perguntas-governanca-finops.html#q45", "perguntas-governanca-finops.html#q47", "perguntas-governanca-finops.html#q57", "perguntas-governanca-finops.html#q66", "perguntas-governanca-finops.html#q73", "perguntas-governanca-finops.html#q74"
+      ]
+    },
+    perguntas_dataops_ia: {
+      name: "❓ DataOps, MLOps & GenAI",
+      badge: "Mestre em IA & DataOps",
+      color: "#8b5cf6",
+      items: [
+        "perguntas-dataops-ia.html#q7", "perguntas-dataops-ia.html#q14", "perguntas-dataops-ia.html#q20", "perguntas-dataops-ia.html#q32", "perguntas-dataops-ia.html#q4", "perguntas-dataops-ia.html#q30", "perguntas-dataops-ia.html#q63", "perguntas-dataops-ia.html#q67", "perguntas-dataops-ia.html#q78", "perguntas-dataops-ia.html#q82", "perguntas-dataops-ia.html#q90", "perguntas-dataops-ia.html#q96", "perguntas-dataops-ia.html#q10", "perguntas-dataops-ia.html#q12", "perguntas-dataops-ia.html#q17", "perguntas-dataops-ia.html#q19", "perguntas-dataops-ia.html#q21", "perguntas-dataops-ia.html#q24", "perguntas-dataops-ia.html#q27", "perguntas-dataops-ia.html#q40", "perguntas-dataops-ia.html#q43", "perguntas-dataops-ia.html#q44", "perguntas-dataops-ia.html#q48", "perguntas-dataops-ia.html#q49", "perguntas-dataops-ia.html#q50", "perguntas-dataops-ia.html#q54", "perguntas-dataops-ia.html#q55", "perguntas-dataops-ia.html#q56", "perguntas-dataops-ia.html#q61", "perguntas-dataops-ia.html#q75", "perguntas-dataops-ia.html#q76", "perguntas-dataops-ia.html#q77", "perguntas-dataops-ia.html#q79", "perguntas-dataops-ia.html#q81", "perguntas-dataops-ia.html#q83", "perguntas-dataops-ia.html#q84", "perguntas-dataops-ia.html#q85", "perguntas-dataops-ia.html#q91", "perguntas-dataops-ia.html#q81", "perguntas-dataops-ia.html#q83", "perguntas-dataops-ia.html#q84", "perguntas-dataops-ia.html#q85", "perguntas-dataops-ia.html#q91"
+      ]
+    }
+,
     cases_streaming: {
       name: "💼 System Design: Streaming",
       badge: "Mestre do Streaming",
@@ -833,15 +755,15 @@
         icon: `<path class="badge-arch-path" d="M22 28 l10 -5 l10 5 l-10 5 z M22 28 v10 l10 5 v-10 z M42 28 v10 l-10 5 v-10 z" fill="none" stroke="url(#grad-architecture)" stroke-width="2" stroke-linejoin="round"/>` 
       },
       
-      perguntas_arquitetura: { 
+      perguntas_arquitetura_db: { 
         colors: ["#38bdf8", "#818cf8"], 
         icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas_arquitetura)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas_arquitetura)" stroke-width="1.8" stroke-linecap="round"/>` 
       },
-      perguntas_engenharia: { 
+      perguntas_engenharia_core: { 
         colors: ["#fbbf24", "#f59e0b"], 
         icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas_engenharia)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas_engenharia)" stroke-width="1.8" stroke-linecap="round"/>` 
       },
-      perguntas_governanca: { 
+      perguntas_governanca_finops: { 
         colors: ["#94a3b8", "#64748b"], 
         icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas_governanca)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas_governanca)" stroke-width="1.8" stroke-linecap="round"/>` 
       },
@@ -854,11 +776,63 @@
         icon: `<circle class="badge-fin-coin" cx="32" cy="32" r="13" fill="none" stroke="url(#grad-financas)" stroke-width="2"/><text class="badge-fin-text" x="32" y="37" font-size="14" font-weight="900" font-family="'DM Sans', sans-serif" text-anchor="middle" fill="url(#grad-financas)">$</text>` 
       },
 
+      
+      
+      perguntas_storage_lakehouse: { 
+        colors: ["#0ea5e9", "#0284c7"], 
+        icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas_storage_lakehouse)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas_storage_lakehouse)" stroke-width="1.8" stroke-linecap="round"/>` 
+      },
+      perguntas_dataops_ia: { 
+        colors: ["#8b5cf6", "#6d28d9"], 
+        icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas_dataops_ia)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas_dataops_ia)" stroke-width="1.8" stroke-linecap="round"/>` 
+      },
       perguntas: { 
         colors: ["#fbbf24", "#f59e0b"], 
         icon: `<path class="badge-preg-crown" d="M28 20 A6 6 0 1 1 34 30 L38 34" fill="none" stroke="url(#grad-perguntas)" stroke-width="3" stroke-linecap="round"/><path class="badge-preg-laurel" d="M20 38 C22 32, 42 32, 44 38 M26 44 L38 44" fill="none" stroke="url(#grad-perguntas)" stroke-width="1.8" stroke-linecap="round"/>` 
       },
-      cases_streaming: { 
+      
+    perguntas_engenharia_core: {
+      name: "❓ Engenharia (Processing)",
+      badge: "Mestre dos Pipelines",
+      color: "#eab308",
+      items: [
+        "perguntas-engenharia-core.html#q3", "perguntas-engenharia-core.html#q6", "perguntas-engenharia-core.html#q62", "perguntas-engenharia-core.html#q64", "perguntas-engenharia-core.html#q68", "perguntas-engenharia-core.html#q87", "perguntas-engenharia-core.html#q94", "perguntas-engenharia-core.html#q11", "perguntas-engenharia-core.html#q42", "perguntas-engenharia-core.html#q58", "perguntas-engenharia-core.html#q65", "perguntas-engenharia-core.html#q70"
+      ]
+    },
+    perguntas_arquitetura_db: {
+      name: "❓ Arquitetura & Bancos",
+      badge: "Mestre das Arquiteturas",
+      color: "#10b981",
+      items: [
+        "perguntas-arquitetura-db.html#q60", "perguntas-arquitetura-db.html#q97", "perguntas-arquitetura-db.html#q98", "perguntas-arquitetura-db.html#q100", "perguntas-arquitetura-db.html#q18", "perguntas-arquitetura-db.html#q59", "perguntas-arquitetura-db.html#q79"
+      ]
+    },
+    perguntas_storage_lakehouse: {
+      name: "❓ Storage & Lakehouse",
+      badge: "Mestre do Storage",
+      color: "#0ea5e9",
+      items: [
+        "perguntas-storage-lakehouse.html#q28", "perguntas-storage-lakehouse.html#q33", "perguntas-storage-lakehouse.html#q92", "perguntas-storage-lakehouse.html#q26", "perguntas-storage-lakehouse.html#q34", "perguntas-storage-lakehouse.html#q52", "perguntas-storage-lakehouse.html#q71", "perguntas-storage-lakehouse.html#q80", "perguntas-storage-lakehouse.html#q89", "perguntas-storage-lakehouse.html#q15", "perguntas-storage-lakehouse.html#q23", "perguntas-storage-lakehouse.html#q77"
+      ]
+    },
+    perguntas_governanca_finops: {
+      name: "❓ Governança & FinOps",
+      badge: "Guardião da Governança",
+      color: "#64748b",
+      items: [
+        "perguntas-governanca-finops.html#q1", "perguntas-governanca-finops.html#q2", "perguntas-governanca-finops.html#q31", "perguntas-governanca-finops.html#q46", "perguntas-governanca-finops.html#q51", "perguntas-governanca-finops.html#q72", "perguntas-governanca-finops.html#q86", "perguntas-governanca-finops.html#q88", "perguntas-governanca-finops.html#q93", "perguntas-governanca-finops.html#q9", "perguntas-governanca-finops.html#q41", "perguntas-governanca-finops.html#q53", "perguntas-governanca-finops.html#q69", "perguntas-governanca-finops.html#q95", "perguntas-governanca-finops.html#q99", "perguntas-governanca-finops.html#q101", "perguntas-governanca-finops.html#q5", "perguntas-governanca-finops.html#q8", "perguntas-governanca-finops.html#q13", "perguntas-governanca-finops.html#q16", "perguntas-governanca-finops.html#q22", "perguntas-governanca-finops.html#q25", "perguntas-governanca-finops.html#q29", "perguntas-governanca-finops.html#q35", "perguntas-governanca-finops.html#q36", "perguntas-governanca-finops.html#q37", "perguntas-governanca-finops.html#q38", "perguntas-governanca-finops.html#q39", "perguntas-governanca-finops.html#q45", "perguntas-governanca-finops.html#q47", "perguntas-governanca-finops.html#q57", "perguntas-governanca-finops.html#q66", "perguntas-governanca-finops.html#q73", "perguntas-governanca-finops.html#q74"
+      ]
+    },
+    perguntas_dataops_ia: {
+      name: "❓ DataOps, MLOps & GenAI",
+      badge: "Mestre em IA & DataOps",
+      color: "#8b5cf6",
+      items: [
+        "perguntas-dataops-ia.html#q7", "perguntas-dataops-ia.html#q14", "perguntas-dataops-ia.html#q20", "perguntas-dataops-ia.html#q32", "perguntas-dataops-ia.html#q4", "perguntas-dataops-ia.html#q30", "perguntas-dataops-ia.html#q63", "perguntas-dataops-ia.html#q67", "perguntas-dataops-ia.html#q78", "perguntas-dataops-ia.html#q82", "perguntas-dataops-ia.html#q90", "perguntas-dataops-ia.html#q96", "perguntas-dataops-ia.html#q10", "perguntas-dataops-ia.html#q12", "perguntas-dataops-ia.html#q17", "perguntas-dataops-ia.html#q19", "perguntas-dataops-ia.html#q21", "perguntas-dataops-ia.html#q24", "perguntas-dataops-ia.html#q27", "perguntas-dataops-ia.html#q40", "perguntas-dataops-ia.html#q43", "perguntas-dataops-ia.html#q44", "perguntas-dataops-ia.html#q48", "perguntas-dataops-ia.html#q49", "perguntas-dataops-ia.html#q50", "perguntas-dataops-ia.html#q54", "perguntas-dataops-ia.html#q55", "perguntas-dataops-ia.html#q56", "perguntas-dataops-ia.html#q61", "perguntas-dataops-ia.html#q75", "perguntas-dataops-ia.html#q76", "perguntas-dataops-ia.html#q77", "perguntas-dataops-ia.html#q79", "perguntas-dataops-ia.html#q81", "perguntas-dataops-ia.html#q83", "perguntas-dataops-ia.html#q84", "perguntas-dataops-ia.html#q85", "perguntas-dataops-ia.html#q91", "perguntas-dataops-ia.html#q81", "perguntas-dataops-ia.html#q83", "perguntas-dataops-ia.html#q84", "perguntas-dataops-ia.html#q85", "perguntas-dataops-ia.html#q91"
+      ]
+    }
+,
+    cases_streaming: { 
         colors: ["#34d399", "#059669"], 
         icon: `<path class="badge-case-rocket" d="M32 16 L38 28 L38 38 L32 44 L26 38 L26 28 z M26 38 L22 42 M38 38 L42 42 M32 44 L32 48" fill="none" stroke="url(#grad-cases)" stroke-width="2" stroke-linejoin="round"/><path class="badge-case-fire" d="M30 45 L32 51 L34 45 Z" fill="#ef4444" opacity="0"/>` 
       },
