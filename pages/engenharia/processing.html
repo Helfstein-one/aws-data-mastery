@@ -2483,6 +2483,121 @@ result.write.format("noop").mode("overwrite").save()</code></pre>
       </div>
 
     </section>
+
+    <section class="section" id="spark-ui-advanced">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">16.7</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Leitura Avançada: DAG, Environments & Desbalanceamento</h2>
+          <p>Dominando as entranhas da Spark UI para orquestração de alta performance</p>
+        </div>
+      </div>
+
+      <h3>1. A Aba "Environment" (O Checkup Inicial)</h3>
+      <p>Muitos engenheiros ignoram a aba Environment, mas ela é o primeiro lugar que você deve olhar ao assumir o troubleshooting de um job legado. Ela lista todas as variáveis de ambiente, dependências (Jars) e as <strong>Spark Properties</strong> em vigor.</p>
+      
+      <div class="abox info">
+        <div class="abox-icon"><i class="ph ph-list-magnifying-glass"></i></div>
+        <div class="abox-content">
+          <strong>Propriedades Chave para Auditar:</strong>
+          <ul style="margin-top:5px; padding-left:15px; font-size:13px;">
+            <li><code>spark.sql.shuffle.partitions</code>: Se estiver no valor default (200) e você estiver processando Terabytes de dados, os executores vão colapsar (Spill). A regra prática é ter partições de 100MB a 200MB.</li>
+            <li><code>spark.memory.fraction</code>: (Default 0.6). Define a divisão da memória Heap entre a <em>Execution Memory</em> (para joins e shuffles) e <em>Storage Memory</em> (para caches). Se o job tem muito cache, aumente. Se tem muitos Joins, reduza.</li>
+            <li><code>spark.executor.memoryOverhead</code>: Memória extra alocada fora da Heap (Off-Heap). Vital se você estiver usando PySpark (Python Pandas UDFs executam na memória Overhead, não na Heap Java!).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section-spacer"></div>
+
+      <h3>2. Desbalanceamento Crítico: Lendo a Aba Tasks</h3>
+      <p>Além do tempo (Duration), o maior delator de um Skew violento são as colunas de I/O. Veja este exemplo clássico onde a quantidade de registros destruiu um executor.</p>
+
+      <!-- Spark UI Mock: Tasks Imbalance -->
+      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0; overflow-x:auto;">
+        <div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Tasks Details (Task Imbalance Detection)</div>
+        <table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
+          <tr style="background:#1e293b; color:var(--text-muted);">
+            <th style="padding:8px;">Task ID</th>
+            <th style="padding:8px;">Status</th>
+            <th style="padding:8px;">Duration</th>
+            <th style="padding:8px; color:var(--alert);">Shuffle Read Size / Records</th>
+            <th style="padding:8px;">Shuffle Write Size / Records</th>
+          </tr>
+          <tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
+            <td style="padding:8px;">34</td>
+            <td style="padding:8px; color:var(--alert);">RUNNING</td>
+            <td style="padding:8px;">22.5 min</td>
+            <td style="padding:8px; color:var(--alert); font-weight:bold;">12.4 GB / 45,000,000</td>
+            <td style="padding:8px;">---</td>
+          </tr>
+          <tr style="border-bottom:1px solid #334155;">
+            <td style="padding:8px;">35</td>
+            <td style="padding:8px; color:#4ade80;">SUCCESS</td>
+            <td style="padding:8px;">0.8 s</td>
+            <td style="padding:8px;">4.2 MB / 1,500</td>
+            <td style="padding:8px;">2.1 MB / 800</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="abox tip">
+        <div class="abox-icon"><i class="ph ph-lightbulb"></i></div>
+        <div class="abox-content">
+          <strong>A Solução (Salting Technique):</strong> Para resolver isso, adicionamos uma coluna "Salt" (um número aleatório de 1 a N) na chave problemática. Isso força o Hash Partitioner a quebrar esses 45 milhões de registros da chave "999" em N partições (distribuindo para diferentes tasks), realizando um Join em duas etapas (Partial Aggregation -> Global Aggregation).
+        </div>
+      </div>
+
+      <div class="section-spacer"></div>
+
+      <h3>3. Como Interpretar o DAG (Directed Acyclic Graph)</h3>
+      <p>O DAG é a bússola do Engenheiro de Dados. Cada caixa representa uma transformação, e as linhas representam a movimentação dos dados. As barreiras entre <strong>Stages</strong> são invariavelmente criadas por operações que requerem a rede do cluster (Shuffles / Exchanges).</p>
+
+      <!-- Simulated DAG Node Flow -->
+      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        
+        <!-- Stage 1 -->
+        <div style="border: 2px solid #3b82f6; border-radius:8px; padding:10px; width:80%; max-width:400px; background:#1e293b;">
+          <div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 1</div>
+          
+          <div style="background:#0f172a; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+            <strong>Scan parquet</strong><br><span style="color:var(--text-muted)">S3://bucket/table_A</span>
+          </div>
+          <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+          
+          <div style="background:#0f172a; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+            <strong>*(1) Project & Filter</strong><br><span style="color:var(--text-muted)">WholeStageCodegen (JIT)</span>
+          </div>
+        </div>
+
+        <!-- Exchange -->
+        <div style="text-align:center; padding:5px;">
+          <i class="ph ph-arrow-down" style="color:var(--alert); font-size:18px;"></i><br>
+          <span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange (Shuffle)</span>
+        </div>
+
+        <!-- Stage 2 -->
+        <div style="border: 2px solid #8b5cf6; border-radius:8px; padding:10px; width:80%; max-width:400px; background:#1e293b;">
+          <div style="font-family:monospace; color:#8b5cf6; font-weight:bold; margin-bottom:10px;">Stage 2</div>
+          
+          <div style="background:#0f172a; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+            <strong>*(2) HashAggregate</strong><br><span style="color:var(--text-muted)">WholeStageCodegen (JIT)</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="abox info">
+        <div class="abox-icon"><i class="ph ph-graph"></i></div>
+        <div class="abox-content">
+          <strong>A Regra de Ouro do DAG:</strong> 
+          <br>1. Onde você vê <code>*(1)</code> ou <code>*(2)</code>, o Spark pegou todas as transformações daquele bloco (ex: ler, filtrar, selecionar colunas) e compilou num único loop em linguagem de máquina nativa (Tungsten WholeStageCodegen). É ultra-rápido!
+          <br>2. Onde você vê a palavra <strong>Exchange</strong>, o motor foi obrigado a pausar a execução, serializar todos os dados no disco local e traficá-los pela rede para que os executores consigam montar os agrupamentos ou joins globais. <strong>É aqui que os Jobs gargalam.</strong> Minimizar <em>Exchanges</em> é a essência do Tuning.
+        </div>
+      </div>
+
+    </section>
 </section>
 
     <section class="section" id="spark-performance-callout">
