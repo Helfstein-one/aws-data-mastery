@@ -1,76 +1,37 @@
-# 🗺️ AWS Data Engineering Specialist - Portal de Estudos
+# AWS Data Mastery
 
-Bem-vindo ao **AWS Data Mastery**, um portal de referência técnica avançada, projetado especificamente para Engenheiros de Dados que buscam a especialização em arquitetura de dados escalável, resiliente e de custo-eficiente na nuvem AWS.
+Este é o **Portal de Estudos AWS Data Engineering Specialist**, o guia definitivo de arquiteturas, boas práticas e tuning para engenharia de dados na AWS.
+Este portal é 100% Client-Side Renderizado (CSR) usando apenas HTML, CSS e JavaScript puros (Vanilla), com dependência zero de backends pesados.
 
-Este repositório contém a base de código e os conteúdos práticos do portal, organizados em trilhas interativas de estudo com cálculo de progresso automatizado localmente (via LocalStorage) e gamificação por meio de conquistas e medalhas.
+## 🚀 Como Executar Localmente
 
----
+### 1. Clonando o repositório
+```bash
+git clone https://github.com/Helfstein-one/aws-data-mastery.git
+cd aws-data-mastery
+```
 
-## 🚀 O que você encontrará no Portal?
+### 2. Rodando o Servidor Local
+Por ser uma página puramente baseada em HTML/CSS/JS (Vanilla), você pode hospedar o projeto em qualquer web-server estático. O método mais fácil no Mac/Linux (que tenha Python) é:
 
-O portal está estruturado para cobrir do design abstrato de sistemas distribuídos até o tuning de baixo nível de engines de execução:
+```bash
+python3 -m http.server 8000
+```
+Isso iniciará um servidor local.
 
-### 1. 📐 Arquitetura & Padrões
-- Design de Sistemas Distribuídos e os 7 Pilares de Dados.
-- Padrões de arquitetura Lambda e Kappa em cenários de alta vazão.
-- Implementações reais de Data Mesh e Lakehouses transacionais.
+### 3. Acessando o Portal
+Abra o navegador e acesse:
+[http://localhost:8000](http://localhost:8000)
 
-### 2. ⚡ Ingestão, Processamento & Analytics
-- Ingestão contínua com Kinesis e CDC com AWS DMS.
-- Tuning de performance do Apache Spark em AWS Glue e EMR Serverless.
-- Consultas de altíssima performance no Athena e Redshift Serverless.
+## 🧩 Arquitetura
 
-### 3. 🤖 Inteligência Artificial & GenAI
-- Roteamento e orquestração de RAG (Retrieval-Augmented Generation) com Amazon Bedrock.
-- Bancos de dados vetoriais (pgvector) e Prompt Engineering voltado a pipelines de dados.
+- **Client-Side Storage**: O portal utiliza o `localStorage` do navegador para rastrear sua jornada e atualizar a barra de progresso.
+- **Draw.io Integrado**: Os diagramas do portal usam o viewer `data-mxgraph` da biblioteca mxGraph (Draw.io). Os diagramas já estão injetados no código fonte das páginas, dispensando carregamentos pesados.
+- **Estrutura de Pastas**:
+  - `/pages`: Onde todo o conteúdo por domínio se encontra (Engenharia, Arquitetura, Fundamentos, Prática).
+  - `/css` e `/js`: Estilos e controle de interatividade do portal.
+  - `/assets`: Ícones e imagens globais.
 
-### 4. ⚙️ Operações, Segurança & FinOps
-- Práticas de DataOps & MLOps com pipelines de CI/CD baseados em Gitflow.
-- Governança refinada e segurança com AWS Lake Formation, IAM, KMS e Secrets Manager.
-- Práticas financeiras agressivas de FinOps para controle e corte de custos de processamento.
+## 🤝 Contribuições
 
----
-
-## 🤝 Solução Colaborativa: Contribua!
-
-Este portal é uma **iniciativa colaborativa e viva**. Se você identificou um bug, tem uma sugestão de arquitetura ou quer propor um novo tema técnico de Engenharia de Dados na AWS, a sua contribuição é super bem-vinda!
-
-### Como Contribuir:
-
-1. **Abra uma Issue:**
-   - Para propor novos temas ou sugerir novos conteúdos práticos, utilize o template de [💡 Sugestão de Conteúdo](https://github.com/Helfstein-one/aws-data-mastery/issues/new?template=sugestao_conteudo.md).
-   - Para reportar erros de digitação, bugs de código ou layout no portal, utilize o template de [🐛 Relato de Bug](https://github.com/Helfstein-one/aws-data-mastery/issues/new?template=relato_bug.md).
-
-2. **Envie um Pull Request:**
-   - Faça um fork do repositório.
-   - Crie uma branch com a sua modificação (`git checkout -b feature/novo-tema`).
-   - Faça o commit das suas alterações (`git commit -m 'feat: adiciona bloco de tuning de join no spark'`).
-   - Abra um Pull Request direcionado à branch principal.
-
-> [!NOTE]
-> Certifique-se de que os issues e PRs seguem uma linguagem clara e detalhada para facilitar a revisão pela comunidade.
-
----
-
-## 🛠️ Tecnologias Utilizadas
-- **Estruturação:** HTML5 Semântico.
-- **Estilização:** CSS Vanilla com variáveis CSS dinâmicas (Dark Mode e Glassmorphism).
-- **Lógica e Gamificação:** JavaScript puro (ES6) integrado ao LocalStorage para manter o progresso do estudante.
-
----
-*Desenvolvido com foco na excelência técnica e na evolução contínua da comunidade de Engenharia de Dados.*
-
-## 📸 Preview do Portal
-
-![Preview da Navegação e Dashboard do Portal AWS Data Mastery](assets/images/aws-data-mastery-preview.png)
-
-
-## Atualizações Recentes (v1.8.0)
-
-- 🚀 **Mega Case Interdisciplinar**: Adição de um desafio épico que consolida arquiteturas reais envolvendo MLOps, DataOps, FinOps, Streaming e Batch. Novos Casos Avançados (como Health Lakehouse HIPAA) também foram injetados.
-- 🎨 **Refatoração Visual Extrema de Diagramas**: Todos os diagramas *placeholder* antigos de perguntas técnicas foram substituídos por arquiteturas ricas, utilizando estritamente a biblioteca vetorial `mxgraph.aws4`.
-- 🛠️ **Bug Fixes em Draw.io Parsing**: Varredura e correção sistêmica em dezenas de matrizes JSON inválidas (`data-mxgraph`) e arestas sem atributos espaciais (`mxGeometry`), garantindo 100% de confiabilidade na renderização de linhas, setas e ícones do portal.
-- 🗣️ **Aprofundamento de Respostas Práticas**: Injeção minuciosa de validações teóricas sobre Lake Formation Cell-Level ACL, DMS DDL Evolution e RAG OpenSearch Consistency.
-
-Veja o histórico de atualizações completo no [CHANGELOG.md](CHANGELOG.md).
-
+Contribuições são super bem-vindas. Sinta-se à vontade para fazer um Pull Request para adicionar dicas, comandos úteis ou casos de uso!

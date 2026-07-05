@@ -536,10 +536,79 @@ df_past.show()</code></pre>
       </div>
     </section>
 
-    <!-- 5. Manutenção das Tabelas -->
+    <!-- Time Travel -->
+    <section class="section" id="time-travel">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--primary)">05</div>
+        <div class="sec-title">
+          <div class="sec-subtitle">Auditoria e Recuperação</div>
+          <h2>Time Travel (Amazon Athena)</h2>
+        </div>
+      </div>
+      <p>O Time Travel não é exclusividade do Spark. Você pode consultar estados antigos da tabela diretamente pelo Amazon Athena utilizando extensões SQL do Iceberg. Isso é essencial para auditorias financeiras e debug rápido.</p>
+      
+      <div class="code-header">
+        <span class="code-lang">sql</span>
+        <span class="code-copy" onclick="copyCode(this)"><i class="ph ph-copy"></i></span>
+      </div>
+      <pre><code>-- Consulta usando TIMESTAMP (As Of)
+SELECT * FROM my_database.credit_events 
+FOR SYSTEM_TIME AS OF TIMESTAMP '2026-06-15 10:00:00 UTC';
+
+-- Consulta usando Version (Snapshot ID)
+SELECT * FROM my_database.credit_events 
+FOR SYSTEM_VERSION AS OF 887233049583;</code></pre>
+      
+      <div class="abox tip">
+        <div class="abox-icon"><i class="ph ph-lightbulb"></i></div>
+        <div class="abox-content">
+          <strong>Dica de Desempenho:</strong> Quando for recuperar dados muito antigos (ex: 6 meses), garanta que o processo de <em>Expire Snapshots</em> não removeu a versão desejada, pois o Iceberg tentará procurar os Manifests que podem já ter sido fisicamente deletados do S3.
+        </div>
+      </div>
+    </section>
+
+    <!-- Schema Evolution -->
+    <section class="section" id="schema-evolution">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--primary)">06</div>
+        <div class="sec-title">
+          <div class="sec-subtitle">Zero Data Rewrite</div>
+          <h2>Schema Evolution</h2>
+        </div>
+      </div>
+      <p>O Iceberg rastreia colunas por um ID único e não pelo nome. Isso significa que adicionar, renomear ou remover colunas é uma operação <strong>O(1)</strong> apenas nos metadados, sem necessidade de reescrever centenas de terabytes de arquivos Parquet antigos (sem Backfill!).</p>
+      
+      <div class="code-header">
+        <span class="code-lang">python</span>
+        <span class="code-copy" onclick="copyCode(this)"><i class="ph ph-copy"></i></span>
+      </div>
+      <pre><code># Spark SQL para Schema Evolution
+spark.sql("""
+    -- Adicionar uma coluna nova (lida como NULL em partições velhas)
+    ALTER TABLE my_catalog.db.credit_events 
+    ADD COLUMN customer_segment string AFTER customer_id;
+    
+    -- Renomear coluna sem reescrever dados
+    ALTER TABLE my_catalog.db.credit_events 
+    RENAME COLUMN trx_amount TO transaction_amount;
+    
+    -- Alterar tipo de dado seguro (ex: int para bigint)
+    ALTER TABLE my_catalog.db.credit_events 
+    ALTER COLUMN transaction_amount TYPE bigint;
+""")</code></pre>
+
+      <div class="abox info">
+        <div class="abox-icon"><i class="ph ph-info"></i></div>
+        <div class="abox-content">
+          <strong>Segurança:</strong> Tentativas de alterar tipos de dados que causariam perda de precisão (ex: <code>double</code> para <code>int</code>) são barradas automaticamente pelo Iceberg, protegendo o seu Data Lake.
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Manutenção das Tabelas -->
     <section class="section" id="maintenance">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--alert)">05</div>
+        <div class="sec-num" style="color:var(--alert)">07</div>
         <div class="sec-title">
           <div class="sec-subtitle">SRE de Dados</div>
           <h2>Saúde da Tabela (VACUUM & OPTIMIZE)</h2>
