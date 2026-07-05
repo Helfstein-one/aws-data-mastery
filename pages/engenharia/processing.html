@@ -2311,7 +2311,179 @@ df_parsed.writeStream     .format("delta")     .outputMode("append")     .option
           <li><strong>Join Selection Validation:</strong> Verifique se a query utilizou um <code>BroadcastHashJoin</code> ou se realizou um dispendioso <code>SortMergeJoin</code> com troca massiva de dados (Exchange). Isso valida se as regras de tamanho dinâmico do AQE funcionaram.</li>
         </ul>
       </div>
+    
+    <section class="section" id="spark-troubleshooting-simulations">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--alert)">16.6</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--alert)"></div>
+          <h2>Troubleshooting Visual: Skew, Spill, OOM e GC</h2>
+          <p>Exemplos reais de código e como os problemas se materializam na interface do Spark</p>
+        </div>
+      </div>
+
+      <h3>1. O Código (Data Skew & Spill Intencional)</h3>
+      <p>O <strong>Data Skew</strong> (Viés de Dados) ocorre quando uma chave de Join ou GroupBy concentra a esmagadora maioria dos registros (ex: ID de "Cliente Não Cadastrado" = -1). Isso joga quase todos os dados para um único <em>Executor</em> (Core), que invariavelmente sofre <strong>Spill</strong> (transbordo para o disco) e eventual <strong>OOM</strong> (Falta de Memória).</p>
+
+      <div class="code-header">
+        <span class="code-lang">python</span>
+        <span class="code-copy" onclick="copyCode(this)"><i class="ph ph-copy"></i></span>
+      </div>
+      <pre><code># Criando Skew Intencional: 99% dos dados possuem customer_id = 999
+spark.conf.set("spark.sql.shuffle.partitions", "200")
+spark.conf.set("spark.executor.memory", "2g")
+
+skewed_data = spark.range(0, 10000000) \
+    .withColumn("customer_id", F.when(F.col("id") < 9900000, 999).otherwise(F.col("id")))
+
+# O Shuffle joga todos os "999" para a mesma Partição!
+result = skewed_data.groupBy("customer_id").count()
+result.write.format("noop").mode("overwrite").save()</code></pre>
+
+      <div class="section-spacer"></div>
+
+      <h3>2. Como o Skew aparece na Spark UI (Aba Stages)</h3>
+      <p>Na aba de Stages, o sintoma clássico de Skew é o <strong>Max Task Time</strong> ser absurdamente superior ao <strong>Median Task Time</strong>. Veja o simulador da UI abaixo:</p>
+      
+      <!-- Spark UI Mock: Stages -->
+      <div class="mxgraph" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0;">
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+          <div style="font-family:monospace; font-weight:bold; color:var(--text)">Spark UI > Stages > Stage 12</div>
+          <div style="font-family:monospace; color:var(--text-muted)">Total Tasks: 200</div>
+        </div>
+        
+        <table style="width:100%; text-align:left; font-family:monospace; font-size:12px; border-collapse: collapse;">
+          <tr style="background:#1e293b; color:var(--text-muted);">
+            <th style="padding:8px;">Metric</th>
+            <th style="padding:8px;">Min</th>
+            <th style="padding:8px;">25th percentile</th>
+            <th style="padding:8px;">Median</th>
+            <th style="padding:8px;">75th percentile</th>
+            <th style="padding:8px; color:var(--alert);">Max</th>
+          </tr>
+          <tr style="border-bottom:1px solid #334155;">
+            <td style="padding:8px;">Duration</td>
+            <td style="padding:8px;">0.8 s</td>
+            <td style="padding:8px;">1.1 s</td>
+            <td style="padding:8px; font-weight:bold;">1.2 s</td>
+            <td style="padding:8px;">1.5 s</td>
+            <td style="padding:8px; color:var(--alert); font-weight:bold;">14.5 min</td>
+          </tr>
+          <tr style="border-bottom:1px solid #334155;">
+            <td style="padding:8px;">GC Time</td>
+            <td style="padding:8px;">10 ms</td>
+            <td style="padding:8px;">15 ms</td>
+            <td style="padding:8px;">22 ms</td>
+            <td style="padding:8px;">35 ms</td>
+            <td style="padding:8px; color:var(--alert); font-weight:bold;">3.2 min</td>
+          </tr>
+        </table>
+        <div style="margin-top:10px; font-family:monospace; font-size:12px; color:#4ade80;">
+          <i class="ph ph-check-circle"></i> 199/200 Tasks Succeeded
+          <br>
+          <span style="color:var(--alert)"><i class="ph ph-spinner"></i> 1/200 Tasks Active (Stuck)</span>
+        </div>
+      </div>
+
+      <div class="abox tip">
+        <div class="abox-icon"><i class="ph ph-magnifying-glass"></i></div>
+        <div class="abox-content">
+          <strong>O Veredito:</strong> 199 cores (Tasks) acabaram em 1 segundo. 1 único Core recebeu 99% dos dados e está "preso" calculando o agrupamento do cliente "999" por mais de 14 minutos. O <strong>GC Time</strong> (Garbage Collection) dessa Task está altíssimo (3.2 min), provando que o executor está lutando para não estourar a memória.
+        </div>
+      </div>
+
+      <div class="section-spacer"></div>
+
+      <h3>3. Como o Spill aparece na Spark UI (Aba Tasks)</h3>
+      <p>Quando a memória alocada para execução (Execution Memory) enche, o Spark salva o excesso em disco (Spill). O Spill degrada a performance do nó violentamente devido ao I/O físico (Disco e Rede).</p>
+      
+      <!-- Spark UI Mock: Tasks -->
+      <div class="mxgraph" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0; overflow-x:auto;">
+        <div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Tasks Details (Sorted by Duration)</div>
+        <table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
+          <tr style="background:#1e293b; color:var(--text-muted);">
+            <th style="padding:8px;">Task ID</th>
+            <th style="padding:8px;">Status</th>
+            <th style="padding:8px;">Duration</th>
+            <th style="padding:8px;">Shuffle Read Size</th>
+            <th style="padding:8px; color:var(--alert);">Spill (Memory)</th>
+            <th style="padding:8px; color:var(--alert);">Spill (Disk)</th>
+          </tr>
+          <tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
+            <td style="padding:8px;">145</td>
+            <td style="padding:8px; color:var(--alert);">RUNNING</td>
+            <td style="padding:8px;">14.5 min</td>
+            <td style="padding:8px;">8.2 GB</td>
+            <td style="padding:8px; color:var(--alert); font-weight:bold;">24.5 GB</td>
+            <td style="padding:8px; color:var(--alert); font-weight:bold;">4.1 GB</td>
+          </tr>
+          <tr style="border-bottom:1px solid #334155;">
+            <td style="padding:8px;">146</td>
+            <td style="padding:8px; color:#4ade80;">SUCCESS</td>
+            <td style="padding:8px;">1.2 s</td>
+            <td style="padding:8px;">14.2 MB</td>
+            <td style="padding:8px;">0.0 B</td>
+            <td style="padding:8px;">0.0 B</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="abox info">
+        <div class="abox-icon"><i class="ph ph-hard-drives"></i></div>
+        <div class="abox-content">
+          <strong>A Matemática do Spill:</strong> Note que o <em>Spill (Memory)</em> é muito maior que o <em>Spill (Disk)</em>. Isso ocorre porque o tamanho em memória considera objetos Java inflados (uncompressed deserialized), enquanto no disco os dados são gravados serializados e comprimidos. <strong>Qualquer valor > 0.0 B nessas colunas exige sua atenção!</strong>
+        </div>
+      </div>
+
+      <div class="section-spacer"></div>
+
+      <h3>4. O Destino Final: OOM (Out of Memory) na Aba Executors</h3>
+      <p>Se o Spill não for suficiente e a sobrecarga do Garbage Collector for extrema (passando mais tempo reciclando do que calculando), a JVM do nó Worker irá travar e será morta pelo YARN/Kubernetes (Status: Dead).</p>
+      
+      <!-- Spark UI Mock: Executors -->
+      <div class="mxgraph" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0;">
+        <div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Executors</div>
+        <table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
+          <tr style="background:#1e293b; color:var(--text-muted);">
+            <th style="padding:8px;">Executor ID</th>
+            <th style="padding:8px;">Status</th>
+            <th style="padding:8px;">Cores</th>
+            <th style="padding:8px;">Active Tasks</th>
+            <th style="padding:8px;">Failed Tasks</th>
+            <th style="padding:8px;">Task Time</th>
+          </tr>
+          <tr style="border-bottom:1px solid #334155;">
+            <td style="padding:8px;">driver</td>
+            <td style="padding:8px; color:#4ade80;">Active</td>
+            <td style="padding:8px;">0</td>
+            <td style="padding:8px;">0</td>
+            <td style="padding:8px;">0</td>
+            <td style="padding:8px;">0 ms</td>
+          </tr>
+          <tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
+            <td style="padding:8px;">1</td>
+            <td style="padding:8px; color:var(--alert); font-weight:bold;">Dead</td>
+            <td style="padding:8px;">4</td>
+            <td style="padding:8px;">0</td>
+            <td style="padding:8px; color:var(--alert);">1</td>
+            <td style="padding:8px;">15.1 min</td>
+          </tr>
+          <tr style="border-bottom:1px solid #334155;">
+            <td style="padding:8px;">2</td>
+            <td style="padding:8px; color:#4ade80;">Active</td>
+            <td style="padding:8px;">4</td>
+            <td style="padding:8px;">0</td>
+            <td style="padding:8px;">0</td>
+            <td style="padding:8px;">1.4 s</td>
+          </tr>
+        </table>
+        <div style="margin-top:10px; font-family:monospace; font-size:12px; color:var(--alert);">
+          <strong>Reason for Death:</strong> Container killed by YARN for exceeding memory limits. 2.5G of 2G physical memory used. Consider boosting spark.executor.memoryOverhead.
+        </div>
+      </div>
+
     </section>
+</section>
 
     <section class="section" id="spark-performance-callout">
       <div class="sec-hdr">
