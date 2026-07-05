@@ -7,35 +7,18 @@
 (function() {
   // Configuração das trilhas e suas respectivas seções/hashes para cálculo de progresso
   const MODULES = {
-    python: {
-      name: "💻 Python & OOP para Dados",
-      badge: "Engenheiro Python",
+    pmo: {
+      name: "📊 PMO & Sustentação",
+      badge: "Gerente de Dados",
       color: "#f43f5e",
       items: [
-        "python-legend.html#boas-praticas",
-        "python-legend.html#oop-dados",
-        "python-legend.html#design-patterns",
-        "python-legend.html#oop-cases-perguntas"
-      ]
-    },
-    sql: {
-      name: "🗄️ SQL Analytics",
-      badge: "Mestre em SQL",
-      color: "#f59e0b",
-      items: [
-        "sql-mastery.html#fundamentos-sql",
-        "sql-mastery.html#ctes-window",
-        "sql-mastery.html#iceberg-hive"
-      ]
-    },
-    terraform: {
-      name: "🏗️ Terraform & IaC",
-      badge: "Arquiteto IaC",
-      color: "#8b5cf6",
-      items: [
-        "terraform.html#fundamentos-terraform",
-        "terraform.html#comandos-terraform",
-        "terraform.html#arquitetura-terraform"
+        "pmo-sme-dados.html#visao-geral",
+        "pmo-sme-dados.html#gestao-agil",
+        "pmo-sme-dados.html#negociacao-backlog",
+        "pmo-sme-dados.html#sustentacao",
+        "pmo-sme-dados.html#pareto-incidentes",
+        "pmo-sme-dados.html#fluxo-sustentacao",
+        "pmo-sme-dados.html#roadmap"
       ]
     },
     architecture: {
@@ -105,6 +88,10 @@
         "processing.html#spark-joins",
         "processing.html#spark-cache",
         "processing.html#spark-streaming",
+        
+        "processing.html#pyspark-dataframe-api",
+        "processing.html#pyspark-functions",
+        "processing.html#spark-sql-api",
         "processing.html#spark-tuning",
         "processing.html#spark-debug",
         "processing.html#spark-erros",
@@ -124,17 +111,6 @@
         "processing.html#flink-streaming",
         "processing.html#spark-e2e-integrations",
         "processing.html#emr-erros"
-      ]
-    },
-    containers_docker: {
-      name: "🐳 Containers & Docker",
-      badge: "Mestre em Containers",
-      color: "#0ea5e9",
-      items: [
-        "containers-docker.html#fundamentos-docker",
-        "containers-docker.html#aws-containers-ecosystem",
-        "containers-docker.html#data-engineering-containers",
-        "containers-docker.html#cases"
       ]
     },
     infra_operacional: {
@@ -202,7 +178,6 @@
       badge: "Mestre das Redes",
       color: "#06b6d4",
       items: [
-        "networking-ingress.html#fundamentos-rede",
         "networking-ingress.html#dns-cdn",
         "networking-ingress.html#api-alb",
         "networking-ingress.html#vpc-endpoints"
@@ -251,18 +226,6 @@
         "dataops-mlops.html#git-flow"
       ]
     },
-    data_quality: {
-      name: "✨ Data & Business Quality",
-      badge: "Engenheiro de Qualidade",
-      color: "#10b981",
-      items: [
-        "data-quality.html#teoria-dq",
-        "data-quality.html#business-quality",
-        "data-quality.html#cases-dq",
-        "data-quality.html#crises-dq",
-        "data-quality.html#perguntas-dq"
-      ]
-    },
     business_value: {
       name: "💼 Business Value",
       badge: "Estrategista de Dados",
@@ -296,14 +259,28 @@
       ]
     },
     oop: {
-      name: "🏗️ Python & OOP",
-      badge: "Engenheiro Pythonico",
+      name: "🐍 Python Legend",
+      badge: "Lenda Viva do Python",
       color: "#f43f5e",
       items: [
-        "python-legend.html#boas-praticas",
-        "python-legend.html#oop-dados",
-        "python-legend.html#design-patterns",
-        "python-legend.html#oop-cases-perguntas"
+        "data-engineering-oop.html#boas-praticas",
+        "data-engineering-oop.html#oop-dados",
+        "data-engineering-oop.html#design-patterns",
+        "data-engineering-oop.html#oop-cases-perguntas",
+        "data-engineering-oop.html#cpython-memoria",
+        "data-engineering-oop.html#core-types",
+        "data-engineering-oop.html#oop-avancado",
+        "data-engineering-oop.html#pandas-projetos"
+      ]
+    },,
+    testing: {
+      name: "🧪 Software Testing",
+      badge: "Engenheiro de Qualidade",
+      color: "#10b981",
+      items: [
+        "testing.html#piramide",
+        "testing.html#code-examples",
+        "testing.html#data-quality"
       ]
     },
     softskills: {
@@ -320,164 +297,155 @@
         "soft-skills.html#cfo-pitch"
       ]
     },
-    perguntas_arquitetura: {
-      name: "❓ Perguntas: Arquitetura",
-      badge: "Mestre das Arquiteturas",
-      color: "var(--arch)",
-      items: [
-        "perguntas-arquitetura.html#perguntas",
-        "perguntas-arquitetura.html#q4",
-        "perguntas-arquitetura.html#q9",
-        "perguntas-arquitetura.html#q26",
-        "perguntas-arquitetura.html#q30",
-        "perguntas-arquitetura.html#q34",
-        "perguntas-arquitetura.html#q41",
-        "perguntas-arquitetura.html#q52",
-        "perguntas-arquitetura.html#q53",
-        "perguntas-arquitetura.html#q60",
-        "perguntas-arquitetura.html#q63",
-        "perguntas-arquitetura.html#q67",
-        "perguntas-arquitetura.html#q69",
-        "perguntas-arquitetura.html#q71",
-        "perguntas-arquitetura.html#q78",
-        "perguntas-arquitetura.html#q80",
-        "perguntas-arquitetura.html#q82",
-        "perguntas-arquitetura.html#q89",
-        "perguntas-arquitetura.html#q90",
-        "perguntas-arquitetura.html#q95",
-        "perguntas-arquitetura.html#q96",
-        "perguntas-arquitetura.html#q97",
-        "perguntas-arquitetura.html#q98",
-        "perguntas-arquitetura.html#q99"
-      ]
-    },
-    perguntas_engenharia: {
-      name: "❓ Perguntas: Engenharia",
+    
+    
+    
+    
+    
+    
+    perguntas_engenharia_core: {
+      name: "❓ Engenharia (Processing)",
       badge: "Mestre dos Pipelines",
-      color: "#f59e0b",
+      color: "#eab308",
       items: [
-        "perguntas-engenharia.html#perguntas",
-        "perguntas-engenharia.html#q1",
-        "perguntas-engenharia.html#q2",
-        "perguntas-engenharia.html#q3",
-        "perguntas-engenharia.html#q6",
-        "perguntas-engenharia.html#q7",
-        "perguntas-engenharia.html#q14",
-        "perguntas-engenharia.html#q20",
-        "perguntas-engenharia.html#q28",
-        "perguntas-engenharia.html#q31",
-        "perguntas-engenharia.html#q32",
-        "perguntas-engenharia.html#q33",
-        "perguntas-engenharia.html#q46",
-        "perguntas-engenharia.html#q51",
-        "perguntas-engenharia.html#q62",
-        "perguntas-engenharia.html#q64",
-        "perguntas-engenharia.html#q68",
-        "perguntas-engenharia.html#q72",
-        "perguntas-engenharia.html#q86",
-        "perguntas-engenharia.html#q87",
-        "perguntas-engenharia.html#q88",
-        "perguntas-engenharia.html#q92",
-        "perguntas-engenharia.html#q93",
-        "perguntas-engenharia.html#q94"
+        "perguntas-engenharia-core.html#q3", "perguntas-engenharia-core.html#q6", "perguntas-engenharia-core.html#q62", "perguntas-engenharia-core.html#q64", "perguntas-engenharia-core.html#q68", "perguntas-engenharia-core.html#q87", "perguntas-engenharia-core.html#q94", "perguntas-engenharia-core.html#q11", "perguntas-engenharia-core.html#q42", "perguntas-engenharia-core.html#q58", "perguntas-engenharia-core.html#q65", "perguntas-engenharia-core.html#q70"
       ]
     },
-    perguntas_governanca: {
-      name: "❓ Perguntas: Governança",
-      badge: "Mestre da Governança",
-      color: "var(--muted)",
+    perguntas_arquitetura_db: {
+      name: "❓ Arquitetura & Bancos",
+      badge: "Mestre das Arquiteturas",
+      color: "#10b981",
       items: [
-        "perguntas-governanca.html#perguntas",
-        "perguntas-governanca.html#q5",
-        "perguntas-governanca.html#q8",
-        "perguntas-governanca.html#q10",
-        "perguntas-governanca.html#q11",
-        "perguntas-governanca.html#q12",
-        "perguntas-governanca.html#q13",
-        "perguntas-governanca.html#q15",
-        "perguntas-governanca.html#q16",
-        "perguntas-governanca.html#q17",
-        "perguntas-governanca.html#q18",
-        "perguntas-governanca.html#q19",
-        "perguntas-governanca.html#q21",
-        "perguntas-governanca.html#q22",
-        "perguntas-governanca.html#q23",
-        "perguntas-governanca.html#q24",
-        "perguntas-governanca.html#q25",
-        "perguntas-governanca.html#q27",
-        "perguntas-governanca.html#q29",
-        "perguntas-governanca.html#q35",
-        "perguntas-governanca.html#q36",
-        "perguntas-governanca.html#q37",
-        "perguntas-governanca.html#q38",
-        "perguntas-governanca.html#q39",
-        "perguntas-governanca.html#q40",
-        "perguntas-governanca.html#q42",
-        "perguntas-governanca.html#q43",
-        "perguntas-governanca.html#q44",
-        "perguntas-governanca.html#q45",
-        "perguntas-governanca.html#q47",
-        "perguntas-governanca.html#q48",
-        "perguntas-governanca.html#q49",
-        "perguntas-governanca.html#q50",
-        "perguntas-governanca.html#q54",
-        "perguntas-governanca.html#q55",
-        "perguntas-governanca.html#q56",
-        "perguntas-governanca.html#q57",
-        "perguntas-governanca.html#q58",
-        "perguntas-governanca.html#q59",
-        "perguntas-governanca.html#q61",
-        "perguntas-governanca.html#q65",
-        "perguntas-governanca.html#q66",
-        "perguntas-governanca.html#q70",
-        "perguntas-governanca.html#q73",
-        "perguntas-governanca.html#q74",
-        "perguntas-governanca.html#q75",
-        "perguntas-governanca.html#q76",
-        "perguntas-governanca.html#q77",
-        "perguntas-governanca.html#q79",
-        "perguntas-governanca.html#q81",
-        "perguntas-governanca.html#q83",
-        "perguntas-governanca.html#q84",
-        "perguntas-governanca.html#q85",
-        "perguntas-governanca.html#q91"
+        "perguntas-arquitetura-db.html#q60", "perguntas-arquitetura-db.html#q97", "perguntas-arquitetura-db.html#q98", "perguntas-arquitetura-db.html#q100", "perguntas-arquitetura-db.html#q18", "perguntas-arquitetura-db.html#q59", "perguntas-arquitetura-db.html#q79"
       ]
     },
-    cases: {
-      name: "💼 Cases de Plataformas",
-      badge: "Resolvedor de Cases",
-      color: "var(--ext)",
+    perguntas_storage_lakehouse: {
+      name: "❓ Storage & Lakehouse",
+      badge: "Mestre do Storage",
+      color: "#0ea5e9",
       items: [
-        "cases.html#case-streaming",
-        "cases.html#case-mesh",
-        "cases.html#case-genai",
-        "cases.html#case-genai-avancado",
-        "cases.html#case-ai-data-quality",
-        "cases.html#case-polaris-flink",
-        "cases.html#case-iot",
-        "cases.html#case-reverse-etl"
+        "perguntas-storage-lakehouse.html#q28", "perguntas-storage-lakehouse.html#q33", "perguntas-storage-lakehouse.html#q92", "perguntas-storage-lakehouse.html#q26", "perguntas-storage-lakehouse.html#q34", "perguntas-storage-lakehouse.html#q52", "perguntas-storage-lakehouse.html#q71", "perguntas-storage-lakehouse.html#q80", "perguntas-storage-lakehouse.html#q89", "perguntas-storage-lakehouse.html#q15", "perguntas-storage-lakehouse.html#q23", "perguntas-storage-lakehouse.html#q77"
       ]
     },
-    playbook: {
-      name: "🚒 Playbook de Crises",
-      badge: "Gerenciador de Crises",
-      color: "var(--warn)",
+    perguntas_governanca_finops: {
+      name: "❓ Governança & FinOps",
+      badge: "Guardião da Governança",
+      color: "#64748b",
       items: [
-        "playbook-crises.html#introducao",
-        "playbook-crises.html#crise-streaming",
-        "playbook-crises.html#crise-kms",
-        "playbook-crises.html#crise-genai",
-        "playbook-crises.html#crise-fechamento",
-        "playbook-crises.html#crise-duplicacao",
-        "playbook-crises.html#crise-nulos",
-        "playbook-crises.html#crise-sla",
-        "playbook-crises.html#crise-schema-drift",
-        "playbook-crises.html#crise-lgpd",
-        "playbook-crises.html#crise-corrupcao",
-        "playbook-crises.html#cenarios-conflito",
-        "playbook-crises.html#crise-leakage-churn"
+        "perguntas-governanca-finops.html#q1", "perguntas-governanca-finops.html#q2", "perguntas-governanca-finops.html#q31", "perguntas-governanca-finops.html#q46", "perguntas-governanca-finops.html#q51", "perguntas-governanca-finops.html#q72", "perguntas-governanca-finops.html#q86", "perguntas-governanca-finops.html#q88", "perguntas-governanca-finops.html#q93", "perguntas-governanca-finops.html#q9", "perguntas-governanca-finops.html#q41", "perguntas-governanca-finops.html#q53", "perguntas-governanca-finops.html#q69", "perguntas-governanca-finops.html#q95", "perguntas-governanca-finops.html#q99", "perguntas-governanca-finops.html#q101", "perguntas-governanca-finops.html#q5", "perguntas-governanca-finops.html#q8", "perguntas-governanca-finops.html#q13", "perguntas-governanca-finops.html#q16", "perguntas-governanca-finops.html#q22", "perguntas-governanca-finops.html#q25", "perguntas-governanca-finops.html#q29", "perguntas-governanca-finops.html#q35", "perguntas-governanca-finops.html#q36", "perguntas-governanca-finops.html#q37", "perguntas-governanca-finops.html#q38", "perguntas-governanca-finops.html#q39", "perguntas-governanca-finops.html#q45", "perguntas-governanca-finops.html#q47", "perguntas-governanca-finops.html#q57", "perguntas-governanca-finops.html#q66", "perguntas-governanca-finops.html#q73", "perguntas-governanca-finops.html#q74"
+      ]
+    },
+    perguntas_dataops_ia: {
+      name: "❓ DataOps, MLOps & GenAI",
+      badge: "Mestre em IA & DataOps",
+      color: "#8b5cf6",
+      items: [
+        "perguntas-dataops-ia.html#q7", "perguntas-dataops-ia.html#q14", "perguntas-dataops-ia.html#q20", "perguntas-dataops-ia.html#q32", "perguntas-dataops-ia.html#q4", "perguntas-dataops-ia.html#q30", "perguntas-dataops-ia.html#q63", "perguntas-dataops-ia.html#q67", "perguntas-dataops-ia.html#q78", "perguntas-dataops-ia.html#q82", "perguntas-dataops-ia.html#q90", "perguntas-dataops-ia.html#q96", "perguntas-dataops-ia.html#q10", "perguntas-dataops-ia.html#q12", "perguntas-dataops-ia.html#q17", "perguntas-dataops-ia.html#q19", "perguntas-dataops-ia.html#q21", "perguntas-dataops-ia.html#q24", "perguntas-dataops-ia.html#q27", "perguntas-dataops-ia.html#q40", "perguntas-dataops-ia.html#q43", "perguntas-dataops-ia.html#q44", "perguntas-dataops-ia.html#q48", "perguntas-dataops-ia.html#q49", "perguntas-dataops-ia.html#q50", "perguntas-dataops-ia.html#q54", "perguntas-dataops-ia.html#q55", "perguntas-dataops-ia.html#q56", "perguntas-dataops-ia.html#q61", "perguntas-dataops-ia.html#q75", "perguntas-dataops-ia.html#q76", "perguntas-dataops-ia.html#q77", "perguntas-dataops-ia.html#q79", "perguntas-dataops-ia.html#q81", "perguntas-dataops-ia.html#q83", "perguntas-dataops-ia.html#q84", "perguntas-dataops-ia.html#q85", "perguntas-dataops-ia.html#q91", "perguntas-dataops-ia.html#q81", "perguntas-dataops-ia.html#q83", "perguntas-dataops-ia.html#q84", "perguntas-dataops-ia.html#q85", "perguntas-dataops-ia.html#q91"
       ]
     }
+,
+    cases_streaming: {
+      name: "💼 System Design: Streaming",
+      badge: "Mestre do Streaming",
+      color: "#059669",
+      items: [
+        "cases-streaming.html#case-streaming",
+        "cases-streaming.html#case-iot",
+        "cases-streaming.html#case-recommender",
+        "cases-streaming.html#case-ecs-fargate",
+        "cases-streaming.html#case-athena-federated",
+        "cases-streaming.html#case-risco-mlops",
+        "cases-streaming.html#case-ingress-global",
+        "cases-streaming.html#case-ia-cambio"
+      ]
+    },
+    cases_batch: {
+      name: "💼 System Design: Batch & Lakehouse",
+      badge: "Mestre do Lakehouse",
+      color: "#059669",
+      items: [
+        "cases-batch-lakehouse.html#case-health",
+        "cases-batch-lakehouse.html#case-billing",
+        "cases-batch-lakehouse.html#case-emr-eks",
+        "cases-batch-lakehouse.html#case-finops",
+        "cases-batch-lakehouse.html#case-genai-avancado",
+        "cases-batch-lakehouse.html#case-emr-iceberg-migracao",
+        "cases-batch-lakehouse.html#case-eks-karpenter-migracao",
+        "cases-batch-lakehouse.html#case-advanced-33"
+      ]
+    },
+    cases_ecosistema: {
+      name: "💼 System Design: Ecosistema",
+      badge: "Arquiteto de Ecosistemas",
+      color: "#059669",
+      items: [
+        "cases-ecosistema.html#case-banco-digital",
+        "cases-ecosistema.html#case-mesh",
+        "cases-ecosistema.html#case-logistics",
+        "cases-ecosistema.html#case-esg",
+        "cases-ecosistema.html#case-data-quality",
+        "cases-ecosistema.html#case-polaris-flink",
+        "cases-ecosistema.html#case-business-value",
+        "cases-ecosistema.html#case-genai-suporte",
+        "cases-ecosistema.html#case-rds-dynamo-migracao",
+        "cases-ecosistema.html#case-advanced-31",
+        "cases-ecosistema.html#case-advanced-32",
+        "cases-ecosistema.html#case-advanced-34",
+        "cases-ecosistema.html#case-advanced-35",
+        "cases-ecosistema.html#case-captacao-liquida",
+        "cases-ecosistema.html#case-ia-oficios"
+      ]
+    },
+    cases_dataops: {
+      name: "💼 System Design: DataOps & IA",
+      badge: "Engenheiro de IA",
+      color: "#059669",
+      items: [
+        "cases-dataops-ia.html#case-genai",
+        "cases-dataops-ia.html#case-reverse-etl",
+        "cases-dataops-ia.html#case-ai-data-quality",
+        "cases-dataops-ia.html#case-ia-cadastro"
+      ]
+    },
+    playbook_kinesis: {
+      name: "🚒 Playbook: Kinesis & Spark",
+      badge: "SRE de Streaming",
+      color: "var(--warn)",
+      items: [
+        "playbook-kinesis-spark.html#crise-streaming",
+        "playbook-kinesis-spark.html#crise-sla",
+        "playbook-kinesis-spark.html#crise-schema-drift",
+        "playbook-kinesis-spark.html#crise-dynamo",
+        "playbook-kinesis-spark.html#crise-sqs-poison"
+      ]
+    },
+    playbook_governanca: {
+      name: "🚒 Playbook: Gov & FinOps",
+      badge: "Guardião de Custos",
+      color: "var(--warn)",
+      items: [
+        "playbook-governanca-finops.html#crise-kms",
+        "playbook-governanca-finops.html#crise-genai",
+        "playbook-governanca-finops.html#crise-lgpd",
+        "playbook-governanca-finops.html#crise-leakage-churn",
+        "playbook-governanca-finops.html#crise-athena-custo",
+        "playbook-governanca-finops.html#ransomware-p1"
+      ]
+    },
+    playbook_data_quality: {
+      name: "🚒 Playbook: Data Quality",
+      badge: "Xerife da Qualidade",
+      color: "var(--warn)",
+      items: [
+        "playbook-data-quality.html#introducao",
+        "playbook-data-quality.html#crise-fechamento",
+        "playbook-data-quality.html#crise-duplicacao",
+        "playbook-data-quality.html#crise-nulos",
+        "playbook-data-quality.html#crise-corrupcao",
+        "playbook-data-quality.html#cenarios-conflito"
+      ]
+    }
+
 };
 
   // Carrega progresso do localStorage
