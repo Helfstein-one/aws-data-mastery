@@ -2598,6 +2598,127 @@ result.write.format("noop").mode("overwrite").save()</code></pre>
       </div>
 
     </section>
+
+      <div class="section-spacer"></div>
+
+      <h3>4. Padrões Mortais do DAG: SortMergeJoin vs BroadcastHashJoin</h3>
+      <p>A melhor forma de testar sua habilidade em ler DAGs é analisando planos de <strong>Join</strong>. Quando você cruza duas tabelas, o comportamento do Spark muda radicalmente dependendo do tamanho das tabelas envolvidas.</p>
+
+      <h4>Caso A: O DAG Pesado (SortMergeJoin)</h4>
+      <p>Ocorre quando as duas tabelas são gigas ou terabytes (Default do Spark). As duas tabelas são lidas em paralelo, e ambas sofrem um <strong>Exchange (Shuffle)</strong> simultâneo para que as chaves idênticas sejam enviadas para o mesmo executor. A visualização se parece com um "Y" de ponta cabeça.</p>
+
+      <!-- Simulated DAG: SortMergeJoin -->
+      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        
+        <div style="display:flex; width:100%; max-width:600px; justify-content:space-between; gap:20px;">
+          <!-- Stage 1 (Left Table) -->
+          <div style="flex:1; border: 2px solid #3b82f6; border-radius:8px; padding:15px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 11 (Tabela Fato)</div>
+            
+            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+              <strong>Scan parquet</strong>
+            </div>
+            <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+            <div style="text-align:center; padding:5px;">
+              <span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange</span>
+            </div>
+          </div>
+
+          <!-- Stage 2 (Right Table) -->
+          <div style="flex:1; border: 2px solid #ec4899; border-radius:8px; padding:15px; background:rgba(236, 72, 153, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <div style="font-family:monospace; color:#ec4899; font-weight:bold; margin-bottom:10px;">Stage 12 (Tabela Dim)</div>
+            
+            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+              <strong>Scan parquet</strong>
+            </div>
+            <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+            <div style="text-align:center; padding:5px;">
+              <span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-around; width:100%; max-width:600px;">
+          <i class="ph ph-arrow-down-right" style="color:var(--alert); font-size:18px;"></i>
+          <i class="ph ph-arrow-down-left" style="color:var(--alert); font-size:18px;"></i>
+        </div>
+
+        <!-- Stage 3 (Merge) -->
+        <div style="border: 2px solid #8b5cf6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(139, 92, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+          <div style="font-family:monospace; color:#8b5cf6; font-weight:bold; margin-bottom:10px;">Stage 13 (Join & Sort)</div>
+          
+          <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+            <strong>*(3) SortMergeJoin</strong><br><span style="color:var(--text-muted)">Inner Join</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="abox warning">
+        <div class="abox-icon"><i class="ph ph-warning-circle"></i></div>
+        <div class="abox-content">
+          <strong>Perigo Iminente:</strong> A presença de dois Stages lado-a-lado engatilhando "Exchanges" significa que o cluster parou o processamento e está traficando Terabytes na rede. Se uma das chaves for mal distribuída, haverá Spill ou OOM (como vimos no tópico de Desbalanceamento).
+        </div>
+      </div>
+
+      <div class="section-spacer"></div>
+
+      <h4>Caso B: A Bala de Prata (BroadcastHashJoin)</h4>
+      <p>Ocorre quando aplicamos o comando <code>broadcast(df_pequeno)</code> ou quando o Spark AQE detecta que uma das tabelas tem menos de 10MB. O Spark envia a tabela inteira para todos os executores usando BitTorrent (BroadcastExchange), <strong>aniquilando o Shuffle pesado da tabela Fato</strong>.</p>
+
+      <!-- Simulated DAG: BroadcastHashJoin -->
+      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
+        
+        <div style="display:flex; width:100%; max-width:600px; justify-content:space-between; gap:20px;">
+          <!-- Stage 1 (Left Table - Massive) -->
+          <div style="flex:1; border: 2px solid #3b82f6; border-radius:8px; padding:15px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 11 (Tabela Fato)</div>
+            
+            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+              <strong>Scan parquet</strong>
+            </div>
+            <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+              <strong>*(1) Filter</strong>
+            </div>
+          </div>
+
+          <!-- Stage 2 (Right Table - Tiny) -->
+          <div style="flex:1; border: 2px solid #ec4899; border-radius:8px; padding:15px; background:rgba(236, 72, 153, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <div style="font-family:monospace; color:#ec4899; font-weight:bold; margin-bottom:10px;">Stage 12 (Tabela Dim Pequena)</div>
+            
+            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+              <strong>Scan parquet</strong>
+            </div>
+            <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+            <div style="text-align:center; padding:5px;">
+              <span style="font-family:monospace; color:#0ea5e9; font-size:11px; font-weight:bold;">BroadcastExchange</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-around; width:100%; max-width:600px;">
+          <i class="ph ph-arrow-down" style="color:var(--text-muted); font-size:18px;"></i>
+          <i class="ph ph-arrow-down-left" style="color:#0ea5e9; font-size:18px;"></i>
+        </div>
+
+        <!-- Stage 1 (Merge in place) -->
+        <div style="border: 2px solid #3b82f6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+          <div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Ainda no Stage 11!</div>
+          
+          <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+            <strong>*(1) BroadcastHashJoin</strong><br><span style="color:var(--text-muted)">Inner Join</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="abox success">
+        <div class="abox-icon"><i class="ph ph-check-circle"></i></div>
+        <div class="abox-content">
+          <strong>Vitória Arquitetural:</strong> A Tabela Fato inteira <strong>não teve um único bloco de Shuffle</strong>. O processamento ocorre localmente no mesmo Stage (Stage 11), consumindo o <em>Broadcast</em>. O tempo do seu job deve cair de horas para minutos. Esta é a assinatura visual perfeita de um Job ultra otimizado!
+        </div>
+      </div>
 </section>
 
     <section class="section" id="spark-performance-callout">
