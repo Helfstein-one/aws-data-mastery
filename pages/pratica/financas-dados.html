@@ -442,6 +442,30 @@
           </div>
         </div>
       </div>
+      <h3 style="margin-top:40px;">Deep Dive Arquitetural: Event Sourcing &amp; Padrão Outbox</h3>
+      <p>Bancos escaláveis não operam apenas lendo o estado atual do banco de dados (CRUD tradicional). Eles utilizam <strong>Event Sourcing</strong>, onde toda mudança de estado é um evento imutável. Para garantir que um evento de negócio seja gravado no banco relacional (Aurora) e transmitido para o Data Lake (S3) <strong>com garantia transacional</strong>, utilizamos o Padrão Outbox.</p>
+      
+      <div class="grid-2">
+        <div class="code-block" style="margin-bottom: 24px;">
+          <pre><code class="language-sql">-- Transação ACID no Banco Core (PostgreSQL)
+BEGIN;
+  -- 1. Insere o contrato na tabela de negócio
+  INSERT INTO contratos (id, cliente, valor) 
+  VALUES ('c-123', 'cpf-99', 5000);
+  
+  -- 2. Insere na tabela Outbox na mesma transação
+  INSERT INTO outbox (id, aggregate_type, payload) 
+  VALUES (gen_random_uuid(), 'CONTRATO_CRIADO', '{"id":"c-123"}');
+COMMIT;</code></pre>
+        </div>
+        <div class="abox info">
+          <div class="abox-hdr" style="background:var(--spark)">Debezium &amp; Kafka (CDC)</div>
+          <div class="abox-body">
+            O <strong>Debezium</strong> (conector Kafka Connect) lê o WAL (Write-Ahead Log) do banco de dados interceptando as linhas da tabela <code>outbox</code> em tempo real. Ele publica esse evento em um tópico do <strong>Amazon MSK (Kafka)</strong> com a garantia de <em>At-Least-Once</em> (Pelo menos uma vez). Isso isola o banco de produção da carga de leitura analítica.
+          </div>
+        </div>
+      </div>
+
     </section>
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
@@ -591,6 +615,17 @@ def calcular_price(capital, taxa, meses):
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
 
+    
+      <h3 style="margin-top: 40px;">Deep Dive de Engenharia: Late Arriving Events &amp; Retrospectiva Contábil</h3>
+      <p>Em sistemas financeiros complexos, a realidade não acontece em ordem cronológica perfeita. O maior inimigo do engenheiro de dados é o <strong>Late Arriving Event</strong> (Evento que chega atrasado).</p>
+      
+      <div class="callout callout-warning">
+        <strong>O Problema da Janela Fechada (Watermarking)</strong>
+        <p>Imagine um motor de Apropriação em <strong>Apache Flink (Stateful Streaming)</strong> que computa o lucro a cada hora usando uma <em>Tumbling Window</em>. Se um pagamento feito às 14:59 ficar preso na rede do correspondente bancário e chegar ao Kafka apenas às 15:15, a janela das 14h já foi fechada e contabilizada.</p>
+        <p><strong>Solução:</strong> O Flink utiliza <strong>Watermarks</strong> para aceitar um grau de latência configurável (ex: tolerância de 30 min). Eventos que chegam após o fechamento da janela disparam um fluxo alternativo chamado <em>Side Output</em>, que a engenharia utiliza para lançar <strong>Ajustes Retroativos</strong> no Livro-Razão (Ledger), garantindo que o saldo histórico feche perfeitamente no fim do mês.</p>
+      </div>
+
+
     <!-- SEÇÃO 4: CONTABILIDADE -->
     <section class="section" id="contabilidade">
       <div class="sec-hdr">
@@ -634,6 +669,43 @@ def calcular_price(capital, taxa, meses):
     </section>
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    
+      <h3 style="margin-top:40px;">Deep Dive Arquitetural: O Razonete Contábil no Data Mesh</h3>
+      <p>As <strong>Partidas Dobradas</strong> exigem que todo evento financeiro gere, no mínimo, dois lançamentos simétricos: um <strong>Débito (D)</strong> e um <strong>Crédito (C)</strong>. Em arquiteturas modernas (Data Mesh), não deixamos que o domínio de negócio (Ex: Cartão de Crédito, Financiamento) suje seu banco de dados com regras contábeis puras. Em vez disso, usamos um <strong>Microserviço Tradutor Contábil (Accounting Engine)</strong>.</p>
+      
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid var(--arch);">
+          <div class="cc-tag">1. Evento de Negócio (Raw)</div>
+          <div class="cc-body">
+            O domínio de Cartões emite um evento agnóstico: <code>{ "tipo": "PAGAMENTO_RECEBIDO", "valor": 150.00 }</code> via Kafka. Ele não sabe o que é Ativo, Passivo ou DRE.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid var(--navy);">
+          <div class="cc-tag">2. Accounting Engine (Tradutor)</div>
+          <div class="cc-body">
+            Uma aplicação streaming consome esse evento, busca os identificadores das contas contábeis correspondentes (COA - Chart of Accounts) e gera os <strong>Eventos de Razonete</strong> duplos.
+          </div>
+        </div>
+        <div class="concept-card" style="border-top: 4px solid var(--ok);">
+          <div class="cc-tag">3. Ledger Analítico (Iceberg)</div>
+          <div class="cc-body">
+            O Data Lake armazena a tabela unificada do Razonete usando Apache Iceberg. Tabelas particionadas por <code>data_referencia</code> e <code>conta_contabil</code> garantem queries de fechamento milionárias rodando em segundos no Athena.
+          </div>
+        </div>
+      </div>
+
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--emr)"><span class="dot" style="background:var(--emr)"></span>ARQUITETURA DE RAZONETE DISTRIBUÍDO E PARTIDAS DOBRADAS (DATA MESH)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;overflow:auto;" data-mxgraph='{"highlight": "#FF6B00", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxGraphModel dx="1000" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="400" background="#0B1120"&gt;&lt;root&gt;&lt;mxCell id="0"/&gt;&lt;mxCell id="1" parent="0"/&gt;&lt;mxCell id="box1" value="DOMÍNIO DE NEGÓCIO (CORE)" style="rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#ffffff;align=center;verticalAlign=top;spacingTop=10;dashed=1;dashPattern=4 4;" vertex="1" parent="1"&gt;&lt;mxGeometry x="40" y="40" width="280" height="320" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="box2" value="DOMÍNIO CONTÁBIL (LEDGER)" style="rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;align=center;verticalAlign=top;spacingTop=10;dashed=1;dashPattern=4 4;" vertex="1" parent="1"&gt;&lt;mxGeometry x="360" y="40" width="600" height="320" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="micro" value="Microserviço de&amp;#10;Originação (ECS)" style="rounded=1;fillColor=#3b82f6;fontColor=#ffffff;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="120" y="100" width="120" height="50" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="db" value="Aurora (PostgreSQL)&amp;#10;Tabela Outbox" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#0ea5e9;fontColor=#ffffff;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="120" y="190" width="120" height="70" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="cdc" value="Debezium (CDC)&amp;#10;MSK / Kafka" style="shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="280" y="200" width="120" height="50" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="engine" value="Accounting Engine&amp;#10;(Flink / ECS)&amp;#10;Tradutor de Regras" style="rounded=1;fillColor=#10b981;fontColor=#ffffff;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="460" y="190" width="120" height="70" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="raz1" value="Evento de Débito (D)&amp;#10;+ R$ 1.000&amp;#10;Cta: Carteira" style="rounded=1;fillColor=#34d399;fontColor=#064e3b;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="640" y="140" width="120" height="60" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="raz2" value="Evento de Crédito (C)&amp;#10;- R$ 1.000&amp;#10;Cta: Caixa" style="rounded=1;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="640" y="240" width="120" height="60" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="lake" value="Data Lake (Iceberg)&amp;#10;Livro-Razão Analítico" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#8b5cf6;fontColor=#ffffff;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="800" y="175" width="120" height="90" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e1" edge="1" source="micro" target="db" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e2" edge="1" source="db" target="cdc" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#f59e0b;strokeWidth=2;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e3" edge="1" source="cdc" target="engine" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#f59e0b;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e4" edge="1" source="engine" target="raz1" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e5" edge="1" source="engine" target="raz2" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e6" edge="1" source="raz1" target="lake" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#8b5cf6;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e7" edge="1" source="raz2" target="lake" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#8b5cf6;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="lbl1" value="Partidas Dobradas" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#ffffff;" vertex="1" parent="1"&gt;&lt;mxGeometry x="640" y="210" width="120" height="30" as="geometry"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;}'></div>
+      </div>
+      
+      <div class="callout callout-info" style="border-left-color:var(--arch)">
+        <strong>Garantia de Qualidade: Data Contracts &amp; Idempotência</strong>
+        <p>Ao desacoplar o sistema transacional do motor contábil, é imperativo usar <strong>Data Contracts</strong> (como Protobuf ou Confluent Schema Registry). Se o desenvolvedor backend mudar o payload de "PAGAMENTO_RECEBIDO" para "PAGAMENTO_CONCLUIDO" sem avisar, o pipeline de dados quebra silenciosamente, destruindo o balanço do banco.</p>
+        <p>Além disso, o motor de Accounting e o Iceberg precisam garantir a <strong>Idempotência</strong> (processar uma mensagem duas vezes não deve gerar dois débitos). A tabela Iceberg processa deduplicação analítica via chave de <code>event_uuid</code> cruzado com <code>MERGE INTO</code>.</p>
+      </div>
+
 
     <!-- SEÇÃO 5: O CICLO COMPLETO DE CRÉDITO -->
     <section class="section" id="ciclo-credito">
