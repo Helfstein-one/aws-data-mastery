@@ -55,14 +55,14 @@
         <a href="../../pages/fundamentos/soft-skills.html#implementacao" class="nav-sub"><span class="nav-sdot"></span>Plano de Implementação</a>
         <a href="../../pages/fundamentos/soft-skills.html#cfo-pitch" class="nav-sub"><span class="nav-sdot"></span>Pilar 9: Pitch Executivo</a>
       </div>
-      <div class="nav-page-group">
+            <div class="nav-page-group">
         <a href="../../pages/pratica/financas-dados.html" class="nav-a" data-page="financas-dados"><span class="nav-dot" style="background:#0284c7"></span>🏦 Conhecimentos Financeiros</a>
-        <a href="../../pages/pratica/financas-dados.html#jornada" class="nav-sub"><span class="nav-sdot"></span>A Jornada do Crédito</a>
-        <a href="../../pages/pratica/financas-dados.html#matematica" class="nav-sub"><span class="nav-sdot"></span>Matemática do Contrato</a>
-        <a href="../../pages/pratica/financas-dados.html#pos-venda" class="nav-sub"><span class="nav-sdot"></span>Pós-venda e Inadimplência</a>
-        <a href="../../pages/pratica/financas-dados.html#bancos-escala-global" class="nav-sub"><span class="nav-sdot"></span>Risco, ALM & Compliance</a>
+        <a href="../../pages/pratica/financas-dados.html#jornada" class="nav-sub"><span class="nav-sdot"></span>Originação &amp; Scoring</a>
+        <a href="../../pages/pratica/financas-dados.html#matematica" class="nav-sub"><span class="nav-sdot"></span>Matemática (SAC/Price)</a>
+        <a href="../../pages/pratica/financas-dados.html#pos-venda" class="nav-sub"><span class="nav-sdot"></span>Reconciliação e Atrasos</a>
         <a href="../../pages/pratica/financas-dados.html#contabilidade" class="nav-sub"><span class="nav-sdot"></span>Contabilidade Bancária</a>
-        <div class="nav-sub-lbl">Ecossistemas Expandidos</div>
+        <a href="../../pages/pratica/financas-dados.html#ciclo-credito" class="nav-sub"><span class="nav-sdot"></span>Ciclo Completo de Crédito</a>
+      </div>
         <a href="../../pages/pratica/financas-dados.html#pagamentos" class="nav-sub"><span class="nav-sdot"></span>Meios de Pagamento</a>
         <a href="../../pages/pratica/financas-dados.html#asset-management" class="nav-sub"><span class="nav-sdot"></span>Asset Management &amp; Fundos</a>
         <a href="../../pages/pratica/financas-dados.html#mercado-capitais" class="nav-sub"><span class="nav-sdot"></span>Mercado de Capitais</a>
@@ -409,34 +409,41 @@
 
   <main class="main-content">
 
-    <!-- SEÇÃO 1 -->
+    <!-- SEÇÃO 1: Originação e Modelagem de Risco -->
     <section class="section" id="jornada">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--emr)">01</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>A Jornada do Crédito: Originação & Cadastro (KYC)</h2>
-          <p>O início de tudo: como um usuário vira um Lead qualificado e como a Engenharia cruza os dados para avaliar o Risco (Scoring).</p>
+          <h2>Originação, KYC e Modelagem de Risco</h2>
+          <p>O início do relacionamento: como o Onboarding gera dados vitais para os modelos de Scoring e determinação da Probability of Default (PD).</p>
         </div>
       </div>
 
       <div class="callout callout-tip">
         <strong>Conceito de Negócio: KYC (Know Your Customer) e Onboarding</strong>
-        <p>A primeira etapa de um relacionamento bancário é a captura de dados demográficos, biométricos e financeiros (renda presumida). O KYC é regulatório (evita lavagem de dinheiro). Na perspectiva de crédito, a instituição precisa responder a uma pergunta de $1 milhão: <em>"Qual a probabilidade deste cliente não me pagar?"</em> Essa métrica é conhecida como <strong>PD (Probability of Default)</strong>.</p>
+        <p>A primeira etapa de um relacionamento bancário é a captura de dados demográficos, biométricos e financeiros (renda presumida). O KYC é regulatório (Prevenção à Lavagem de Dinheiro - PLD). Na perspectiva de crédito, a instituição precisa responder a uma pergunta de $1 milhão: <em>"Qual a probabilidade deste cliente não me pagar?"</em> Essa métrica é conhecida como <strong>PD (Probability of Default)</strong>.</p>
       </div>
 
-      <h3>A Engenharia por trás do Risco de Crédito</h3>
+      <h3>A Engenharia por trás do Risco de Crédito (Scoring)</h3>
+      <p>O <strong>Credit Scoring</strong> é o coração da operação de crédito. Ele classifica o cliente em <strong>Ratings</strong> (ex: A, B, C... H) que determinam o limite pré-aprovado e a taxa de juros (quanto maior o risco, maior a taxa).</p>
+      
       <div class="concept-grid">
         <div class="concept-card" style="border-top: 4px solid var(--arch);">
-          <div class="cc-tag">Consultas em Bureaus (Serasa/SPC)</div>
+          <div class="cc-tag">Consultas em Bureaus (Bacen, Serasa)</div>
           <div class="cc-body">
-            Durante o onboarding, a aplicação faz chamadas HTTP Síncronas (via API Gateway) para bureaus de crédito externos. A engenharia captura essas respostas cruas (JSON) no Data Lake. Por causa do alto custo de requisições, os dados do bureau geralmente possuem <em>caches lógicos</em> (ex: TTL de 30 dias no DynamoDB) para evitar múltiplas faturas.
+            No onboarding, o sistema faz chamadas síncronas para o SCR (Sistema de Informações de Crédito do Banco Central) e Serasa/Boa Vista. A engenharia deve orquestrar essas APIs (via Lambda/Step Functions) e criar um <em>Cache Analítico</em> (ex: TTL de 30 dias no DynamoDB ou Redis) para evitar pagar múltiplas vezes pela mesma consulta do mesmo CPF em um curto intervalo de tempo.
           </div>
         </div>
         <div class="concept-card" style="border-top: 4px solid var(--spark);">
           <div class="cc-tag">Modelagem de Scoring (Feature Store)</div>
           <div class="cc-body">
-            Para o time de Data Science calcular a PD (Probability of Default) em milissegundos via MLOps, a Engenharia de Dados mantém uma <strong>Feature Store</strong>. As features incluem "Quantidade de atrasos &gt; 30 dias nos últimos 12 meses", "Renda comprometida" e "Uso do limite do cartão rotativo".
+            Para aprovar um empréstimo em milissegundos via MLOps, a Engenharia de Dados constrói uma <strong>Feature Store</strong>. Features clássicas: 
+            <ul>
+              <li>Quantidade de atrasos &gt; 30 dias nos últimos 12 meses.</li>
+              <li>Renda comprometida (Comprometimento de Renda - DTI).</li>
+              <li>Tempo médio de residência e estabilidade no emprego.</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -444,7 +451,7 @@
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
 
-    <!-- SEÇÃO 2 -->
+    <!-- SEÇÃO 2: MATEMÁTICA -->
     <section class="section" id="matematica">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--ok)">02</div>
@@ -461,18 +468,16 @@
       <div class="abox info">
         <div class="abox-hdr" style="background:var(--muted)">Imposto sobre Operações Financeiras (IOF)</div>
         <div class="abox-body">
-          No Brasil, qualquer operação de crédito cobra IOF do cliente, diluído nas parcelas. Ele é composto por duas partes cruciais:
+          No Brasil, toda operação de crédito sofre tributação de IOF. Ele é composto por duas partes:
           <ul>
             <li><strong>IOF Fixo (Alíquota Adicional):</strong> Geralmente de 0,38% incidente sobre o valor total do crédito.</li>
             <li><strong>IOF Diário:</strong> Um percentual (ex: 0,0082% ao dia) cobrado pelo tempo que o dinheiro fica emprestado (limitado a 365 dias).</li>
           </ul>
-          Na Engenharia, o IOF é calculado na emissão (D0) e injetado no <em>Valor Financiado</em>. Se o cliente pegou R$ 1.000,00 de crédito, a tabela de parcelas será calculada em cima de R$ 1.000,00 + IOF + Tarifas (O Custo Efetivo Total - CET).
+          Na Engenharia, o IOF é calculado na emissão (D0) e financiado junto com o principal, formando o <em>Custo Efetivo Total (CET)</em>.
         </div>
       </div>
 
       <h3>2. Tabela Price vs. Tabela SAC</h3>
-      <p>A forma como o saldo devedor é abatido (Amortização) define o valor das parcelas do cliente. O Analista de Dados deve entender perfeitamente essas duas curvas matemáticas:</p>
-
       <div class="tbl-wrap">
         <table>
           <thead>
@@ -489,79 +494,63 @@
               <td><strong>Decrescente.</strong> A primeira é mais cara, a última é a mais barata.</td>
             </tr>
             <tr>
-              <td><strong>Amortização (Abatimento da Dívida)</strong></td>
-              <td>Crescente. No início você paga muito juro e abate pouca dívida. No fim abate muita dívida.</td>
+              <td><strong>Amortização da Dívida</strong></td>
+              <td>Crescente. No início abate pouca dívida e paga muito juro.</td>
               <td><strong>Fixa/Constante.</strong> O saldo devedor cai de forma igual todos os meses.</td>
             </tr>
             <tr>
               <td><strong>Juros Pagos</strong></td>
-              <td>Decrescentes. Mas o total de juros pago no final é <strong>maior</strong> que na SAC.</td>
-              <td>Decrescentes rápidos. O total de juros pago no final é <strong>menor</strong> que na Price.</td>
-            </tr>
-            <tr>
-              <td><strong>Uso Típico</strong></td>
-              <td>Crédito Pessoal, Empréstimos por App, Financiamento de Veículos.</td>
-              <td>Financiamento Imobiliário.</td>
+              <td>Decrescentes. O total de juros no final é <strong>maior</strong> que na SAC.</td>
+              <td>Decrescentes rápidos. O total de juros no final é <strong>menor</strong> que na Price.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <h4 style="margin-top: 32px;">Como calcular em Python (Exemplo Prático)</h4>
-      <p>Simulação de um empréstimo de <strong>R$ 10.000,00</strong> em <strong>12 meses</strong> com juros de <strong>2% ao mês</strong>.</p>
-      
-      <div class="code-block" style="margin-bottom: 24px;">
-        <pre><code class="language-python"># Cálculo Tabela SAC (Amortização Constante)
-def calcular_sac(capital, taxa_juros, meses):
-    amortizacao_mensal = capital / meses
-    saldo_devedor = capital
-    
-    print("Mês | Amortização | Juros   | Parcela  | Saldo Devedor")
-    for mes in range(1, meses + 1):
-        juros_mes = saldo_devedor * taxa_juros
-        parcela = amortizacao_mensal + juros_mes
-        saldo_devedor -= amortizacao_mensal
-        
-        print(f"{mes:02d}  | R$ {amortizacao_mensal:.2f} | R$ {juros_mes:.2f} | R$ {parcela:.2f} | R$ {saldo_devedor:.2f}")
-
-calcular_sac(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
-      </div>
-
-      <div class="code-block" style="margin-bottom: 32px;">
-        <pre><code class="language-python"># Cálculo Tabela Price (Parcela Fixa)
-def calcular_price(capital, taxa_juros, meses):
-    # Fórmula da Parcela Fixa (PMT)
-    parcela = capital * (taxa_juros * (1 + taxa_juros)**meses) / ((1 + taxa_juros)**meses - 1)
-    saldo_devedor = capital
-    
-    print("Mês | Amortização | Juros   | Parcela  | Saldo Devedor")
-    for mes in range(1, meses + 1):
-        juros_mes = saldo_devedor * taxa_juros
-        amortizacao_mes = parcela - juros_mes
-        saldo_devedor -= amortizacao_mes
-        
-        print(f"{mes:02d}  | R$ {amortizacao_mes:.2f} | R$ {juros_mes:.2f} | R$ {parcela:.2f} | R$ {saldo_devedor:.2f}")
-
-calcular_price(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
+      <p>Estes cálculos são frequentemente codificados em PySpark para reconstruir a curva teórica de milhões de contratos de forma distribuída.</p>
+      <div class="grid-2">
+        <div class="code-block" style="margin-bottom: 24px;">
+          <pre><code class="language-python"># Cálculo Tabela SAC
+def calcular_sac(capital, taxa, meses):
+    amortizacao = capital / meses
+    saldo = capital
+    for m in range(1, meses + 1):
+        juros = saldo * taxa
+        parcela = amortizacao + juros
+        saldo -= amortizacao
+        print(f"Mês {m:02d}: R$ {parcela:.2f}")</code></pre>
+        </div>
+        <div class="code-block" style="margin-bottom: 24px;">
+          <pre><code class="language-python"># Cálculo Tabela Price
+def calcular_price(capital, taxa, meses):
+    parcela = capital * (taxa * (1+taxa)**meses) / ((1+taxa)**meses - 1)
+    saldo = capital
+    for m in range(1, meses + 1):
+        juros = saldo * taxa
+        amort = parcela - juros
+        saldo -= amort
+        print(f"Mês {m:02d}: R$ {parcela:.2f}")</code></pre>
+        </div>
       </div>
 
       <div class="callout callout-tip" style="border-left-color:var(--ext)">
-        <strong>Engenharia: Modelagem do Contrato em um Datalake (SCD Tipo 2)</strong>
-        <p>Um contrato de empréstimo não é estático. O cliente pode pedir renegociação, alongar o prazo ou mudar a data de vencimento. Se você usar uma tabela mutável simples (<code>UPDATE</code>), você destrói a história analítica. Em Bancos e Fintechs, adotamos as <strong>Slowly Changing Dimensions (SCD Tipo 2)</strong>. Cada mudança no contrato insere um registro novo na tabela `dim_contratos` com colunas <code>validade_inicio</code>, <code>validade_fim</code> e <code>is_active_flag</code>. Isso permite ao analista financeiro reconstruir a foto de carteira do banco em qualquer data do passado (Time-Travel lógico).</p>
+        <strong>Engenharia de Datalake: Modelagem de Contrato (SCD Tipo 2)</strong>
+        <p>Um contrato não é estático. O cliente pode pedir renegociação. Se você usar <code>UPDATE</code>, destruirá a história analítica. Usamos <strong>Slowly Changing Dimensions (SCD Tipo 2)</strong>. Toda mudança insere um novo registro com <code>validade_inicio</code>, <code>validade_fim</code> e <code>is_active_flag</code>, viabilizando o Time-Travel analítico da carteira de crédito.</p>
       </div>
 
     </section>
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
 
-    <!-- SEÇÃO 3 -->
+    <!-- SEÇÃO 3: PÓS VENDA E RECONCILIAÇÃO -->
     <section class="section" id="pos-venda">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--warn)">03</div>
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--warn)"></div>
-          <h2>Pós-venda: Baixas, Deságios e Inadimplência</h2>
-          <p>A fase final do ciclo de crédito envolve lidar com os pagamentos recebidos (Baixas) e a matemática dos atrasos.</p>
+          <h2>Pós-venda, Inadimplência e Reconciliação</h2>
+          <p>A fase complexa do Billing: liquidações, cálculos de multas, estornos e motores de conciliação.</p>
         </div>
       </div>
 
@@ -569,58 +558,45 @@ calcular_price(capital=10000, taxa_juros=0.02, meses=12)</code></pre>
         <div class="concept-card" style="border-top: 4px solid var(--spark);">
           <div class="cc-tag">Liquidação Antecipada (VPL)</div>
           <div class="cc-body">
-            Por lei, o cliente pode antecipar parcelas de trás para frente. Como a parcela da Tabela Price já carrega os juros futuros embutidos, o banco deve retirar esses juros. Aplicamos o <strong>Valor Presente Líquido (VPL)</strong> com a taxa de Deságio (a mesma taxa de juros da contratação). A Engenharia escuta eventos de `AntecipacaoEfetuada` no Kafka para recalcular o fluxo de caixa projetado da instituição analiticamente.
+            Por lei, o cliente pode antecipar parcelas com abatimento de juros. Aplicamos o <strong>Valor Presente Líquido (VPL)</strong> com a taxa de Deságio (a mesma taxa da contratação). A Engenharia escuta eventos de <code>AntecipacaoEfetuada</code> no MSK/Kafka para recalcular a Duration da carteira.
           </div>
         </div>
         <div class="concept-card" style="border-top: 4px solid var(--warn);">
           <div class="cc-tag">Atraso: Multa + Juros de Mora</div>
           <div class="cc-body">
-            Quando a parcela passa do vencimento, entram os encargos de inadimplência:
-            <br>1. <strong>Multa:</strong> Um valor fixo percentual (Ex: 2% por lei no BR) cobrado <em>uma única vez</em>.
-            <br>2. <strong>Juros de Mora:</strong> Um valor diário (Pro-rata) cobrado por cada dia de atraso (Ex: 1% ao mês proporcional).<br>Isso faz a dívida escalar em "bola de neve".
+            Se passar do vencimento:
+            <br>1. <strong>Multa:</strong> Valor fixo percentual (Ex: 2% por lei) cobrado <em>uma vez</em>.
+            <br>2. <strong>Juros de Mora:</strong> Valor pro-rata cobrado por cada dia de atraso (Ex: 1% ao mês proporcional).
           </div>
         </div>
       </div>
 
-      <h4 style="margin-top: 32px;">Exemplo de Cálculo de Inadimplência</h4>
-      <div class="code-block" style="margin-bottom: 32px;">
-        <pre><code class="language-python"># Cálculo de Atraso (Multa e Juros de Mora)
-def calcular_divida_atraso(valor_parcela, dias_atraso, perc_multa=0.02, juros_mes=0.01):
-    if dias_atraso <= 0:
-        return valor_parcela
-        
-    # Multa cobrada uma única vez (ex: 2%)
-    valor_multa = valor_parcela * perc_multa
-    
-    # Juros de mora pro-rata die (ex: 1% ao mês / 30 dias)
-    juros_diario = juros_mes / 30
-    valor_mora = valor_parcela * juros_diario * dias_atraso
-    
-    divida_atualizada = valor_parcela + valor_multa + valor_mora
-    
-    print(f"Parcela Original: R$ {valor_parcela:.2f}")
-    print(f"Dias de Atraso: {dias_atraso}")
-    print(f"Multa ({perc_multa*100}%): R$ {valor_multa:.2f}")
-    print(f"Juros Mora ({juros_mes*100}% a.m): R$ {valor_mora:.2f}")
-    print(f"Total a Pagar: R$ {divida_atualizada:.2f}")
-
-calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
+      <h3 style="margin-top: 32px;">O Desafio da Engenharia: Inconsistências de Dados e Conciliação</h3>
+      <p>Em instituições financeiras, frequentemente existem vários sistemas lidando com o mesmo dinheiro: o Sistema de Faturamento (Billing), o Sistema Transacional (Core Banking), o Barramento de Pagamentos (SPB/PIX) e o Livro Razão (Ledger).</p>
+      
+      <div class="callout callout-warning">
+        <strong>Case de Divergência: O "Falso Inadimplente" do Fim de Semana</strong>
+        <p>Um cliente paga o boleto/fatura sexta-feira às 23h. O Sistema de Billing processa na hora, mas a Câmara de Compensação Bancária (CIP) só liquida o lote na segunda-feira pela manhã. Se a rotina analítica de crédito rodar no domingo, o cliente será classificado como "Overdue" (Atrasado) e sua nota de Risco (Rating) será rebaixada no Bacen indevidamente.</p>
       </div>
 
-      <h3>A Inadimplência na Engenharia de Dados</h3>
-      <p>Um cliente atrasado vira um registro de "Overdue". A métrica sagrada do banco é o índice de inadimplência (<strong>NPL - Non-Performing Loans</strong>). Geralmente o banco olha para atrasos maiores de 15, 30, 60 e 90 dias.</p>
-      
-      <div class="callout callout-tip" style="border-left-color:var(--emr)">
-        <strong>Problema de Pipeline: "Late-Arriving Data" nas Baixas de PIX/Boleto</strong>
-        <p>Um problema severo de engenharia na liquidação bancária é a assincronicidade. O cliente paga o boleto na sexta à noite. A câmara de compensação (CIP) ou o Banco Central envia o arquivo de confirmação apenas na segunda-feira pela manhã. Se o pipeline rodar na sexta à meia-noite, marcará o cliente como Inadimplente.</p>
-        <p><strong>Solução:</strong> A Engenharia utiliza janelas de chegada (Watermarks) no Apache Flink ou Spark Structured Streaming para tolerar dados atrasados, além de atualizar o <code>fato_pagamentos</code> no Apache Iceberg retroativamente usando <code>MERGE INTO</code> com a data de pagamento efetiva do banco de origem, garantindo que o cálculo de Multas seja revertido analiticamente.</p>
+      <h4>Arquitetura do Motor de Reconciliação (PySpark)</h4>
+      <p>A engenharia de dados cria "Motores de Reconciliação" (geralmente jobs Spark noturnos) que cruzam a perna do negócio (Billing) com a perna financeira (Ledger/PIX). Eles procuram por 3 cenários básicos:</p>
+      <ul style="margin-bottom: 20px;">
+        <li><strong>Match Perfeito:</strong> Valor faturado = Valor pago = Valor contabilizado.</li>
+        <li><strong>Quebra de Valor (Divergência):</strong> O cliente pagou R$ 999,99 ao invés de R$ 1000,00. O sistema precisa criar um evento de ajuste de 1 centavo.</li>
+        <li><strong>Falta de Perna (Orphan Event):</strong> Existe um pagamento no extrato do PIX, mas não há baixa no Billing (Dinheiro Sobrando) ou vice-versa (Falta Dinheiro).</li>
+      </ul>
+
+      <div class="drawio-wrap">
+        <div class="drawio-label" style="color:var(--emr)"><span class="dot" style="background:var(--emr)"></span>MOTOR DE RECONCILIAÇÃO (DATA QUALITY)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight": "#FF6B00", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxGraphModel dx="800" dy="400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="800" pageHeight="300" background="#080f1e"&gt;&lt;root&gt;&lt;mxCell id="0"/&gt;&lt;mxCell id="1" parent="0"/&gt;&lt;mxCell id="b1" value="SISTEMA BILLING&amp;#10;(S3 Raw)" style="rounded=1;fillColor=#1e293b;fontColor=#ffffff;strokeColor=#475569;" vertex="1" parent="1"&gt;&lt;mxGeometry x="60" y="60" width="120" height="50" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="b2" value="EXTRATO BANCÁRIO&amp;#10;(S3 Raw)" style="rounded=1;fillColor=#1e293b;fontColor=#ffffff;strokeColor=#475569;" vertex="1" parent="1"&gt;&lt;mxGeometry x="60" y="180" width="120" height="50" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="spark" value="PySpark Reconciler&amp;#10;FULL OUTER JOIN" style="shape=hexagon;fillColor=#f59e0b;fontColor=#000;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="280" y="110" width="150" height="70" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e1" edge="1" source="b1" target="spark" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e2" edge="1" source="b2" target="spark" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="m1" value="MATCHES" style="rounded=1;fillColor=#10b981;fontColor=#ffffff;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="520" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="m2" value="DIVERGÊNCIAS" style="rounded=1;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="520" y="125" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="m3" value="ORPHANS" style="rounded=1;fillColor=#f97316;fontColor=#ffffff;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry x="520" y="210" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e3" edge="1" source="spark" target="m1" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e4" edge="1" source="spark" target="m2" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ef4444;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e5" edge="1" source="spark" target="m3" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#f97316;"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;}'></div>
       </div>
 
     </section>
 
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
 
-    <!-- SEÇÃO 4 -->
+    <!-- SEÇÃO 4: CONTABILIDADE -->
     <section class="section" id="contabilidade">
       <div class="sec-hdr">
         <div class="sec-num" style="color:var(--ext)">04</div>
@@ -633,86 +609,68 @@ calcular_divida_atraso(valor_parcela=1000.00, dias_atraso=45)</code></pre>
 
       <div class="callout callout-info">
         <strong>Saldo Contábil vs. Saldo Líquido (Curva)</strong>
-        <p>No banco de dados transacional, um contrato recém-criado de R$ 10.000,00 a ser pago em 12 vezes de R$ 1.000,00 possui um <strong>Saldo Contábil (ou Saldo Futuro)</strong> de R$ 12.000,00. Contudo, o <strong>Saldo Líquido (Curva/Presente)</strong> é R$ 10.000,00. O banco só pode reconhecer os R$ 2.000,00 de juros como "Lucro" à medida que os dias passam (Diferimento).</p>
+        <p>No banco transacional, um contrato de R$ 10.000 a pagar em 12x de R$ 1.000 possui um <strong>Saldo Contábil</strong> de R$ 12.000. Contudo, o <strong>Saldo Líquido (Curva Presente)</strong> é R$ 10.000. Os R$ 2.000 de juros só são reconhecidos como lucro ao longo do tempo (Diferimento).</p>
       </div>
 
-      <h3>1. Apropriação e Diferimento Contábil (Visão do Analista Financeiro)</h3>
-      <p><strong>Diferimento (ou Apropriação)</strong> é o princípio fundamental da competência contábil (Accrual Accounting). Como analista financeiro, eu não olho para o "fluxo de caixa" imediato para medir a rentabilidade de uma carteira, mas sim para a apropriação diária (<em>pro-rata die</em>) das receitas e despesas.</p>
-      
-      <div class="callout callout-warning">
-        <strong>O Paradoxo do Lucro Bancário</strong>
-        <p>Se o banco empresta R$ 10.000 hoje para receber R$ 12.000 em 12 meses, ele NÃO lucrou R$ 2.000 hoje. Pela regulação do Banco Central (COSIF), esses R$ 2.000 são <strong>Receitas a Apropriar (Passivo/Redutora)</strong>. O lucro só existe à medida que o tempo passa e o risco é incorrido.</p>
-      </div>
-
-      <h4>O Pipeline de Apropriação (Engenharia de Dados)</h4>
-      <p>Na prática, a engenharia de dados precisa construir uma máquina de apropriação. Todo fim de dia (D-0), um job em Spark calcula a fração de juros que o banco "ganhou" naquele dia para cada um dos milhões de contratos.</p>
-
-      <div class="abox info">
-        <div class="abox-hdr">Exemplo Prático: Cálculo de Apropriação em PySpark</div>
-        <div class="abox-body">
-          <p>Considere um contrato com taxa de 2% ao mês. A taxa diária equivalente (considerando 30 dias) é calculada e multiplicada pelo <strong>Saldo Devedor Curvado</strong> do dia anterior.</p>
-          <pre><code class="language-python">
-# A visão do Analista traduzida para código:
-from pyspark.sql.functions import col, pow, lit
-
-# 1. Converter Taxa Mensal para Diária (Dias Corridos ou Úteis dependendo do produto)
-df_contratos = df_contratos.withColumn("taxa_diaria", pow(1 + col("taxa_mensal"), 1/30) - 1)
-
-# 2. Apropriar a Receita do Dia (Juros Acruados)
-df_apropriacao = df_contratos.withColumn(
-    "receita_juros_dia", 
-    col("saldo_curva_d_menos_1") * col("taxa_diaria")
-)
-
-# 3. Atualizar o Saldo (Curva)
-df_novo_saldo = df_apropriacao.withColumn(
-    "saldo_curva_atual", 
-    col("saldo_curva_d_menos_1") + col("receita_juros_dia") - col("pagamentos_dia")
-)
-          </code></pre>
-          <p>Essa tabela <code>fato_apropriacao_diaria</code> é o "santo graal" para a diretoria financeira. Se esse job falhar ou calcular centavos a mais, o DRE (Demonstrativo de Resultado do Exercício) do banco sai errado, o que é uma infração grave perante os reguladores.</p>
-        </div>
-      </div>
+      <h3>Apropriação Diária (Spot Accrual)</h3>
+      <p>A engenharia de dados precisa construir uma máquina de apropriação. Todo fim de dia (D-0), um pipeline em Spark calcula a fração de juros que o banco "ganhou" naquele dia e atualiza o fato diário.</p>
 
       <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
         <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>PIPELINE DE APROPRIAÇÃO CONTÁBIL (ACCRUAL)</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;800\&quot; pageHeight=\&quot;380\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_0\&quot; /&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_1\&quot; parent=\&quot;0dc418_90787d_5cba36_0\&quot; /&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry width=\&quot;800\&quot; height=\&quot;380\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_l_tech\&quot; value=\&quot;CAMADA T\u00c9CNICA (PIPELINE DE DADOS)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;40\&quot; width=\&quot;720\&quot; height=\&quot;150\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_l_biz\&quot; value=\&quot;CAMADA DE NEG\u00d3CIO (FINAN\u00c7AS E CONTABILIDADE)\&quot; style=\&quot;rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=10;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;210\&quot; width=\&quot;720\&quot; height=\&quot;130\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_db\&quot; value=\&quot;Aurora (PostgreSQL)&amp;#xa;Contratos / Taxas\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Athena.png;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;100\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_emr\&quot; value=\&quot;Amazon EMR (Spark)&amp;#xa;C\u00e1lculo Pro-Rata Die\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/EMR.png;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;280\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_s3\&quot; value=\&quot;S3 + Iceberg&amp;#xa;fato_apropriacao\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/S3.png;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_ath\&quot; value=\&quot;Athena + QuickSight&amp;#xa;Fechamento D-0\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Athena.png;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;640\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_e1\&quot; edge=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot; source=\&quot;0dc418_90787d_5cba36_db\&quot; target=\&quot;0dc418_90787d_5cba36_emr\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=2;fontColor=#94a3b8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_e2\&quot; edge=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot; source=\&quot;0dc418_90787d_5cba36_emr\&quot; target=\&quot;0dc418_90787d_5cba36_s3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=2;fontColor=#94a3b8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_e3\&quot; edge=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot; source=\&quot;0dc418_90787d_5cba36_s3\&quot; target=\&quot;0dc418_90787d_5cba36_ath\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=2;fontColor=#94a3b8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_b1\&quot; value=\&quot;Extrac\u00e3o D-0&amp;#xa;Saldo Atual: R$ 10k\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#3b82f6;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=10;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;64\&quot; y=\&quot;260\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_b2\&quot; value=\&quot;Regras de Neg\u00f3cio&amp;#xa;Tx: 2% a.m -&amp;gt; + R$ 6,55/dia\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#f59e0b;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;244\&quot; y=\&quot;260\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_b3\&quot; value=\&quot;Curva Atualizada&amp;#xa;Novo Saldo: R$ 10.006,55\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=10;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;424\&quot; y=\&quot;260\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_b4\&quot; value=\&quot;DRE Financeiro&amp;#xa;Lucro Di\u00e1rio: R$ 6,55\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#8b5cf6;fontColor=#c4b5fd;fontFamily=DM Sans;fontSize=10;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot;&gt;&lt;mxGeometry x=\&quot;604\&quot; y=\&quot;260\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_c1\&quot; edge=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot; source=\&quot;0dc418_90787d_5cba36_db\&quot; target=\&quot;0dc418_90787d_5cba36_b1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1;dashed=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_c2\&quot; edge=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot; source=\&quot;0dc418_90787d_5cba36_emr\&quot; target=\&quot;0dc418_90787d_5cba36_b2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=1;dashed=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_c3\&quot; edge=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot; source=\&quot;0dc418_90787d_5cba36_s3\&quot; target=\&quot;0dc418_90787d_5cba36_b3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1;dashed=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;0dc418_90787d_5cba36_c4\&quot; edge=\&quot;1\&quot; parent=\&quot;0dc418_90787d_5cba36_1\&quot; source=\&quot;0dc418_90787d_5cba36_ath\&quot; target=\&quot;0dc418_90787d_5cba36_b4\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1;dashed=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{"highlight": "#FF6B00", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxGraphModel background="#080f1e" dx="1" dy="1" grid="0" gridSize="10" guides="0" tooltips="1" connect="0" arrows="0" fold="0" page="0" pageScale="1" pageWidth="800" pageHeight="380" math="0" shadow="0"&gt;&lt;root&gt;&lt;mxCell id="0" /&gt;&lt;mxCell id="1" parent="0" /&gt;&lt;mxCell id="bg" value="" style="labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;" vertex="1" parent="1"&gt;&lt;mxGeometry width="800" height="380" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="l_tech" value="CAMADA TÉCNICA (PIPELINE DE DADOS)" style="rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;" vertex="1" parent="1"&gt;&lt;mxGeometry x="40" y="40" width="720" height="150" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="l_biz" value="CAMADA DE NEGÓCIO (FINANÇAS E CONTABILIDADE)" style="rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=10;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;" vertex="1" parent="1"&gt;&lt;mxGeometry x="40" y="210" width="720" height="130" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="db" value="Aurora (PostgreSQL)&amp;#xa;Contratos / Taxas" style="labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Aurora.png;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"&gt;&lt;mxGeometry x="100" y="90" width="48" height="48" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="emr" value="Amazon EMR (Spark)&amp;#xa;Cálculo Pro-Rata Die" style="labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/EMR.png;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"&gt;&lt;mxGeometry x="280" y="90" width="48" height="48" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="s3" value="S3 + Iceberg&amp;#xa;fato_apropriacao" style="labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/S3.png;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"&gt;&lt;mxGeometry x="460" y="90" width="48" height="48" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="ath" value="Athena + QuickSight&amp;#xa;Fechamento D-0" style="labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Athena.png;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1"&gt;&lt;mxGeometry x="640" y="90" width="48" height="48" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="e1" edge="1" parent="1" source="db" target="emr" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=2;fontColor=#94a3b8;"&gt;&lt;mxGeometry relative="1" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="e2" edge="1" parent="1" source="emr" target="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=2;fontColor=#94a3b8;"&gt;&lt;mxGeometry relative="1" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="e3" edge="1" parent="1" source="s3" target="ath" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=2;fontColor=#94a3b8;"&gt;&lt;mxGeometry relative="1" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="b1" value="Extracão D-0&amp;#xa;Saldo Atual: R$ 10k" style="rounded=1;fillColor=#0f172a;strokeColor=#3b82f6;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=10;align=center;" vertex="1" parent="1"&gt;&lt;mxGeometry x="64" y="260" width="120" height="50" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="b2" value="Regras de Negócio&amp;#xa;Tx: 2% a.m -&amp;gt; + R$ 6,55/dia" style="rounded=1;fillColor=#0f172a;strokeColor=#f59e0b;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=center;" vertex="1" parent="1"&gt;&lt;mxGeometry x="244" y="260" width="120" height="50" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="b3" value="Curva Atualizada&amp;#xa;Novo Saldo: R$ 10.006,55" style="rounded=1;fillColor=#0f172a;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=10;align=center;" vertex="1" parent="1"&gt;&lt;mxGeometry x="424" y="260" width="120" height="50" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="b4" value="DRE Financeiro&amp;#xa;Lucro Diário: R$ 6,55" style="rounded=1;fillColor=#0f172a;strokeColor=#8b5cf6;fontColor=#c4b5fd;fontFamily=DM Sans;fontSize=10;align=center;" vertex="1" parent="1"&gt;&lt;mxGeometry x="604" y="260" width="120" height="50" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="c1" edge="1" parent="1" source="db" target="b1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1;dashed=1;"&gt;&lt;mxGeometry relative="1" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="c2" edge="1" parent="1" source="emr" target="b2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=1;dashed=1;"&gt;&lt;mxGeometry relative="1" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="c3" edge="1" parent="1" source="s3" target="b3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1;dashed=1;"&gt;&lt;mxGeometry relative="1" as="geometry" /&gt;&lt;/mxCell&gt;&lt;mxCell id="c4" edge="1" parent="1" source="ath" target="b4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1;dashed=1;"&gt;&lt;mxGeometry relative="1" as="geometry" /&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;}'></div>
       </div>
 
-      <h3>2. Inadimplência Extrema: Stop Accrual & Write-off</h3>
+      <h3>Inadimplência Extrema: Stop Accrual & Write-off</h3>
       <div class="concept-grid">
         <div class="concept-card" style="border-top: 4px solid var(--warn);">
           <div class="cc-tag">Stop Accrual</div>
           <div class="cc-body">
-            Quando um contrato atinge um atraso crítico (ex: 60 ou 90 dias), o banco <strong>para de contabilizar os juros diários como receita</strong>, pois a probabilidade de calote é altíssima. Na Engenharia, isso é tratado via regras de negócio no Apache Spark (ex: <code>IF dias_atraso >= 60 THEN juros_dia = 0</code>). O saldo do cliente continua crescendo para fins de cobrança, mas o banco não finge mais que está lucrando no balanço.
+            Quando o atraso atinge 60 dias, o banco <strong>para de apropriar juros como receita</strong> (Stop Accrual), pois a chance de calote é alta. A dívida do cliente continua subindo, mas o banco deixa de reconhecer lucro fictício no balanço.
           </div>
         </div>
         <div class="concept-card" style="border-top: 4px solid var(--navy);">
           <div class="cc-tag">Write-off (Baixa a Prejuízo)</div>
           <div class="cc-body">
-            Geralmente após 180 a 360 dias de atraso, o contrato é expurgado do ativo do banco (Write-off), sendo contabilizado integralmente como prejuízo fiscal. Na arquitetura de dados, o contrato recebe uma flag <code>is_written_off = TRUE</code> no Datalake. A partir daqui, as réplicas desse dado são roteadas via Kafka para parceiros de cobrança externa (Cessionárias).
+            Geralmente após 180 a 360 dias, o contrato é expurgado do Ativo do banco e lançado integralmente no Prejuízo Fiscal. Na arquitetura de dados, injetamos um evento `is_written_off=TRUE`. A cobrança é terceirizada e, se recuperada, entra como "Recuperação de Crédito".
           </div>
         </div>
       </div>
 
-      <h3>3. Event Sourcing e Razonete Contábil</h3>
-      <p>Na contabilidade (Partidas Dobradas), todo <strong>Crédito</strong> exige um <strong>Débito</strong> correspondente. A arquitetura de dados moderna que imita isso chama-se <strong>Event Sourcing</strong>.</p>
-      
-      <div class="abox info" style="border-color:var(--ext)">
-        <div class="abox-hdr" style="background:var(--ext)">Arquitetura de Razonete Distribuído</div>
-        <div class="abox-body">
-          Em vez de fazer `UPDATE saldo = saldo - 50`, nós inserimos um novo evento imutável de redução de saldo no Kafka/Iceberg. 
-          <br><br>
-          <strong>Cancelamento de Operação (Distrato):</strong> Se o cliente se arrepender do empréstimo em até 7 dias (CDC), o sistema NÃO apaga a linha original. Ele gera um evento reverso (Estorno) que zera o balanço. A soma (FOLD) de todos os eventos no Data Lake sempre resultará no saldo atual do Razonete Contábil, garantindo a rastreabilidade perfeita para auditorias do Banco Central.
+    </section>
+
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+    <!-- SEÇÃO 5: O CICLO COMPLETO DE CRÉDITO -->
+    <section class="section" id="ciclo-credito">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#0284c7">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#0284c7"></div>
+          <h2>O Ciclo de Vida Completo do Crédito</h2>
+          <p>Da Originação ao Write-off: o fluxo completo modelado em uma arquitetura de Data Mesh.</p>
         </div>
       </div>
 
-      <h3>4. Spread Bancário</h3>
-      <p>Finalmente, a métrica mais cobiçada. O <strong>Spread</strong> é a diferença entre a taxa que o banco cobra do cliente (Ex: 4% ao mês) e o custo de captação de dinheiro do próprio banco (Ex: CDI a 1% ao mês). A plataforma de dados cruza a curva da carteira contra a curva de CDI histórica consumida da B3 (Ingestão Diária), gerando o painel executivo que dita a saúde (Rentabilidade) da instituição financeira.</p>
+      <div class="callout callout-tip">
+        <strong>Visão Geral de Estados</strong>
+        <ul>
+          <li><strong>Originação:</strong> Pipeline de ingestão da aplicação (API Gateway -> Kinesis).</li>
+          <li><strong>Manutenção/Accrual:</strong> Spark Jobs diários computando a evolução da curva.</li>
+          <li><strong>Recebimentos:</strong> Ingestão de arquivos de retorno CIP/Bacen, ativando pipelines de Reconciliação e abatendo a dívida.</li>
+          <li><strong>Inadimplência:</strong> Modelos de MLOps disparando réguas de cobrança (SMS, E-mail) e aprovisionamento de risco (PDD).</li>
+          <li><strong>Renegociação:</strong> Aditivos no contrato via transações ACID; o Data Lake utiliza <code>MERGE INTO</code> do Apache Iceberg para invalidar a versão antiga e criar a nova linhagem financeira.</li>
+        </ul>
+      </div>
 
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
+        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>CICLO DE VIDA DE CRÉDITO NA ARQUITETURA DE DADOS (DRAW.IO)</div>
+        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;overflow:auto;" data-mxgraph='{"highlight": "#FF6B00", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="500" background="#0B1120"&gt;&lt;root&gt;&lt;mxCell id="0"/&gt;&lt;mxCell id="1" parent="0"/&gt;&lt;mxCell id="lane1" value="NEGÓCIO (Ciclo do Cliente)" style="swimlane;horizontal=0;startSize=40;fillColor=#1e293b;fontColor=#ffffff;strokeColor=#334155;rounded=0;" vertex="1" parent="1"&gt;&lt;mxGeometry x="40" y="40" width="1080" height="120" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="lane2" value="CONTÁBIL (Razonete D/C)" style="swimlane;horizontal=0;startSize=40;fillColor=#064e3b;fontColor=#ffffff;strokeColor=#047857;rounded=0;" vertex="1" parent="1"&gt;&lt;mxGeometry x="40" y="160" width="1080" height="120" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="lane3" value="SISTEMA (Data Lake Events)" style="swimlane;horizontal=0;startSize=40;fillColor=#450a0a;fontColor=#ffffff;strokeColor=#7f1d1d;rounded=0;" vertex="1" parent="1"&gt;&lt;mxGeometry x="40" y="280" width="1080" height="120" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="b1" value="1. Contratação" style="rounded=1;fillColor=#0ea5e9;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane1"&gt;&lt;mxGeometry x="60" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="c1" value="D: Carteira (Ativo)&amp;#10;C: Caixa (Ativo)" style="rounded=1;fillColor=#10b981;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane2"&gt;&lt;mxGeometry x="60" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="s1" value="CREDIT_GRANTED" style="shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;" vertex="1" parent="lane3"&gt;&lt;mxGeometry x="60" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="b2" value="2. Spot Accrual" style="rounded=1;fillColor=#0ea5e9;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane1"&gt;&lt;mxGeometry x="240" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="c2" value="D: Rendas (A)&amp;#10;C: Receita (DRE)" style="rounded=1;fillColor=#10b981;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane2"&gt;&lt;mxGeometry x="240" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="s2" value="ACCRUAL_CALC" style="shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;" vertex="1" parent="lane3"&gt;&lt;mxGeometry x="240" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="b3" value="3. Pagamento" style="rounded=1;fillColor=#0ea5e9;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane1"&gt;&lt;mxGeometry x="420" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="c3" value="D: Caixa (A)&amp;#10;C: Carteira (A)" style="rounded=1;fillColor=#10b981;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane2"&gt;&lt;mxGeometry x="420" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="s3" value="INSTALL_PAID" style="shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;" vertex="1" parent="lane3"&gt;&lt;mxGeometry x="420" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="b4" value="4. Atraso (Arrears)" style="rounded=1;fillColor=#eab308;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane1"&gt;&lt;mxGeometry x="600" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="c4" value="D: Despesa PDD&amp;#10;C: Provisão (Red)" style="rounded=1;fillColor=#eab308;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane2"&gt;&lt;mxGeometry x="600" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="s4" value="DELINQUENCY" style="shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;" vertex="1" parent="lane3"&gt;&lt;mxGeometry x="600" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="b5" value="5. Renegociação" style="rounded=1;fillColor=#8b5cf6;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane1"&gt;&lt;mxGeometry x="780" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="c5" value="D: Nova Carteira&amp;#10;C: Carteira Velha" style="rounded=1;fillColor=#8b5cf6;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane2"&gt;&lt;mxGeometry x="780" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="s5" value="REFINANCING" style="shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;" vertex="1" parent="lane3"&gt;&lt;mxGeometry x="780" y="40" width="120" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="b6" value="6. Write-off" style="rounded=1;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane1"&gt;&lt;mxGeometry x="960" y="40" width="90" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="c6" value="D: Provisão&amp;#10;C: Carteira" style="rounded=1;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane2"&gt;&lt;mxGeometry x="960" y="40" width="90" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="s6" value="WRITEOFF" style="shape=hexagon;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;align=center;" vertex="1" parent="lane3"&gt;&lt;mxGeometry x="960" y="40" width="90" height="40" as="geometry"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e1" edge="1" source="b1" target="b2" parent="lane1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e2" edge="1" source="b2" target="b3" parent="lane1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e3" edge="1" source="b3" target="b4" parent="lane1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e4" edge="1" source="b4" target="b5" parent="lane1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="e5" edge="1" source="b5" target="b6" parent="lane1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v1" edge="1" source="b1" target="c1" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v1b" edge="1" source="c1" target="s1" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v2" edge="1" source="b2" target="c2" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v2b" edge="1" source="c2" target="s2" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v3" edge="1" source="b3" target="c3" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v3b" edge="1" source="c3" target="s3" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v4" edge="1" source="b4" target="c4" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v4b" edge="1" source="c4" target="s4" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v5" edge="1" source="b5" target="c5" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v5b" edge="1" source="c5" target="s5" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v6" edge="1" source="b6" target="c6" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;mxCell id="v6b" edge="1" source="c6" target="s6" parent="1"&gt;&lt;mxGeometry relative="1" as="geometry"/&gt;&lt;mxCell style="edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;}'></div>
+      </div>
+      
     </section>
 
-  
+    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
     <!-- SEÇÃO DE REFERÊNCIAS -->
     <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
       <div class="sec-hdr">
@@ -720,7 +678,7 @@ df_novo_saldo = df_apropriacao.withColumn(
         <div class="sec-meta">
           <div class="sec-acc" style="background:var(--muted)"></div>
           <h2>Referências &amp; Notas de Curadoria</h2>
-          <p>Documentos originais e literatura técnica de referência para este módulo</p>
+          <p>Documentos originais e literatura técnica de referência para este módulo.</p>
         </div>
       </div>
       <div class="grid-2">
@@ -733,322 +691,6 @@ df_novo_saldo = df_apropriacao.withColumn(
           <div class="card-lbl">Finanças Corporativas e Análise de Crédito</div>
           <h4>Alexandre Assaf Neto (Editora Atlas)</h4>
           <p>Estudo dos conceitos matemáticos de crédito, análise de risco corporativo, juros e amortizações.</p>
-        </div>
-      </div>
-    </section>
-
-    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
-
-    <!-- SEÇÃO 5: O CICLO COMPLETO DE CRÉDITO -->
-    <section class="section" id="ciclo-credito">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#0284c7">05</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#0284c7"></div>
-          <h2>O Ciclo de Vida do Crédito &amp; Razonete Contábil</h2>
-          <p>Da contratação ao Write-off: o fluxo contábil e a arquitetura de dados (Data Mesh) que garantem a integridade das operações financeiras.</p>
-        </div>
-      </div>
-
-      <div class="callout callout-tip">
-        <strong>Conceitos Fundamentais de Crédito</strong>
-        <p>A engenharia de dados em fintechs e bancos exige o mapeamento preciso dos seguintes eventos de negócio:</p>
-        <ul>
-          <li><strong>Contratação &amp; Concessão:</strong> O cliente assina o termo, a conta do cliente é creditada (TED/PIX). Surge a <strong>Exposição de Crédito</strong> do banco.</li>
-          <li><strong>Cancelamento:</strong> Desistência da operação antes ou logo após a concessão (dentro da janela legal). A operação é estornada na contabilidade.</li>
-          <li><strong>Spot Accrual (Apropriação Spot):</strong> A apropriação diária (pro-rata) dos juros. Embora o cliente só pague no final do mês, contabilmente o banco reconhece o lucro dos juros diariamente (regime de competência).</li>
-          <li><strong>Recebimento:</strong> Quando o cliente paga a fatura/parcela. O saldo devedor diminui e o dinheiro entra no caixa.</li>
-          <li><strong>Atraso &amp; Risco de Crédito:</strong> Quando a parcela não é paga na data de vencimento. O rating de risco piora e entra em cobrança. A instituição provisiona perdas (PDD/ECL).</li>
-          <li><strong>Renegociação:</strong> O cliente em atraso refaz as condições da dívida. Um novo contrato (ou aditivo) é gerado, estendendo o prazo e alterando a taxa.</li>
-          <li><strong>Write-off (Baixa para Prejuízo):</strong> Quando a dívida chega a um nível irrecuperável (ex: mais de 360 dias de atraso), o banco realiza a baixa contábil ("joga para prejuízo"), limpando o balanço de ativos podres, mas a cobrança pode continuar externamente.</li>
-        </ul>
-      </div>
-
-      
-      <h3>Linha do Tempo: Ciclo de Vida &amp; Eventos Contábeis</h3>
-      <p>A arquitetura moderna exige que a <strong>Camada Gold do Data Lake</strong> seja um espelho fiel do Livro Razão. Veja a progressão temporal em linhas paralelas:</p>
-      
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>TIMELINE: NEGÓCIO VS CONTABILIDADE VS SISTEMA</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;overflow:auto;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1200\&quot; pageHeight=\&quot;500\&quot; background=\&quot;#0B1120\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_0\&quot; /&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_0\&quot; /&gt;        &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_lane1\&quot; value=\&quot;NEG\u00d3CIO (Ciclo do Cliente)\&quot; style=\&quot;swimlane;horizontal=0;startSize=40;fillColor=#1e293b;fontColor=#ffffff;strokeColor=#334155;rounded=0;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;40\&quot; width=\&quot;1080\&quot; height=\&quot;120\&quot; as=\&quot;geometry\&quot; /&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_lane2\&quot; value=\&quot;CONT\u00c1BIL (Razonete D/C)\&quot; style=\&quot;swimlane;horizontal=0;startSize=40;fillColor=#064e3b;fontColor=#ffffff;strokeColor=#047857;rounded=0;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;160\&quot; width=\&quot;1080\&quot; height=\&quot;120\&quot; as=\&quot;geometry\&quot; /&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_lane3\&quot; value=\&quot;SISTEMA (Data Lake Events)\&quot; style=\&quot;swimlane;horizontal=0;startSize=40;fillColor=#450a0a;fontColor=#ffffff;strokeColor=#7f1d1d;rounded=0;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;280\&quot; width=\&quot;1080\&quot; height=\&quot;120\&quot; as=\&quot;geometry\&quot; /&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_b1\&quot; value=\&quot;1. Contrata\u00e7\u00e3o\&quot; style=\&quot;rounded=1;fillColor=#0ea5e9;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_c1\&quot; value=\&quot;D: Carteira (Ativo)&amp;#10;C: Caixa (Ativo)\&quot; style=\&quot;rounded=1;fillColor=#10b981;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane2\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_s1\&quot; value=\&quot;CREDIT_GRANTED\&quot; style=\&quot;shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane3\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_b2\&quot; value=\&quot;2. Spot Accrual\&quot; style=\&quot;rounded=1;fillColor=#0ea5e9;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry x=\&quot;260\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_c2\&quot; value=\&quot;D: Rendas a Rec. (A)&amp;#10;C: Receita (DRE)\&quot; style=\&quot;rounded=1;fillColor=#10b981;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane2\&quot;&gt;&lt;mxGeometry x=\&quot;260\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_s2\&quot; value=\&quot;ACCRUAL_CALC\&quot; style=\&quot;shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane3\&quot;&gt;&lt;mxGeometry x=\&quot;260\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_b3\&quot; value=\&quot;3. Pagamento\&quot; style=\&quot;rounded=1;fillColor=#0ea5e9;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_c3\&quot; value=\&quot;D: Caixa (Ativo)&amp;#10;C: Rendas e Carteira\&quot; style=\&quot;rounded=1;fillColor=#10b981;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane2\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_s3\&quot; value=\&quot;INSTALLMENT_PAID\&quot; style=\&quot;shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane3\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_b4\&quot; value=\&quot;4. Inadimpl\u00eancia\&quot; style=\&quot;rounded=1;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_c4\&quot; value=\&quot;D: Despesa PDD (DRE)&amp;#10;C: Provis\u00e3o (A. Red)\&quot; style=\&quot;rounded=1;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane2\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_s4\&quot; value=\&quot;DELINQUENCY\&quot; style=\&quot;shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane3\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_b5\&quot; value=\&quot;5. Write-off\&quot; style=\&quot;rounded=1;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry x=\&quot;860\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_c5\&quot; value=\&quot;D: Provis\u00e3o (A. Red)&amp;#10;C: Carteira (Ativo)\&quot; style=\&quot;rounded=1;fillColor=#ef4444;fontColor=#ffffff;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane2\&quot;&gt;&lt;mxGeometry x=\&quot;860\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_s5\&quot; value=\&quot;WRITEOFF\&quot; style=\&quot;shape=hexagon;fillColor=#f59e0b;fontColor=#000000;strokeColor=none;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane3\&quot;&gt;&lt;mxGeometry x=\&quot;860\&quot; y=\&quot;40\&quot; width=\&quot;140\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_e1\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b1\&quot; target=\&quot;ea34e4_d8f796_2aa267_b2\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_e2\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b2\&quot; target=\&quot;ea34e4_d8f796_2aa267_b3\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_e3\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b3\&quot; target=\&quot;ea34e4_d8f796_2aa267_b4\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_e4\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b4\&quot; target=\&quot;ea34e4_d8f796_2aa267_b5\&quot; parent=\&quot;ea34e4_d8f796_2aa267_lane1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v1\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b1\&quot; target=\&quot;ea34e4_d8f796_2aa267_c1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v1b\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_c1\&quot; target=\&quot;ea34e4_d8f796_2aa267_s1\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v2\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b2\&quot; target=\&quot;ea34e4_d8f796_2aa267_c2\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v2b\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_c2\&quot; target=\&quot;ea34e4_d8f796_2aa267_s2\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v3\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b3\&quot; target=\&quot;ea34e4_d8f796_2aa267_c3\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v3b\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_c3\&quot; target=\&quot;ea34e4_d8f796_2aa267_s3\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v4\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b4\&quot; target=\&quot;ea34e4_d8f796_2aa267_c4\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v4b\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_c4\&quot; target=\&quot;ea34e4_d8f796_2aa267_s4\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v5\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_b5\&quot; target=\&quot;ea34e4_d8f796_2aa267_c5\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ea34e4_d8f796_2aa267_v5b\&quot; edge=\&quot;1\&quot; source=\&quot;ea34e4_d8f796_2aa267_c5\&quot; target=\&quot;ea34e4_d8f796_2aa267_s5\&quot; parent=\&quot;ea34e4_d8f796_2aa267_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#94a3b8;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
-      </div>
-<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>ARQUITETURA DO LIVRO-RAZÃO (LEDGER) E RAZONETES</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;Electron\&quot; modified=\&quot;2026-06-13T14:00:00.000Z\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;21.2.8\&quot; type=\&quot;device\&quot;&gt;&lt;diagram id=\&quot;dbb2cb_e6e3e4_6a3ad6_ledger_aws\&quot; name=\&quot;BUSINESS VALUE &amp;amp; ROI ARCHITECTURE\&quot;&gt;&lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1000\&quot; pageHeight=\&quot;600\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot; background=\&quot;#0B1120\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_0\&quot; /&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_0\&quot; /&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bg_tech\&quot; value=\&quot;CAMADA T\u00c9CNICA (EVENT-DRIVEN LEDGER)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;400\&quot; height=\&quot;250\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bg_bus\&quot; value=\&quot;CAMADA DE NEG\u00d3CIOS (RAZONETES CONT\u00c1BEIS E COSIF)\&quot; style=\&quot;rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;550\&quot; y=\&quot;100\&quot; width=\&quot;400\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_tech_1\&quot; value=\&quot;MSK / Kafka&amp;#10;(T\u00f3pico: credit.events)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;110\&quot; y=\&quot;240\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_tech_2\&quot; value=\&quot;ECS Fargate&amp;#10;(Ledger Engine)\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/ElasticContainerService.png;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;260\&quot; y=\&quot;190\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_tech_3\&quot; value=\&quot;DynamoDB&amp;#10;(Ledger ACID)\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/DatabaseMigrationService.png;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;260\&quot; y=\&quot;300\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_e_t1_t2\&quot; edge=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot; source=\&quot;dbb2cb_e6e3e4_6a3ad6_tech_1\&quot; target=\&quot;dbb2cb_e6e3e4_6a3ad6_tech_2\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_e_t2_t3\&quot; edge=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot; source=\&quot;dbb2cb_e6e3e4_6a3ad6_tech_2\&quot; target=\&quot;dbb2cb_e6e3e4_6a3ad6_tech_3\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t1\&quot; value=\&quot;Ativo: Carteira de Cr\u00e9dito&amp;#10;-----------------------------------&amp;#10; D (Entradas)   |   C (Baixas) \&quot; style=\&quot;text;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=12;align=center;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;580\&quot; y=\&quot;160\&quot; width=\&quot;180\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t1_d\&quot; value=\&quot;+ R$ 10.000&amp;#10;(Concess\u00e3o)\&quot; style=\&quot;text;fontColor=#10b981;fontFamily=Inter;fontSize=11;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;590\&quot; y=\&quot;210\&quot; width=\&quot;80\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t1_c\&quot; value=\&quot;- R$ 10.000&amp;#10;(Liquida\u00e7\u00e3o)\&quot; style=\&quot;text;fontColor=#ef4444;fontFamily=Inter;fontSize=11;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;680\&quot; y=\&quot;210\&quot; width=\&quot;80\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t2\&quot; value=\&quot;Ativo: Caixa / Reservas&amp;#10;-----------------------------------&amp;#10; D (Entradas)   |   C (Sa\u00eddas) \&quot; style=\&quot;text;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=12;align=center;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;760\&quot; y=\&quot;160\&quot; width=\&quot;160\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t2_d\&quot; value=\&quot;+ R$ 11.000&amp;#10;(Recebimento)\&quot; style=\&quot;text;fontColor=#10b981;fontFamily=Inter;fontSize=11;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;760\&quot; y=\&quot;210\&quot; width=\&quot;80\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t2_c\&quot; value=\&quot;- R$ 10.000&amp;#10;(Concess\u00e3o)\&quot; style=\&quot;text;fontColor=#ef4444;fontFamily=Inter;fontSize=11;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;840\&quot; y=\&quot;210\&quot; width=\&quot;80\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t3\&quot; value=\&quot;DRE: Receitas de Cr\u00e9dito&amp;#10;-----------------------------------&amp;#10; D (Cancel.)    |   C (Rendas) \&quot; style=\&quot;text;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=12;align=center;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;580\&quot; y=\&quot;300\&quot; width=\&quot;180\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t3_c\&quot; value=\&quot;+ R$ 1.000&amp;#10;(Spot Accrual)\&quot; style=\&quot;text;fontColor=#10b981;fontFamily=Inter;fontSize=11;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;680\&quot; y=\&quot;350\&quot; width=\&quot;80\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t4\&quot; value=\&quot;Ativo Redutora: PDD&amp;#10;-----------------------------------&amp;#10; D (Write-off)  |   C (Provis\u00e3o)\&quot; style=\&quot;text;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=12;align=center;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;760\&quot; y=\&quot;300\&quot; width=\&quot;160\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_bus_t4_c\&quot; value=\&quot;- R$ 5.000&amp;#10;(Inadimplente)\&quot; style=\&quot;text;fontColor=#ef4444;fontFamily=Inter;fontSize=11;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot;&gt;&lt;mxGeometry x=\&quot;840\&quot; y=\&quot;350\&quot; width=\&quot;80\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_e_link\&quot; edge=\&quot;1\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_1\&quot; source=\&quot;dbb2cb_e6e3e4_6a3ad6_bg_tech\&quot; target=\&quot;dbb2cb_e6e3e4_6a3ad6_bg_bus\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=3;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dbb2cb_e6e3e4_6a3ad6_lbl_link\&quot; value=\&quot;Gera\u00e7\u00e3o de Transa\u00e7\u00f5es ACID\&quot; style=\&quot;edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fillColor=#ffffff;fontColor=#047857;fontFamily=Inter;fontSize=11;fontStyle=1;spacing=4;rounded=1;\&quot; vertex=\&quot;1\&quot; connectable=\&quot;0\&quot; parent=\&quot;dbb2cb_e6e3e4_6a3ad6_e_link\&quot;&gt;&lt;mxGeometry x=\&quot;0.2\&quot; y=\&quot;0\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;mxPoint as=\&quot;offset\&quot; /&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}'></div>
-      </div>
-
-      <h3>Concessão, Exposição e Risco: O Triângulo de Ferro (Visão Aprofundada)</h3>
-      <p>A gestão de risco de crédito não é apenas aprovar ou negar empréstimos. Ela é o motor financeiro (e o maior ofensor de custos) de qualquer instituição financeira de varejo. Para a Engenharia de Dados, modelar e operar o Triângulo de Ferro — <strong>Concessão, Exposição e Risco</strong> — exige pipelines de baixa latência (para aprovação) e altíssimo throughput (para recálculo de provisões noturnas).</p>
-      
-      <div class="callout callout-tip" style="margin-top: 20px;">
-        <strong>1. Concessão (Credit Underwriting &amp; Origination)</strong>
-        <p>A Concessão é o momento de entrada (Onboarding). É a intersecção entre o Apetite de Risco do banco e o perfil do cliente. Tradicionalmente baseada nos <strong>5 C's do Crédito</strong>: <em>Character</em> (Histórico/Reputação), <em>Capacity</em> (Capacidade de Pagamento/Fluxo de Caixa), <em>Capital</em> (Patrimônio Líquido), <em>Collateral</em> (Garantias) e <em>Conditions</em> (Condições Macroeconômicas).</p>
-        
-        <h5 style="margin-top: 15px; color: var(--fg)">Scoring e Modelagem</h5>
-        <p>Durante a originação, utilizamos o <strong>Application Scorecard</strong> (pontuação de entrada baseada em dados demográficos e birôs de crédito tradicionais como Serasa/SPC). No entanto, bancos modernos utilizam o <strong>Behavioral Scorecard</strong>, cruzando dados alternativos (Open Finance, geolocalização, padrão de navegação no app).</p>
-        
-        <h5 style="margin-top: 15px; color: var(--fg)">Desafio Arquitetural (Engenharia de Dados)</h5>
-        <p>O fluxo de decisão (Credit Engine) exige latências baixíssimas (&lt;1 segundo). A Engenharia atua provendo <strong>Feature Stores (ex: Amazon SageMaker Feature Store ou Redis)</strong>. Variáveis como "quantidade de CPFs consultados nos últimos 3 dias" precisam ser computadas via <em>Streaming Analytics</em> (Apache Flink/Kinesis) e servidas instantaneamente para o motor de ML durante a tentativa de checkout ou pedido de cartão. Os dados de entrada são 100% imutáveis e guardados na <code>fato_concessao</code> para backtesting de modelos e auditoria regulatória.</p>
-      </div>
-
-      <div class="callout callout-warning" style="margin-top: 20px;">
-        <strong>2. Exposição (EAD - Exposure at Default) &amp; RWA</strong>
-        <p>Aprovar um limite de R$ 50.000 não significa que o banco tem R$ 50.000 de risco imediato. O risco financeiro real é a <strong>Exposição</strong>.</p>
-        
-        <h5 style="margin-top: 15px; color: var(--fg)">Drawn vs Undrawn e o CCF</h5>
-        <p>Em produtos rotativos (Cartão de Crédito, Cheque Especial), a exposição é dividida em <strong>Drawn</strong> (sacado/utilizado) e <strong>Undrawn</strong> (limite disponível). O banco precisa estimar o <strong>CCF (Credit Conversion Factor)</strong>: qual porcentagem do limite não utilizado o cliente sacará num cenário de desespero financeiro antes de dar o calote oficial. Assim, <code>EAD = Drawn + (Undrawn &times; CCF)</code>.</p>
-
-        <h5 style="margin-top: 15px; color: var(--fg)">Risk-Weighted Assets (RWA) e Basileia</h5>
-        <p>O Banco Central não olha apenas o EAD puro, mas o EAD ponderado pelo risco (RWA). Empréstimos com garantia imobiliária (LTV baixo) têm peso de risco menor do que empréstimos pessoais sem garantia (peso 100% ou mais). O RWA total define o <strong>Índice de Basileia (CAR - Capital Adequacy Ratio)</strong>: quanto de dinheiro próprio os sócios do banco devem manter travado no Tesouro para suportar o risco da carteira.</p>
-
-        <h5 style="margin-top: 15px; color: var(--fg)">Desafio Arquitetural (Engenharia de Dados)</h5>
-        <p>A fotografia da exposição exige agregação pesada e junção (JOIN) entre sistemas de core banking, cartões e limites globais (pois o cliente tem vários produtos). Processos batch diários (PySpark no EMR/Glue) varrem dezenas de terabytes para calcular o EAD diário (Snapshot D-1) e expor em cubos OLAP (ClickHouse, Druid) para a diretoria monitorar o RWA.</p>
-      </div>
-
-      <div class="callout callout-error" style="margin-top: 20px;">
-        <strong>3. Risco: Perda Esperada (EL) vs Perda Inesperada (UL)</strong>
-        <p>O coração matemático da tesouraria e controladoria. A rentabilidade do banco depende de precificar o risco corretamente na taxa de juros (Risk-Based Pricing).</p>
-        
-        <h5 style="margin-top: 15px; color: var(--fg)">Expected Loss (Perda Esperada)</h5>
-        <p>A fórmula universal de provisão: <code>EL = PD &times; LGD &times; EAD</code>. <br>
-        - <strong>PD (Probability of Default):</strong> A probabilidade percentual de atraso superior a 90 dias em um horizonte de 12 meses. Pode ser calculada com modelos <em>Point-in-Time (PIT)</em> para refletir a economia atual, ou <em>Through-the-Cycle (TTC)</em> para neutralizar volatilidades.<br>
-        - <strong>LGD (Loss Given Default):</strong> A severidade da perda. Se o cliente quebrar, quanto recuperamos vendendo o carro/imóvel (descontando custas jurídicas)?</p>
-
-        <h5 style="margin-top: 15px; color: var(--fg)">Unexpected Loss (Perda Inesperada)</h5>
-        <p>A Perda Esperada é coberta pelo spread bancário e pela PDD (Provisão para Devedores Duvidosos). Mas e se vier uma pandemia? E se houver um colapso em um setor da economia? Para isso calcula-se a <strong>Perda Inesperada (UL)</strong>, utilizando modelos de <em>Value at Risk (VaR)</em> no 99,9º percentil. A UL é coberta pelo Capital Econômico do banco.</p>
-
-        <h5 style="margin-top: 15px; color: var(--fg)">Desafio Arquitetural (Engenharia de Dados)</h5>
-        <p>Calcular PD, LGD, EL e VaR requer arquiteturas de MLOps de ponta. Pipelines de inferência em Batch rodam modelos preditivos complexos (XGBoost, LightGBM) cruzando os Snapshots de Exposição com dados macroeconômicos (IFRS 9). Se a Engenharia atrasar o processamento da <code>fato_pagamentos</code>, bons clientes constarão como inadimplentes, elevando a PD geral. Isso força o banco a reter mais capital artificialmente (aumentando a PDD), destruindo o Lucro Líquido do trimestre por culpa de um pipeline quebrado (SLA violado).</p>
-      </div>
-
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - EXPOSURE &amp; RISK MODELS</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;Electron\&quot; modified=\&quot;2026-06-13T14:00:00.000Z\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;21.2.8\&quot; type=\&quot;device\&quot;&gt;&lt;diagram id=\&quot;cd50b3_c42289_078e30_credit_risk_aws\&quot; name=\&quot;BUSINESS VALUE &amp;amp; ROI ARCHITECTURE\&quot;&gt;&lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1000\&quot; pageHeight=\&quot;600\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot; background=\&quot;#0B1120\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_0\&quot; /&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_1\&quot; parent=\&quot;cd50b3_c42289_078e30_0\&quot; /&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_bg_tech\&quot; value=\&quot;CAMADA T\u00c9CNICA (DATA PLATFORM &amp;amp; MLOps)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;450\&quot; height=\&quot;250\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_bg_bus\&quot; value=\&quot;CAMADA DE NEG\u00d3CIOS (CONCESS\u00c3O, EXPOSI\u00c7\u00c3O E RISCO)\&quot; style=\&quot;rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;550\&quot; y=\&quot;100\&quot; width=\&quot;400\&quot; height=\&quot;350\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_tech_1\&quot; value=\&quot;Kinesis Data Streams&amp;#10;(Transa\u00e7\u00f5es)\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/awsdocs/aws-icons/main/icons/Machine%20Learning/Amazon-SageMaker.png;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;90\&quot; y=\&quot;240\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_tech_2\&quot; value=\&quot;DynamoDB&amp;#10;(EAD / Saldo)\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/DynamoDB.png;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;210\&quot; y=\&quot;190\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_tech_3\&quot; value=\&quot;SageMaker&amp;#10;(Modelo PD/LGD)\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/awsdocs/aws-icons/main/icons/Machine%20Learning/Amazon-SageMaker.png;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;210\&quot; y=\&quot;300\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_tech_4\&quot; value=\&quot;S3 Iceberg&amp;#10;(Lakehouse)\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/S3.png;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;330\&quot; y=\&quot;300\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_tech_5\&quot; value=\&quot;Athena / QS&amp;#10;(Dashboards)\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/DatabaseMigrationService.png;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;400\&quot; y=\&quot;190\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_e_t1_t2\&quot; edge=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot; source=\&quot;cd50b3_c42289_078e30_tech_1\&quot; target=\&quot;cd50b3_c42289_078e30_tech_2\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_e_t1_t3\&quot; edge=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot; source=\&quot;cd50b3_c42289_078e30_tech_1\&quot; target=\&quot;cd50b3_c42289_078e30_tech_3\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_e_t3_t4\&quot; edge=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot; source=\&quot;cd50b3_c42289_078e30_tech_3\&quot; target=\&quot;cd50b3_c42289_078e30_tech_4\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_e_t4_t5\&quot; edge=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot; source=\&quot;cd50b3_c42289_078e30_tech_4\&quot; target=\&quot;cd50b3_c42289_078e30_tech_5\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_bus_c1\&quot; value=\&quot;A. Concess\u00e3o (Origination)&amp;#10;Inje\u00e7\u00e3o de R$ 50M/M\u00eas em novos empr\u00e9stimos&amp;#10;(Apetite da Institui\u00e7\u00e3o)\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;580\&quot; y=\&quot;160\&quot; width=\&quot;340\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_bus_c2\&quot; value=\&quot;B. Exposi\u00e7\u00e3o Ativa (EAD)&amp;#10;Bloqueio O(1) de fraude via saldo D-0 (DynamoDB)&amp;#10;Carteira Total: R$ 800M\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;580\&quot; y=\&quot;240\&quot; width=\&quot;340\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_bus_c3\&quot; value=\&quot;C. Preven\u00e7\u00e3o e Provis\u00e3o (PD &amp;amp; LGD)&amp;#10;Retreinamento Autom\u00e1tico de Score (SageMaker)&amp;#10;Redu\u00e7\u00e3o de Perda Esperada em 18%\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot;&gt;&lt;mxGeometry x=\&quot;580\&quot; y=\&quot;320\&quot; width=\&quot;340\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_e_link\&quot; edge=\&quot;1\&quot; parent=\&quot;cd50b3_c42289_078e30_1\&quot; source=\&quot;cd50b3_c42289_078e30_bg_tech\&quot; target=\&quot;cd50b3_c42289_078e30_bg_bus\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=3;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;cd50b3_c42289_078e30_lbl_link\&quot; value=\&quot;Modelagem de Neg\u00f3cio (Risco)\&quot; style=\&quot;edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fillColor=#ffffff;fontColor=#047857;fontFamily=Inter;fontSize=11;fontStyle=1;spacing=4;rounded=1;\&quot; vertex=\&quot;1\&quot; connectable=\&quot;0\&quot; parent=\&quot;cd50b3_c42289_078e30_e_link\&quot;&gt;&lt;mxGeometry x=\&quot;0.2\&quot; y=\&quot;0\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;mxPoint as=\&quot;offset\&quot; /&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}'></div>
-      </div>
-
-      <h3>Modelagem Data Mesh: Produtos de Dados Financeiros</h3>
-      <p>Para escalar esses conceitos, a arquitetura moderna propõe o isolamento via Data Mesh:</p>
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #0284c7;">
-          <div class="cc-tag">Domínio de Crédito</div>
-          <div class="cc-body">
-            Responsável pelos Data Products: <strong>Contratos</strong>, <strong>Posição de Saldo Devedor (Exposição)</strong>, e <strong>Eventos de Atraso/Renegociação</strong>. É o dono das regras de negócios do produto de crédito.
-          </div>
-        </div>
-        <div class="concept-card" style="border-top: 4px solid #f59e0b;">
-          <div class="cc-tag">Domínio Contábil</div>
-          <div class="cc-body">
-            Consome eventos de todos os domínios para compor o Data Product: <strong>Razonete/Lançamentos Contábeis (Ledger)</strong>. Valida a integridade Débito = Crédito diariamente (Conciliação).
-          </div>
-        </div>
-        <div class="concept-card" style="border-top: 4px solid #e11d48;">
-          <div class="cc-tag">Domínio de Risco</div>
-          <div class="cc-body">
-            Consome dados de atraso e cria os Data Products: <strong>Scoring</strong>, <strong>Probabilidade de Default (PD)</strong>, e gera as recomendações de <strong>Write-off</strong> para a contabilidade provisionar perdas.
-          </div>
-        </div>
-      </div>
-
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - ORQUESTRAÇÃO E2E (MOBILE AO MESH)</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;Electron\&quot; modified=\&quot;2026-06-13T14:00:00.000Z\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;21.2.8\&quot; type=\&quot;device\&quot;&gt;&lt;diagram id=\&quot;6dd522_4ff77e_37e638_e2e_platform\&quot; name=\&quot;PLATAFORMA COMPLETA ORQUESTRA\u00c7\u00c3O E2E\&quot;&gt;&lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1000\&quot; pageHeight=\&quot;600\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot; background=\&quot;#0B1120\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_0\&quot; /&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_1\&quot; parent=\&quot;6dd522_4ff77e_37e638_0\&quot; /&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_zone_src\&quot; value=\&quot;ORIGEM (Mobile &amp;amp; App)\&quot; style=\&quot;rounded=1;fillColor=none;strokeColor=#475569;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;50\&quot; width=\&quot;160\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_zone_trans\&quot; value=\&quot;PLATAFORMA TRANSACIONAL\&quot; style=\&quot;rounded=1;fillColor=none;strokeColor=#3b82f6;fontColor=#93c5fd;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;50\&quot; width=\&quot;280\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_zone_stream\&quot; value=\&quot;STREAMING &amp;amp; CDC\&quot; style=\&quot;rounded=1;fillColor=none;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;500\&quot; y=\&quot;50\&quot; width=\&quot;200\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_zone_mesh\&quot; value=\&quot;DATA MESH (Anal\u00edtico)\&quot; style=\&quot;rounded=1;fillColor=none;strokeColor=#eab308;fontColor=#fde047;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;720\&quot; y=\&quot;50\&quot; width=\&quot;260\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;!-- Components (Native colors) --&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_c_mobile\&quot; value=\&quot;Mobile App&amp;#10;(Cliente)\&quot; style=\&quot;shape=mxgraph.aws4.mobile_client;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ffffff;fontFamily=Inter;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;70\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_c_api\&quot; value=\&quot;API Gateway\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/APIGateway.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ffffff;fontFamily=Inter;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;230\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_c_aurora\&quot; value=\&quot;Aurora PostgreSQL&amp;#10;(Core Banc\u00e1rio)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/APIGateway.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ffffff;fontFamily=Inter;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;370\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_c_dms\&quot; value=\&quot;AWS DMS&amp;#10;(CDC/Debezium)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/DatabaseMigrationService.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ffffff;fontFamily=Inter;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;540\&quot; y=\&quot;90\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_c_msk\&quot; value=\&quot;Kinesis Data Streams&amp;#10;(Event Bus)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Kinesis.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ffffff;fontFamily=Inter;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;540\&quot; y=\&quot;210\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_c_glue\&quot; value=\&quot;AWS Glue&amp;#10;(Processing)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Glue.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ffffff;fontFamily=Inter;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;760\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_c_s3\&quot; value=\&quot;S3 Iceberg&amp;#10;(Lakehouse)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/S3.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ffffff;fontFamily=Inter;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;880\&quot; y=\&quot;100\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_c_athena\&quot; value=\&quot;Athena / QS&amp;#10;(Relat\u00f3rios)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Athena.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ffffff;fontFamily=Inter;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;880\&quot; y=\&quot;220\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;!-- Edges (White for visibility) --&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_e1\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_c_mobile\&quot; target=\&quot;6dd522_4ff77e_37e638_c_api\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_e2\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_c_api\&quot; target=\&quot;6dd522_4ff77e_37e638_c_aurora\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_e3\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_c_aurora\&quot; target=\&quot;6dd522_4ff77e_37e638_c_dms\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_e4\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_c_dms\&quot; target=\&quot;6dd522_4ff77e_37e638_c_msk\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_e5\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_c_msk\&quot; target=\&quot;6dd522_4ff77e_37e638_c_glue\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_e6\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_c_glue\&quot; target=\&quot;6dd522_4ff77e_37e638_c_s3\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_e7\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_c_s3\&quot; target=\&quot;6dd522_4ff77e_37e638_c_athena\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;!-- BUSINESS VALUE ZONE --&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_zone_biz\&quot; value=\&quot;CAMADA DE NEG\u00d3CIOS (BUSINESS VALUE &amp;amp; ROI)\&quot; style=\&quot;rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;380\&quot; width=\&quot;960\&quot; height=\&quot;180\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_bus_c1\&quot; value=\&quot;Time-to-Market de Novos Produtos&amp;#10;Redu\u00e7\u00e3o de 6 meses para 2 semanas (APIs Flex\u00edveis)\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;440\&quot; width=\&quot;280\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_bus_c2\&quot; value=\&quot;SLA de 99.99% (Alta Disponibilidade)&amp;#10;Mitiga\u00e7\u00e3o de Riscos de Downtime no Core Banc\u00e1rio\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;360\&quot; y=\&quot;440\&quot; width=\&quot;280\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_bus_c3\&quot; value=\&quot;Democratiza\u00e7\u00e3o e Custo de Dados&amp;#10;TCO 40% menor e Self-Service BI (Mesh)\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;440\&quot; width=\&quot;280\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_link_biz1\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_zone_trans\&quot; target=\&quot;6dd522_4ff77e_37e638_bus_c1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=2;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_link_biz2\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_zone_stream\&quot; target=\&quot;6dd522_4ff77e_37e638_bus_c2\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=2;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;6dd522_4ff77e_37e638_link_biz3\&quot; edge=\&quot;1\&quot; parent=\&quot;6dd522_4ff77e_37e638_1\&quot; source=\&quot;6dd522_4ff77e_37e638_zone_mesh\&quot; target=\&quot;6dd522_4ff77e_37e638_bus_c3\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=2;dashed=1;\&quot; /&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}'></div>
-      </div>
-
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - JORNADA DO CRÉDITO</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;Electron\&quot; modified=\&quot;2026-06-13T14:00:00.000Z\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;21.2.8\&quot; type=\&quot;device\&quot;&gt;&lt;diagram id=\&quot;b0e840_cb57f9_8fbc5c_credit_journey\&quot; name=\&quot;BUSINESS VALUE &amp;amp; ROI ARCHITECTURE\&quot;&gt;&lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1000\&quot; pageHeight=\&quot;500\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot; background=\&quot;#0B1120\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_0\&quot; /&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_0\&quot; /&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_bg_tech\&quot; value=\&quot;CAMADA T\u00c9CNICA (EVENTOS CR\u00c9DITO)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot;&gt;&lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;400\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_bg_bus\&quot; value=\&quot;CAMADA DE NEG\u00d3CIOS (VALOR &amp;amp; ROI)\&quot; style=\&quot;rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot;&gt;&lt;mxGeometry x=\&quot;550\&quot; y=\&quot;100\&quot; width=\&quot;400\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_tech_1\&quot; value=\&quot;Kinesis Data Streams&amp;#10;(Eventos Transacionais)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot;&gt;&lt;mxGeometry x=\&quot;110\&quot; y=\&quot;220\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_tech_2\&quot; value=\&quot;Data Lake Gold Layer&amp;#10;(Tabelas Fato)\&quot; style=\&quot;labelBackgroundColor=none;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/S3.png;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot;&gt;&lt;mxGeometry x=\&quot;280\&quot; y=\&quot;220\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_e_t1_t2\&quot; edge=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot; source=\&quot;b0e840_cb57f9_8fbc5c_tech_1\&quot; target=\&quot;b0e840_cb57f9_8fbc5c_tech_2\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_bus_1\&quot; value=\&quot;Rastreabilidade da Jornada do Cliente&amp;#10;Contrata\u00e7\u00e3o, Amortiza\u00e7\u00e3o e Write-off\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot;&gt;&lt;mxGeometry x=\&quot;600\&quot; y=\&quot;160\&quot; width=\&quot;300\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_bus_2\&quot; value=\&quot;Integridade Financeira (Partidas Dobradas)&amp;#10;Garantia de fechamento di\u00e1rio\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot;&gt;&lt;mxGeometry x=\&quot;600\&quot; y=\&quot;240\&quot; width=\&quot;300\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_bus_3\&quot; value=\&quot;Acur\u00e1cia do Spot Accrual e PDD&amp;#10;Controle de exposi\u00e7\u00e3o ao risco de cr\u00e9dito\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot;&gt;&lt;mxGeometry x=\&quot;600\&quot; y=\&quot;320\&quot; width=\&quot;300\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_e_link\&quot; edge=\&quot;1\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_1\&quot; source=\&quot;b0e840_cb57f9_8fbc5c_bg_tech\&quot; target=\&quot;b0e840_cb57f9_8fbc5c_bg_bus\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=3;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b0e840_cb57f9_8fbc5c_lbl_link\&quot; value=\&quot;Gera\u00e7\u00e3o de Valor\&quot; style=\&quot;edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fillColor=#ffffff;fontColor=#047857;fontFamily=Inter;fontSize=11;fontStyle=1;spacing=4;rounded=1;\&quot; vertex=\&quot;1\&quot; connectable=\&quot;0\&quot; parent=\&quot;b0e840_cb57f9_8fbc5c_e_link\&quot;&gt;&lt;mxGeometry x=\&quot;0.2\&quot; y=\&quot;0\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;mxPoint as=\&quot;offset\&quot; /&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}'></div>
-      </div>
-
-      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 30px;">
-        <div class="drawio-label" style="color:var(--orange)"><span class="dot" style="background:var(--orange)"></span>BUSINESS VALUE &amp; ROI ARCHITECTURE - DATA MESH</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;Electron\&quot; modified=\&quot;2026-06-13T14:00:00.000Z\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;21.2.8\&quot; type=\&quot;device\&quot;&gt;&lt;diagram id=\&quot;e26182_8d4880_81d3ec_data_mesh\&quot; name=\&quot;BUSINESS VALUE &amp;amp; ROI ARCHITECTURE\&quot;&gt;&lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1000\&quot; pageHeight=\&quot;500\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot; background=\&quot;#0B1120\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_0\&quot; /&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_1\&quot; parent=\&quot;e26182_8d4880_81d3ec_0\&quot; /&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_bg_tech\&quot; value=\&quot;CAMADA T\u00c9CNICA (ARQUITETURA DISTRIBU\u00cdDA MESH)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot;&gt;&lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;400\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_bg_bus\&quot; value=\&quot;CAMADA DE NEG\u00d3CIOS (VALOR &amp;amp; ROI)\&quot; style=\&quot;rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=Inter;fontSize=12;verticalAlign=top;align=center;spacingTop=10;dashed=1;dashPattern=4 4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot;&gt;&lt;mxGeometry x=\&quot;550\&quot; y=\&quot;100\&quot; width=\&quot;400\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_tech_1\&quot; value=\&quot;Dom\u00ednio de Cr\u00e9dito&amp;#10;(Transacional)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot;&gt;&lt;mxGeometry x=\&quot;90\&quot; y=\&quot;220\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_tech_2\&quot; value=\&quot;Dom\u00ednio Cont\u00e1bil&amp;#10;(Agregador)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;220\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_tech_3\&quot; value=\&quot;Dom\u00ednio Risco&amp;#10;(Analytics)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot;&gt;&lt;mxGeometry x=\&quot;350\&quot; y=\&quot;220\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_bus_1\&quot; value=\&quot;Agilidade e Governan\u00e7a Federada&amp;#10;Redu\u00e7\u00e3o de gargalos centralizados na engenharia\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot;&gt;&lt;mxGeometry x=\&quot;600\&quot; y=\&quot;160\&quot; width=\&quot;300\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_bus_2\&quot; value=\&quot;Data Products de Cr\u00e9dito como Servi\u00e7o&amp;#10;Acelera\u00e7\u00e3o do Time-to-Market de novos produtos\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot;&gt;&lt;mxGeometry x=\&quot;600\&quot; y=\&quot;240\&quot; width=\&quot;300\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_bus_3\&quot; value=\&quot;Compliance Nativo (Data Quality por Dom\u00ednio)&amp;#10;Risco cont\u00e1bil dilu\u00eddo na fonte dos eventos\&quot; style=\&quot;rounded=1;fillColor=#047857;strokeColor=none;fontColor=#ffffff;fontFamily=Inter;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot;&gt;&lt;mxGeometry x=\&quot;600\&quot; y=\&quot;320\&quot; width=\&quot;300\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_e_link\&quot; edge=\&quot;1\&quot; parent=\&quot;e26182_8d4880_81d3ec_1\&quot; source=\&quot;e26182_8d4880_81d3ec_bg_tech\&quot; target=\&quot;e26182_8d4880_81d3ec_bg_bus\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;mxCell style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=3;\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e26182_8d4880_81d3ec_lbl_link\&quot; value=\&quot;Gera\u00e7\u00e3o de Valor\&quot; style=\&quot;edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fillColor=#ffffff;fontColor=#047857;fontFamily=Inter;fontSize=11;fontStyle=1;spacing=4;rounded=1;\&quot; vertex=\&quot;1\&quot; connectable=\&quot;0\&quot; parent=\&quot;e26182_8d4880_81d3ec_e_link\&quot;&gt;&lt;mxGeometry x=\&quot;0.2\&quot; y=\&quot;0\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;mxPoint as=\&quot;offset\&quot; /&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}'></div>
-      </div>
-
-    </section>
-
-    <!-- SEÇÃO NOVA: BANCOS EM ESCALA GLOBAL -->
-    <section class="section" id="bancos-escala-global" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--emr)">5</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Bancos em Escala Global: Risco, Tesouraria & Compliance</h2>
-          <p>O nível C-Level: Basileia, Gestão de Ativos/Passivos (ALM), Modelagem IFRS 9 e Prevenção a Crimes Financeiros.</p>
-        </div>
-      </div>
-
-      <!-- Basileia e RWA -->
-      <h3 style="margin-top: 30px;">1. Acordos de Basileia (III e IV) e Capital Regulatório</h3>
-      <p>O princípio máximo de um banco é não quebrar e gerar risco sistêmico. Para isso, o Comitê de Basileia exige que bancos guardem uma porcentagem de capital próprio (Capital Regulatório) para cada empréstimo que fazem. Como eles sabem o risco? Usando <strong>RWA (Risk-Weighted Assets)</strong>.</p>
-      
-      <div class="bento-grid" style="margin-top: 15px;">
-        <div class="card" style="border-left: 3px solid var(--warn);">
-          <h4>Modelo Padrão (Standardised Approach)</h4>
-          <p style="font-size: 0.85em; color: var(--ink2);">O Banco Central dita as regras matemáticas estáticas. É mais fácil de implementar em bancos menores, mas pune o banco exigindo mais capital guardado (custo de oportunidade altíssimo).</p>
-        </div>
-        <div class="card" style="border-left: 3px solid var(--ok);">
-          <h4>Modelos Internos (IRB - Internal Ratings-Based)</h4>
-          <p style="font-size: 0.85em; color: var(--ink2);">O Santo Graal da Engenharia de Dados em bancos. O banco usa seus próprios modelos massivos de Machine Learning para provar matematicamente ao regulador qual o risco real. Como o risco é mais bem calculado, o banco guarda menos capital, liberando bilhões para emprestar.</p>
-        </div>
-      </div>
-
-      <!-- IFRS 9 / CECL -->
-      <h3 style="margin-top: 40px;">2. Norma IFRS 9 / CECL: A Matemática da Perda Esperada</h3>
-      <p>Após a crise de 2008, o mundo mudou da regra de "Perda Incorrida" (provisionar quando o cliente dá calote) para "Perda de Crédito Esperada" (<strong>ECL - Expected Credit Losses</strong>) no Dia 1. O dado é o protagonista.</p>
-      
-      <div class="code-block" style="margin-top: 15px;">
-        <div class="code-header"><span class="code-lang">Matemática do ECL</span></div>
-        <pre><code class="language-plaintext">ECL = PD × LGD × EAD
-
-Onde:
-PD  (Probability of Default): A chance % do cliente dar calote em 12 meses ou ao longo da vida. Modelos Preditivos pesados.
-LGD (Loss Given Default): Se der calote, quanto eu perco de fato? (Ex: Financiou um carro, se der calote eu tomo o carro. O LGD é menor que um cartão de crédito).
-EAD (Exposure at Default): Qual será o saldo devedor dele no momento do calote?</code></pre>
-      </div>
-
-      <div class="callout" style="border-left: 4px solid var(--accent); background: rgba(129,140,248,0.05); padding: 15px; border-radius: 4px; margin-top: 15px;">
-        <h4 style="margin-top: 0; color: var(--accent);">📊 Impacto Arquitetural: Cenários Macroeconômicos (FLI)</h4>
-        <p style="margin-bottom: 0; font-size: 0.95em;">O IFRS 9 obriga o uso de <em>Forward-Looking Information (FLI)</em>. A Engenharia de Dados precisa injetar nos pipelines preditivos pelo menos 3 cenários econômicos futuros do país (Otimista, Base, Pessimista) cruzados com a carteira de crédito. Cada processamento no PySpark não roda a carteira uma vez, mas dezenas de vezes em simulações de Monte Carlo.</p>
-      </div>
-
-      <!-- ALM e Liquidez -->
-      <h3 style="margin-top: 40px;">3. ALM (Asset and Liability Management) & Tesouraria</h3>
-      <p>A Tesouraria do banco não atende o varejo, atende o próprio banco. O grande jogo é o <strong>casamento de taxas e prazos</strong>. O banco capta dinheiro curto (sua conta corrente diária) e empresta longo (financiamento de casa de 30 anos). Isso gera dois grandes riscos mortais:</p>
-      
-      <ul style="margin-top: 15px; padding-left: 20px; line-height: 1.6;">
-        <li><strong>Risco de Liquidez (LCR e NSFR):</strong> O <em>Liquidity Coverage Ratio (LCR)</em> testa se o banco tem ativos líquidos de alta qualidade (ex: títulos do tesouro) para sobreviver a uma fuga de capital de 30 dias de estresse agudo. O Engenheiro de Dados precisa ingerir e unificar todas as posições do banco D+0 para este cálculo de exposição.</li>
-        <li><strong>Risco de Mercado (Yield Curve):</strong> Se a taxa SELIC/FED sobe de surpresa, o valor presente dos ativos longos do banco desaba. Modelos como <em>Value at Risk (VaR)</em> calculam a perda máxima esperada no portfólio para o dia seguinte usando milhares de simulações históricas.</li>
-      </ul>
-
-      <!-- AML / KYC e Grafos -->
-      <h3 style="margin-top: 40px;">4. Prevenção a Crimes Financeiros (AML/KYC)</h3>
-      <p>A lavagem de dinheiro (AML - Anti-Money Laundering) e Fraudes deixaram de ser investigações em planilhas para se tornarem um gigantesco problema topológico. Pessoas ocultam a trilha do dinheiro através de transferências interconectadas (Smurfing).</p>
-      
-      <div class="tbl-wrap" style="margin-top: 15px;">
-        <table>
-          <thead>
-            <tr>
-              <th>Padrão Arquitetural</th>
-              <th>Tecnologia e Caso de Uso Bancário</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Fraude Transacional Real-time</strong></td>
-              <td>Uso de <em>DynamoDB</em> ou <em>Redis</em> e Inferência de ML no SageMaker. O objetivo é bloquear o cartão em milissegundos se a transação do PIX/Cartão for atípica.</td>
-            </tr>
-            <tr>
-              <td><strong>Investigação AML e Smurfing</strong></td>
-              <td>Uso de <strong>Bancos de Grafos (ex: Amazon Neptune, Neo4j)</strong>. O criminoso divide 10 milhões em 1.000 depósitos de 10 mil (estruturação) em dezenas de contas 'laranjas' que depois transferem para uma conta destino final. Consultas SQL normais demorariam horas para fazer JOINs recursivos em milhões de contas; grafos encontram a rede criminosa em segundos usando algoritmos de centralidade.</td>
-            </tr>
-            <tr>
-              <td><strong>KYC Contínuo (Know Your Customer)</strong></td>
-              <td>Monitoramento de Listas Restritivas (OFAC, Interpol) conectadas via EventBridge assim que um CPF é atualizado no Lakehouse.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-    </section>
-    <!-- SEÇÃO 7: EXPANSÃO DO ECOSSISTEMA FINANCEIRO -->
-    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
-    <section class="section" id="ecossistema-financeiro">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f59e0b">07</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f59e0b"></div>
-          <h2>Ecossistema Financeiro Expandido</h2>
-          <p>A Engenharia de Dados além do Crédito: Pagamentos, Asset Management, Mercado de Capitais e Open Finance.</p>
-        </div>
-      </div>
-
-      <!-- 1. Pagamentos -->
-      <h3 id="pagamentos" style="margin-top: 30px;">1. Meios de Pagamento &amp; Adquirência (Payments &amp; Acquiring)</h3>
-      <p>O ecossistema de cartões envolve transações de extrema volumetria (centenas de milhares de TPS) exigindo processamento em tempo real para prevenção à fraude e liquidação financeira diária.</p>
-      
-      <div class="concept-grid" style="margin-top: 20px;">
-        <div class="concept-card" style="border-top: 4px solid #3b82f6;">
-          <div class="cc-tag">A Tríade do Cartão</div>
-          <div class="cc-body">
-            <p><strong>Emissor (Issuer):</strong> O banco que emite o cartão (ex: Nubank, Itaú). Concede o limite.<br>
-            <strong>Adquirente (Acquirer):</strong> A "maquininha" ou gateway (ex: Stone, Cielo). Processa a captura na ponta lojista.<br>
-            <strong>Bandeira (Network):</strong> (ex: Visa, Mastercard) A rede que roteia a comunicação entre Adquirente e Emissor.</p>
-          </div>
-        </div>
-        <div class="concept-card" style="border-top: 4px solid #10b981;">
-          <div class="cc-tag">Liquidação &amp; TPV</div>
-          <div class="cc-body">
-            <p><strong>TPV (Total Payment Volume):</strong> Métrica vital que indica o volume transacionado.<br>
-            <strong>Clearing &amp; Settlement:</strong> O envio do arquivo de compensação no fim do dia (Batch) e a transferência de caixa (Liquidação) do Adquirente para o Lojista (D+1 ou D+30).</p>
-          </div>
-        </div>
-        <div class="concept-card" style="border-top: 4px solid #ef4444;">
-          <div class="cc-tag">Engenharia de Risco</div>
-          <div class="cc-body">
-            <p><strong>Chargeback &amp; Fraude:</strong> Transações precisam de <em>Feature Stores</em> ultra-rápidas (Redis) para inferência de ML de fraude em &lt;50ms.<br>
-            <strong>PIX:</strong> Mensageria assíncrona baseada em eventos (Kafka) onde a liquidação (STR/SPI do Bacen) ocorre em milissegundos.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. Asset Management -->
-      <h3 id="asset-management" style="margin-top: 40px;">2. Asset Management &amp; Fundos de Investimento</h3>
-      <p>Diferente de bancos comerciais que emprestam do próprio balanço, a Gestora de Recursos (Asset) administra dinheiro de terceiros através de Cotas.</p>
-
-      <div class="callout callout-info" style="margin-top: 20px;">
-        <strong>O Ciclo do Fundo: Cota e Marcação (MtM)</strong>
-        <p>A métrica de ouro da Asset é a Cota (<strong>NAV - Net Asset Value</strong>). Ela representa o patrimônio líquido do fundo dividido pelo número de cotas. Para calcular o patrimônio, a Engenharia de Dados precisa realizar o <strong>Batimento de Carteira</strong> diário, recebendo arquivos da B3 e da ANBIMA para precificar cada ativo (Marcação a Mercado - MtM).</p>
-        <p>Na prática, isso demanda pipelines (PySpark/Airflow) que consolidem Posição (Estoque) e Movimentação (Fluxo) contra arquivos de custodiantes, identificando qualquer diferença de centavos (Quebra de Conciliação).</p>
-      </div>
-
-      <!-- 3. Capital Markets -->
-      <h3 id="mercado-capitais" style="margin-top: 40px;">3. Mercado de Capitais &amp; Trading (Capital Markets)</h3>
-      <p>Ambiente dominado por alta volatilidade, baixa latência e instrumentos derivativos.</p>
-      
-      <div class="bento-grid" style="margin-top: 20px;">
-        <div class="bento-card">
-          <h4>Classes de Ativos</h4>
-          <ul>
-            <li><strong>Renda Variável:</strong> Ações ordinárias, preferenciais, BDRs. Risco de mercado puro.</li>
-            <li><strong>Renda Fixa:</strong> Títulos Públicos (Tesouro), Debêntures (Dívida Corporativa), CDBs.</li>
-            <li><strong>Derivativos:</strong> Opções (Calls/Puts), Futuros (Dólar, Índice) e Swaps. Usados para Hedge ou Alavancagem.</li>
-          </ul>
-        </div>
-        <div class="bento-card">
-          <h4>HFT &amp; Arquitetura Streaming</h4>
-          <p>O <strong>Order Book (Livro de Ofertas)</strong> gera milhares de eventos por segundo (Ticks). O processamento de Market Data exige <strong>Kinesis Data Streams</strong> ou clusters robustos de <strong>Kafka (MSK)</strong> com <em>Apache Flink</em> para processamento Complex Event Processing (CEP) no cálculo de médias móveis em real-time.</p>
-        </div>
-      </div>
-
-      <!-- 4. Open Finance -->
-      <h3 id="open-finance" style="margin-top: 40px;">4. Open Finance &amp; Ecossistema Aberto</h3>
-      <p>O rompimento do monopólio dos dados. Instituições agora podem (com o consentimento do cliente) ingerir todo o histórico transacional de um cliente em bancos concorrentes.</p>
-
-      <div class="callout callout-tip" style="margin-top: 20px;">
-        <strong>O Desafio de Dados no Open Finance</strong>
-        <p>A arquitetura exige <strong>APIs seguras (FAPI/OAuth2)</strong> e motores assíncronos (ex: AWS Step Functions + SQS). Quando o cliente concorda, o banco consome o histórico de 12 meses via API e deposita no Data Lake (Raw Layer). A grande mágica (Gold Layer) é aplicar <strong>LLMs ou Modelos NLP</strong> para padronizar descrições de extratos de 30 bancos diferentes e gerar Features unificadas de Renda (Inferência) e Perfil de Consumo para escoragem de crédito (Credit Scoring).</p>
-      </div>
-    </section>
-    <!-- SEÇÃO DE REFERÊNCIAS CONTÁBEIS -->
-    <section class="section" id="referencias-contabeis" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--muted)">REF</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Referências Oficiais &amp; Manuais</h2>
-          <p>Documentação normativa exigida na Engenharia Financeira.</p>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-lbl">Regulação Banco Central (BACEN)</div>
-          <h4>Manual COSIF</h4>
-          <p>Plano Contábil das Instituições do Sistema Financeiro Nacional. Define a padronização e o elenco das contas (Ativo, Passivo, Resultado). A base do Ledger.</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">Normativa de Provisão</div>
-          <h4>Resolução CMN 2.682</h4>
-          <p>Regras para a classificação das operações de crédito e a constituição de PDD (Provisão para Devedores Duvidosos) baseada nos dias de atraso (Rating AA a H).</p>
         </div>
       </div>
     </section>
