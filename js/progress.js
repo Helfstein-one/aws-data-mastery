@@ -214,10 +214,10 @@
       badge: "Arquiteto de GenAI",
       color: "#a78bfa",
       items: [
-        "genai.html#genai-teoria",
-        "genai.html#rag",
-        "genai.html#pgvector",
-        "genai.html#prompt-engineering"
+        "genai-fundamentos.html#fundamentos",
+        "genai-rag-architectures.html#rag",
+        "genai-agents-prompting.html#agentes",
+        "genai-data-engineering.html#dataeng"
       ]
     },
     dataops: {
