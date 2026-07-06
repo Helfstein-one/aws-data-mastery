@@ -215,14 +215,25 @@
       color: "#a78bfa",
       items: [
         "genai-fundamentos.html#fundamentos",
+        "genai-fundamentos.html#modelos",
         "genai-rag-architectures.html#rag",
+        "genai-rag-architectures.html#vector-stores",
         "genai-agents-prompting.html#agentes",
         "genai-data-engineering.html#dataeng",
         "genai-system-design.html#sdd",
+        "genai-system-design.html#drawio-arch",
+        "genai-system-design.html#model-matrix",
+        "genai-security-finetuning.html#guardrails",
         "genai-security-finetuning.html#finetuning",
         "genai-llmops-evaluation.html#llmops",
+        "genai-llmops-evaluation.html#ragas",
+        "genai-llmops-evaluation.html#tracing",
         "genai-graphrag-neptune.html#intro",
-        "genai-multimodal-cognitivo.html#multimodal"
+        "genai-graphrag-neptune.html#graphrag",
+        "genai-graphrag-neptune.html#hibrido",
+        "genai-multimodal-cognitivo.html#multimodal",
+        "genai-multimodal-cognitivo.html#arquitetura",
+        "genai-multimodal-cognitivo.html#tradeoffs"
       ]
     },
     dataops: {
