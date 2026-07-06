@@ -217,7 +217,9 @@
         "genai-fundamentos.html#fundamentos",
         "genai-rag-architectures.html#rag",
         "genai-agents-prompting.html#agentes",
-        "genai-data-engineering.html#dataeng"
+        "genai-data-engineering.html#dataeng",
+        "genai-system-design.html#sdd",
+        "genai-security-finetuning.html#finetuning"
       ]
     },
     dataops: {
