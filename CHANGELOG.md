@@ -13,6 +13,10 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/).
 - Inclusão do **Apache Iceberg** no Roadmap da Index e nos "Bento Cards" principais, destacando sua importância para arquiteturas de Storage & Lakehouse.
 - **Novos Bento Cards na Home Page**: 12 novos cards adicionados ao `index.html` para unificar e referenciar as páginas desmembradas recentemente (DataOps, Plataforma, Networking, Spark API, Spark UI, EMR, Glue & Flink, PMO, Soft Skills).
 - **Ícones Oficiais**: Inclusão do logo oficial do Apache Spark (SVG vetorizado) nos cards referentes a Spark.
+- **Sistema de Busca em Tempo Real**: Adição de uma barra de pesquisa responsiva no `index.html` para filtrar as trilhas de especialização baseadas em título, descrição e tags.
+- **Micro-interações UI/UX**: Efeitos aprimorados de glassmorphism nos filtros de trilhas (Bento Pills) e refinamento nos hovers com glows neon para acompanhar o tema dark.
+- **Header e Tipografia**: Redesign do Hero principal e melhoria de legibilidade do cabeçalho da seção "Mapa da Trilha".
+- **Screenshot Oficial**: Adicionado um screenshot atualizado da homepage no `README.md`.
 
 ### Changed
 - Sincronização global da navegação lateral (Sidebar) em **todas as páginas HTML** para incluir a Masterclass sobre Apache Iceberg de maneira unificada.
