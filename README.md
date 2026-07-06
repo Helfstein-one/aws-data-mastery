@@ -1,5 +1,7 @@
 # AWS Data Mastery
 
+![AWS Data Mastery - Home Page](assets/images/homepage_screenshot.png)
+
 Este é o **Portal de Estudos AWS Data Engineering Specialist**, o guia definitivo de arquiteturas, boas práticas e tuning para engenharia de dados na AWS.
 Este portal é 100% Client-Side Renderizado (CSR) usando apenas HTML, CSS e JavaScript puros (Vanilla), com dependência zero de backends pesados.
 
