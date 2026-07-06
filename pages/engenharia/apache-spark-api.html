@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <title>Apache Spark API & Tuning | AWS Data Mastery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar">
+<div class="nav-logo">
+    <div class="t">AWS Data<br>Engineering</div>
+    <div class="s">Portal de Estudos</div>
+    <div class="auth" style="font-family: 'DM Mono', monospace; font-size: 8px; color: #38bdf8; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase;">Autor: Mauricio Helfstein</div>
+  </div>
+  <div style="padding:0 12px">
+    
+    <!-- 1. Visão Geral & Introdução -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('visao-geral-cat', this)">
+      <span>🗺️ Visão Geral & Introdução</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="visao-geral-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../index.html" class="nav-a" data-page="index"><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
+      </div>
+      
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/pmo-sme-dados.html" class="nav-a" data-page="pmo-sme-dados"><span class="nav-dot" style="background:#f43f5e"></span>📊 PMO &amp; Sustentação</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#visao-geral" class="nav-sub"><span class="nav-sdot"></span>PMO e SME para Dados</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#gestao-agil" class="nav-sub"><span class="nav-sdot"></span>Gestão Ágil: PMO e Squads</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#negociacao-backlog" class="nav-sub"><span class="nav-sdot"></span>Negociação e Backlog</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#sustentacao" class="nav-sub"><span class="nav-sdot"></span>Sustentação (RUN)</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#pareto-incidentes" class="nav-sub"><span class="nav-sdot"></span>Identificação &amp; Pareto</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#fluxo-sustentacao" class="nav-sub"><span class="nav-sdot"></span>Fluxo de Sustentação</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#roadmap" class="nav-sub"><span class="nav-sdot"></span>Roadmap do Projeto</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/soft-skills.html" class="nav-a" data-page="soft-skills"><span class="nav-dot" style="background:var(--spark)"></span>🧠 Soft Skills & Liderança</a>
+        <a href="../../pages/fundamentos/soft-skills.html#personas" class="nav-sub"><span class="nav-sdot"></span>Personas do Ecossistema</a>
+        <a href="../../pages/fundamentos/soft-skills.html#como-falar" class="nav-sub"><span class="nav-sdot"></span>Como Falar com Cada Persona</a>
+        <a href="../../pages/fundamentos/soft-skills.html#framework-talk" class="nav-sub"><span class="nav-sdot"></span>Framework T.A.L.K.</a>
+        <a href="../../pages/fundamentos/soft-skills.html#lideranca" class="nav-sub"><span class="nav-sdot"></span>Liderança Técnica &amp; Gestão</a>
+        <a href="../../pages/fundamentos/soft-skills.html#pilares" class="nav-sub"><span class="nav-sdot"></span>Os 8 Pilares da Cultura</a>
+        <a href="../../pages/fundamentos/soft-skills.html#implementacao" class="nav-sub"><span class="nav-sdot"></span>Plano de Implementação</a>
+        <a href="../../pages/fundamentos/soft-skills.html#cfo-pitch" class="nav-sub"><span class="nav-sdot"></span>Pilar 9: Pitch Executivo</a>
+      </div>
+                  <div class="nav-page-group">
+        <a href="../../pages/pratica/financas-dados.html" class="nav-a" data-page="financas-dados"><span class="nav-dot" style="background:#0284c7"></span>🏦 Conhecimentos Financeiros</a>
+        <a href="../../pages/pratica/financas-dados.html#jornada" class="nav-sub"><span class="nav-sdot"></span>Originação &amp; Scoring</a>
+        <a href="../../pages/pratica/financas-dados.html#matematica" class="nav-sub"><span class="nav-sdot"></span>Matemática (SAC/Price)</a>
+        <a href="../../pages/pratica/financas-dados.html#pos-venda" class="nav-sub"><span class="nav-sdot"></span>Reconciliação e Atrasos</a>
+        <a href="../../pages/pratica/financas-dados.html#contabilidade" class="nav-sub"><span class="nav-sdot"></span>Contabilidade Bancária</a>
+        <a href="../../pages/pratica/financas-dados.html#ciclo-credito" class="nav-sub"><span class="nav-sdot"></span>Ciclo Completo de Crédito</a>
+      </div>
+    </div>
+
+    <!-- 2. Arquitetura & Fundamentos -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('arquitetura-fundamentos-cat', this)">
+      <span>📐 Arquitetura & Fundamentos</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="arquitetura-fundamentos-cat" class="nav-cat-content">
+
+      <div class="nav-page-group">
+        <a href="../../pages/arquitetura/padroes-arquitetura.html" class="nav-a" data-page="padroes-arquitetura"><span class="nav-dot" style="background:var(--arch)"></span>🏗️ Padrões de Arquitetura</a>
+        <a href="../../pages/arquitetura/mensageria-eventos.html" class="nav-a" data-page="mensageria-eventos"><span class="nav-dot" style="background:var(--arch)"></span>📨 Mensageria &amp; Eventos</a>
+        <a href="../../pages/arquitetura/modelagem-produtos.html" class="nav-a" data-page="modelagem-produtos"><span class="nav-dot" style="background:var(--arch)"></span>📦 Modelagem &amp; Produtos</a>
+        <a href="../../pages/arquitetura/engenharia-avancada.html" class="nav-a" data-page="engenharia-avancada"><span class="nav-dot" style="background:var(--arch)"></span>🚀 Engenharia Avançada</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/plataforma-dados.html" class="nav-a" data-page="plataforma-dados"><span class="nav-dot" style="background:var(--accent)"></span>🏗️ Plataforma de Dados</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/business-value.html" class="nav-a" data-page="business-value"><span class="nav-dot" style="background:#f59e0b"></span>💼 Business Value</a>
+      </div>
+    
+</div>
+    <!-- 3. Engenharia de Dados (Core) -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('engenharia-core-cat', this)">
+      <span>⚙️ Engenharia de Dados (Core)</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="engenharia-core-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/ingestion.html" class="nav-a" data-page="ingestion"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Ingestão &amp; Streaming</a>
+        <a href="../../pages/engenharia/ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Amazon Kinesis: Teoria</a>
+        <a href="../../pages/engenharia/ingestion.html#kinesis-avancado" class="nav-sub"><span class="nav-sdot"></span>Kinesis Deep Dive: EFO, KCL</a>
+        <a href="../../pages/engenharia/ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Kinesis Firehose Dynamic Partitioning</a>
+        <a href="../../pages/engenharia/ingestion.html#firehose-avancado" class="nav-sub"><span class="nav-sdot"></span>Firehose Deep Dive: Buffering</a>
+        <a href="../../pages/engenharia/ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>Amazon MSK: Teoria &amp; Prática</a>
+        <a href="../../pages/engenharia/ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate: Ingestão Customizada</a>
+        <a href="../../pages/engenharia/ingestion.html#cdc-comparativo" class="nav-sub"><span class="nav-sdot"></span>Change Data Capture (CDC)</a>
+        <a href="../../pages/engenharia/ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>AWS DMS: Teoria &amp; Prática</a>
+        <a href="../../pages/engenharia/ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB Ingestion</a>
+        <a href="../../pages/engenharia/ingestion.html#rds" class="nav-sub"><span class="nav-sdot"></span>RDS / Aurora Ingestion</a>
+        <a href="../../pages/engenharia/ingestion.html#comparativo" class="nav-sub"><span class="nav-sdot"></span>Batch vs Streaming vs Lambda</a>
+        <a href="../../pages/engenharia/ingestion.html#tabela-aws" class="nav-sub"><span class="nav-sdot"></span>Mapeamento de Ingestão</a>
+        <a href="../../pages/engenharia/ingestion.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns de Ingestão</a>
+      </div>
+      <div class="nav-page-group">
+                  <a href="../../pages/engenharia/apache-spark-core.html" class="nav-a" data-page="apache-spark-core"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Spark Core & Arch</a>
+         <a href="../../pages/engenharia/apache-spark-core.html#spark-conceitos" class="nav-sub"><span class="nav-sdot"></span>Apache Spark: Teoria</a>
+         <a href="../../pages/engenharia/apache-spark-core.html#spark-arch" class="nav-sub"><span class="nav-sdot"></span>Ciclo de Execução</a>
+         <a href="../../pages/engenharia/apache-spark-core.html#tungsten" class="nav-sub"><span class="nav-sdot"></span>Tungsten &amp; JIT Engine</a>
+
+         <a href="../../pages/engenharia/apache-spark-api.html" class="nav-a" data-page="apache-spark-api"><span class="nav-dot" style="background:var(--ext)"></span>🧑‍💻 Spark API & Tuning</a>
+         <a href="../../pages/engenharia/apache-spark-api.html#spark-skew" class="nav-sub"><span class="nav-sdot"></span>Shuffle, Skew, Salting</a>
+         <a href="../../pages/engenharia/apache-spark-api.html#spark-advanced-functions" class="nav-sub"><span class="nav-sdot"></span>Funções Avançadas</a>
+         <a href="../../pages/engenharia/apache-spark-api.html#spark-joins" class="nav-sub"><span class="nav-sdot"></span>Estratégias de Join</a>
+
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html" class="nav-a" data-page="spark-ui-troubleshooting"><span class="nav-dot" style="background:var(--ext)"></span>🩺 UI & Troubleshooting</a>
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html#spark-tuning" class="nav-sub"><span class="nav-sdot"></span>Tuning Guia Completo</a>
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html#spark-ui-deepdive" class="nav-sub"><span class="nav-sdot"></span>Simuladores Spark UI</a>
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html#spark-ui-advanced" class="nav-sub"><span class="nav-sdot"></span>DAGs Avançados</a>
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html#spark-erros" class="nav-sub"><span class="nav-sdot"></span>Resolução de Erros</a>
+
+         <a href="../../pages/engenharia/aws-emr.html" class="nav-a" data-page="aws-emr"><span class="nav-dot" style="background:var(--ext)"></span>☁️ Amazon EMR Master</a>
+         <a href="../../pages/engenharia/aws-emr.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR em EC2</a>
+         <a href="../../pages/engenharia/aws-emr.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless & EKS</a>
+         <a href="../../pages/engenharia/aws-emr.html#emr-configs" class="nav-sub"><span class="nav-sdot"></span>Sizing & Configurações</a>
+
+         <a href="../../pages/engenharia/aws-glue-flink.html" class="nav-a" data-page="aws-glue-flink"><span class="nav-dot" style="background:var(--ext)"></span>🧩 Glue ETL & Flink</a>
+         <a href="../../pages/engenharia/aws-glue-flink.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue Serverless</a>
+         <a href="../../pages/engenharia/aws-glue-flink.html#flink-streaming" class="nav-sub"><span class="nav-sdot"></span>Apache Flink Streaming</a>
+       </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/storage-lakehouse.html" class="nav-a" data-page="storage-lakehouse"><span class="nav-dot" style="background:#4f46e5"></span>💾 Lakehouse &amp; Storage</a>
+        <a href="../../pages/engenharia/apache-iceberg.html" class="nav-a" data-page="apache-iceberg"><span class="nav-dot" style="background:#0ea5e9"></span>🧊 Apache Iceberg (SOT)</a>
+
+        <a href="../engenharia/apache-iceberg.html#architecture" class="nav-sub"><span class="nav-sdot"></span>Árvore de Metadados</a>
+        <a href="../engenharia/apache-iceberg.html#schema-evolution" class="nav-sub"><span class="nav-sdot"></span>Schema Evolution</a>
+        <a href="../engenharia/apache-iceberg.html#time-travel" class="nav-sub"><span class="nav-sdot"></span>Time Travel &amp; Athena</a>
+        <a href="../engenharia/apache-iceberg.html#code" class="nav-sub"><span class="nav-sdot"></span>PySpark Lakehouse</a>
+        <a href="../engenharia/apache-iceberg.html#maintenance" class="nav-sub"><span class="nav-sdot"></span>Manutenção &amp; Vacuum</a>
+
+        <a href="../../pages/engenharia/storage-lakehouse.html#s3-camadas" class="nav-sub"><span class="nav-sdot"></span>Persistência Física: Camadas S3</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#s3-tiers" class="nav-sub"><span class="nav-sdot"></span>Tiers de Custo &amp; Ciclo de Vida</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#formatos" class="nav-sub"><span class="nav-sdot"></span>Formatos de Dados e Compressões</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#parquet-internals" class="nav-sub"><span class="nav-sdot"></span>Internals do Apache Parquet</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg" class="nav-sub"><span class="nav-sdot"></span>Apache Iceberg: Otimização</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-internals" class="nav-sub"><span class="nav-sdot"></span>Árvore de Metadados Iceberg</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-rest-catalog" class="nav-sub"><span class="nav-sdot"></span>Iceberg REST Catalogs</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-vs-delta" class="nav-sub"><span class="nav-sdot"></span>Iceberg vs Delta Lake vs Hudi</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção de Tabelas Iceberg</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#upsert-code" class="nav-sub"><span class="nav-sdot"></span>Código PySpark para Upserts</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em Storage</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/serving.html" class="nav-a" data-page="serving"><span class="nav-dot" style="background:#be123c"></span>📊 Analytics &amp; Serving</a>
+        <a href="../../pages/engenharia/serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Amazon Athena: Teoria</a>
+        <a href="../../pages/engenharia/serving.html#athena-trino-arch" class="nav-sub"><span class="nav-sdot"></span>A Arquitetura Oculta Trino</a>
+        <a href="../../pages/engenharia/serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Federated Query</a>
+        <a href="../../pages/engenharia/serving.html#iceberg-manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção Iceberg via Athena</a>
+        <a href="../../pages/engenharia/serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Amazon Redshift: Teoria</a>
+        <a href="../../pages/engenharia/serving.html#redshift-spectrum" class="nav-sub"><span class="nav-sdot"></span>Redshift Spectrum: Queries Externas</a>
+        <a href="../../pages/engenharia/serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>Explain &amp; Tuning de Query</a>
+        <a href="../../pages/engenharia/serving.html#redshift-io" class="nav-sub"><span class="nav-sdot"></span>Ingestão Massiva COPY/UNLOAD</a>
+        <a href="../../pages/engenharia/serving.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns no Consumo</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/orquestracao-dados.html" class="nav-a" data-page="orquestracao-dados"><span class="nav-dot" style="background:#a78bfa"></span>⛓️ Orquestração de Dados</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#teoria" class="nav-sub"><span class="nav-sdot"></span>Três Pilares de Orquestração</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#step-functions" class="nav-sub"><span class="nav-sdot"></span>AWS Step Functions</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#mwaa-airflow" class="nav-sub"><span class="nav-sdot"></span>Amazon MWAA (Apache Airflow)</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#operacional" class="nav-sub"><span class="nav-sdot"></span>Cases Reais &amp; Diagnósticos</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/data-quality.html" class="nav-a" data-page="data-quality"><span class="nav-dot" style="background:#10b981"></span>✨ Data &amp; Business Quality</a>
+        <a href="../../pages/engenharia/data-quality.html#teoria-dq" class="nav-sub"><span class="nav-sdot"></span>Conceitos Técnicos</a>
+        <a href="../../pages/engenharia/data-quality.html#business-quality" class="nav-sub"><span class="nav-sdot"></span>Business Quality (Extensivo)</a>
+        <a href="../../pages/engenharia/data-quality.html#cases-dq" class="nav-sub"><span class="nav-sdot"></span>Case: DQDL Circuit Breaker</a>
+        <a href="../../pages/engenharia/data-quality.html#crises-dq" class="nav-sub"><span class="nav-sdot"></span>Crise: Schema Drift</a>
+        <a href="../../pages/engenharia/data-quality.html#perguntas-dq" class="nav-sub"><span class="nav-sdot"></span>Simulador de Entrevista</a>
+      </div>
+
+    </div>
+
+    <!-- 4. Infraestrutura, Redes & Segurança -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('infra-seguranca-cat', this)">
+      <span>🌐 Infra, Redes &amp; Segurança</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="infra-seguranca-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/computacao-bancos.html" class="nav-a" data-page="computacao-bancos"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#ecs" class="nav-sub"><span class="nav-sdot"></span>Amazon ECS: Containers</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#dynamodb-deep-dive" class="nav-sub"><span class="nav-sdot"></span>Amazon DynamoDB Architecture</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#operacao" class="nav-sub"><span class="nav-sdot"></span>Guia Operacional &amp; Métricas</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#aws-databases-guide" class="nav-sub"><span class="nav-sdot"></span>Guia de Bancos de Dados AWS</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#sql-nosql-sqs" class="nav-sub"><span class="nav-sdot"></span>Matriz de Decisão de Bancos</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/networking-ingress.html" class="nav-a" data-page="networking-ingress"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>Route 53 &amp; CloudFront</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#api-alb" class="nav-sub"><span class="nav-sdot"></span>API Gateway &amp; ALB Integration</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#vpc-endpoints" class="nav-sub"><span class="nav-sdot"></span>VPC &amp; VPC Endpoints</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/api-gateway.html" class="nav-a" data-page="api-gateway"><span class="nav-dot" style="background:#7c3aed"></span>🔌 API Gateway Deep Dive</a>
+        <a href="../../pages/fundamentos/api-gateway.html#fundamentos" class="nav-sub"><span class="nav-sdot"></span>REST vs HTTP vs WebSockets</a>
+        <a href="../../pages/fundamentos/api-gateway.html#crud-rest" class="nav-sub"><span class="nav-sdot"></span>CRUD REST: OpenAPI &amp; Lambda</a>
+        <a href="../../pages/fundamentos/api-gateway.html#async" class="nav-sub"><span class="nav-sdot"></span>Chamadas Assíncronas</a>
+        <a href="../../pages/fundamentos/api-gateway.html#terraform" class="nav-sub"><span class="nav-sdot"></span>Terraform Completo: API Gateway</a>
+        <a href="../../pages/fundamentos/api-gateway.html#integracoes" class="nav-sub"><span class="nav-sdot"></span>Auth, CORS &amp; Rate Limiting</a>
+        <a href="../../pages/fundamentos/api-gateway.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Produção</a>
+        <a href="../../pages/fundamentos/api-gateway.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade API Gateway</a>
+        <a href="../../pages/fundamentos/api-gateway.html#diagramas" class="nav-sub"><span class="nav-sdot"></span>Diagramas de Arquitetura</a>
+        <a href="../../pages/fundamentos/api-gateway.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Questões de Entrevista</a>
+        <a href="../../pages/fundamentos/api-gateway.html#cases" class="nav-sub"><span class="nav-sdot"></span>Cases Reais de API</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/governance-security.html" class="nav-a" data-page="governance-security"><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança &amp; IaC</a>
+        <a href="../../pages/fundamentos/governance-security.html#pilares" class="nav-sub"><span class="nav-sdot"></span>Os 7 Pilares de Segurança</a>
+        <a href="../../pages/fundamentos/governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>AWS Lake Formation Security</a>
+        <a href="../../pages/fundamentos/governance-security.html#lake-cli" class="nav-sub"><span class="nav-sdot"></span>AWS Lake Formation CLI</a>
+        <a href="../../pages/fundamentos/governance-security.html#lf-abac" class="nav-sub"><span class="nav-sdot"></span>LF-TBAC: Tag-based Access Control</a>
+        <a href="../../pages/fundamentos/governance-security.html#iam-kms" class="nav-sub"><span class="nav-sdot"></span>IAM &amp; KMS Criptografia</a>
+        <a href="../../pages/fundamentos/governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>AWS Secrets Manager</a>
+        <a href="../../pages/fundamentos/governance-security.html#iam-engineering" class="nav-sub"><span class="nav-sdot"></span>IAM Avançado: Roles Cross-Account</a>
+        <a href="../../pages/fundamentos/governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade: Logs &amp; CloudTrail</a>
+        <a href="../../pages/fundamentos/governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Qualidade de Dados &amp; Contratos</a>
+        <a href="../../pages/fundamentos/governance-security.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em Governança</a>
+      </div>
+    </div>
+
+    <!-- 5. Operações & Inteligência Artificial -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('operacoes-ia-cat', this)">
+      <span>🤖 Operações &amp; IA</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="operacoes-ia-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/dataops-mlops.html" class="nav-a" data-page="dataops-mlops"><span class="nav-dot" style="background:#0d9488"></span>⚙️ DataOps &amp; MLOps</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>DataOps: Automação &amp; Linhagem</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality &amp; Observabilidade</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-contracts" class="nav-sub"><span class="nav-sdot"></span>Contratos de Dados</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-lineage" class="nav-sub"><span class="nav-sdot"></span>Linhagem de Dados (OpenLineage)</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#plataforma-testes" class="nav-sub"><span class="nav-sdot"></span>Plataforma de Testes &amp; CI/CD</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#mlops-core" class="nav-sub"><span class="nav-sdot"></span>MLOps: Ciclo de Vida do Modelo</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#mlops-feature-store" class="nav-sub"><span class="nav-sdot"></span>Feature Stores &amp; Drift</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#git-flow" class="nav-sub"><span class="nav-sdot"></span>Git Flow para Dados</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/genai.html" class="nav-a" data-page="genai"><span class="nav-dot" style="background:#a78bfa"></span>🤖 IA &amp; GenAI</a>
+        <a href="../../pages/engenharia/genai.html#genai-teoria" class="nav-sub"><span class="nav-sdot"></span>LLMs, Transformers e Embeddings</a>
+        <a href="../../pages/engenharia/genai.html#genai-pilares" class="nav-sub"><span class="nav-sdot"></span>Pilares de Arquitetura GenAI</a>
+        <a href="../../pages/engenharia/genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG &amp; Agentes na AWS</a>
+        <a href="../../pages/engenharia/genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>pgvector: Busca Semântica</a>
+        <a href="../../pages/engenharia/genai.html#bedrock-api" class="nav-sub"><span class="nav-sdot"></span>Bedrock API &amp; Boto3</a>
+        <a href="../../pages/engenharia/genai.html#prompt-engineering" class="nav-sub"><span class="nav-sdot"></span>Prompt Engineering Avançado</a>
+        <a href="../../pages/engenharia/genai.html#guardrails" class="nav-sub"><span class="nav-sdot"></span>Amazon Bedrock Guardrails</a>
+        <a href="../../pages/engenharia/genai.html#finetuning" class="nav-sub"><span class="nav-sdot"></span>Fine-tuning com SageMaker</a>
+        <a href="../../pages/engenharia/genai.html#casos" class="nav-sub"><span class="nav-sdot"></span>Casos de Uso: Dados + GenAI</a>
+        <a href="../../pages/engenharia/genai.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em GenAI</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/finops.html" class="nav-a" data-page="finops"><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
+        <a href="../../pages/engenharia/finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>Pilares de FinOps em Dados</a>
+        <a href="../../pages/engenharia/finops.html#finops-boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Engenharia</a>
+        <a href="../../pages/engenharia/finops.html#finops-aws-cost-explorer" class="nav-sub"><span class="nav-sdot"></span>AWS Cost Explorer & Trade-offs</a>
+        <a href="../../pages/engenharia/finops.html#finops-analise" class="nav-sub"><span class="nav-sdot"></span>Análise de Custos Analíticos</a>
+        <a href="../../pages/engenharia/finops.html#finops-terraform" class="nav-sub"><span class="nav-sdot"></span>Tagging com Terraform</a>
+      </div>
+    </div>
+
+    
+
+    <!-- 7. Linguagem e IaC -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('linguagem-iac-cat', this)">
+      <span>💻 Linguagem &amp; IaC</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="linguagem-iac-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/python-legend.html" class="nav-a" data-page="python-legend"><span class="nav-dot" style="background:#f43f5e"></span>🐍 Python Legend</a>
+        <a href="../../pages/fundamentos/python-legend.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Código Python</a>
+        <a href="../../pages/fundamentos/python-legend.html#oop-dados" class="nav-sub"><span class="nav-sdot"></span>Orientação a Objetos em Dados</a>
+        <a href="../../pages/fundamentos/python-legend.html#design-patterns" class="nav-sub"><span class="nav-sdot"></span>Design Patterns de Engenharia</a>
+        <a href="../../pages/fundamentos/python-legend.html#oop-cases-perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas de Arquitetura &amp; Cases</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/sql-mastery.html" class="nav-a" data-page="sql-mastery"><span class="nav-dot" style="background:#3b82f6"></span>🗄️ SQL Mastery</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#fundamentos-sql" class="nav-sub"><span class="nav-sdot"></span>Fundamentos Essenciais</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#comandos-basicos" class="nav-sub"><span class="nav-sdot"></span>Comandos do Dia a Dia</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#ctes-window" class="nav-sub"><span class="nav-sdot"></span>CTEs & Window Functions</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#otimizacao-avancada" class="nav-sub"><span class="nav-sdot"></span>Tuning & Explain Plan</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#iceberg-hive" class="nav-sub"><span class="nav-sdot"></span>SQL para Iceberg/Trino</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#modelagem-avancada" class="nav-sub"><span class="nav-sdot"></span>Modelagem Avançada</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#sql-cases-reais" class="nav-sub"><span class="nav-sdot"></span>Perguntas Técnicas & Cases</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/terraform.html" class="nav-a" data-page="terraform"><span class="nav-dot" style="background:#8b5cf6"></span>🏗️ Terraform: Infra as Code</a>
+        <a href="../../pages/fundamentos/terraform.html#fundamentos-terraform" class="nav-sub"><span class="nav-sdot"></span>Fundamentos Essenciais</a>
+        <a href="../../pages/fundamentos/terraform.html#comandos-terraform" class="nav-sub"><span class="nav-sdot"></span>Comandos do Dia a Dia</a>
+        <a href="../../pages/fundamentos/terraform.html#arquitetura-terraform" class="nav-sub"><span class="nav-sdot"></span>Arquitetura AWS com TF</a>
+        <a href="../../pages/fundamentos/terraform.html#terraform-avancado" class="nav-sub"><span class="nav-sdot"></span>Conceitos Avançados (State, Lock)</a>
+        <a href="../../pages/fundamentos/terraform.html#terraform-cases" class="nav-sub"><span class="nav-sdot"></span>Perguntas de Entrevista & Cases</a>
+        <a href="../../pages/fundamentos/terraform.html#terraform-estrutura-pastas" class="nav-sub"><span class="nav-sdot"></span>Organização de Repositório</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/linguagem/testing.html" class="nav-a" data-page="testing"><span class="nav-dot" style="background:#eab308"></span>🧪 Testes com Pytest & Spark</a>
+        <a href="../../pages/linguagem/testing.html#piramide" class="nav-sub"><span class="nav-sdot"></span>Pirâmide de Testes (Dados)</a>
+        <a href="../../pages/linguagem/testing.html#estrutura" class="nav-sub"><span class="nav-sdot"></span>Estrutura Arrange-Act-Assert</a>
+        <a href="../../pages/linguagem/testing.html#conftest" class="nav-sub"><span class="nav-sdot"></span>Conftest & Fixtures Avançadas</a>
+        <a href="../../pages/linguagem/testing.html#code-examples" class="nav-sub"><span class="nav-sdot"></span>Testando Spark & APIs (Mocks)</a>
+        <a href="../../pages/linguagem/testing.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality vs Unit Tests</a>
+        <a href="../../pages/linguagem/testing.html#performance-testing" class="nav-sub"><span class="nav-sdot"></span>Testes de Carga (Locust)</a>
+      </div>
+    </div>
+
+            <!-- 8. System Design & Arquitetura -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('system-design-cat', this)">
+      <span>🏗️ System Design &amp; Arquitetura</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="system-design-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-reais.html" class="nav-a" data-page="cases-reais"><span class="nav-dot" style="background:#8b5cf6"></span>🏆 Estudos de Caso Reais</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-streaming.html" class="nav-a" data-page="cases-streaming"><span class="nav-dot" style="background:#059669"></span>💼 Streaming</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-batch-lakehouse.html" class="nav-a" data-page="cases-batch-lakehouse"><span class="nav-dot" style="background:#059669"></span>💼 Batch &amp; Lakehouse</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-ecosistema.html" class="nav-a" data-page="cases-ecosistema"><span class="nav-dot" style="background:#059669"></span>💼 Ecosistema Avançado</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-dataops-ia.html" class="nav-a" data-page="cases-dataops-ia"><span class="nav-dot" style="background:#059669"></span>💼 DataOps &amp; IA</a>
+      </div>
+    </div>
+
+    <!-- 9. Operações & Troubleshooting -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('operacoes-troubleshooting-cat', this)">
+      <span>🚑 Operações &amp; Troubleshooting</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="operacoes-troubleshooting-cat" class="nav-cat-content">
+
+      <div class="nav-page-group">
+        <a href="../../pages/operacoes/troubleshooting-tuning.html" class="nav-a" data-page="troubleshooting-tuning"><span class="nav-dot" style="background:var(--warn)"></span>🛠️ Troubleshooting &amp; Tuning</a>
+        <a href="../../pages/operacoes/governanca-finops.html" class="nav-a" data-page="governanca-finops"><span class="nav-dot" style="background:var(--warn)"></span>💰 Governança &amp; FinOps</a>
+        <a href="../../pages/operacoes/data-quality-cicd.html" class="nav-a" data-page="data-quality-cicd"><span class="nav-dot" style="background:var(--warn)"></span>✨ Data Quality &amp; CI/CD</a>
+      </div>
+
+    </div>
+
+    <!-- 10. Preparação para Entrevistas -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('entrevistas-cat', this)">
+      <span>🎯 Preparação para Entrevistas</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="entrevistas-cat" class="nav-cat-content">
+
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/perguntas-ingestao-streaming.html" class="nav-a" data-page="perguntas-ingestao"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Entrevista: Ingestão</a>
+        <a href="../../pages/pratica/perguntas-processamento-spark.html" class="nav-a" data-page="perguntas-spark"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Entrevista: Spark &amp; EMR</a>
+        <a href="../../pages/pratica/perguntas-bancos-relacionais-nosql.html" class="nav-a" data-page="perguntas-bancos"><span class="nav-dot" style="background:#f43f5e"></span>🗄️ Entrevista: Bancos &amp; NoSQL</a>
+        <a href="../../pages/pratica/perguntas-arquitetura-cloud.html" class="nav-a" data-page="perguntas-cloud"><span class="nav-dot" style="background:var(--arch)"></span>🏗️ Entrevista: Cloud Arch</a>
+        <a href="../../pages/pratica/perguntas-dataops-cicd.html" class="nav-a" data-page="perguntas-dataops"><span class="nav-dot" style="background:#0ea5e9"></span>🔄 Entrevista: DataOps</a>
+        <a href="../../pages/pratica/perguntas-mlops-genai.html" class="nav-a" data-page="perguntas-mlops"><span class="nav-dot" style="background:#ec4899"></span>🤖 Entrevista: MLOps/GenAI</a>
+        <a href="../../pages/pratica/perguntas-governanca-seguranca.html" class="nav-a" data-page="perguntas-gov"><span class="nav-dot" style="background:#8b5cf6"></span>🛡️ Entrevista: Segurança</a>
+        <a href="../../pages/pratica/perguntas-finops-cloud.html" class="nav-a" data-page="perguntas-finops"><span class="nav-dot" style="background:#eab308"></span>💰 Entrevista: FinOps</a>
+        <a href="../../pages/pratica/perguntas-storage-s3.html" class="nav-a" data-page="perguntas-storage"><span class="nav-dot" style="background:#4f46e5"></span>💾 Entrevista: S3 Storage</a>
+        <a href="../../pages/pratica/perguntas-lakehouse-iceberg.html" class="nav-a" data-page="perguntas-lakehouse"><span class="nav-dot" style="background:#0284c7"></span>🧊 Entrevista: Lakehouse</a>
+      </div>
+    
+</div>
+    </nav>
+
+<div id="main">
+  <div class="hero">
+    <div class="hero-ey">Processamento Distribuído</div>
+    <h1>Apache Spark &amp; Amazon EMR</h1>
+    <p class="hero-d">Arquitetura profunda de processamento distribuído, otimização física de CPU/memória e guias práticos de tuning e troubleshooting.</p>
+  </div>
+
+  <main class="main-content">
+    
+    <!-- ── APACHE SPARK SECTION ── -->
+    <section class="section" id="spark-gc">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Garbage Collection &amp; Heap Tuning</h2>
+          <p>Otimização de pausas Stop-The-World e JVM Tuning avançado</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Configurações para Garbage Collector G1</h4>
+          <p>O G1GC divide a memória Heap da JVM em pequenas regiões e analisa qual região possui maior volume de dados inúteis para liberar primeiro, evitando a suspensão de threads executores.</p>
+          <pre><span class="k">spark.executor.extraJavaOptions</span> =
+  -XX:+UseG1GC
+  -XX:InitiatingHeapOccupancyPercent=35
+  -XX:G1HeapRegionSize=16m
+  -verbose:gc -XX:+PrintGCDetails</pre>
+        </div>
+        <div>
+          <h4>Identificação de gargalos de GC no Spark UI</h4>
+          <div class="callout callout-info">
+            <strong>Analise a coluna GC Time no Executors Tab:</strong> Se o tempo de GC superar 10% do tempo de processamento total, você deve aumentar a memória dos executores ou reduzir o paralelismo local diminuindo cores.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="spark-skew">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Shuffle, Skew, Salting e Pandas UDFs</h2>
+          <p>Resolução de gargalos causados por desbalanceamento em joins e otimização de UDFs com Apache Arrow</p>
+        </div>
+      </div>
+
+      <p>O <strong>Data Skew</strong> (desvio de dados) ocorre quando uma chave específica acumula mais de 80% do volume físico dos dados (ex: chaves nulas ou registros de auditoria padrão). O executor encarregado por processar essa chave demorará muito mais tempo que os demais, deixando os cores ociosos e estendendo a duração do estágio.</p>
+
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark); padding: 15px; margin-bottom: 15px;">
+          <h4>🔍 Como Diagnosticar Skew no Spark UI</h4>
+          <p>Navegue até a aba <strong>Stages</strong>, selecione o estágio problemático lento e abra a seção <strong>Task Metrics (Stage Details)</strong>:</p>
+          <ul style="padding-left: 15px; font-size: 12px; margin-top: 5px;">
+            <li><strong>Métrica Duration:</strong> Ordene as tarefas pela coluna <em>Duration</em>. Se o tempo da task no <strong>P95 / Max</strong> for superior a <strong>5x a mediana</strong>, há indicativo claro de desvio (Skew).</li>
+            <li><strong>Shuffle Read Size:</strong> Verifique a distribuição do tamanho de leitura de shuffle por task. Task com leitura muito maior que a média aponta skew na chave de junção.</li>
+          </ul>
+        </div>
+        
+        <div class="card" style="border-left: 3px solid var(--spark); padding: 15px; margin-bottom: 15px;">
+          <h4>⚙️ Otimização Automática: AQE (Spark 3.x+)</h4>
+          <p>Configure os parâmetros abaixo no `spark-defaults` para permitir que o Catalyst divida dinamicamente partições assimétricas:</p>
+          <pre><code class="language-properties">spark.sql.adaptive.enabled = true
+spark.sql.adaptive.skewJoin.enabled = true
+spark.sql.adaptive.coalescePartitions.enabled = true</code></pre>
+        </div>
+      </div>
+
+      <h3>1. Otimização via Salting (Distribuição de Chave no Join)</h3>
+      <p>A técnica de <strong>Salting</strong> resolve o skew adicionando um sufixo numérico aleatório (o "sal") às chaves da tabela gigante e explodindo a tabela menor correspondente para conter todas as combinações desse sal, distribuindo os registros de forma uniforme pelos executores durante o shuffle:</p>
+
+      <pre><code class="language-python">import pyspark.sql.functions as F
+n_salts = 50  # Fator de salting (número de partições paralelas para dividir o skew)
+
+# Tabela principal com skew: adiciona salt aleatório (0 a n_salts-1)
+df_large_salted = df_large.withColumn(
+    "salt", (F.rand() * n_salts).cast("int")
+).withColumn("salted_key", F.concat(F.col("key"), F.lit("_"), F.col("salt")))
+
+# Tabela de lookup (pequena): explode gerando todas as chaves salgadas possíveis
+df_small_exploded = df_small.withColumn(
+    "salt", F.explode(F.array([F.lit(i) for i in range(n_salts)]))
+).withColumn("salted_key", F.concat(F.col("key"), F.lit("_"), F.col("salt")))
+
+# Executa o join distribuído sem sobrecarregar um único nó (No skew bottleneck)
+df_joined = df_large_salted.join(df_small_exploded, "salted_key").drop("salt", "salted_key")</code></pre>
+
+      <h3>2. Otimização de UDFs com Pandas UDF (Vectorized Arrow)</h3>
+      <p>As UDFs (User Defined Functions) comuns do PySpark forçam a JVM a serializar os dados linha a linha para enviá-los ao interpretador Python, gerando uma sobrecarga severa e possíveis OOMs na <strong>User Memory</strong>. As <strong>Pandas UDFs</strong> otimizam esse processo transferindo dados em blocos (batches) usando o <strong>Apache Arrow</strong> diretamente na memória:</p>
+
+      <pre><code class="language-python">import pandas as pd
+from pyspark.sql.functions import pandas_udf
+from pyspark.sql.types import DoubleType
+
+# Ativa o Apache Arrow para otimização de conversão
+# spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")
+
+# Pandas UDF Vectorized usando type hints do Python
+@pandas_udf(DoubleType())
+def predict_discount_udf(price: pd.Series, rate: pd.Series) -> pd.Series:
+    # Executa a operação vetorizada rápida usando Pandas/NumPy C-extension
+    return price * (1.0 - rate)
+
+# Uso da UDF vetorizada no DataFrame do Spark
+df_processed = df_sales.withColumn(
+    "final_price", 
+    predict_discount_udf(F.col("base_price"), F.col("tax_rate"))
+)
+# Execução extremamente veloz e segura contra estouro de memória!</code></pre>
+    </section>
+
+    <section class="section" id="spark-advanced-functions">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">06.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Funções Avançadas de API PySpark &amp; Otimização</h2>
+          <p>Higher-Order Functions (HOFs), Bloom Filters, Window Functions de alto desempenho e Exemplos de Código Baseados em Cores</p>
+        </div>
+      </div>
+
+      <p>As funções nativas do PySpark (disponíveis em <code>pyspark.sql.functions</code>) são implementadas em Scala/Java no backend e executadas diretamente no nível da JVM do Executor. Elas se beneficiam do <strong>Catalyst Optimizer</strong> (para colapsar expressões) e do <strong>Tungsten Engine</strong> (geração de código e alocação de memória direta). Isso significa que elas são drasticamente mais rápidas e eficientes em termos de memória do que as funções definidas pelo usuário (UDFs) em Python regular. <strong>Sempre dê preferência à API nativa do PySpark.</strong></p>
+
+      <h3>Higher-Order Functions (HOFs) em Arrays</h3>
+      <p>Evite o uso de <code>F.explode()</code> seguido de <code>F.groupBy()</code>, pois isso duplica os dados em memória e gera shuffles desnecessários. Use HOFs para manipular arrays diretamente no executor:</p>
+      <pre><code class="language-python"># Filtrar elementos de um array sem explode
+df.withColumn("active_users", F.expr("filter(users_array, x -> x.status == 'active')"))
+
+# Transformar elementos do array em tempo real
+df.withColumn("prices_with_tax", F.expr("transform(prices_array, p -> p * 1.10)"))</code></pre>
+
+      <h3>Bloom Filters para Otimização de Busca</h3>
+      <p>Em vez de varrer petabytes de dados procurando uma chave específica, um Bloom Filter cria uma estrutura probabilística mínima na memória que testa a presença do dado (sem falsos negativos). Útil antes de joins pesados:</p>
+      <pre><code class="language-python"># Cria o Bloom filter da tabela de anomalias (muito pequena)
+bf = df_anomalies.stat.bloomFilter("user_id", expectedNumItems=1000, fpp=0.01)
+
+# Filtra a tabela massiva ANTES do join (Filter Pushdown aprimorado)
+df_massive_filtered = df_massive.filter(F.col("user_id").might_contain(bf))</code></pre>
+
+      <h3>Otimização de Window Functions: rangeBetween vs rowsBetween</h3>
+      <p>A especificação física do Frame da Window Function muda drasticamente o consumo computacional:</p>
+      <ul>
+        <li><strong><code>rangeBetween</code> (Padrão):</strong> Agrupa dados baseando-se no valor da chave de ordenação. O Spark mantém na memória todos os registros atrelados àquele valor lógico, podendo causar picos de uso da Execution Memory se houverem milhares de registros com o mesmo valor (Data Skew na partição da window).</li>
+        <li><strong><code>rowsBetween</code> (Performance Otimizada):</strong> Usa a posição física da linha, independentemente do valor da chave. A alocação de memória do executor é perfeitamente previsível (ex: os últimos 10 registros lidos fisicamente). Use sempre que a regra de negócio permitir contagem posicional no lugar da contagem por valor.</li>
+      </ul>
+
+      <h3>Dica de Debugging e Testes com Exemplos Simples (Cores)</h3>
+      <p>Para testar e depurar lógicas complexas sem depender de clusters caros, crie conjuntos de dados (DataFrames) mínimos na memória. A abordagem visual com "cores" facilita o rastreamento lógico do agrupamento e ordenação (Window Functions):</p>
+      <pre><code class="language-python">from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+import pyspark.sql.functions as F
+
+spark = SparkSession.builder.appName("DebugLocal").getOrCreate()
+
+# Criação de um DataFrame mínimo para depurar a lógica
+data = [
+    ("Vermelho", "Carro", 100),
+    ("Vermelho", "Moto", 50),
+    ("Azul", "Carro", 120),
+    ("Azul", "Bicicleta", 30),
+    ("Verde", "Caminhão", 500)
+]
+df_colors = spark.createDataFrame(data, ["Cor", "Veículo", "Preço"])
+
+# 1. Definindo a Window particionada pela Cor
+window_spec = Window.partitionBy("Cor").orderBy(F.desc("Preço"))
+
+# 2. Aplicando funções avançadas usando a API PySpark nativa
+# Função row_number() numera as linhas dentro de cada partição de cor
+df_ranked = df_colors \
+    .withColumn("Rank", F.row_number().over(window_spec)) \
+    .withColumn("Preco_Maximo_Cor", F.max("Preço").over(window_spec.rangeBetween(Window.unboundedPreceding, Window.unboundedFollowing)))
+
+df_ranked.show()
+# Dica de Debugging: Use .explain(True) para ver o plano físico gerado
+# df_ranked.explain(True) # Mostra o Sort, Window, e Projection no plano físico.</code></pre>
+
+
+      <h3 style="margin-top: 30px;">Tuning da API estruturada do PySpark: Práticas de Performance</h3>
+      <p>Abaixo estão descritas as principais boas práticas e armadilhas ao utilizar as projeções e transformações do PySpark no dia a dia:</p>
+
+      <div class="tbl-wrap" style="margin-top: 15px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Operação / Abordagem</th>
+              <th>Padrão Recomendado (Best Practice)</th>
+              <th>Padrão Evitado (Anti-Pattern)</th>
+              <th>Impacto Físico de Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Múltiplas Projeções</strong></td>
+              <td><code>df.select(F.col("a"), F.col("b") + 1, F.col("c") * 2)</code> (Usa uma única etapa de projeção no Catalyst).</td>
+              <td>Enfileirar sucessivos <code>.withColumn("b", F.col("b") + 1).withColumn("c", F.col("c") * 2)</code>.</td>
+              <td><strong>StackOverflowException:</strong> Cada <code>withColumn</code> adiciona um nó projetivo recursivo no plano lógico do Spark. Se você encadear mais de 20-30 <code>withColumn</code>, a análise do Catalyst falha estourando a pilha de chamadas da JVM.</td>
+            </tr>
+            <tr>
+              <td><strong>Namespaces e Duplicidades</strong></td>
+              <td>Fazer alias explícito dos DataFrames locais antes do Join: <code>df_esq.alias("esq").join(df_dir.alias("dir"), "id")</code>, referenciando depois como <code>F.col("esq.valor")</code>.</td>
+              <td>Tentar resolver ambiguidades renomeando colunas duplicadas manualmente com listas posicionais pós-join.</td>
+              <td><strong>Ambiguous Column Exception:</strong> Referenciar <code>F.col("id")</code> após um join onde ambos os lados possuem uma coluna chamada "id" causa falha em runtime. O Spark perde a linhagem física do ponteiro da coluna se não houver alias explícito.</td>
+            </tr>
+            <tr>
+              <td><strong>Unificação de DataFrames</strong></td>
+              <td><code>df_a.unionByName(df_b, allowMissingColumns=True)</code></td>
+              <td><code>df_a.union(df_b)</code></td>
+              <td><strong>Corrupção Silenciosa de Dados:</strong> O <code>union()</code> padrão do Spark faz a união puramente <strong>posicional</strong>. Se o schema da tabela A for <code>[nome, idade]</code> e a tabela B for <code>[idade, nome]</code>, o Spark mesclará as colunas invertidas sem emitir alertas. O <code>unionByName</code> valida e alinha as colunas pelos nomes lógicos.</td>
+            </tr>
+            <tr>
+              <td><strong>Camadas de Abstração SQL</strong></td>
+              <td>Manipular o DataFrame de forma encadeada via API Funcional (DataFrame API).</td>
+              <td>Abusar de <code>createOrReplaceTempView("minha_view")</code> e escrever blocos massivos de SQL em string dentro de <code>spark.sql()</code>.</td>
+              <td><strong>Perda de Rastreamento de Erros e Tipagem:</strong> Embora o Catalyst compile ambos para o mesmo plano físico final, strings SQL impedem IDEs de fazer linting estático de colunas e erros de sintaxe, além de mascarar a árvore de dependência de linhagem (lineage) no código.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 30px;">Dicionário Avançado de Funções Nativas do PySpark (`pyspark.sql.functions`)</h3>
+      <p>Todas as funções nativas abaixo rodam diretamente em código compilado na JVM do Spark, eliminando 100% da necessidade de UDFs Python tradicionais:</p>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">1. Funções Base, Seleção &amp; Expressões</div>
+        <div class="abox-body">
+          <ul>
+            <li><strong><code>col(nome_coluna)</code>:</strong> Cria uma referência lógica para a coluna física de um DataFrame. Permite operações tipadas avançadas.</li>
+            <li><strong><code>expr(expressao_sql)</code>:</strong> Faz o parse de um trecho de sintaxe SQL clássica e compila em uma coluna PySpark estruturada. Excelente para operações matemáticas rápidas.</li>
+            <li><strong><code>array(*cols)</code>:</strong> Concatena múltiplos campos isolados de uma linha em uma estrutura de dados do tipo Array.</li>
+          </ul>
+          <pre><code class="language-python"># Exemplo Prático de col(), expr() e array() em um único select()
+df_final = df_colors.select(
+    F.col("Cor"),
+    F.expr("Preço * 1.10").alias("Preco_Com_Imposto"),
+    F.array(F.col("Veículo"), F.col("Cor")).alias("Metadados_Veiculo")
+)</code></pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">2. Manipulação Avançada de Strings</div>
+        <div class="abox-body">
+          <ul>
+            <li><strong><code>concat(*cols)</code>:</strong> Concatena strings físicas de colunas sem delimitadores.</li>
+            <li><strong><code>substring(col, start, len)</code>:</strong> Recorta uma string baseando-se em índices numéricos físicos (1-indexed).</li>
+            <li><strong><code>regexp_replace(col, pattern, replacement)</code>:</strong> Utiliza expressões regulares (Regex) nativas em Java/JVM para limpar e substituir caracteres complexos.</li>
+            <li><strong><code>lower()</code> / <code>upper()</code> / <code>trim()</code>:</strong> Normalizações clássicas de espaçamento e caixa de caracteres.</li>
+          </ul>
+          <pre><code class="language-python"># Exemplo Prático de limpeza de strings
+df_limpo = df.select(
+    F.concat(F.col("codigo_pais"), F.col("telefone")).alias("numero_completo"),
+    F.substring(F.col("data_string"), 1, 4).alias("ano_extraido"),
+    F.regexp_replace(F.col("texto"), r"[^a-zA-Z0-9 ]", "").alias("texto_alfanumerico"),
+    F.lower(F.trim(F.col("nome_usuario"))).alias("username_normalizado")
+)</code></pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">3. Coleções Complexas (Arrays e Maps)</div>
+        <div class="abox-body">
+          <ul>
+            <li><strong><code>explode(col)</code>:</strong> Desmembra uma linha contendo um Array/Map em múltiplas linhas (uma linha por elemento). *Cuidado de Performance:* Gera duplicação de dados nas outras colunas e força re-particionamentos se mal posicionado.</li>
+            <li><strong><code>array_contains(col, value)</code>:</strong> Retorna um boolean testando se o valor reside no array.</li>
+            <li><strong><code>map_keys()</code> / <code>map_values()</code>:</strong> Extraem chaves ou valores de estruturas chave-valor (Maps) em forma de array.</li>
+            <li><strong><code>element_at(col, index)</code>:</strong> Obtém elemento em índice do array ou valor da chave do map de forma segura (retorna nulo se não existir, sem quebrar o job).</li>
+            <li><strong><code>flatten(col)</code>:</strong> Transforma um array bidimensional (`Array[Array[T]]`) em um array plano unidimensional (`Array[T]`).</li>
+            <li><strong><code>array_join(col, delimiter)</code>:</strong> Concatena todos os elementos do array em uma única string usando o delimitador.</li>
+          </ul>
+          <pre><code class="language-python"># Exemplo Prático de manipulação de coleções complexas
+df_colecoes = df.select(
+    F.explode(F.col("itens_carrinho")).alias("item_carrinho"),
+    F.array_contains(F.col("tags_tags"), "VIP").alias("is_vip"),
+    F.element_at(F.col("mapa_propriedades"), "cor_favorita").alias("cor_usuario"),
+    F.flatten(F.col("arrays_aninhados")).alias("array_plano"),
+    F.array_join(F.col("historico_cidades"), " -> ").alias("linha_tempo_cidades")
+)</code></pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">4. Operações Temporais (Datas)</div>
+        <div class="abox-body">
+          <ul>
+            <li><strong><code>to_date(col, format)</code>:</strong> Converte uma string formatada em uma coluna de data real estruturada.</li>
+            <li><strong><code>date_add(col, days)</code>:</strong> Adiciona dias corridos a uma data analítica.</li>
+            <li><strong><code>datediff(end, start)</code>:</strong> Calcula a distância exata em dias entre duas colunas temporais.</li>
+            <li><strong><code>months_between(end, start)</code>:</strong> Retorna a diferença fracionária de meses entre datas.</li>
+            <li><strong><code>current_date()</code>:</strong> Injeta a data corrente do sistema nos nós executores.</li>
+            <li><strong><code>date_format(col, format)</code>:</strong> Converte uma data física em string seguindo padrão de renderização.</li>
+          </ul>
+          <pre><code class="language-python"># Exemplo Prático de data
+df_data = df.select(
+    F.to_date(F.col("data_texto"), "yyyy-MM-dd").alias("data_efetiva"),
+    F.date_add(F.col("data_venda"), 30).alias("vencimento_fatura"),
+    F.datediff(F.current_date(), F.col("data_cadastro")).alias("dias_de_fidelidade"),
+    F.date_format(F.col("data_entrega"), "EEEE, MMMM yyyy").alias("data_formatada_extensa")
+)</code></pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">5. Lógicas Condicionais e Segurança</div>
+        <div class="abox-body">
+          <ul>
+            <li><strong><code>when(condition, value)</code> / <code>otherwise(value)</code>:</strong> A estrutura condicional recomendada do Catalyst (Case/When).</li>
+            <li><strong><code>coalesce(*cols)</code>:</strong> Retorna a primeira coluna que não possuir valor nulo dentro da lista informada. Muito mais rápido que condicionais <code>when().otherwise()</code> para tratamento de nulos.</li>
+            <li><strong><code>hash(*cols)</code>:</strong> Gera um hash de 32 bits (MurmurHash3) sobre os valores passados. Excelente para criar chaves substitutas rápidas ou hashes de validação de qualidade sem custo de criptografia pesada (SHA-256).</li>
+          </ul>
+          <pre><code class="language-python"># Exemplo Prático de condicionais e tratamento de nulos
+df_seguro = df.select(
+    F.when(F.col("score") > 700, "Aprovado")
+     .when(F.col("score") >= 500, "Em Analise")
+     .otherwise("Reprovado").alias("status_analise"),
+    F.coalesce(F.col("telefone_celular"), F.col("telefone_residencial"), F.lit("Sem Contato")).alias("contato_principal"),
+    F.hash(F.col("id_cliente"), F.col("data_nascimento")).alias("chave_surrogate_cliente")
+)</code></pre>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">6. Janelas (Window Functions) e Agregações</div>
+        <div class="abox-body">
+          <ul>
+            <li><strong><code>row_number()</code>:</strong> Numeração sequencial contínua da linha dentro do frame da janela.</li>
+            <li><strong><code>rank()</code> / <code>dense_rank()</code>:</strong> Classificações ordenadas. O <code>dense_rank</code> não pula números sequenciais na classificação caso ocorram empates de valores.</li>
+            <li><strong><code>lead(col, offset)</code> / <code>lag(col, offset)</code>:</strong> Acessam registros de linhas posteriores ou anteriores à linha física corrente dentro da janela, permitindo cálculos de deltas de tempo/valores sem fazer Joins caros.</li>
+            <li><strong><code>countDistinct(*cols)</code>:</strong> Agregação agregadora de contagem de valores únicos de forma distribuída.</li>
+          </ul>
+          <pre><code class="language-python"># Exemplo Prático de Window Functions e Agregações
+from pyspark.sql.window import Window
+
+window_cliente = Window.partitionBy("id_cliente").orderBy("data_transacao")
+
+df_analitico = df.select(
+    F.col("id_cliente"),
+    F.col("valor_transacao"),
+    F.row_number().over(window_cliente).alias("numero_transacao_cliente"),
+    F.dense_rank().over(window_cliente).alias("rank_densificado"),
+    (F.col("valor_transacao") - F.lag("valor_transacao", 1).over(window_cliente)).alias("dias_desde_ultima_transacao"),
+    F.lead("valor_transacao", 1).over(window_cliente).alias("valor_proxima_transacao")
+)</code></pre>
+        </div>
+      </div>
+
+      <h3>Debugging Avançado de Partições Físicas no PySpark</h3>
+      <p>Em processamento analítico distribuído, ter partições com tamanhos assimétricos (Data Skew) faz com que um único executor Spark execute 90% do trabalho enquanto o restante fica ocioso. Para debugar de forma vasta o estado das partições de um DataFrame, utilize a inspeção de RDDs e metadados no Spark Submit:</p>
+
+      <div class="abox note">
+        <strong>Código de Diagnóstico de Particionamento (Physical Partition Inspection):</strong>
+        <br>Cole o código abaixo no console ou registre no log de execução de homologação para diagnosticar o número e tamanho de cada partição do DataFrame na RAM:
+        <pre><code class="language-python"># 1. Obtém a quantidade física de partições alocadas no cluster
+num_particoes = df.rdd.getNumPartitions()
+print(f"Total de Particoes Fisicas: {num_particoes}")
+
+# 2. Glom() agrupa os registros de cada partição em uma lista local
+# Mapeia e coleta a quantidade de registros residentes em cada partição individual
+distribuicao_particoes = df.rdd.glom().map(len).collect()
+
+for part_idx, count in enumerate(distribuicao_particoes):
+    print(f"Particao [{part_idx}]: {count} registros")
+
+# 3. Calcula métricas de assimetria (Skewness)
+max_count = max(distribuicao_particoes)
+min_count = min(distribuicao_particoes)
+avg_count = sum(distribuicao_particoes) / len(distribuicao_particoes)
+print(f"Max: {max_count} | Min: {min_count} | Avg: {avg_count}")
+print(f"Skew Ratio (Max / Avg): {max_count / avg_count:.2f}x (Valores > 1.5x indicam assimetria severa!)")</code></pre>
+        </div>
+      </section>
+
+    <section class="section" id="spark-dynamic-write">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">06.8</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Dinâmica de Escrita: Cálculo de Partições e Sizing no S3</h2>
+          <p>Estratégias matemáticas de particionamento (repartition vs coalesce) para combater o Small Files Problem no Data Lake</p>
+        </div>
+      </div>
+
+      <p>Escrever dados no S3 de forma ingênua (usando partições originadas de shuffles arbitrários) é a causa número um do <strong>Small Files Problem</strong>. Milhares de arquivos minúsculos (ex: 2KB) destroem a performance do S3 (estourando cotas de requisição de API GET/PUT) e arruínam a latência do Athena/Redshift, que precisam abrir e fechar conexões de metadados para cada arquivo. O tamanho ideal alvo por arquivo colunar (Parquet/Iceberg) no S3 deve ser entre <strong>128 MB e 256 MB</strong>.</p>
+
+      <div class="grid-2" style="margin-bottom: 20px;">
+        <div class="card" style="border-top: 3px solid var(--spark);">
+          <h4><code>repartition(N)</code></h4>
+          <p><strong>Causa um Shuffle completo na rede (Caro).</strong> Ele espalha os dados perfeitamente de forma uniforme (Round-Robin) por todos os executores. Use <em>sempre</em> antes de gravações grandes no S3 para garantir que todas as partições de saída tenham exatamente o mesmo tamanho em Megabytes, prevenindo Skew Files.</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--spark);">
+          <h4><code>coalesce(N)</code></h4>
+          <p><strong>Não causa Shuffle (Barato).</strong> Ele apenas "funde" partições locais na memória do nó executor. <em>Perigo Fetal:</em> Chamar <code>coalesce(10)</code> logo após um <code>read()</code> encolhe o paralelismo lógico do cluster para 10 slots de CPU instantaneamente, deixando centenas de cores ociosos durante o resto do processamento!</p>
+        </div>
+      </div>
+
+      <h3>Implementação: Cálculo Dinâmico de Sizing para Escrita</h3>
+      <p>Hardcodar partições (ex: <code>df.repartition(200)</code>) é um erro crasso. Se a volumetria de dados crescer no Natal, os arquivos gerados serão de 2GB (lentos de processar). Se a volumetria cair, gerarão 200 arquivos minúsculos. A solução é <strong>calcular a volumetria dinamicamente no final da DAG:</strong></p>
+
+      <pre><code class="language-python">import pyspark.sql.functions as F
+from pyspark.sql import DataFrame
+
+def write_optimized_lake_table(df: DataFrame, s3_path: str, target_size_mb: int = 128):
+    # 1. Obtém o número total de linhas do DataFrame final
+    # Obs: Se já houver um count() prévio cacheado no job, use-o para evitar re-scan.
+    total_rows = df.count()
+    if total_rows == 0:
+        return
+
+    # 2. Estimativa heurística pesando o tamanho da linha serializada (ex: 200 bytes por linha)
+    # Em produção, um sample de 1% do df pode determinar o tamanho médio dinâmico em Bytes.
+    bytes_per_row = 150 
+    
+    # 3. Calcula o volume total estimado e determina o número de arquivos (partições) exatos
+    total_size_mb = (total_rows * bytes_per_row) / (1024 * 1024)
+    ideal_partitions = max(1, int(total_size_mb / target_size_mb))
+    
+    print(f"Escrevendo {total_size_mb:.2f} MB distribuídos em {ideal_partitions} arquivos parquet de ~{target_size_mb} MB")
+
+    # 4. Redistribui uniformemente e grava no S3
+    df.repartition(ideal_partitions) \
+      .write \
+      .mode("overwrite") \
+      .format("parquet") \
+      .save(s3_path)
+
+# Chamada do pipeline final
+write_optimized_lake_table(df_vendas_finais, "s3://meu-lake/silver/vendas/")</code></pre>
+
+      <div class="callout callout-info" style="margin-top:20px;">
+        <strong>Alternativa do Motor do Spark (Auto Sizing):</strong> Em ambientes com EMR 6.x+ ou AWS Glue, você pode delegar o limite de registros do arquivo ao Catalyst definindo <code>spark.sql.files.maxRecordsPerFile = 1000000</code> na configuração do cluster. Isso forçará o writer a "fechar" o arquivo parquet e abrir um novo assim que bater 1 milhão de linhas, independentemente das partições em RAM. 
+      </div>
+    </section>
+
+  <section class="section" id="spark-joins">
+    <div class="sec-hdr">
+      <div class="sec-num" style="color:var(--spark)">07</div>
+      <div class="sec-meta">
+        <div class="sec-acc" style="background:var(--spark)"></div>
+        <h2>Estratégias Físicas de Join no Spark</h2>
+        <p>Mapeamento profundo de cruzamentos analíticos em nível de rede, memória e disco</p>
+      </div>
+    </div>
+
+    <p>Diferente de bancos de dados relacionais em um único servidor, um <strong>Join Distribuído</strong> no Spark é a operação mais custosa que existe, pois exige que dados relacionados que estão espalhados em dezenas de servidores (Executors) trafeguem pela rede para a mesma máquina a fim de serem cruzados. O Catalyst Optimizer escolhe automaticamente entre três algoritmos físicos principais, baseando-se no tamanho (em bytes) estimado das tabelas.</p>
+
+    
+    
+    <div class="join-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+      <div class="jc">
+        <div class="jc-name">Broadcast Hash Join (BHJ)</div>
+        <span class="jtag ns">✓ Sem Shuffle de Rede Pesado</span>
+        <div class="jc-desc">Copia a tabela inteira e envia para todos os executores na memória. Elimina totalmente o embaralhamento de chaves na rede. Padrão Ouro para Dimensões.</div>
+      </div>
+      <div class="jc">
+        <div class="jc-name">Sort-Merge Join (SMJ)</div>
+        <span class="jtag sh">Forte Shuffle</span>
+        <div class="jc-desc">Lê, faz o Hash, trafega pela rede, Ordena (Sort) no disco local e depois mescla os ponteiros iterativamente. Extremamente robusto para cruzamentos Massivos x Massivos.</div>
+      </div>
+      <div class="jc">
+        <div class="jc-name">Shuffle Hash Join (SHJ)</div>
+        <span class="jtag sh">Shuffle &amp; RAM Pesada</span>
+        <div class="jc-desc">Distribui e mapeia os blocos via Rede e constrói HashMaps parciais na memória. Usado quando a tabela menor é maior que o broadcast, mas caberá num bucket hash isolado de um único executor.</div>
+      </div>
+    </div>
+
+    <div class="drawio-wrap" style="margin-top: 30px;">
+      <div class="drawio-label"><span class="dot"></span>DIAGRAMA 1: BROADCAST HASH JOIN (Ouro para Tabelas Menores)</div>
+      <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#0ea5e9&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;\n&lt;root&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_0\&quot;/&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_1\&quot; parent=\&quot;ed547f_bhj_0\&quot;/&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry width=\&quot;900\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Title --&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_title\&quot; value=\&quot;BROADCAST HASH JOIN (BHJ)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;900\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Components --&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_small_tbl\&quot; value=\&quot;Tabela Dimens\u00e3o&amp;amp;#xa;(Pequena, &amp;lt; 10MB)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0284c7;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;60\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;ed547f_bhj_big_tbl\&quot; value=\&quot;Tabela Fato&amp;amp;#xa;(Massiva, TBs)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a8a;strokeColor=none;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;200\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;ed547f_bhj_driver\&quot; value=\&quot;Spark Driver&amp;amp;#xa;Faz Collect() &amp;amp;amp; Build&amp;amp;#xa;do Hash Map\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#FF6B00;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;240\&quot; y=\&quot;55\&quot; width=\&quot;140\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;ed547f_bhj_exec1\&quot; value=\&quot;Executor 1&amp;amp;#xa;RAM\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;500\&quot; y=\&quot;50\&quot; width=\&quot;180\&quot; height=\&quot;100\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_exec2\&quot; value=\&quot;Executor 2&amp;amp;#xa;RAM\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;500\&quot; y=\&quot;170\&quot; width=\&quot;180\&quot; height=\&quot;100\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;ed547f_bhj_hash1\&quot; value=\&quot;Hash Map Broadcast\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0284c7;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;510\&quot; y=\&quot;80\&quot; width=\&quot;160\&quot; height=\&quot;25\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_task1\&quot; value=\&quot;Task Join Fato (Sem Shuffle)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a8a;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;510\&quot; y=\&quot;115\&quot; width=\&quot;160\&quot; height=\&quot;25\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;ed547f_bhj_hash2\&quot; value=\&quot;Hash Map Broadcast\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0284c7;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;510\&quot; y=\&quot;200\&quot; width=\&quot;160\&quot; height=\&quot;25\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_task2\&quot; value=\&quot;Task Join Fato (Sem Shuffle)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a8a;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry x=\&quot;510\&quot; y=\&quot;235\&quot; width=\&quot;160\&quot; height=\&quot;25\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Edges --&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_e_pull\&quot; value=\&quot;1. Driver Puxa\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;fontColor=#7dd3fc;fontFamily=DM Sans;fontSize=9;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;ed547f_bhj_small_tbl\&quot; target=\&quot;ed547f_bhj_driver\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_e_br1\&quot; value=\&quot;2. Broadcast\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FF6B00;strokeWidth=1.5;fontColor=#fdba74;fontFamily=DM Sans;fontSize=9;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;ed547f_bhj_driver\&quot; target=\&quot;ed547f_bhj_exec1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_e_br2\&quot; value=\&quot;2. Broadcast\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FF6B00;strokeWidth=1.5;fontColor=#fdba74;fontFamily=DM Sans;fontSize=9;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;ed547f_bhj_driver\&quot; target=\&quot;ed547f_bhj_exec2\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;430\&quot; y=\&quot;85\&quot;/&gt;&lt;mxPoint x=\&quot;430\&quot; y=\&quot;220\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;ed547f_bhj_e_fat1\&quot; value=\&quot;L\u00ea Parquert\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#94a3b8;strokeWidth=1.5;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;ed547f_bhj_big_tbl\&quot; target=\&quot;ed547f_bhj_task1\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;200\&quot; y=\&quot;225\&quot;/&gt;&lt;mxPoint x=\&quot;200\&quot; y=\&quot;127\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;ed547f_bhj_e_fat2\&quot; value=\&quot;L\u00ea Parquet\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#94a3b8;strokeWidth=1.5;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;ed547f_bhj_big_tbl\&quot; target=\&quot;ed547f_bhj_task2\&quot; parent=\&quot;ed547f_bhj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;200\&quot; y=\&quot;225\&quot;/&gt;&lt;mxPoint x=\&quot;200\&quot; y=\&quot;247\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n\n&lt;/root&gt;\n&lt;/mxGraphModel&gt;&quot;}'></div>
+    </div>
+    
+    <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+      <strong style="color: var(--accent);">Mecânica do Broadcast Hash Join:</strong> O Spark ignora o terrível particionamento de rede. O Driver pega a tabela menor (até 10MB default), monta um dicionário HashMap no Driver e envia uma cópia idêntica (Broadcast) para a RAM de cada um dos executores do cluster. Assim, a tabela Fato de Terabytes sofre join sem trafegar pela rede.
+    </div>
+
+    <div class="drawio-wrap" style="margin-top: 30px;">
+      <div class="drawio-label"><span class="dot"></span>DIAGRAMA 2: SORT-MERGE JOIN (O Padrão para Tabelas Massivas)</div>
+      <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#fbbf24&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;\n&lt;root&gt;\n&lt;mxCell id=\&quot;c364d9_smj_0\&quot;/&gt;\n&lt;mxCell id=\&quot;c364d9_smj_1\&quot; parent=\&quot;c364d9_smj_0\&quot;/&gt;\n&lt;mxCell id=\&quot;c364d9_smj_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry width=\&quot;900\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Title --&gt;\n&lt;mxCell id=\&quot;c364d9_smj_title\&quot; value=\&quot;SORT-MERGE JOIN (SMJ)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;900\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Components --&gt;\n&lt;mxCell id=\&quot;c364d9_smj_t_a\&quot; value=\&quot;Tabela Fato A&amp;amp;#xa;(Massiva)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a8a;strokeColor=none;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;60\&quot; width=\&quot;100\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;c364d9_smj_t_b\&quot; value=\&quot;Tabela Fato B&amp;amp;#xa;(Massiva)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a8a;strokeColor=none;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;180\&quot; width=\&quot;100\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;c364d9_smj_exch\&quot; value=\&quot;Exchange (Rede)&amp;amp;#xa;Particiona pela Chave\&quot; style=\&quot;labelBackgroundColor=none;shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#b45309;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry x=\&quot;190\&quot; y=\&quot;110\&quot; width=\&quot;140\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;c364d9_smj_grp_exec\&quot; value=\&quot;Executor 1 (Processa Chave K)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#475569;strokeWidth=1.5;dashed=1;verticalAlign=top;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry x=\&quot;390\&quot; y=\&quot;45\&quot; width=\&quot;450\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;c364d9_smj_sort_a\&quot; value=\&quot;Sort Tabela A&amp;amp;#xa;(RAM + Disco se Spill)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#f59e0b;strokeWidth=1.5;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry x=\&quot;410\&quot; y=\&quot;80\&quot; width=\&quot;130\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;c364d9_smj_sort_b\&quot; value=\&quot;Sort Tabela B&amp;amp;#xa;(RAM + Disco se Spill)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#f59e0b;strokeWidth=1.5;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry x=\&quot;410\&quot; y=\&quot;160\&quot; width=\&quot;130\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;c364d9_smj_merge\&quot; value=\&quot;Merge Phase&amp;amp;#xa;(Avan\u00e7a Ponteiros)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#064e3b;strokeColor=#10b981;strokeWidth=1.5;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry x=\&quot;610\&quot; y=\&quot;110\&quot; width=\&quot;130\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Edges --&gt;\n&lt;mxCell id=\&quot;c364d9_smj_e_ea\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;c364d9_smj_t_a\&quot; target=\&quot;c364d9_smj_exch\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;c364d9_smj_e_eb\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;c364d9_smj_t_b\&quot; target=\&quot;c364d9_smj_exch\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;c364d9_smj_e_sa\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;c364d9_smj_exch\&quot; target=\&quot;c364d9_smj_sort_a\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;360\&quot; y=\&quot;145\&quot;/&gt;&lt;mxPoint x=\&quot;360\&quot; y=\&quot;100\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;c364d9_smj_e_sb\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;c364d9_smj_exch\&quot; target=\&quot;c364d9_smj_sort_b\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;360\&quot; y=\&quot;145\&quot;/&gt;&lt;mxPoint x=\&quot;360\&quot; y=\&quot;180\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;c364d9_smj_e_ma\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;c364d9_smj_sort_a\&quot; target=\&quot;c364d9_smj_merge\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;c364d9_smj_e_mb\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;c364d9_smj_sort_b\&quot; target=\&quot;c364d9_smj_merge\&quot; parent=\&quot;c364d9_smj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;/root&gt;\n&lt;/mxGraphModel&gt;&quot;}'></div>
+    </div>
+    
+    <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+      <strong style="color: var(--accent);">Mecânica do Sort-Merge Join (SMJ):</strong> Esse é o rei do processamento Big Data de petabytes. Como as tabelas A e B não cabem em memória isolada, ambas sofrem Exchange/Shuffle pela rede para caírem no exato mesmo executor baseado no valor do hash da chave. Após a chegada de ambas as metades (Data Skew é crítico aqui!), se estourar a RAM, o Spark faz Spill para o disco EBS, ordena iterativamente (Sort) ambos os lados da chave e finalmente avança simultaneamente mesclando ponteiros lado-a-lado (Merge). Lento, mas resiliente a quebras de nó.
+    </div>
+
+    <div class="drawio-wrap" style="margin-top: 30px;">
+      <div class="drawio-label"><span class="dot"></span>DIAGRAMA 3: SHUFFLE HASH JOIN (Intermediário em RAM)</div>
+      <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#c026d3&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;\n&lt;root&gt;\n&lt;mxCell id=\&quot;32658c_shj_0\&quot;/&gt;\n&lt;mxCell id=\&quot;32658c_shj_1\&quot; parent=\&quot;32658c_shj_0\&quot;/&gt;\n&lt;mxCell id=\&quot;32658c_shj_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry width=\&quot;900\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Title --&gt;\n&lt;mxCell id=\&quot;32658c_shj_title\&quot; value=\&quot;SHUFFLE HASH JOIN (SHJ)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;fontColor=#c026d3;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;900\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Components --&gt;\n&lt;mxCell id=\&quot;32658c_shj_t_a\&quot; value=\&quot;Tabela A&amp;amp;#xa;(Grande p/ Broadcast)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0284c7;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=9;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;60\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;32658c_shj_t_b\&quot; value=\&quot;Tabela Fato B&amp;amp;#xa;(Massiva)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a8a;strokeColor=none;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;180\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;32658c_shj_exch\&quot; value=\&quot;Exchange (Rede)&amp;amp;#xa;Particiona pela Chave\&quot; style=\&quot;labelBackgroundColor=none;shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#b45309;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;210\&quot; y=\&quot;110\&quot; width=\&quot;140\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;32658c_shj_grp_exec\&quot; value=\&quot;Executor 1 (Parti\u00e7\u00e3o Local na RAM)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#475569;strokeWidth=1.5;dashed=1;verticalAlign=top;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;410\&quot; y=\&quot;45\&quot; width=\&quot;450\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;32658c_shj_hash_a\&quot; value=\&quot;Hash Map A&amp;amp;#xa;(Na Mem\u00f3ria Local)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#701a75;strokeColor=#d946ef;strokeWidth=1.5;fontColor=#f5d0fe;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;440\&quot; y=\&quot;80\&quot; width=\&quot;130\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;32658c_shj_hash_b\&quot; value=\&quot;Itera Tabela B&amp;amp;#xa;(Sem Sort)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#94a3b8;strokeWidth=1.5;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;440\&quot; y=\&quot;160\&quot; width=\&quot;130\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;32658c_shj_join\&quot; value=\&quot;Hash Join Phase&amp;amp;#xa;(Busca O(1))\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#4a044e;strokeColor=#c026d3;strokeWidth=1.5;fontColor=#fbcfe8;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;640\&quot; y=\&quot;110\&quot; width=\&quot;130\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;32658c_shj_warn\&quot; value=\&quot;Perigo OOM: Se a parti\u00e7\u00e3o Hash A for maior que a RAM da Task!\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;fontColor=#ef4444;fontFamily=DM Sans;fontSize=8;fontStyle=3;\&quot; vertex=\&quot;1\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry x=\&quot;435\&quot; y=\&quot;120\&quot; width=\&quot;220\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Edges --&gt;\n&lt;mxCell id=\&quot;32658c_shj_e_ea\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;32658c_shj_t_a\&quot; target=\&quot;32658c_shj_exch\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;32658c_shj_e_eb\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;32658c_shj_t_b\&quot; target=\&quot;32658c_shj_exch\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;32658c_shj_e_ha\&quot; value=\&quot;Fase de Build\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d946ef;strokeWidth=1.5;fontColor=#e879f9;fontFamily=DM Sans;fontSize=9;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;32658c_shj_exch\&quot; target=\&quot;32658c_shj_hash_a\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;380\&quot; y=\&quot;145\&quot;/&gt;&lt;mxPoint x=\&quot;380\&quot; y=\&quot;100\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;32658c_shj_e_hb\&quot; value=\&quot;Fase de Probe\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#94a3b8;strokeWidth=1.5;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;32658c_shj_exch\&quot; target=\&quot;32658c_shj_hash_b\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;380\&quot; y=\&quot;145\&quot;/&gt;&lt;mxPoint x=\&quot;380\&quot; y=\&quot;180\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\&quot;32658c_shj_e_ja\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#c026d3;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;32658c_shj_hash_a\&quot; target=\&quot;32658c_shj_join\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;32658c_shj_e_jb\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#c026d3;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;32658c_shj_hash_b\&quot; target=\&quot;32658c_shj_join\&quot; parent=\&quot;32658c_shj_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;/root&gt;\n&lt;/mxGraphModel&gt;&quot;}'></div>
+    </div>
+    
+    <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 30px;">
+      <strong style="color: var(--accent);">Mecânica do Shuffle Hash Join (SHJ):</strong> Idêntico ao SMJ na brutalidade da fase de Shuffle (trafegando tudo). A diferença é que não perde I/O com a fase de *Sort*. O lado Menor da partição do Join constrói um Hash Map em memória na partição isolada do executor. Se houver desbalanço (Skew) ou o tamanho da tabela menor ultrapassar a RAM Task-local disponível, resultará fatalmente em `OutOfMemoryError (OOM)` travando seu pipeline. O Catalyst (no AQE) prevê isso e faz fallback para SMJ, por isso o SHJ costuma estar em desuso sem um override manual ou auto-tune severo.
+    </div>
+
+    <div class="tbl-wrap" style="margin-top: 15px; margin-bottom: 25px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Algoritmo de Join</th>
+            <th>Mecânica de Funcionamento Interno</th>
+            <th>Sensibilidade a Data Skew</th>
+            <th>Quando Usar / Forçar no Código</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Broadcast Hash Join (BHJ)</strong></td>
+            <td>O Driver puxa a tabela pequena (Dimensão), cria uma tabela Hash (Chave/Valor) na memória JVM e empurra via rede uma cópia exata para a RAM de <em>cada</em> executor que possui pedaços da tabela gigante. As tarefas vasculham a Hash localmente, <strong>sem embaralhar a tabela gigante pela rede</strong>.</td>
+            <td>Baixa. Como o dado cruza localmente em memória, se uma chave pesada existir na tabela gigante, ela não vai travar um único executor aguardando transferências.</td>
+            <td>Tabelas menores que 10MB (Default configurado via <code>spark.sql.autoBroadcastJoinThreshold</code>). Para forçar: <code>df1.join(F.broadcast(df_small), "id")</code>. Cuidado com OOM no Driver se a tabela crescer subitamente.</td>
+          </tr>
+          <tr>
+            <td><strong>Sort-Merge Join (SMJ)</strong></td>
+            <td><ol><li><strong>Shuffle Phase:</strong> Avalia as chaves de ambas as tabelas gigantes. Usa partições Hash e move os registros pela rede para que chaves idênticas de ambas as tabelas caiam no exato mesmo nó.</li><li><strong>Sort Phase:</strong> Se a memória encher (inevitável em Petabytes), salva os dados temporários no disco local (Spill) e <em>Ordena</em> os registros em cada partição por chave.</li><li><strong>Merge Phase:</strong> Escaneia os dois conjuntos ordenados iterativamente lado a lado usando ponteiros combinando-os.</li></ol></td>
+            <td>Extrema. Se o cliente ID=99 for a "Amazon" e possuir 10 bilhões de registros de vendas, todos os 10 bilhões irão para a rede em direção ao <em>mesmo executor singular</em>. Esse executor fará "Spill to Disk" constante, travando por 10 horas enquanto os outros 199 executores terminam em 1 minuto.</td>
+            <td>O SMJ é o rei indiscutível para cruzar Tabelas Fato x Fato (Massivo x Massivo). É ativado por padrão se o Spark deduzir que ambas são grandes. Exige alta capacidade de I/O em discos temporários EBS (gp3/NVMe) dos nós Worker.</td>
+          </tr>
+          <tr>
+            <td><strong>Shuffle Hash Join (SHJ)</strong></td>
+            <td>Semelhante ao SMJ, faz o Shuffle de ambas as tabelas para mapeá-las fisicamente na rede por chave. Contudo, ele pula a etapa de Sort e simplesmente cria Tabelas Hash em memória na partição para a menor tabela. É OOM na certa se a tabela for muito maior que a RAM do executor alocado para aquela partição.</td>
+            <td>Alta. Mesmos problemas do SMJ no shuffle, mas falhará abruptamente (OOM) em vez de gravar no disco lentamente (como faz o Sort-Merge) porque não faz Spill da árvore de chaves.</td>
+            <td>Ideal quando a tabela é grande demais para caber inteira no Driver (abortando o Broadcast), mas depois de shufflada, as partições resultantes cabem tranquilamente na memória de um Executor sem dar Spill. O Catalyst do Spark 3 com AQE costuma migrar para SMJ automaticamente se pressentir falta de RAM.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="abox note">
+      <strong>⚠️ Warning Especialista: Cartesian / Cross Joins e a Explosão de RAM</strong>
+      <p>Um join sem critério de filtro claro ou usando predicados não equitativos (ex: <code>df1.join(df2, df1.data > df2.data)</code>) não consegue aplicar os algoritmos baseados em Hash. O Spark degrada a performance para um <em>Broadcast Nested Loop Join (BNLJ)</em> ou, pior, lança uma exceção pedindo ao usuário que autorize o produto cartesiano <code>spark.sql.crossJoin.enabled=true</code>. Um Cross Join O(N*M) entre duas tabelas de 10 milhões de linhas tentará processar 100 Trilhões de combinações, aniquilando qualquer cluster Cloud instantaneamente.</p>
+    </div>
+  </section>
+
+    
+  <section class="section" id="pyspark-dataframe-api" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+    <div class="sec-hdr">
+      <div class="sec-num" style="color:var(--emr)">9.5</div>
+      <div class="sec-meta">
+        <div class="sec-acc" style="background:var(--emr)"></div>
+        <h2>Guia Definitivo: DataFrame API & Boas Práticas</h2>
+        <p>Como escrever código PySpark sustentável, de alta performance e legível</p>
+      </div>
+    </div>
+
+    <p>A <strong>DataFrame API</strong> é a espinha dorsal do PySpark moderno. Diferente dos antigos RDDs, o DataFrame se beneficia do <em>Catalyst Optimizer</em>, construindo um plano lógico de execução que otimiza agregações e joins por baixo dos panos. Abaixo estão os padrões cruciais para engenharia de dados.</p>
+
+    <div class="callout callout-tip" style="margin-top:20px;">
+      <strong>Evite Encadeamento Infinito (Chaining):</strong> Embora seja possível encadear 20 <code>.withColumn()</code>, isso estoura a pilha de recursão do Java e destrói o <em>Lineage</em> do Spark, gerando <em>StackOverflowErrors</em> no driver. Use a função <code>.select()</code> com expressões múltiplas sempre que possível.
+    </div>
+
+    <div class="code-block" style="margin-top:20px;">
+      <div class="code-header">
+        <span class="code-lang">python</span>
+      </div>
+      <pre><code># ❌ Anti-Pattern: Chaining excessivo e recálculo
+df_bad = df \
+    .withColumn("ano", F.year("data_venda")) \
+    .withColumn("mes", F.month("data_venda")) \
+    .withColumn("dia", F.dayofmonth("data_venda")) \
+    .withColumn("total_com_imposto", F.col("valor") * 1.15)
+
+# ✅ Best Practice: Projeção única e limpa
+df_good = df.select(
+    "*",
+    F.year("data_venda").alias("ano"),
+    F.month("data_venda").alias("mes"),
+    F.dayofmonth("data_venda").alias("dia"),
+    (F.col("valor") * 1.15).alias("total_com_imposto")
+)</code></pre>
+    </div>
+
+    <h3 style="margin-top:30px;" id="pyspark-functions">Funções PySpark (pyspark.sql.functions) Essenciais</h3>
+    <p>O módulo <code>pyspark.sql.functions</code> (comumente importado como <code>F</code>) possui funções nativas implementadas em Scala. <strong>Nunca use UDFs (User Defined Functions) em Python</strong> a menos que seja estritamente necessário (ou use Pandas UDF), pois UDFs tradicionais quebram a execução do Tungsten e forçam a serialização/deserialização (Pickle) entre JVM e Python.</p>
+    
+    <div class="grid-2" style="margin-top:20px;">
+      <div class="card">
+        <div class="card-lbl">Controle de Fluxo (when/otherwise)</div>
+        <p>A estrutura condicional nativa do Spark. Evite criar colunas baseadas em ifs de Python puros iterando sobre linhas.</p>
+        <pre style="background:#0f172a; padding:10px; border-radius:5px; color:#fff; font-size:0.8em; margin-top:10px; overflow-x: auto;"><code>df.withColumn(
+  "status_compra",
+  F.when(F.col("valor") > 1000, "VIP")
+   .when(F.col("valor") > 500, "Premium")
+   .otherwise("Standard")
+)</code></pre>
+      </div>
+      <div class="card">
+        <div class="card-lbl">Estruturas Complexas (explode & arrays)</div>
+        <p>Processamento de JSONs aninhados. O <code>explode</code> desmembra arrays em múltiplas linhas, multiplicando os registros do DataFrame.</p>
+        <pre style="background:#0f172a; padding:10px; border-radius:5px; color:#fff; font-size:0.8em; margin-top:10px; overflow-x: auto;"><code># Transforma [1, 2, 3] em três linhas distintas
+df_exploded = df.select(
+  "user_id",
+  F.explode("lista_compras").alias("item")
+)</code></pre>
+      </div>
+      <div class="card">
+        <div class="card-lbl">Tratamento de Nulos (coalesce vs na.fill)</div>
+        <p><code>F.coalesce</code> retorna a primeira coluna não-nula entre várias. <code>na.fill</code> substitui nulos em colunas específicas.</p>
+        <pre style="background:#0f172a; padding:10px; border-radius:5px; color:#fff; font-size:0.8em; margin-top:10px; overflow-x: auto;"><code>df.withColumn(
+  "telefone_principal", 
+  F.coalesce(F.col("celular"), F.col("fixo"), F.lit("Sem Contato"))
+)</code></pre>
+      </div>
+      <div class="card">
+        <div class="card-lbl">Window Functions</div>
+        <p>Operações analíticas sobre partições sem agrupar (reduzir) as linhas. Essencial para CTEs, running totals e deduplicação.</p>
+        <pre style="background:#0f172a; padding:10px; border-radius:5px; color:#fff; font-size:0.8em; margin-top:10px; overflow-x: auto;"><code>from pyspark.sql.window import Window
+windowSpec = Window.partitionBy("user_id").orderBy(F.desc("data"))
+# Deduplica mantendo a última compra
+df.withColumn("rn", F.row_number().over(windowSpec)) \
+  .filter(F.col("rn") == 1)</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="spark-sql-api" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+    <h3 style="margin-top:30px;">Spark.sql: Integração de Queries e Catalyst Optimizer</h3>
+    <p>O Spark permite executar 100% de queries SQL ANSI puras através do método <code>spark.sql()</code>. Quando um analista roda uma query SQL ou um engenheiro escreve código PySpark, o <strong>Catalyst Optimizer</strong> converte ambos para a mesma árvore sintática exata (AST). Portanto, não há perda de performance teórica entre SQL e DataFrame API.</p>
+
+    <div class="code-block" style="margin-top:20px;">
+      <div class="code-header">
+        <span class="code-lang">python</span>
+      </div>
+      <pre><code># Registra o DataFrame como uma tabela temporária em memória
+df_bronze.createOrReplaceTempView("bronze_vendas")
+
+# Executa lógica SQL complexa (ideal para analistas migrando para DE)
+df_silver = spark.sql("""
+    SELECT 
+        loja_id,
+        DATE_TRUNC('month', data_venda) as mes,
+        SUM(valor) as receita_total
+    FROM bronze_vendas
+    WHERE status = 'CONCLUIDO'
+    GROUP BY 1, 2
+    HAVING SUM(valor) > 10000
+""")</code></pre>
+    </div>
+
+    <div class="callout callout-warn" style="margin-top:20px;">
+      <strong>Trade-offs: DataFrame API vs Spark SQL</strong>
+      <ul>
+        <li><strong>Vantagem do DataFrame API:</strong> Verificação de sintaxe em tempo de compilação (IDE aponta o erro de digitação), facilidade de modularização, passagem de parâmetros dinâmicos de forma elegante sem concatenar strings propensas a SQL Injection.</li>
+        <li><strong>Vantagem do Spark SQL:</strong> Curva de aprendizado zero para profissionais de dados tradicionais, facilidade de portar queries complexas gigantes (ex: do Teradata ou Oracle) diretamente para o Lake.</li>
+        <li><strong>Melhor Prática:</strong> Utilize DataFrame API para ingestão, leitura, partições dinâmicas e tipagem estrita de colunas. Utilize Spark SQL para agregações complexas de negócios que mudam frequentemente, encapsuladas em blocos configuráveis (ou dbt).</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="spark-cache">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">08</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Níveis de Persistência de Dados (Cache &amp; Persist)</h2>
+          <p>Comparativo físico de cacheamento e níveis de persistência para reutilização de DataFrames</p>
+        </div>
+      </div>
+
+      <div class="pgrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;">
+        <div class="pc">
+          <div class="lv">MEMORY_ONLY</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--spark) 100%, #ccc 0%);"></div>
+          <div class="ppro">Acesso veloz direto em RAM (deserializado).</div>
+          <div class="pcon">Recalcula se faltar memória (alto risco de GC se o DF for gigante).</div>
+        </div>
+        <div class="pc">
+          <div class="lv">MEMORY_AND_DISK</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--spark) 70%, var(--emr) 30%);"></div>
+          <div class="ppro">Resiliente. Sem perda ou recálculo de dados.</div>
+          <div class="pcon">Escrita lenta em disco quando os dados transbordam da RAM.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">MEMORY_ONLY_SER</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--arch) 90%, #ccc 10%);"></div>
+          <div class="ppro">Extremamente compacto (salva como array de bytes na RAM).</div>
+          <div class="pcon">Exige processamento de CPU extra para serializar/deserializar.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">DISK_ONLY</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--emr) 100%, #ccc 0%);"></div>
+          <div class="ppro">Sem qualquer pressão sobre a RAM da Heap JVM.</div>
+          <div class="pcon">Acesso muito lento devido ao I/O físico de leitura do disco.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">MEMORY_AND_DISK_SER</div>
+          <div class="pbar" style="background: linear-gradient(90deg, var(--arch) 60%, var(--emr) 40%);"></div>
+          <div class="ppro">Melhor balanço para produção de larga escala.</div>
+          <div class="pcon">Custo médio de processamento de CPU para serializar.</div>
+        </div>
+        <div class="pc">
+          <div class="lv">OFF_HEAP</div>
+          <div class="pbar" style="background: linear-gradient(90deg, #10b981 90%, #ccc 10%);"></div>
+          <div class="ppro">Bypass de GC. Gerenciado diretamente pelo Tungsten na RAM do S.O.</div>
+          <div class="pcon">Requer habilitar <code>spark.memory.offHeap.enabled = true</code> e alocação prévia.</div>
+        </div>
+      </div>
+
+      <div class="callout callout-warn" style="margin-top: 20px;">
+        <strong>Tradeoff Avançado de Produção (Serialization &amp; GC):</strong> 
+        O uso padrão do DataFrame API (<code>df.cache()</code>) mapeia para <code>MEMORY_AND_DISK</code>. Se o DataFrame tiver 50GB descompactados, ele inundará a Heap da JVM, acionando o Garbage Collector a todo instante (Stop-The-World), travando todos os cores. Em cenários Staff-Level, recomenda-se explicitamente o uso de <code>df.persist(StorageLevel.MEMORY_AND_DISK_SER)</code> acompanhado da configuração <code>spark.serializer = org.apache.spark.serializer.KryoSerializer</code> no cluster. Isso armazena os dados não como objetos Java dispersos, mas como um bloco binário massivo e coeso, reduzindo a pegada na RAM em até 80% e eliminando a pressão de limpeza do GC, trocando memória por um pequeno gasto de CPU (descompressão).
+      </div>
+    </section>
+
+    <section class="section" id="spark-code-masterclass">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">19</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Masterclass Exaustiva: Código PySpark &amp; SQL</h2>
+          <p>Mergulho profundo na teoria e prática de transformações complexas, análise temporal e engenharia de features em grande escala.</p>
+        </div>
+      </div>
+
+      <p>Nesta masterclass, destrinchamos os conceitos mais desafiadores exigidos por empresas de ponta (FAANG, big techs). A transição de um engenheiro júnior para sênior frequentemente se reflete na habilidade de resolver problemas complexos com o <strong>mínimo de shuffles</strong>, evitando UDFs padrão e utilizando os motores nativos (Catalyst/Tungsten) através de <em>Higher-Order Functions</em> e <em>Window Functions</em>.</p>
+
+      <!-- TEMA 1: WINDOW FUNCTIONS E SESSÕES -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">Tema 1 · Teoria: Window Functions &amp; Sessionization</div>
+        <h4>O Paradigma do Deslocamento Temporal e Construção de Sessões</h4>
+        
+        <p><strong>A Física da Operação:</strong> Diferente de um <code>GROUP BY</code> tradicional que comprime (esmaga) milhões de registros em uma única linha (ex: somatório global), uma <strong>Window Function</strong> permite realizar operações de agregação (Soma, Média) ou navegação (Lag, Lead) <em>mantendo a granularidade original das linhas</em>. O Spark cria "janelas" lógicas deslizantes na memória para cada registro, olhando para trás e para frente num contexto delimitado por uma chave (<code>PARTITION BY</code>) e uma ordenação (<code>ORDER BY</code>). O maior perigo físico aqui é a exceção <code>OutOfMemory (OOM)</code> se uma única janela (ex: um usuário muito ativo) for maior que a RAM de um único executor.</p>
+
+        <p><strong>O Problema Prático (Sessionization):</strong> Precisamos mapear as jornadas de usuários num site. Se o usuário ficou 30 minutos inativo, consideramos que a sessão antiga "fechou" e qualquer clique futuro abrirá uma "nova sessão". Isso é resolvido rastreando a distância temporal (Gap) entre um clique e o anterior.</p>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 1.1: Identificação de Gaps e Sessões (PySpark)</h5>
+          <pre><code class="language-python">from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+# 1. Definimos a Janela Particionada por Usuário e Ordenada pelo Tempo Cronológico
+w_user_time = Window.partitionBy("user_id").orderBy("event_timestamp")
+
+# 2. LAG: Busca o exato momento do clique anterior. Se for o primeiro clique, retorna NULL.
+df_lag = df_events.withColumn("prev_timestamp", F.lag("event_timestamp").over(w_user_time))
+
+# 3. Cálculo do GAP e Flag de Nova Sessão
+# Lógica: Se o tempo atual menos o tempo anterior for maior que 1800 segundos (30 min), marcamos com '1' (início).
+df_gap = df_lag.withColumn(
+    "is_new_session",
+    F.when(F.col("prev_timestamp").isNull(), 1)
+     .when((F.col("event_timestamp").cast("long") - F.col("prev_timestamp").cast("long")) > 1800, 1)
+     .otherwise(0)
+)
+
+# 4. Criação do ID único da sessão via SOMA CUMULATIVA
+# A janela avança linha a linha desde o início (unboundedPreceding) até a linha atual (currentRow)
+w_cumulative = Window.partitionBy("user_id").orderBy("event_timestamp")\
+    .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+
+df_sessions = df_gap.withColumn("session_id", F.sum("is_new_session").over(w_cumulative))
+
+# Para gerar um ID Global único, podemos concatenar o usuário com o número da sessão local
+df_final = df_sessions.withColumn("global_session_id", F.concat_ws("_", F.col("user_id"), F.col("session_id")))
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 1.2: A Solução Elegante usando SQL (Trino/Athena/SparkSQL)</h5>
+          <pre><code class="language-sql">WITH lags AS (
+  SELECT 
+    user_id,
+    event_timestamp,
+    LAG(event_timestamp) OVER (PARTITION BY user_id ORDER BY event_timestamp) as prev_timestamp
+  FROM raw_events
+),
+flags AS (
+  SELECT 
+    user_id,
+    event_timestamp,
+    -- Converte timestamp pra EPOCH (segundos) para achar a diferença de 30 min
+    CASE 
+      WHEN prev_timestamp IS NULL THEN 1
+      WHEN UNIX_TIMESTAMP(event_timestamp) - UNIX_TIMESTAMP(prev_timestamp) > 1800 THEN 1
+      ELSE 0
+    END as is_new_session
+  FROM lags
+)
+SELECT 
+  user_id,
+  event_timestamp,
+  -- Soma cumulativa atuando como gerador sequencial de IDs de sessão
+  SUM(is_new_session) OVER (PARTITION BY user_id ORDER BY event_timestamp ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as session_id
+FROM flags;
+</code></pre>
+        </div>
+
+        <div class="callout callout-warn">
+          <h5>Exemplo 1.3: Running Totals (Faturamento Acumulado) - PySpark</h5>
+          <p>Outro uso comum de Window. Calcule a receita acumulada diária sem agrupar toda a tabela.</p>
+          <pre><code class="language-python">w_running = Window.partitionBy("ano_mes").orderBy("data_venda")\
+    .rangeBetween(Window.unboundedPreceding, Window.currentRow)
+    
+df_running = df_faturamento.withColumn(
+    "receita_acumulada_mes", 
+    F.sum("valor_venda").over(w_running)
+)
+</code></pre>
+        </div>
+      </div>
+
+      <!-- TEMA 2: ESTRUTURAS COMPLEXAS E JSON -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">Tema 2 · Teoria: Parseamento de Estruturas Aninhadas (Complex Types)</div>
+        <h4>Explode, Lateral Views e Navegação em Grafo de JSONs</h4>
+        
+        <p><strong>A Mecânica Estrutural:</strong> Dados provenientes de bancos NoSQL (como MongoDB ou DynamoDB) e de APIs modernas não são tabulares (planos). Eles vêm no formato de árvores, com Tipos Complexos do Spark: <code>ArrayType</code> (Listas) e <code>StructType</code> (Objetos aninhados). O processamento analítico (como o envio para um Data Warehouse columnar) exige que essas árvores sejam transformadas em um modelo relacional (Flattening). A operação mais custosa dessa etapa é o <code>explode()</code>, pois ela atua como um multiplicador cartesiano restrito: se um usuário tiver 5 compras num Array, a linha do usuário é duplicada (achatada) em 5 linhas individuais herdando as características da raiz.</p>
+
+        <p><strong>Diferença de Performance:</strong> O <code>explode()</code> puro ignora a linha raiz se o array estiver vazio ou nulo (Perda de dados). Em pipelines Enterprise, utilizamos estritamente o <code>explode_outer()</code> (ou <code>LEFT JOIN LATERAL</code>) para garantir que um usuário que fez um cadastro mas não comprou nada seja mantido na tabela (ficará com campos nulos nas colunas de compras).</p>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 2.1: Achatamento Massivo de Array de Structs (PySpark)</h5>
+          <pre><code class="language-python"># Imagine o JSON: {"order_id": "123", "items": [{"id": 1, "price": 10}, {"id": 2, "price": 20}]}
+# Schema: StructType(StructField("order_id", String), StructField("items", ArrayType(StructType(id, price))))
+
+# Passo 1: Explodir o Array para gerar uma linha por Item, preservando orders sem items (explode_outer)
+df_exploded = df_orders.withColumn("item_obj", F.explode_outer("items"))
+
+# Passo 2: Navegar no Struct interno usando notação de ponto (Dot Notation)
+df_flat = df_exploded.select(
+    F.col("order_id"),
+    F.col("item_obj.id").alias("product_id"),
+    F.col("item_obj.price").alias("product_price")
+)
+
+# Passo 3: Drop do array original super pesado da memória
+df_final = df_flat.drop("items", "item_obj")
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 2.2: O Motor SQL e as Views Laterais (LATERAL VIEW)</h5>
+          <p>O SQL padrão antigo não sabe lidar com Arrays de tamanho variável por linha. O Hive introduziu e o Spark absorveu a sintaxe de exibição lateral, que atua como um cross join da linha com os itens do array da própria linha.</p>
+          <pre><code class="language-sql">SELECT 
+  o.order_id,
+  item.id AS product_id,
+  item.price AS product_price
+FROM raw_orders o
+-- EXPLODE_OUTER garante que pedimos LEFT OUTER JOIN, preservando ordens vazias
+LATERAL VIEW OUTER explode(o.items) exploded_table AS item;
+
+-- No PostgreSQL ou Athena mais modernos, a sintaxe de desdobramento (UNNEST) é comum:
+SELECT 
+  o.order_id,
+  item.id AS product_id,
+  item.price AS product_price
+FROM raw_orders o
+LEFT JOIN UNNEST(o.items) AS t(item);
+</code></pre>
+        </div>
+      </div>
+
+      <!-- TEMA 3: AGREGAÇÕES DINÂMICAS E ROLLUP -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">Tema 3 · Teoria: Multi-Dimensional Aggregation (Cubes, Rollups, Pivots)</div>
+        <h4>Engenharia de Cubos Analíticos no Motor de Dados</h4>
+        
+        <p><strong>A Ciência da Agregação:</strong> Fazer milhares de Group Bys para alimentar um Dashboard gera custos enormes se cada consulta varrer a tabela fato crua. Técnicas avançadas calculam <em>todas as combinações hierárquicas possíveis em uma única varredura dos dados</em> usando os operadores <code>ROLLUP</code>, <code>CUBE</code>, e <code>GROUPING SETS</code>.</p>
+        <ul>
+          <li><strong>ROLLUP:</strong> Cria subtotais hierárquicos focados (Direcional). Ex: Se você rodar Rollup por (País, Estado, Cidade), ele criará agrupamentos para (País, Estado, Cidade), depois (País, Estado, NULL) que é o total do estado, depois (País, NULL, NULL) que é o total do País, e (NULL, NULL, NULL) que é o total global. Custo de computação linear `N+1`.</li>
+          <li><strong>CUBE:</strong> Computa absolutamente todas as permutações cruzadas. Criará os totais do ROLLUP, mas também combinações isoladas como (NULL, Estado, NULL), quebrar por estado independente de país. Custo muito mais pesado `2^N`.</li>
+          <li><strong>PIVOT:</strong> Transposição de valores literais de uma coluna-linha para virarem os nomes físicos das colunas. Essencial para transformar séries temporais (uma linha por mês) em colunas tabulares (Jan_Revenue, Feb_Revenue...).</li>
+        </ul>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 3.1: Construindo Tabelas Dinâmicas Transpostas (PIVOT) em PySpark</h5>
+          <pre><code class="language-python"># Cenário: Tabela com colunas [Loja, Mes, Faturamento]. Queremos [Loja, Fat_Jan, Fat_Fev, Fat_Mar]
+
+df_pivot = df_vendas.groupBy("loja_id") \
+    .pivot("mes", ["Janeiro", "Fevereiro", "Marco", "Abril"]) \
+    .agg(
+        F.sum("faturamento").alias("total"), 
+        F.count("transacoes").alias("qnt_vendas")
+    ) \
+    .fillna(0) # Remove Nulos de meses que não tiveram venda
+
+# Atenção (Otimização OOM): SEMPRE forneça a lista de valores literais no método pivot([...]). 
+# Se você deixar vazio, o Spark fará um "Scan Distribuído Extra" na tabela inteira apenas 
+# para descobrir os valores distintos antes de pivotar, dobrando o tempo de processamento.
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 3.2: O SQL Poderoso para Grouping Sets e Rollup</h5>
+          <p>O SQL moderno permite flexibilidade insana no planejamento de totais parciais e cruzamentos, essencial para materialização rápida do Tableau/PowerBI.</p>
+          <pre><code class="language-sql">-- Rollup: Hierarquia rígida (Ano -> Mes -> Dia)
+SELECT 
+  ano, 
+  mes, 
+  dia, 
+  SUM(receita) as faturamento_total
+FROM fato_vendas
+GROUP BY ROLLUP (ano, mes, dia);
+
+-- Grouping Sets: Total controle de quais "Group Bys" rodar de uma vez só no mesmo Dataset Resultante
+SELECT 
+  categoria,
+  marca,
+  regiao,
+  SUM(vendas) as total
+FROM produtos
+GROUP BY GROUPING SETS (
+  (categoria, marca),  -- Visão de concorrência por categoria
+  (regiao),            -- Visão macro territorial isolada
+  ()                   -- Total Global da Tabela
+);
+</code></pre>
+        </div>
+      </div>
+
+      <!-- TEMA 4: DEDUPLICAÇÃO E SCD -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">Tema 4 · Teoria: Deduplicação Resiliente e Histórico Dimensional (SCD Tipo 2)</div>
+        <h4>Isolando a Verdade Num Mar de Eventos Duplicados</h4>
+        
+        <p><strong>A Raiz do Problema:</strong> Sistemas de ingestão como Kafka/Kinesis garantem <em>At-Least-Once Delivery</em>. Portanto, a duplicação no Data Lake é certa. Além disso, quando o status de um pedido muda de "Aguardando" para "Pago" para "Enviado", cada mudança é um evento separado. Como saber a foto atual do pedido sem descartar a história de como ele chegou lá?</p>
+        <p>Abordamos de duas formas: (A) Deduplicação lógica de última foto mantendo só o mais recente. (B) Criação de uma Tabela Dimensional Slowly Changing Dimension Tipo 2 (SCD-2), que insere controle de vigência usando colunas temporais <code>Data_Inicio_Validade</code> e <code>Data_Fim_Validade</code> (sendo a linha ativa marcada com <code>NULL</code> ou data no infinito 9999-12-31).</p>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 4.1: Deduplicação Extremamente Otimizada de Última Foto (PySpark)</h5>
+          <pre><code class="language-python"># O método .dropDuplicates(["user_id"]) é "Não determinístico" na nuvem (você não escolhe qual linha ele mantém).
+# Para manter a linha mais recente com exatidão garantida, usamos row_number().
+
+w_dedup = Window.partitionBy("user_id").orderBy(F.col("update_timestamp").desc())
+
+# Pega o primeiro evento (mais recente) de cada usuário e joga fora o resto.
+df_gold_latest = df_silver_events.withColumn("rank", F.row_number().over(w_dedup)) \
+    .filter(F.col("rank") == 1) \
+    .drop("rank")
+</code></pre>
+        </div>
+
+        <div class="callout callout-warn">
+          <h5>Exemplo 4.2: Construção manual do Histórico SCD-2 (Tratando Eventos Históricos)</h5>
+          <p>O <code>lead()</code> olha para o futuro na sua partição, roubando o timestamp do próximo evento para fechar a sua janela atual valid_to.</p>
+          <pre><code class="language-python"># Ordenamos os eventos do usuário do mais antigo pro mais novo.
+w_hist = Window.partitionBy("pedido_id").orderBy("data_evento")
+
+df_scd2 = df_status_pedidos.withColumn(
+    "data_inicio_vigencia", F.col("data_evento")
+).withColumn(
+    "data_fim_vigencia", F.lead("data_evento", 1).over(w_hist)
+).withColumn(
+    "is_active", F.when(F.col("data_fim_vigencia").isNull(), True).otherwise(False)
+)
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 4.3: O Motor MERGE (Upsert Lakehouse) em SQL Delta/Iceberg</h5>
+          <p>O paradigma Lakehouse moderno realiza o SCD e o Upsert via ACID transactions em SQL, sem precisar reescrever a tabela inteira (Técnica do Merge on Read/Write).</p>
+          <pre><code class="language-sql">-- Sincronizando tabela alvo com dados vindos de staging usando UPSERT (Update/Insert)
+MERGE INTO gold_users AS target
+USING staging_users_cdc AS source
+ON target.user_id = source.user_id
+WHEN MATCHED AND source.op = 'DELETE' THEN 
+  DELETE -- Deleta se a origem informou remoção
+WHEN MATCHED AND source.update_timestamp > target.update_timestamp THEN 
+  UPDATE SET * -- Atualiza só se a origem for mais recente que o alvo
+WHEN NOT MATCHED THEN 
+  INSERT * -- Insere o cadastro inteiramente novo
+</code></pre>
+        </div>
+      </div>
+
+      <!-- TEMA 5: HIGHER-ORDER FUNCTIONS E PANDAS UDF -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--spark);">
+        <div class="card-lbl">Tema 5 · Teoria: Fuga das UDFs Padrões e Otimização Nativa</div>
+        <h4>Evitando a Morte da Serialização na JVM: Apache Arrow e Expressões Nativas</h4>
+        
+        <p><strong>O Pesadelo da UDF Python:</strong> Quando você escreve uma <code>@udf</code> em Python e aplica em um DataFrame, o Spark é obrigado a pausar o processamento ultra-otimizado (C++/Tungsten), serializar a linha via Socket (Pickle), enviar para um processo filho Python, aguardar o processamento monothread lento do Python e retornar. Isso é uma tragédia de performance. Regra #1 da arquitetura Spark: Evite UDFs como se fossem pragas. Use funções nativas. Se precisar interagir com Arrays internamente, use <strong>Higher-Order Functions</strong> (SQL native lambda functions). Se precisar MUITO de Python (ex: rodar um modelo Scikit-Learn ou cálculo matemático denso), use <strong>Pandas UDF</strong> que trabalha vetorialmente movendo blocos em memória via Apache Arrow sem serialização ineficiente.</p>
+
+        <div class="callout callout-info">
+          <h5>Exemplo 5.1: Operações em Array SEM UDF usando Higher-Order Functions (Spark 2.4+)</h5>
+          <p>Multiplicando todos os números de um array interno do DataFrame sem escrever Python customizado.</p>
+          <pre><code class="language-python"># Imagine um DataFrame com uma coluna array_col = [10, 20, 30]
+
+# O método F.transform aplica uma função anônima lambda diretamente no código C++ da engine.
+df_dobrado = df.withColumn(
+    "array_multiplicado", 
+    F.transform("array_col", lambda item: item * 2)
+)
+
+# O método F.filter limpa lixo de dentro de um array do DataFrame sem explodir ele.
+df_filtrado = df_dobrado.withColumn(
+    "array_somente_maior_25",
+    F.filter("array_multiplicado", lambda item: item > 25)
+)
+</code></pre>
+          <pre><code class="language-sql">-- Equivalente SQL Avançado: Lambda puro
+SELECT 
+  id,
+  TRANSFORM(array_col, x -> x * 2) as array_multiplicado,
+  FILTER(array_col, x -> x > 25) as array_somente_maior_25
+FROM tabela_complexa
+</code></pre>
+        </div>
+
+        <div class="callout callout-tip">
+          <h5>Exemplo 5.2: O Refúgio Vetorizado (Pandas UDF Series)</h5>
+          <p>Quando a transformação é impossível de fazer via Spark SQL puro (ex: aplicar modelo de IA nos dados, regex monstruosos, bibliotecas C), usamos o Pandas UDF do tipo SCALAR. O código recebe não uma linha, mas uma <code>pd.Series</code> (coluna do Pandas com 10.000 linhas) em memória Arrow (Zero-Copy) e retorna 10.000 linhas de uma vez.</p>
+          <pre><code class="language-python">import pandas as pd
+from pyspark.sql.functions import pandas_udf
+from pyspark.sql.types import StringType
+
+# O decorador informa que a saída é String. 
+# Tipagem forte com pandas Series (pd.Series)
+@pandas_udf(StringType())
+def mascara_cpf_vetorizada_udf(cpf_series: pd.Series) -> pd.Series:
+    # A operação string do Pandas é vetorizada (roda compilada em C por baixo)
+    # Extrema velocidade substituindo regex linha a linha por operação matricial.
+    return cpf_series.str.replace(r'(\d{3})(\d{3})(\d{3})(\d{2})', r'***..-**', regex=True)
+
+# Aplicação simples, como se fosse uma função padrão nativa
+df_anonimizado = df_banco.withColumn("cpf_ofuscado", mascara_cpf_vetorizada_udf(F.col("cpf_cru")))
+</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+<script src="../../js/progress.js"></script>
+
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+</body>
+</html>

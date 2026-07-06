@@ -71,46 +71,55 @@
         "ingestion.html#dynamodb"
       ]
     },
-    processing: {
-      name: "⚙️ Processamento Spark",
-      badge: "Guru do Spark",
+    
+    "apache-spark-core": {
+      name: "⚙️ Spark Core",
+      badge: "Engenheiro de Spark",
+      color: "var(--spark)",
+      items: [
+        "apache-spark-core.html#spark-conceitos",
+        "apache-spark-core.html#spark-arch",
+        "apache-spark-core.html#spark-yarn-pyramid",
+        "apache-spark-core.html#tungsten"
+      ]
+    },
+    "apache-spark-api": {
+      name: "🧑‍💻 Spark API",
+      badge: "Mestre em Tuning",
+      color: "var(--spark)",
+      items: [
+        "apache-spark-api.html#spark-skew",
+        "apache-spark-api.html#spark-advanced-functions",
+        "apache-spark-api.html#spark-joins"
+      ]
+    },
+    "spark-ui-troubleshooting": {
+      name: "🩺 UI & Troubleshooting",
+      badge: "Troubleshooter",
+      color: "var(--alert)",
+      items: [
+        "spark-ui-troubleshooting.html#spark-tuning",
+        "spark-ui-troubleshooting.html#spark-ui-deepdive",
+        "spark-ui-troubleshooting.html#spark-ui-advanced"
+      ]
+    },
+    "aws-emr": {
+      name: "☁️ Amazon EMR",
+      badge: "Arquiteto EMR",
+      color: "#ec4899",
+      items: [
+        "aws-emr.html#emr-ec2",
+        "aws-emr.html#emr-serverless",
+        "aws-emr.html#emr-configs"
+      ]
+    },
+    "aws-glue-flink": {
+      name: "🧩 Glue & Flink",
+      badge: "Especialista Serverless",
       color: "var(--ext)",
       items: [
-        "processing.html#spark-conceitos",
-        "processing.html#spark-arch",
-        "processing.html#spark-yarn-pyramid",
-        "processing.html#spark-math",
-        "processing.html#tungsten",
-        "processing.html#spark-gc",
-        "processing.html#spark-skew",
-        "processing.html#spark-advanced-functions",
-        "processing.html#spark-dynamic-write",
-        "processing.html#spark-joins",
-        "processing.html#spark-cache",
-        "processing.html#spark-streaming",
-        
-        "processing.html#pyspark-dataframe-api",
-        "processing.html#pyspark-functions",
-        "processing.html#spark-sql-api",
-        "processing.html#spark-tuning",
-        "processing.html#spark-debug",
-        "processing.html#spark-erros",
-        "processing.html#spark-specialist-debug",
-        "processing.html#glue-jobs",
-        "processing.html#emr-ec2",
-        "processing.html#emr-serverless",
-        "processing.html#emr-eks",
-        "processing.html#emr-comparativo",
-        "processing.html#spark-finops-costs",
-        "processing.html#spark-ui-deepdive",
-        "processing.html#spark-performance-callout",
-        "processing.html#emr-bootstrap",
-        "processing.html#emr-instancias",
-        "processing.html#emr-configs",
-        "processing.html#emr-arch",
-        "processing.html#flink-streaming",
-        "processing.html#spark-e2e-integrations",
-        "processing.html#emr-erros"
+        "aws-glue-flink.html#glue-jobs",
+        "aws-glue-flink.html#flink-streaming"
       ]
     },
     infra_operacional: {

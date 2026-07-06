@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <title>Apache Spark Core | AWS Data Mastery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar">
+<div class="nav-logo">
+    <div class="t">AWS Data<br>Engineering</div>
+    <div class="s">Portal de Estudos</div>
+    <div class="auth" style="font-family: 'DM Mono', monospace; font-size: 8px; color: #38bdf8; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase;">Autor: Mauricio Helfstein</div>
+  </div>
+  <div style="padding:0 12px">
+    
+    <!-- 1. Visão Geral & Introdução -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('visao-geral-cat', this)">
+      <span>🗺️ Visão Geral & Introdução</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="visao-geral-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../index.html" class="nav-a" data-page="index"><span class="nav-dot" style="background:var(--spark)"></span>🗺️ Home / Mapa</a>
+      </div>
+      
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/pmo-sme-dados.html" class="nav-a" data-page="pmo-sme-dados"><span class="nav-dot" style="background:#f43f5e"></span>📊 PMO &amp; Sustentação</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#visao-geral" class="nav-sub"><span class="nav-sdot"></span>PMO e SME para Dados</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#gestao-agil" class="nav-sub"><span class="nav-sdot"></span>Gestão Ágil: PMO e Squads</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#negociacao-backlog" class="nav-sub"><span class="nav-sdot"></span>Negociação e Backlog</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#sustentacao" class="nav-sub"><span class="nav-sdot"></span>Sustentação (RUN)</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#pareto-incidentes" class="nav-sub"><span class="nav-sdot"></span>Identificação &amp; Pareto</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#fluxo-sustentacao" class="nav-sub"><span class="nav-sdot"></span>Fluxo de Sustentação</a>
+        <a href="../../pages/fundamentos/pmo-sme-dados.html#roadmap" class="nav-sub"><span class="nav-sdot"></span>Roadmap do Projeto</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/soft-skills.html" class="nav-a" data-page="soft-skills"><span class="nav-dot" style="background:var(--spark)"></span>🧠 Soft Skills & Liderança</a>
+        <a href="../../pages/fundamentos/soft-skills.html#personas" class="nav-sub"><span class="nav-sdot"></span>Personas do Ecossistema</a>
+        <a href="../../pages/fundamentos/soft-skills.html#como-falar" class="nav-sub"><span class="nav-sdot"></span>Como Falar com Cada Persona</a>
+        <a href="../../pages/fundamentos/soft-skills.html#framework-talk" class="nav-sub"><span class="nav-sdot"></span>Framework T.A.L.K.</a>
+        <a href="../../pages/fundamentos/soft-skills.html#lideranca" class="nav-sub"><span class="nav-sdot"></span>Liderança Técnica &amp; Gestão</a>
+        <a href="../../pages/fundamentos/soft-skills.html#pilares" class="nav-sub"><span class="nav-sdot"></span>Os 8 Pilares da Cultura</a>
+        <a href="../../pages/fundamentos/soft-skills.html#implementacao" class="nav-sub"><span class="nav-sdot"></span>Plano de Implementação</a>
+        <a href="../../pages/fundamentos/soft-skills.html#cfo-pitch" class="nav-sub"><span class="nav-sdot"></span>Pilar 9: Pitch Executivo</a>
+      </div>
+                  <div class="nav-page-group">
+        <a href="../../pages/pratica/financas-dados.html" class="nav-a" data-page="financas-dados"><span class="nav-dot" style="background:#0284c7"></span>🏦 Conhecimentos Financeiros</a>
+        <a href="../../pages/pratica/financas-dados.html#jornada" class="nav-sub"><span class="nav-sdot"></span>Originação &amp; Scoring</a>
+        <a href="../../pages/pratica/financas-dados.html#matematica" class="nav-sub"><span class="nav-sdot"></span>Matemática (SAC/Price)</a>
+        <a href="../../pages/pratica/financas-dados.html#pos-venda" class="nav-sub"><span class="nav-sdot"></span>Reconciliação e Atrasos</a>
+        <a href="../../pages/pratica/financas-dados.html#contabilidade" class="nav-sub"><span class="nav-sdot"></span>Contabilidade Bancária</a>
+        <a href="../../pages/pratica/financas-dados.html#ciclo-credito" class="nav-sub"><span class="nav-sdot"></span>Ciclo Completo de Crédito</a>
+      </div>
+    </div>
+
+    <!-- 2. Arquitetura & Fundamentos -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('arquitetura-fundamentos-cat', this)">
+      <span>📐 Arquitetura & Fundamentos</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="arquitetura-fundamentos-cat" class="nav-cat-content">
+
+      <div class="nav-page-group">
+        <a href="../../pages/arquitetura/padroes-arquitetura.html" class="nav-a" data-page="padroes-arquitetura"><span class="nav-dot" style="background:var(--arch)"></span>🏗️ Padrões de Arquitetura</a>
+        <a href="../../pages/arquitetura/mensageria-eventos.html" class="nav-a" data-page="mensageria-eventos"><span class="nav-dot" style="background:var(--arch)"></span>📨 Mensageria &amp; Eventos</a>
+        <a href="../../pages/arquitetura/modelagem-produtos.html" class="nav-a" data-page="modelagem-produtos"><span class="nav-dot" style="background:var(--arch)"></span>📦 Modelagem &amp; Produtos</a>
+        <a href="../../pages/arquitetura/engenharia-avancada.html" class="nav-a" data-page="engenharia-avancada"><span class="nav-dot" style="background:var(--arch)"></span>🚀 Engenharia Avançada</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/plataforma-dados.html" class="nav-a" data-page="plataforma-dados"><span class="nav-dot" style="background:var(--accent)"></span>🏗️ Plataforma de Dados</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/business-value.html" class="nav-a" data-page="business-value"><span class="nav-dot" style="background:#f59e0b"></span>💼 Business Value</a>
+      </div>
+    
+</div>
+    <!-- 3. Engenharia de Dados (Core) -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('engenharia-core-cat', this)">
+      <span>⚙️ Engenharia de Dados (Core)</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="engenharia-core-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/ingestion.html" class="nav-a" data-page="ingestion"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Ingestão &amp; Streaming</a>
+        <a href="../../pages/engenharia/ingestion.html#kinesis" class="nav-sub"><span class="nav-sdot"></span>Amazon Kinesis: Teoria</a>
+        <a href="../../pages/engenharia/ingestion.html#kinesis-avancado" class="nav-sub"><span class="nav-sdot"></span>Kinesis Deep Dive: EFO, KCL</a>
+        <a href="../../pages/engenharia/ingestion.html#firehose" class="nav-sub"><span class="nav-sdot"></span>Kinesis Firehose Dynamic Partitioning</a>
+        <a href="../../pages/engenharia/ingestion.html#firehose-avancado" class="nav-sub"><span class="nav-sdot"></span>Firehose Deep Dive: Buffering</a>
+        <a href="../../pages/engenharia/ingestion.html#msk" class="nav-sub"><span class="nav-sdot"></span>Amazon MSK: Teoria &amp; Prática</a>
+        <a href="../../pages/engenharia/ingestion.html#ecs-fargate" class="nav-sub"><span class="nav-sdot"></span>ECS Fargate: Ingestão Customizada</a>
+        <a href="../../pages/engenharia/ingestion.html#cdc-comparativo" class="nav-sub"><span class="nav-sdot"></span>Change Data Capture (CDC)</a>
+        <a href="../../pages/engenharia/ingestion.html#dms" class="nav-sub"><span class="nav-sdot"></span>AWS DMS: Teoria &amp; Prática</a>
+        <a href="../../pages/engenharia/ingestion.html#dynamodb" class="nav-sub"><span class="nav-sdot"></span>DynamoDB Ingestion</a>
+        <a href="../../pages/engenharia/ingestion.html#rds" class="nav-sub"><span class="nav-sdot"></span>RDS / Aurora Ingestion</a>
+        <a href="../../pages/engenharia/ingestion.html#comparativo" class="nav-sub"><span class="nav-sdot"></span>Batch vs Streaming vs Lambda</a>
+        <a href="../../pages/engenharia/ingestion.html#tabela-aws" class="nav-sub"><span class="nav-sdot"></span>Mapeamento de Ingestão</a>
+        <a href="../../pages/engenharia/ingestion.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns de Ingestão</a>
+      </div>
+      <div class="nav-page-group">
+                  <a href="../../pages/engenharia/apache-spark-core.html" class="nav-a" data-page="apache-spark-core"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Spark Core & Arch</a>
+         <a href="../../pages/engenharia/apache-spark-core.html#spark-conceitos" class="nav-sub"><span class="nav-sdot"></span>Apache Spark: Teoria</a>
+         <a href="../../pages/engenharia/apache-spark-core.html#spark-arch" class="nav-sub"><span class="nav-sdot"></span>Ciclo de Execução</a>
+         <a href="../../pages/engenharia/apache-spark-core.html#tungsten" class="nav-sub"><span class="nav-sdot"></span>Tungsten &amp; JIT Engine</a>
+
+         <a href="../../pages/engenharia/apache-spark-api.html" class="nav-a" data-page="apache-spark-api"><span class="nav-dot" style="background:var(--ext)"></span>🧑‍💻 Spark API & Tuning</a>
+         <a href="../../pages/engenharia/apache-spark-api.html#spark-skew" class="nav-sub"><span class="nav-sdot"></span>Shuffle, Skew, Salting</a>
+         <a href="../../pages/engenharia/apache-spark-api.html#spark-advanced-functions" class="nav-sub"><span class="nav-sdot"></span>Funções Avançadas</a>
+         <a href="../../pages/engenharia/apache-spark-api.html#spark-joins" class="nav-sub"><span class="nav-sdot"></span>Estratégias de Join</a>
+
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html" class="nav-a" data-page="spark-ui-troubleshooting"><span class="nav-dot" style="background:var(--ext)"></span>🩺 UI & Troubleshooting</a>
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html#spark-tuning" class="nav-sub"><span class="nav-sdot"></span>Tuning Guia Completo</a>
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html#spark-ui-deepdive" class="nav-sub"><span class="nav-sdot"></span>Simuladores Spark UI</a>
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html#spark-ui-advanced" class="nav-sub"><span class="nav-sdot"></span>DAGs Avançados</a>
+         <a href="../../pages/engenharia/spark-ui-troubleshooting.html#spark-erros" class="nav-sub"><span class="nav-sdot"></span>Resolução de Erros</a>
+
+         <a href="../../pages/engenharia/aws-emr.html" class="nav-a" data-page="aws-emr"><span class="nav-dot" style="background:var(--ext)"></span>☁️ Amazon EMR Master</a>
+         <a href="../../pages/engenharia/aws-emr.html#emr-ec2" class="nav-sub"><span class="nav-sdot"></span>EMR em EC2</a>
+         <a href="../../pages/engenharia/aws-emr.html#emr-serverless" class="nav-sub"><span class="nav-sdot"></span>EMR Serverless & EKS</a>
+         <a href="../../pages/engenharia/aws-emr.html#emr-configs" class="nav-sub"><span class="nav-sdot"></span>Sizing & Configurações</a>
+
+         <a href="../../pages/engenharia/aws-glue-flink.html" class="nav-a" data-page="aws-glue-flink"><span class="nav-dot" style="background:var(--ext)"></span>🧩 Glue ETL & Flink</a>
+         <a href="../../pages/engenharia/aws-glue-flink.html#glue-jobs" class="nav-sub"><span class="nav-sdot"></span>AWS Glue Serverless</a>
+         <a href="../../pages/engenharia/aws-glue-flink.html#flink-streaming" class="nav-sub"><span class="nav-sdot"></span>Apache Flink Streaming</a>
+       </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/storage-lakehouse.html" class="nav-a" data-page="storage-lakehouse"><span class="nav-dot" style="background:#4f46e5"></span>💾 Lakehouse &amp; Storage</a>
+        <a href="../../pages/engenharia/apache-iceberg.html" class="nav-a" data-page="apache-iceberg"><span class="nav-dot" style="background:#0ea5e9"></span>🧊 Apache Iceberg (SOT)</a>
+
+        <a href="../engenharia/apache-iceberg.html#architecture" class="nav-sub"><span class="nav-sdot"></span>Árvore de Metadados</a>
+        <a href="../engenharia/apache-iceberg.html#schema-evolution" class="nav-sub"><span class="nav-sdot"></span>Schema Evolution</a>
+        <a href="../engenharia/apache-iceberg.html#time-travel" class="nav-sub"><span class="nav-sdot"></span>Time Travel &amp; Athena</a>
+        <a href="../engenharia/apache-iceberg.html#code" class="nav-sub"><span class="nav-sdot"></span>PySpark Lakehouse</a>
+        <a href="../engenharia/apache-iceberg.html#maintenance" class="nav-sub"><span class="nav-sdot"></span>Manutenção &amp; Vacuum</a>
+
+        <a href="../../pages/engenharia/storage-lakehouse.html#s3-camadas" class="nav-sub"><span class="nav-sdot"></span>Persistência Física: Camadas S3</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#s3-tiers" class="nav-sub"><span class="nav-sdot"></span>Tiers de Custo &amp; Ciclo de Vida</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#formatos" class="nav-sub"><span class="nav-sdot"></span>Formatos de Dados e Compressões</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#parquet-internals" class="nav-sub"><span class="nav-sdot"></span>Internals do Apache Parquet</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg" class="nav-sub"><span class="nav-sdot"></span>Apache Iceberg: Otimização</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-internals" class="nav-sub"><span class="nav-sdot"></span>Árvore de Metadados Iceberg</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-rest-catalog" class="nav-sub"><span class="nav-sdot"></span>Iceberg REST Catalogs</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#iceberg-vs-delta" class="nav-sub"><span class="nav-sdot"></span>Iceberg vs Delta Lake vs Hudi</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção de Tabelas Iceberg</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#upsert-code" class="nav-sub"><span class="nav-sdot"></span>Código PySpark para Upserts</a>
+        <a href="../../pages/engenharia/storage-lakehouse.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em Storage</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/serving.html" class="nav-a" data-page="serving"><span class="nav-dot" style="background:#be123c"></span>📊 Analytics &amp; Serving</a>
+        <a href="../../pages/engenharia/serving.html#athena" class="nav-sub"><span class="nav-sdot"></span>Amazon Athena: Teoria</a>
+        <a href="../../pages/engenharia/serving.html#athena-trino-arch" class="nav-sub"><span class="nav-sdot"></span>A Arquitetura Oculta Trino</a>
+        <a href="../../pages/engenharia/serving.html#athena-avancado" class="nav-sub"><span class="nav-sdot"></span>Athena Federated Query</a>
+        <a href="../../pages/engenharia/serving.html#iceberg-manutencao" class="nav-sub"><span class="nav-sdot"></span>Manutenção Iceberg via Athena</a>
+        <a href="../../pages/engenharia/serving.html#redshift" class="nav-sub"><span class="nav-sdot"></span>Amazon Redshift: Teoria</a>
+        <a href="../../pages/engenharia/serving.html#redshift-spectrum" class="nav-sub"><span class="nav-sdot"></span>Redshift Spectrum: Queries Externas</a>
+        <a href="../../pages/engenharia/serving.html#explain-tuning" class="nav-sub"><span class="nav-sdot"></span>Explain &amp; Tuning de Query</a>
+        <a href="../../pages/engenharia/serving.html#redshift-io" class="nav-sub"><span class="nav-sdot"></span>Ingestão Massiva COPY/UNLOAD</a>
+        <a href="../../pages/engenharia/serving.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns no Consumo</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/orquestracao-dados.html" class="nav-a" data-page="orquestracao-dados"><span class="nav-dot" style="background:#a78bfa"></span>⛓️ Orquestração de Dados</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#teoria" class="nav-sub"><span class="nav-sdot"></span>Três Pilares de Orquestração</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#step-functions" class="nav-sub"><span class="nav-sdot"></span>AWS Step Functions</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#mwaa-airflow" class="nav-sub"><span class="nav-sdot"></span>Amazon MWAA (Apache Airflow)</a>
+        <a href="../../pages/engenharia/orquestracao-dados.html#operacional" class="nav-sub"><span class="nav-sdot"></span>Cases Reais &amp; Diagnósticos</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/data-quality.html" class="nav-a" data-page="data-quality"><span class="nav-dot" style="background:#10b981"></span>✨ Data &amp; Business Quality</a>
+        <a href="../../pages/engenharia/data-quality.html#teoria-dq" class="nav-sub"><span class="nav-sdot"></span>Conceitos Técnicos</a>
+        <a href="../../pages/engenharia/data-quality.html#business-quality" class="nav-sub"><span class="nav-sdot"></span>Business Quality (Extensivo)</a>
+        <a href="../../pages/engenharia/data-quality.html#cases-dq" class="nav-sub"><span class="nav-sdot"></span>Case: DQDL Circuit Breaker</a>
+        <a href="../../pages/engenharia/data-quality.html#crises-dq" class="nav-sub"><span class="nav-sdot"></span>Crise: Schema Drift</a>
+        <a href="../../pages/engenharia/data-quality.html#perguntas-dq" class="nav-sub"><span class="nav-sdot"></span>Simulador de Entrevista</a>
+      </div>
+
+    </div>
+
+    <!-- 4. Infraestrutura, Redes & Segurança -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('infra-seguranca-cat', this)">
+      <span>🌐 Infra, Redes &amp; Segurança</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="infra-seguranca-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/computacao-bancos.html" class="nav-a" data-page="computacao-bancos"><span class="nav-dot" style="background:#f43f5e"></span>🏗️ Computação &amp; Bancos</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#ecs" class="nav-sub"><span class="nav-sdot"></span>Amazon ECS: Containers</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#dynamodb-deep-dive" class="nav-sub"><span class="nav-sdot"></span>Amazon DynamoDB Architecture</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#operacao" class="nav-sub"><span class="nav-sdot"></span>Guia Operacional &amp; Métricas</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#aws-databases-guide" class="nav-sub"><span class="nav-sdot"></span>Guia de Bancos de Dados AWS</a>
+        <a href="../../pages/fundamentos/computacao-bancos.html#sql-nosql-sqs" class="nav-sub"><span class="nav-sdot"></span>Matriz de Decisão de Bancos</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/networking-ingress.html" class="nav-a" data-page="networking-ingress"><span class="nav-dot" style="background:#06b6d4"></span>🌐 Rede &amp; Ingress de Dados</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#dns-cdn" class="nav-sub"><span class="nav-sdot"></span>Route 53 &amp; CloudFront</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#api-alb" class="nav-sub"><span class="nav-sdot"></span>API Gateway &amp; ALB Integration</a>
+        <a href="../../pages/fundamentos/networking-ingress.html#vpc-endpoints" class="nav-sub"><span class="nav-sdot"></span>VPC &amp; VPC Endpoints</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/api-gateway.html" class="nav-a" data-page="api-gateway"><span class="nav-dot" style="background:#7c3aed"></span>🔌 API Gateway Deep Dive</a>
+        <a href="../../pages/fundamentos/api-gateway.html#fundamentos" class="nav-sub"><span class="nav-sdot"></span>REST vs HTTP vs WebSockets</a>
+        <a href="../../pages/fundamentos/api-gateway.html#crud-rest" class="nav-sub"><span class="nav-sdot"></span>CRUD REST: OpenAPI &amp; Lambda</a>
+        <a href="../../pages/fundamentos/api-gateway.html#async" class="nav-sub"><span class="nav-sdot"></span>Chamadas Assíncronas</a>
+        <a href="../../pages/fundamentos/api-gateway.html#terraform" class="nav-sub"><span class="nav-sdot"></span>Terraform Completo: API Gateway</a>
+        <a href="../../pages/fundamentos/api-gateway.html#integracoes" class="nav-sub"><span class="nav-sdot"></span>Auth, CORS &amp; Rate Limiting</a>
+        <a href="../../pages/fundamentos/api-gateway.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Produção</a>
+        <a href="../../pages/fundamentos/api-gateway.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade API Gateway</a>
+        <a href="../../pages/fundamentos/api-gateway.html#diagramas" class="nav-sub"><span class="nav-sdot"></span>Diagramas de Arquitetura</a>
+        <a href="../../pages/fundamentos/api-gateway.html#perguntas" class="nav-sub"><span class="nav-sdot"></span>Questões de Entrevista</a>
+        <a href="../../pages/fundamentos/api-gateway.html#cases" class="nav-sub"><span class="nav-sdot"></span>Cases Reais de API</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/governance-security.html" class="nav-a" data-page="governance-security"><span class="nav-dot" style="background:var(--muted)"></span>🛡️ Segurança &amp; IaC</a>
+        <a href="../../pages/fundamentos/governance-security.html#pilares" class="nav-sub"><span class="nav-sdot"></span>Os 7 Pilares de Segurança</a>
+        <a href="../../pages/fundamentos/governance-security.html#lakeformation" class="nav-sub"><span class="nav-sdot"></span>AWS Lake Formation Security</a>
+        <a href="../../pages/fundamentos/governance-security.html#lake-cli" class="nav-sub"><span class="nav-sdot"></span>AWS Lake Formation CLI</a>
+        <a href="../../pages/fundamentos/governance-security.html#lf-abac" class="nav-sub"><span class="nav-sdot"></span>LF-TBAC: Tag-based Access Control</a>
+        <a href="../../pages/fundamentos/governance-security.html#iam-kms" class="nav-sub"><span class="nav-sdot"></span>IAM &amp; KMS Criptografia</a>
+        <a href="../../pages/fundamentos/governance-security.html#secretsmanager" class="nav-sub"><span class="nav-sdot"></span>AWS Secrets Manager</a>
+        <a href="../../pages/fundamentos/governance-security.html#iam-engineering" class="nav-sub"><span class="nav-sdot"></span>IAM Avançado: Roles Cross-Account</a>
+        <a href="../../pages/fundamentos/governance-security.html#observabilidade" class="nav-sub"><span class="nav-sdot"></span>Observabilidade: Logs &amp; CloudTrail</a>
+        <a href="../../pages/fundamentos/governance-security.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Qualidade de Dados &amp; Contratos</a>
+        <a href="../../pages/fundamentos/governance-security.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em Governança</a>
+      </div>
+    </div>
+
+    <!-- 5. Operações & Inteligência Artificial -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('operacoes-ia-cat', this)">
+      <span>🤖 Operações &amp; IA</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="operacoes-ia-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/dataops-mlops.html" class="nav-a" data-page="dataops-mlops"><span class="nav-dot" style="background:#0d9488"></span>⚙️ DataOps &amp; MLOps</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#dataops-core" class="nav-sub"><span class="nav-sdot"></span>DataOps: Automação &amp; Linhagem</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-quality-avancado" class="nav-sub"><span class="nav-sdot"></span>Data Quality &amp; Observabilidade</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-contracts" class="nav-sub"><span class="nav-sdot"></span>Contratos de Dados</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#data-lineage" class="nav-sub"><span class="nav-sdot"></span>Linhagem de Dados (OpenLineage)</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#plataforma-testes" class="nav-sub"><span class="nav-sdot"></span>Plataforma de Testes &amp; CI/CD</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#mlops-core" class="nav-sub"><span class="nav-sdot"></span>MLOps: Ciclo de Vida do Modelo</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#mlops-feature-store" class="nav-sub"><span class="nav-sdot"></span>Feature Stores &amp; Drift</a>
+        <a href="../../pages/engenharia/dataops-mlops.html#git-flow" class="nav-sub"><span class="nav-sdot"></span>Git Flow para Dados</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/genai.html" class="nav-a" data-page="genai"><span class="nav-dot" style="background:#a78bfa"></span>🤖 IA &amp; GenAI</a>
+        <a href="../../pages/engenharia/genai.html#genai-teoria" class="nav-sub"><span class="nav-sdot"></span>LLMs, Transformers e Embeddings</a>
+        <a href="../../pages/engenharia/genai.html#genai-pilares" class="nav-sub"><span class="nav-sdot"></span>Pilares de Arquitetura GenAI</a>
+        <a href="../../pages/engenharia/genai.html#rag" class="nav-sub"><span class="nav-sdot"></span>RAG &amp; Agentes na AWS</a>
+        <a href="../../pages/engenharia/genai.html#pgvector" class="nav-sub"><span class="nav-sdot"></span>pgvector: Busca Semântica</a>
+        <a href="../../pages/engenharia/genai.html#bedrock-api" class="nav-sub"><span class="nav-sdot"></span>Bedrock API &amp; Boto3</a>
+        <a href="../../pages/engenharia/genai.html#prompt-engineering" class="nav-sub"><span class="nav-sdot"></span>Prompt Engineering Avançado</a>
+        <a href="../../pages/engenharia/genai.html#guardrails" class="nav-sub"><span class="nav-sdot"></span>Amazon Bedrock Guardrails</a>
+        <a href="../../pages/engenharia/genai.html#finetuning" class="nav-sub"><span class="nav-sdot"></span>Fine-tuning com SageMaker</a>
+        <a href="../../pages/engenharia/genai.html#casos" class="nav-sub"><span class="nav-sdot"></span>Casos de Uso: Dados + GenAI</a>
+        <a href="../../pages/engenharia/genai.html#erros" class="nav-sub"><span class="nav-sdot"></span>Erros Comuns em GenAI</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/engenharia/finops.html" class="nav-a" data-page="finops"><span class="nav-dot" style="background:var(--ok)"></span>💸 FinOps &amp; Custos</a>
+        <a href="../../pages/engenharia/finops.html#finops-fundamentos" class="nav-sub"><span class="nav-sdot"></span>Pilares de FinOps em Dados</a>
+        <a href="../../pages/engenharia/finops.html#finops-boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Engenharia</a>
+        <a href="../../pages/engenharia/finops.html#finops-aws-cost-explorer" class="nav-sub"><span class="nav-sdot"></span>AWS Cost Explorer & Trade-offs</a>
+        <a href="../../pages/engenharia/finops.html#finops-analise" class="nav-sub"><span class="nav-sdot"></span>Análise de Custos Analíticos</a>
+        <a href="../../pages/engenharia/finops.html#finops-terraform" class="nav-sub"><span class="nav-sdot"></span>Tagging com Terraform</a>
+      </div>
+    </div>
+
+    
+
+    <!-- 7. Linguagem e IaC -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('linguagem-iac-cat', this)">
+      <span>💻 Linguagem &amp; IaC</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="linguagem-iac-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/python-legend.html" class="nav-a" data-page="python-legend"><span class="nav-dot" style="background:#f43f5e"></span>🐍 Python Legend</a>
+        <a href="../../pages/fundamentos/python-legend.html#boas-praticas" class="nav-sub"><span class="nav-sdot"></span>Boas Práticas de Código Python</a>
+        <a href="../../pages/fundamentos/python-legend.html#oop-dados" class="nav-sub"><span class="nav-sdot"></span>Orientação a Objetos em Dados</a>
+        <a href="../../pages/fundamentos/python-legend.html#design-patterns" class="nav-sub"><span class="nav-sdot"></span>Design Patterns de Engenharia</a>
+        <a href="../../pages/fundamentos/python-legend.html#oop-cases-perguntas" class="nav-sub"><span class="nav-sdot"></span>Perguntas de Arquitetura &amp; Cases</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/sql-mastery.html" class="nav-a" data-page="sql-mastery"><span class="nav-dot" style="background:#3b82f6"></span>🗄️ SQL Mastery</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#fundamentos-sql" class="nav-sub"><span class="nav-sdot"></span>Fundamentos Essenciais</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#comandos-basicos" class="nav-sub"><span class="nav-sdot"></span>Comandos do Dia a Dia</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#ctes-window" class="nav-sub"><span class="nav-sdot"></span>CTEs & Window Functions</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#otimizacao-avancada" class="nav-sub"><span class="nav-sdot"></span>Tuning & Explain Plan</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#iceberg-hive" class="nav-sub"><span class="nav-sdot"></span>SQL para Iceberg/Trino</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#modelagem-avancada" class="nav-sub"><span class="nav-sdot"></span>Modelagem Avançada</a>
+        <a href="../../pages/fundamentos/sql-mastery.html#sql-cases-reais" class="nav-sub"><span class="nav-sdot"></span>Perguntas Técnicas & Cases</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/fundamentos/terraform.html" class="nav-a" data-page="terraform"><span class="nav-dot" style="background:#8b5cf6"></span>🏗️ Terraform: Infra as Code</a>
+        <a href="../../pages/fundamentos/terraform.html#fundamentos-terraform" class="nav-sub"><span class="nav-sdot"></span>Fundamentos Essenciais</a>
+        <a href="../../pages/fundamentos/terraform.html#comandos-terraform" class="nav-sub"><span class="nav-sdot"></span>Comandos do Dia a Dia</a>
+        <a href="../../pages/fundamentos/terraform.html#arquitetura-terraform" class="nav-sub"><span class="nav-sdot"></span>Arquitetura AWS com TF</a>
+        <a href="../../pages/fundamentos/terraform.html#terraform-avancado" class="nav-sub"><span class="nav-sdot"></span>Conceitos Avançados (State, Lock)</a>
+        <a href="../../pages/fundamentos/terraform.html#terraform-cases" class="nav-sub"><span class="nav-sdot"></span>Perguntas de Entrevista & Cases</a>
+        <a href="../../pages/fundamentos/terraform.html#terraform-estrutura-pastas" class="nav-sub"><span class="nav-sdot"></span>Organização de Repositório</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/linguagem/testing.html" class="nav-a" data-page="testing"><span class="nav-dot" style="background:#eab308"></span>🧪 Testes com Pytest & Spark</a>
+        <a href="../../pages/linguagem/testing.html#piramide" class="nav-sub"><span class="nav-sdot"></span>Pirâmide de Testes (Dados)</a>
+        <a href="../../pages/linguagem/testing.html#estrutura" class="nav-sub"><span class="nav-sdot"></span>Estrutura Arrange-Act-Assert</a>
+        <a href="../../pages/linguagem/testing.html#conftest" class="nav-sub"><span class="nav-sdot"></span>Conftest & Fixtures Avançadas</a>
+        <a href="../../pages/linguagem/testing.html#code-examples" class="nav-sub"><span class="nav-sdot"></span>Testando Spark & APIs (Mocks)</a>
+        <a href="../../pages/linguagem/testing.html#data-quality" class="nav-sub"><span class="nav-sdot"></span>Data Quality vs Unit Tests</a>
+        <a href="../../pages/linguagem/testing.html#performance-testing" class="nav-sub"><span class="nav-sdot"></span>Testes de Carga (Locust)</a>
+      </div>
+    </div>
+
+            <!-- 8. System Design & Arquitetura -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('system-design-cat', this)">
+      <span>🏗️ System Design &amp; Arquitetura</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="system-design-cat" class="nav-cat-content">
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-reais.html" class="nav-a" data-page="cases-reais"><span class="nav-dot" style="background:#8b5cf6"></span>🏆 Estudos de Caso Reais</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-streaming.html" class="nav-a" data-page="cases-streaming"><span class="nav-dot" style="background:#059669"></span>💼 Streaming</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-batch-lakehouse.html" class="nav-a" data-page="cases-batch-lakehouse"><span class="nav-dot" style="background:#059669"></span>💼 Batch &amp; Lakehouse</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-ecosistema.html" class="nav-a" data-page="cases-ecosistema"><span class="nav-dot" style="background:#059669"></span>💼 Ecosistema Avançado</a>
+      </div>
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/cases-dataops-ia.html" class="nav-a" data-page="cases-dataops-ia"><span class="nav-dot" style="background:#059669"></span>💼 DataOps &amp; IA</a>
+      </div>
+    </div>
+
+    <!-- 9. Operações & Troubleshooting -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('operacoes-troubleshooting-cat', this)">
+      <span>🚑 Operações &amp; Troubleshooting</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="operacoes-troubleshooting-cat" class="nav-cat-content">
+
+      <div class="nav-page-group">
+        <a href="../../pages/operacoes/troubleshooting-tuning.html" class="nav-a" data-page="troubleshooting-tuning"><span class="nav-dot" style="background:var(--warn)"></span>🛠️ Troubleshooting &amp; Tuning</a>
+        <a href="../../pages/operacoes/governanca-finops.html" class="nav-a" data-page="governanca-finops"><span class="nav-dot" style="background:var(--warn)"></span>💰 Governança &amp; FinOps</a>
+        <a href="../../pages/operacoes/data-quality-cicd.html" class="nav-a" data-page="data-quality-cicd"><span class="nav-dot" style="background:var(--warn)"></span>✨ Data Quality &amp; CI/CD</a>
+      </div>
+
+    </div>
+
+    <!-- 10. Preparação para Entrevistas -->
+    <div class="nav-lbl collapsible" onclick="toggleCategory('entrevistas-cat', this)">
+      <span>🎯 Preparação para Entrevistas</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="entrevistas-cat" class="nav-cat-content">
+
+      <div class="nav-page-group">
+        <a href="../../pages/pratica/perguntas-ingestao-streaming.html" class="nav-a" data-page="perguntas-ingestao"><span class="nav-dot" style="background:var(--emr)"></span>⚡ Entrevista: Ingestão</a>
+        <a href="../../pages/pratica/perguntas-processamento-spark.html" class="nav-a" data-page="perguntas-spark"><span class="nav-dot" style="background:var(--ext)"></span>⚙️ Entrevista: Spark &amp; EMR</a>
+        <a href="../../pages/pratica/perguntas-bancos-relacionais-nosql.html" class="nav-a" data-page="perguntas-bancos"><span class="nav-dot" style="background:#f43f5e"></span>🗄️ Entrevista: Bancos &amp; NoSQL</a>
+        <a href="../../pages/pratica/perguntas-arquitetura-cloud.html" class="nav-a" data-page="perguntas-cloud"><span class="nav-dot" style="background:var(--arch)"></span>🏗️ Entrevista: Cloud Arch</a>
+        <a href="../../pages/pratica/perguntas-dataops-cicd.html" class="nav-a" data-page="perguntas-dataops"><span class="nav-dot" style="background:#0ea5e9"></span>🔄 Entrevista: DataOps</a>
+        <a href="../../pages/pratica/perguntas-mlops-genai.html" class="nav-a" data-page="perguntas-mlops"><span class="nav-dot" style="background:#ec4899"></span>🤖 Entrevista: MLOps/GenAI</a>
+        <a href="../../pages/pratica/perguntas-governanca-seguranca.html" class="nav-a" data-page="perguntas-gov"><span class="nav-dot" style="background:#8b5cf6"></span>🛡️ Entrevista: Segurança</a>
+        <a href="../../pages/pratica/perguntas-finops-cloud.html" class="nav-a" data-page="perguntas-finops"><span class="nav-dot" style="background:#eab308"></span>💰 Entrevista: FinOps</a>
+        <a href="../../pages/pratica/perguntas-storage-s3.html" class="nav-a" data-page="perguntas-storage"><span class="nav-dot" style="background:#4f46e5"></span>💾 Entrevista: S3 Storage</a>
+        <a href="../../pages/pratica/perguntas-lakehouse-iceberg.html" class="nav-a" data-page="perguntas-lakehouse"><span class="nav-dot" style="background:#0284c7"></span>🧊 Entrevista: Lakehouse</a>
+      </div>
+    
+</div>
+    </nav>
+
+<div id="main">
+  <div class="hero">
+    <div class="hero-ey">Processamento Distribuído</div>
+    <h1>Apache Spark &amp; Amazon EMR</h1>
+    <p class="hero-d">Arquitetura profunda de processamento distribuído, otimização física de CPU/memória e guias práticos de tuning e troubleshooting.</p>
+  </div>
+
+  <main class="main-content">
+    
+    <!-- ── APACHE SPARK SECTION ── -->
+    <section class="section" id="spark-conceitos">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Apache Spark: Introdução Teórica &amp; Abstrações</h2>
+          <p>Visão geral sobre o motor distribuído em memória e abstrações de dados fundamentais</p>
+        </div>
+      </div>
+
+      <p>O <strong>Apache Spark</strong> é um motor de computação distribuída projetado para processamento de big data de alta performance. Diferente do ecossistema Hadoop tradicional (que grava resultados intermediários de map-reduce no HDFS), o Spark opera prioritariamente <strong>em memória (in-memory processing)</strong>, mantendo os dados cacheados na RAM dos executores e reduzindo o gargalo de I/O de disco físico. O ciclo de otimização do Spark baseia-se no <strong>Catalyst Optimizer</strong>, que compila expressões SQL lógicas em código Java otimizado em tempo de execução (JIT).</p>
+
+      <div class="concept-grid">
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Abstração</div>
+          <div class="cc-title">RDD (Resilient Distributed Dataset)</div>
+          <div class="cc-body">Abstração de baixo nível do Spark. Garante tolerância a falhas armazenando a árvore de lineage necessária para recomputar partições perdidas do cluster em caso de falhas físicas.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Abstração</div>
+          <div class="cc-title">DataFrame &amp; Dataset</div>
+          <div class="cc-body">Abstração de alto nível com schemas estruturados. Permite ao Catalyst Optimizer otimizar a query, colapsando projeções e empurrando predicados para leitura física de arquivos.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Execução</div>
+          <div class="cc-title">Lazy Evaluation &amp; DAG</div>
+          <div class="cc-body">Operações no Spark apenas constroem um grafo acíclico direcionado (DAG) que é otimizado e compilado. A execução real só é acionada após a chamada de uma Action.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Compartilhamento</div>
+          <div class="cc-title">Shared Variables (Broadcast &amp; Accumulators)</div>
+          <div class="cc-body"><strong>Broadcast:</strong> Variáveis read-only distribuídas uma vez por nó (não por task). <strong>Accumulators:</strong> Variáveis write-only para contadores agregados de forma associativa e comutativa no Driver.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Metadados</div>
+          <div class="cc-title">Spark Catalog &amp; Hive Metastore</div>
+          <div class="cc-body">Interface de abstração para gerenciar metadados de tabelas, databases, funções e views. No EMR, geralmente integra-se ao <strong>AWS Glue Data Catalog</strong> para persistência global.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Performance</div>
+          <div class="cc-title">Protocolos de Serialização</div>
+          <div class="cc-body">O Spark usa <strong>Java Serialization</strong> por padrão, mas o <strong>Kryo Serialization</strong> é recomendado por ser 10x mais compacto e veloz, reduzindo o uso de rede durante Shuffles.</div>
+        </div>
+
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Recurso</div>
+          <div class="cc-title">Spill to Disk</div>
+          <div class="cc-body">Mecanismo de segurança onde dados transbordam da RAM para o disco local (EBS/Instance Store). Causa lentidão massiva (I/O Wait), mas evita o travamento total do cluster por OOM.</div>
+        </div>
+      </div>
+
+      <h3>Arquitetura Interna da JVM do Executor (Layout de Memória)</h3>
+      <p>Cada executor Spark roda dentro de uma Java Virtual Machine (JVM). Compreender a subdivisão da Heap e Off-Heap é crucial para evitar erros catastróficos de OOM:</p>
+
+      <!-- DIAGRAMA SVG DE MEMÓRIA DO EXECUTOR SPARK -->
+                    <div class="drawio-wrap" style="margin-top: 30px;">
+        <div class="drawio-label"><span class="dot"></span>SPARK EXECUTOR MEMORY ALLOCATION</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;700\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;\n&lt;root&gt;\n&lt;mxCell id=\&quot;b092bc_0\&quot;/&gt;\n&lt;mxCell id=\&quot;b092bc_1\&quot; parent=\&quot;b092bc_0\&quot;/&gt;\n&lt;mxCell id=\&quot;b092bc_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;700\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;b092bc_title\&quot; value=\&quot;ARQUITETURA INTERNA DA JVM DO EXECUTOR (EMR / SPARK)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry y=\&quot;10\&quot; width=\&quot;700\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- EMR Icon (context) --&gt;\n&lt;mxCell id=\&quot;b092bc_emr\&quot; value=\&quot;EMR Executor&amp;amp;#xa;Node\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;160\&quot; width=\&quot;50\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- JVM Container --&gt;\n&lt;mxCell id=\&quot;b092bc_jvm_box\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f1f3a;strokeColor=#3b82f6;strokeWidth=2;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;100\&quot; y=\&quot;50\&quot; width=\&quot;560\&quot; height=\&quot;310\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;b092bc_jvm_label\&quot; value=\&quot;JVM Process (Executor)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=left;fontColor=#60a5fa;fontFamily=DM Sans;fontSize=10;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;108\&quot; y=\&quot;54\&quot; width=\&quot;200\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Heap --&gt;\n&lt;mxCell id=\&quot;b092bc_heap\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1a3a5c;strokeColor=#60a5fa;strokeWidth=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;115\&quot; y=\&quot;80\&quot; width=\&quot;340\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;b092bc_heap_lbl\&quot; value=\&quot;Java Heap (spark.executor.memory)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=left;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=9;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;122\&quot; y=\&quot;83\&quot; width=\&quot;260\&quot; height=\&quot;16\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Storage Memory --&gt;\n&lt;mxCell id=\&quot;b092bc_stor\&quot; value=\&quot;Storage Memory&amp;amp;#xa;(RDD cache, broadcast)&amp;amp;#xa;spark.memory.storageFraction\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a5f;strokeColor=#3b82f6;strokeWidth=1;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;125\&quot; y=\&quot;105\&quot; width=\&quot;150\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Execution Memory --&gt;\n&lt;mxCell id=\&quot;b092bc_exec\&quot; value=\&quot;Execution Memory&amp;amp;#xa;(shuffle, sort, aggregation)&amp;amp;#xa;Unified Memory Pool\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1a3a2a;strokeColor=#10b981;strokeWidth=1;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;285\&quot; y=\&quot;105\&quot; width=\&quot;160\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Reserved --&gt;\n&lt;mxCell id=\&quot;b092bc_resv\&quot; value=\&quot;Reserved Memory&amp;amp;#xa;(300MB \u2014 system)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#3b2a1a;strokeColor=#f59e0b;strokeWidth=1;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;125\&quot; y=\&quot;190\&quot; width=\&quot;150\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- User Memory --&gt;\n&lt;mxCell id=\&quot;b092bc_user\&quot; value=\&quot;User Memory&amp;amp;#xa;(UDFs, metadata)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#3b1f4f;strokeColor=#a855f7;strokeWidth=1;fontColor=#d8b4fe;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;285\&quot; y=\&quot;190\&quot; width=\&quot;160\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Off-Heap --&gt;\n&lt;mxCell id=\&quot;b092bc_offheap\&quot; value=\&quot;Off-Heap Memory&amp;amp;#xa;spark.memory.offHeap&amp;amp;#xa;(Project Tungsten)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#2a1a3a;strokeColor=#c026d3;strokeWidth=1.5;fontColor=#e879f9;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;115\&quot; y=\&quot;290\&quot; width=\&quot;200\&quot; height=\&quot;55\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Overhead --&gt;\n&lt;mxCell id=\&quot;b092bc_ovhd\&quot; value=\&quot;JVM Overhead&amp;amp;#xa;spark.executor.memoryOverhead&amp;amp;#xa;(10% default)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#3b1a1a;strokeColor=#ef4444;strokeWidth=1.5;fontColor=#fca5a5;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;80\&quot; width=\&quot;180\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- S3 (spill) --&gt;\n&lt;mxCell id=\&quot;b092bc_s3spill\&quot; value=\&quot;S3 (Shuffle Spill)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;475\&quot; y=\&quot;220\&quot; width=\&quot;45\&quot; height=\&quot;45\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;b092bc_spill_lbl\&quot; value=\&quot;Spill quando&amp;amp;#xa;mem\u00f3ria esgota\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=8;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;270\&quot; width=\&quot;140\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n&lt;!-- Edges --&gt;\n&lt;mxCell id=\&quot;b092bc_e_emr\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot; source=\&quot;b092bc_emr\&quot; target=\&quot;b092bc_jvm_box\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\&quot;b092bc_e_spill\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;b092bc_1\&quot; source=\&quot;b092bc_exec\&quot; target=\&quot;b092bc_s3spill\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=1;dashed=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n&lt;/root&gt;\n&lt;/mxGraphModel&gt;&quot;}'></div>
+
+</div>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+  <strong style="color: var(--accent);">Explicação:</strong>
+  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> SPARK EXECUTOR MEMORY ALLOCATION, JVM Container (YARN / K8s), On-Heap Memory (spark.executor.memory), Reserved Memory (~300 MB), Spark Memory Fraction (default: 0.6), Execution Memory (Shuffles, Joins, Aggs), Storage Memory (Cache, Broadcasts), User Memory (default: 0.4) (UDFs, Custom Data Structures), Off-Heap Memory, Memory Overhead (max(384M, 10%)), PySpark Workers (spark.executor.pyspark.memory), Direct Off-Heap (Project Tungsten)</li>
+    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+    <li><strong>Contexto:</strong> O diagrama "SPARK EXECUTOR MEMORY ALLOCATION" ilustra a arquitetura da solução para o tópico em questão.</li>
+  </ul>
+</div>
+
+      <h3>Gerenciamento de Memória Unificado (Unified Memory Management)</h3>
+      <p>A partir do Spark 1.6, o <strong>Unified Memory Manager</strong> flexibilizou a barreira rígida entre Execution e Storage Memory. A fração conjunta (<code>spark.memory.fraction</code>, padrão 60% da Heap) é compartilhada dinamicamente:</p>
+      <ul>
+        <li><strong>Eviction Dinâmica:</strong> Se a Execution Memory precisar de mais espaço durante um Shuffle ou Join e houver memória ociosa no bloco de Storage, ela pode "despejar" (evict) blocos em cache (salvando em disco se configurado com <code>MEMORY_AND_DISK</code>) para evitar o erro de Out of Memory (OOM).</li>
+        <li><strong>Imunidade da Execution Memory:</strong> O inverso não é verdadeiro. A Storage Memory <em>não pode</em> expulsar dados da Execution Memory, pois isso interromperia o processamento ativo da Task.</li>
+        <li><strong>Unroll Memory:</strong> Antes de um bloco de dados ser efetivamente armazenado no cache (Storage), o Spark precisa "desenrolar" (unroll) os dados serializados iterando pelos registros. Esse processo consome memória temporária que é alocada e contabilizada como parte da Storage Memory. Caso não haja espaço suficiente para desenrolar o bloco, ele nem chega a ser armazenado.</li>
+        <li><strong>Off-Heap Execution:</strong> Ativar o <code>spark.memory.offHeap.enabled = true</code> e configurar <code>spark.memory.offHeap.size</code> permite que o Project Tungsten aloque dados brutos diretamente na memória do sistema operacional usando a API Unsafe. Essa abordagem escapa completamente do ciclo de Garbage Collection do Java, resultando em pausas nulas e alta performance para operações intensivas em ponteiros.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="spark-arch">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Arquitetura e Ciclo de Execução Spark</h2>
+          <p>Orquestração distribuída profunda: Driver, Cluster Manager e Workers/Executors</p>
+        </div>
+      </div>
+
+      <p>A execução física de uma aplicação Spark segue um modelo mestre-escravo coordenado de forma centralizada pelo <strong>Driver Node</strong> e escalado horizontalmente através de <strong>Workers (Executors)</strong> controlados por um <strong>Cluster Manager</strong> (como YARN, Kubernetes ou o mestre do EMR). Compreender os componentes lógicos abaixo é essencial:</p>
+
+      <ul>
+        <li><strong>Driver (Mestre):</strong> O processo que executa o <code>main()</code> do usuário, inicia o <code>SparkSession</code>, constrói a DAG (Directed Acyclic Graph), coordena o planejamento lógico e físico das consultas com o Catalyst Optimizer e agenda tarefas físicas através do Task Scheduler.</li>
+        <li><strong>Cluster Manager:</strong> O enforcer externo (ex: ResourceManager do YARN ou K8s Control Plane) que aloca contêineres e recursos de máquina física sob demanda ao cluster.</li>
+        <li><strong>Worker Node / Executor JVM:</strong> Processos isolados em execução nas máquinas do cluster que executam as tarefas individuais de dados (Tasks), armazenam dados em cache (Storage Memory) e gravam logs e dados intermediários de rede (Shuffle Files). Cada Executor possui vCPUs alocadas (cores) e memória RAM Heap/Off-Heap.</li>
+      </ul>
+
+                    <div class="drawio-wrap" style="margin-top: 30px;">
+        <div class="drawio-label"><span class="dot"></span>Amazon EMR — Arquitetura do Cluster Spark</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;340\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;5f9950_0\&quot;/&gt;&lt;mxCell id=\&quot;5f9950_1\&quot; parent=\&quot;5f9950_0\&quot;/&gt;&lt;mxCell id=\&quot;5f9950_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;340\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_title\&quot; value=\&quot;AMAZON EMR \u2014 ARQUITETURA DO CLUSTER SPARK\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_grp_master\&quot; value=\&quot;MASTER NODE\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0e00;strokeColor=#FF6B00;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;60\&quot; width=\&quot;180\&quot; height=\&quot;220\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_master\&quot; value=\&quot;EMRMaster\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;50\&quot; y=\&quot;100\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_rm\&quot; value=\&quot;YARN ResourceManager\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#334155;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;180\&quot; width=\&quot;160\&quot; height=\&quot;28\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_nn\&quot; value=\&quot;HDFS NameNode\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#334155;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;215\&quot; width=\&quot;160\&quot; height=\&quot;28\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_grp_core\&quot; value=\&quot;CORE NODES (Persistent)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#02160a;strokeColor=#16a34a;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;230\&quot; y=\&quot;60\&quot; width=\&quot;200\&quot; height=\&quot;220\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_core1\&quot; value=\&quot;Core EC2r6g.xlarge\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;260\&quot; y=\&quot;100\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_core2\&quot; value=\&quot;Core EC2r6g.xlarge\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;350\&quot; y=\&quot;100\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_dn\&quot; value=\&quot;HDFS DataNode + YARN NM\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#334155;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;240\&quot; y=\&quot;185\&quot; width=\&quot;180\&quot; height=\&quot;28\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_e_m_c1\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;5f9950_master\&quot; target=\&quot;5f9950_core1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_e_m_c2\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;5f9950_master\&quot; target=\&quot;5f9950_core2\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_grp_task\&quot; value=\&quot;TASK NODES (Spot)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1c0e00;strokeColor=#b45309;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;60\&quot; width=\&quot;200\&quot; height=\&quot;220\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_task1\&quot; value=\&quot;Spot EC2r6g.2xlarge\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#b45309;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;490\&quot; y=\&quot;100\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_task2\&quot; value=\&quot;Spot EC2r6g.2xlarge\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#b45309;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;580\&quot; y=\&quot;100\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_nm\&quot; value=\&quot;Solo YARN NodeManager\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#0a1628;strokeColor=#334155;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;fontStyle=0;align=center;verticalAlign=middle;whiteSpace=wrap;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;470\&quot; y=\&quot;185\&quot; width=\&quot;180\&quot; height=\&quot;28\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_e_m_t1\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;5f9950_master\&quot; target=\&quot;5f9950_task1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_e_m_t2\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;5f9950_master\&quot; target=\&quot;5f9950_task2\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_s3\&quot; value=\&quot;S3DecoupledStorage\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;730\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_e_c_s3\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;5f9950_core1\&quot; target=\&quot;5f9950_s3\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_e_t_s3\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;5f9950_task1\&quot; target=\&quot;5f9950_s3\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_glue\&quot; value=\&quot;GlueCatalog\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;830\&quot; y=\&quot;80\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_cw\&quot; value=\&quot;CloudWatchMetrics\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry x=\&quot;830\&quot; y=\&quot;200\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_e_s3_g\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;5f9950_s3\&quot; target=\&quot;5f9950_glue\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;5f9950_e_m_cw\&quot; value=\&quot;YARN metrics\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;5f9950_master\&quot; target=\&quot;5f9950_cw\&quot; parent=\&quot;5f9950_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+
+</div>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+  <strong style="color: var(--accent);">Explicação:</strong>
+  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> AMAZON EMR — ARQUITETURA DO CLUSTER SPARK, MASTER NODE, EMR Master, YARN ResourceManager, HDFS NameNode, CORE NODES (Persistent), Core EC2 r6g.xlarge, HDFS DataNode + YARN NM, TASK NODES (Spot), Spot EC2 r6g.2xlarge, Solo YARN NodeManager, S3 Decoupled Storage, Glue Catalog, CloudWatch Metrics, YARN metrics</li>
+    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+    <li><strong>Contexto:</strong> O diagrama "Amazon EMR — Arquitetura do Cluster Spark" ilustra a arquitetura da solução para o tópico em questão.</li>
+  </ul>
+</div>
+
+      <h3 style="margin-top:20px;">Ciclo de Execução: Do Código da Aplicação à Computação no Cluster</h3>
+      <p>Quando uma ação (Action) é chamada na aplicação PySpark:</p>
+      <ol>
+        <li><strong>Criação do Plano Lógico:</strong> O Spark compila o código em uma DAG de transformações lógicas lazy.</li>
+        <li><strong>Divisão em Jobs:</strong> Cada Action dispara exatamente um <strong>Job</strong> no Spark.</li>
+        <li><strong>Fatiamento em Stages:</strong> O DAG Scheduler analisa as dependências lógicas. Se houver dependência estreita (Narrow Dependency, ex: <code>select</code>, <code>filter</code>), as operações rodam juntas no mesmo estágio. Se houver dependência larga (Wide Dependency, ex: <code>groupBy</code>, <code>join</code>), o Spark quebra a execução em um novo <strong>Stage</strong>, pois exige troca de registros pela rede (<strong>Shuffle</strong>).</li>
+        <li><strong>Despacho de Tasks:</strong> Cada Stage é dividido em <strong>Tasks</strong> físicas (exatamente uma task para cada partição de dados do DataFrame). O Task Scheduler despacha as tasks para os executores com capacidade ociosa de cores.</li>
+      </ol>
+    </section>
+
+    <!-- ── NOVO: HADOOP, YARN E PIRÂMIDE DE EXECUÇÃO ── -->
+    <section class="section" id="spark-yarn-pyramid">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">02.5</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Hadoop, YARN e a Pirâmide de Execução do Spark</h2>
+          <p>A base física infraestrutural e a hierarquia lógica de comando</p>
+        </div>
+      </div>
+
+      <p>Para dominar o Spark no EMR, é preciso entender que ele não roda no vácuo. O Spark utiliza o <strong>Hadoop YARN (Yet Another Resource Negotiator)</strong> como seu Cluster Manager padrão. O YARN é o "sistema operacional" do cluster, responsável por fatiar o hardware físico (CPU/RAM) em unidades isoladas chamadas <strong>Containers</strong>.</p>
+
+      <div class="grid-2">
+        <div>
+          <h4>Componentes do YARN</h4>
+          <ul>
+            <li><strong>ResourceManager (RM):</strong> O mestre global (no Master Node). Ele decide quem ganha recursos no cluster.</li>
+            <li><strong>NodeManager (NM):</strong> O agente local em cada Worker. Monitora o consumo de recursos do nó e reporta ao RM.</li>
+            <li><strong>ApplicationMaster (AM):</strong> Um container especial (um por aplicação Spark) que negocia recursos com o RM e coordena os Executors. No Spark, o Driver pode atuar como AM ou lançar um AM separado (modo cluster).</li>
+          </ul>
+        </div>
+        <div>
+          <h4>A Pirâmide de Execução Spark</h4>
+          <p>Existe uma hierarquia rigorosa de como o código se transforma em processamento:</p>
+          <ol>
+            <li><strong>Application:</strong> O programa completo (ex: seu script PySpark).</li>
+            <li><strong>Job:</strong> Disparado por uma <em>Action</em> (ex: <code>.save()</code>, <code>.collect()</code>).</li>
+            <li><strong>Stage:</strong> Conjunto de tasks que podem rodar sem mover dados pela rede. Quebrado por <em>Shuffles</em>.</li>
+            <li><strong>Task:</strong> A menor unidade de trabalho. Processa <strong>uma única partição física</strong> de dados em <strong>um único core</strong> de CPU.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- DIAGRAMA: PIRÂMIDE SPARK SOBRE YARN -->
+                    <div class="drawio-wrap" style="margin-top: 30px;">
+        <div class="drawio-label"><span class="dot"></span>SPARK ON YARN ARCHITECTURE</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;800\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;294f14_0\&quot; /&gt;&lt;mxCell id=\&quot;294f14_1\&quot; parent=\&quot;294f14_0\&quot; /&gt;&lt;mxCell id=\&quot;294f14_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;800\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_title\&quot; value=\&quot;SPARK ON YARN ARCHITECTURE\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;800\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_yarn_rm\&quot; value=\&quot;YARN Resource Manager\\n(Global Scheduler)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#b45309;strokeColor=none;fontColor=#fef3c7;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;300\&quot; y=\&quot;60\&quot; width=\&quot;200\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_node_m1\&quot; value=\&quot;Worker Node 1\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#02160a;strokeColor=#16a34a;strokeWidth=1.5;verticalAlign=top;align=center;fontColor=#bbf7d0;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;160\&quot; width=\&quot;300\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_nm1\&quot; value=\&quot;NodeManager\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;80\&quot; y=\&quot;200\&quot; width=\&quot;100\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_am\&quot; value=\&quot;Application Master\\n+ Spark Driver\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#FF6B00;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;240\&quot; width=\&quot;140\&quot; height=\&quot;100\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_node_m2\&quot; value=\&quot;Worker Node 2\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#02160a;strokeColor=#16a34a;strokeWidth=1.5;verticalAlign=top;align=center;fontColor=#bbf7d0;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;440\&quot; y=\&quot;160\&quot; width=\&quot;300\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_nm2\&quot; value=\&quot;NodeManager\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;200\&quot; width=\&quot;100\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_exec1\&quot; value=\&quot;Spark Executor 1\\n(Tasks)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;250\&quot; width=\&quot;120\&quot; height=\&quot;90\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_exec2\&quot; value=\&quot;Spark Executor 2\\n(Tasks)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;600\&quot; y=\&quot;250\&quot; width=\&quot;120\&quot; height=\&quot;90\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_e_rm_nm1\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;294f14_yarn_rm\&quot; target=\&quot;294f14_nm1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_e_rm_nm2\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;dashed=1;\&quot; edge=\&quot;1\&quot; source=\&quot;294f14_yarn_rm\&quot; target=\&quot;294f14_nm2\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_e_rm_am\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;294f14_yarn_rm\&quot; target=\&quot;294f14_am\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_e_am_exec1\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;294f14_am\&quot; target=\&quot;294f14_exec1\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;294f14_e_am_exec2\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;294f14_am\&quot; target=\&quot;294f14_exec2\&quot; parent=\&quot;294f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+
+</div>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+  <strong style="color: var(--accent);">Explicação:</strong>
+  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> SPARK ON YARN ARCHITECTURE, YARN Resource Manager (Global Scheduler), Worker Node 1, NodeManager, Application Master + Spark Driver, Worker Node 2, Spark Executor 1 (Tasks), Spark Executor 2 (Tasks)</li>
+    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+    <li><strong>Contexto:</strong> O diagrama "SPARK ON YARN ARCHITECTURE" ilustra a arquitetura da solução para o tópico em questão.</li>
+  </ul>
+</div>
+    </section>
+
+    <section class="section" id="spark-math">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">03</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Cálculo de Alocação de Memória, Cores &amp; Particionamento</h2>
+
+      <div class="drawio-wrap" style="margin-top: 30px;">
+        <div class="drawio-label"><span class="dot"></span>Spark Executor Memory Allocation Formula</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#0ea5e9&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;800\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;75609a_0\&quot;/&gt;&lt;mxCell id=\&quot;75609a_1\&quot; parent=\&quot;75609a_0\&quot;/&gt;&lt;mxCell id=\&quot;75609a_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;75609a_1\&quot;&gt;&lt;mxGeometry width=\&quot;800\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;75609a_node\&quot; value=\&quot;EC2 Node / Kubernetes Pod (Total RAM = X)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=none;strokeColor=#10b981;strokeWidth=2;dashed=1;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;75609a_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;40\&quot; width=\&quot;720\&quot; height=\&quot;220\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;75609a_os\&quot; value=\&quot;OS &amp;amp; Hadoop Daemon Overhead\n(Geralmente 1GB ou 10%)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#475569;strokeWidth=1;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;75609a_1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;90\&quot; width=\&quot;200\&quot; height=\&quot;140\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;75609a_yarn\&quot; value=\&quot;YARN Container\n(Dispon\u00edvel para Executor)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#3b293b;strokeColor=#ec4899;strokeWidth=2;fontColor=#f472b6;fontFamily=DM Sans;fontSize=12;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;75609a_1\&quot;&gt;&lt;mxGeometry x=\&quot;280\&quot; y=\&quot;90\&quot; width=\&quot;460\&quot; height=\&quot;140\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;75609a_heap\&quot; value=\&quot;spark.executor.memory (Heap)\n(ex: 19GB)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#3b82f6;strokeWidth=1;fontColor=#60a5fa;fontFamily=DM Sans;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;75609a_1\&quot;&gt;&lt;mxGeometry x=\&quot;300\&quot; y=\&quot;130\&quot; width=\&quot;200\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;75609a_overhead\&quot; value=\&quot;spark.executor.memoryOverhead\n(ex: 2GB ou Max(384M, .10*Heap))\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#f59e0b;strokeWidth=1;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;75609a_1\&quot;&gt;&lt;mxGeometry x=\&quot;520\&quot; y=\&quot;130\&quot; width=\&quot;200\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+      </div>
+      <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+        <strong style="color: var(--accent);">Fórmula Especialista:</strong> Se você tem uma máquina de 32GB e pede <code>spark.executor.memory = 32g</code>, seu job vai FALHAR com <code>Container killed by YARN for exceeding memory limits</code>. Por quê? Porque o YARN precisa alocar a <em>Heap Memory</em> + <em>Memory Overhead</em> + espaço do OS. A regra de ouro é pedir no máximo 85% da memória física como YARN Container, e desse container, reservar 10% para o <code>memoryOverhead</code>.
+      </div>
+
+          <p>Fórmulas práticas de dimensionamento físico para instâncias EC2 e regras de ouro de paralelismo</p>
+        </div>
+      </div>
+
+      <p>Dimensionar incorretamente as configurações de submissão do Spark gera instabilidade ou desperdício severo de custos de infraestrutura analítica no EMR. Abaixo estão descritas as contas detalhadas para duas famílias de instâncias EC2 de hardware distintos, seguidas do passo a passo matemático prático para dimensionar qualquer cluster:</p>
+
+      <div class="abox info">
+        <strong>Fórmula de Dimensionamento Físico de Executores (Passo a Passo):</strong>
+        <ol>
+          <li><strong>Passo 1 (Recursos Disponíveis para o YARN):</strong> Deixe sempre 1 core físico e cerca de 4 GB a 8 GB de RAM por nó reservados estritamente para o funcionamento do sistema operacional e do Daemon do YARN NodeManager. O restante é o pool disponível de fato para o Spark.</li>
+          <li><strong>Passo 2 (Cores por Executor):</strong> Defina <code>spark.executor.cores = 5</code> por padrão. Este é o número ideal testado na indústria: acima de 5 cores, o processamento sofre com contenção de escrita concorrente em disco de shuffle e gargalos na coleta de rede da JVM; abaixo de 5, perde-se a localidade local de leitura multithread.</li>
+          <li><strong>Passo 3 (Executores por Nó):</strong> Divida a quantidade de cores restantes no nó (Passo 1) por 5 (Passo 2). Exemplo: Se sobram 15 cores, teremos <code>15 / 5 = 3</code> executores por nó.</li>
+          <li><strong>Passo 4 (Memória por Executor &amp; Overhead):</strong> Divida a RAM disponível por nó pelo número de executores calculados no Passo 3. Do resultado, deduza cerca de 10% a 15% para a memória de Overhead do Spark (<code>spark.executor.memoryOverhead</code>, com mínimo absoluto de 384 MB). O restante é a Heap do Executor.</li>
+        </ol>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <h4>Cenário 1: Instância Memory-Optimized (r5.4xlarge)</h4>
+          <ul>
+            <li><strong>Hardware Físico:</strong> 16 vCPUs (cores) e 128 GB RAM.</li>
+            <li><strong>Reserva do S.O. &amp; YARN:</strong> 1 core e 4 GB RAM. Sobram 15 cores e 124 GB RAM.</li>
+            <li><strong>Cores por Executor:</strong> Fixado em 5 cores.</li>
+            <li><strong>Quantidade de Executores por nó:</strong> 15 / 5 = 3 executores por nó.</li>
+            <li><strong>Memória total disponível por executor:</strong> 124 GB / 3 = 41.3 GB.</li>
+            <li><strong>Ajuste do Overhead (10%):</strong>
+              <ul>
+                <li><code>spark.executor.memory = 37g</code></li>
+                <li><code>spark.executor.memoryOverhead = 4g</code> (37g * 0.10 ≈ 3.7g -> arredondado para 4g).</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4>Cenário 2: Instância Compute-Optimized (c5.9xlarge)</h4>
+          <ul>
+            <li><strong>Hardware Físico:</strong> 36 vCPUs (cores) e 72 GB RAM.</li>
+            <li><strong>Reserva do S.O. &amp; YARN:</strong> 1 core e 4 GB RAM. Sobram 35 cores e 68 GB RAM.</li>
+            <li><strong>Cores por Executor:</strong> Fixado em 5 cores.</li>
+            <li><strong>Quantidade de Executores por nó:</strong> 35 / 5 = 7 executores por nó.</li>
+            <li><strong>Memória total disponível por executor:</strong> 68 GB / 7 = 9.7 GB.</li>
+            <li><strong>Ajuste do Overhead (10%):</strong>
+              <ul>
+                <li><code>spark.executor.memory = 8g</code></li>
+                <li><code>spark.executor.memoryOverhead = 1g</code> (excedente necessário para operações de runtime).</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Parâmetros de Recursos — Referência Rápida</h3>
+      <div class="tbl-wrap" style="margin-top: 10px; margin-bottom: 25px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Parâmetro do Spark</th>
+              <th>Valor Recomendado</th>
+              <th>O que Controla Físicamente</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>spark.executor.cores</code></td>
+              <td>4 ou 5</td>
+              <td>Número de threads paralelas rodando simultaneamente por executor.</td>
+            </tr>
+            <tr>
+              <td><code>spark.executor.memory</code></td>
+              <td>16g a 48g (depende da instância)</td>
+              <td>Quantidade máxima de RAM alocada para a Heap da JVM por executor.</td>
+            </tr>
+            <tr>
+              <td><code>spark.executor.memoryOverhead</code></td>
+              <td>2g a 6g (10% a 15% da executor.memory)</td>
+              <td>Memória Off-heap para buffers nativos, Python, PyArrow e overheads de rede.</td>
+            </tr>
+            <tr>
+              <td><code>spark.driver.memory</code></td>
+              <td>4g a 16g</td>
+              <td>Memória reservada para o Driver planejar e compilar o grafo lógico (DAG).</td>
+            </tr>
+            <tr>
+              <td><code>spark.driver.maxResultSize</code></td>
+              <td>2g a 4g</td>
+              <td>Limite de dados que os executores podem retornar para o Driver via <code>.collect()</code>.</td>
+            </tr>
+            <tr>
+              <td><code>spark.memory.fraction</code></td>
+              <td>0.6 a 0.8</td>
+              <td>Porcentagem da Heap JVM do Executor dedicada para execução direta de tarefas e caching.</td>
+            </tr>
+            <tr>
+              <td><code>spark.memory.storageFraction</code></td>
+              <td>0.2 a 0.5</td>
+              <td>Porcentagem do espaço pool (fraction) reservada e protegida exclusivamente para cache.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="abox note" style="margin-bottom: 25px;">
+        <strong>⚠️ Armadilha Frequente: Dynamic Allocation sem Limites Claros</strong>
+        <br>Habilitar alocação dinâmica (<code>spark.dynamicAllocation.enabled = true</code>) sem definir tetos restritos pode esgotar toda a capacidade do seu cluster YARN e gerar concorrência excessiva de I/O em disco. Configure sempre com limites rígidos em produção:
+        <pre><code class="language-properties">spark.dynamicAllocation.enabled = true
+spark.dynamicAllocation.minExecutors = 1
+spark.dynamicAllocation.maxExecutors = 100
+spark.dynamicAllocation.initialExecutors = 5
+spark.dynamicAllocation.executorIdleTimeout = 60s
+spark.dynamicAllocation.schedulerBacklogTimeout = 1s</code></pre>
+        No EMR EC2, prefira o <strong>Managed Scaling</strong> no nível de infraestrutura do cluster em vez de configurações desreguladas de Dynamic Allocation puras de aplicação para melhor controle de FinOps.
+      </div>
+
+      <h3>Regras de Ouro de Particionamento &amp; Paralelismo</h3>
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>📏 Tamanho Ideal de Partição</h4>
+          <p>O tamanho ótimo de partição física na RAM e no disco deve residir entre <strong>128 MB e 512 MB</strong>.</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>Partições Pequenas (&lt;10 MB):</strong> Geram um overhead monstruoso de agendamento de tarefas na CPU (Task Scheduling Overhead) no Driver.</li>
+            <li><strong>Partições Gigantes (&gt;2 GB):</strong> Geram estouro de Heap na JVM do executor (Java Heap Space OOM) e forçam spillage ineficiente para o disco local.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🔄 shuffle.partitions vs default.parallelism</h4>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong><code>spark.sql.shuffle.partitions</code> (Padrão: 200):</strong> Controla estritamente o número de partições criadas após operações físicas de Shuffle em APIs SQL e DataFrames (ex: Joins, GroupBy).</li>
+            <li><strong><code>spark.default.parallelism</code>:</strong> Controla o número padrão de partições geradas após transformações de RDDs de baixo nível se o usuário não especificar.</li>
+            <li><strong>Ação do AQE:</strong> Se o Adaptive Query Execution (AQE) estiver ativado, o Spark junta partições pequenas pós-shuffle em runtime automaticamente, mitigando configurações estáticas incorretas.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="tungsten">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Tungsten &amp; JIT: Engine de Execução Física</h2>
+          <p>Aceleração física em nível de hardware, alocação de memória direta e Whole-Stage CodeGen</p>
+        </div>
+      </div>
+
+      <p>O <strong>Project Tungsten</strong> e o compilador <strong>Just-In-Time (JIT)</strong> formam a base da performance moderna do Spark. A premissa central é que a barreira para o processamento distribuído mudou do I/O (Disco/Rede) para a CPU e memória. O Tungsten otimiza agressivamente o modo como as instruções são dadas aos registradores da CPU e como os bytes são alocados na memória, escapando das abstrações pesadas da Java Virtual Machine (JVM).</p>
+
+                                        <div class="drawio-wrap" style="margin-top: 30px;">
+        <div class="drawio-label"><span class="dot"></span>CATALYST OPTIMIZER → TUNGSTEN ENGINE → JIT CODEGEN</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;a73472_0\&quot;/&gt;&lt;mxCell id=\&quot;a73472_1\&quot; parent=\&quot;a73472_0\&quot;/&gt;&lt;mxCell id=\&quot;a73472_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_title\&quot; value=\&quot;CATALYST OPTIMIZER \u2192 PROJECT TUNGSTEN \u2192 JIT CODEGEN\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_df\&quot; value=\&quot;DataFrame API\n(User Code)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a5c;strokeColor=#60a5fa;strokeWidth=2;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;115\&quot; width=\&quot;100\&quot; height=\&quot;65\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_grp_cat\&quot; value=\&quot;CATALYST OPTIMIZER\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#a855f7;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;148\&quot; y=\&quot;45\&quot; width=\&quot;300\&quot; height=\&quot;230\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_analyze\&quot; value=\&quot;1. Analyzer\n(resolve cols, types,\nGlue Catalog)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#2a1040;strokeColor=#a855f7;fontColor=#d8b4fe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;163\&quot; y=\&quot;80\&quot; width=\&quot;125\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_lopt\&quot; value=\&quot;2. Logical Optimizer\n(predicate pushdown,\nconstant folding)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#2a1040;strokeColor=#a855f7;fontColor=#d8b4fe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;308\&quot; y=\&quot;80\&quot; width=\&quot;125\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_phys\&quot; value=\&quot;3. Physical Planner (AQE)\nBroadcastHashJoin vs\nSort-Merge Join\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#2a1040;strokeColor=#a855f7;fontColor=#d8b4fe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;163\&quot; y=\&quot;200\&quot; width=\&quot;270\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_grp_tung\&quot; value=\&quot;PROJECT TUNGSTEN\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a1200;strokeColor=#b45309;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;478\&quot; y=\&quot;45\&quot; width=\&quot;200\&quot; height=\&quot;230\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_codegen\&quot; value=\&quot;Whole-Stage CodeGen\n(Janino compiler)\n*HashAggregate\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#2a1a00;strokeColor=#b45309;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;493\&quot; y=\&quot;80\&quot; width=\&quot;165\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_offheap\&quot; value=\&quot;Off-Heap Memory\n(Unsafe API, sem GC)\nCache binario nativo\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#2a1a00;strokeColor=#b45309;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;493\&quot; y=\&quot;200\&quot; width=\&quot;165\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_jit\&quot; value=\&quot;JVM JIT Compiler\nNative Machine Code\n(CPU Registers / L1)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1a0000;strokeColor=#ef4444;strokeWidth=2;fontColor=#fca5a5;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry x=\&quot;715\&quot; y=\&quot;110\&quot; width=\&quot;155\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_e1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a855f7;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;\&quot; edge=\&quot;1\&quot; source=\&quot;a73472_df\&quot; target=\&quot;a73472_analyze\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_e2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a855f7;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;\&quot; edge=\&quot;1\&quot; source=\&quot;a73472_analyze\&quot; target=\&quot;a73472_lopt\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_e3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a855f7;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;a73472_lopt\&quot; target=\&quot;a73472_phys\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_e4\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;\&quot; edge=\&quot;1\&quot; source=\&quot;a73472_phys\&quot; target=\&quot;a73472_codegen\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;a73472_e5\&quot; value=\&quot;bytecode\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;\&quot; edge=\&quot;1\&quot; source=\&quot;a73472_codegen\&quot; target=\&quot;a73472_jit\&quot; parent=\&quot;a73472_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+
+</div>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+  <strong style="color: var(--accent);">Explicação:</strong>
+  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> DataFrame API (User Code), CATALYST OPTIMIZER, 1. Analyzer (resolve cols/types via Glue Catalog), 2. Logical Optimizer (predicate pushdown, constant folding), 3. Physical Planner AQE (Broadcast Hash Join vs Sort-Merge Join), PROJECT TUNGSTEN, Whole-Stage CodeGen (Janino bytecode, *HashAggregate), Off-Heap Memory (Unsafe API, sem GC), JVM JIT Compiler (Native Machine Code, CPU Registers / L1)</li>
+    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas indicam a direcionalidade entre os elementos do diagrama.</li>
+    <li><strong>Contexto:</strong> O diagrama ilustra o pipeline de compilação do Spark: o Catalyst Optimizer transforma o código DataFrame em plano físico otimizado, o Tungsten gera bytecode e aloca memória off-heap sem GC, e o JIT da JVM compila para código nativo que roda diretamente nos registradores da CPU.</li>
+  </ul>
+</div>
+
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>⚙️ Deep Dive: Whole-Stage CodeGen e Eliminação de Funções Virtuais</h4>
+          <p>No processamento SQL tradicional (Modelo Vulcano), cada operador na query (ex: <code>Filter</code> -> <code>Project</code> -> <code>Aggregate</code>) chama um método <code>.next()</code> para buscar a próxima linha. Essas <strong>chamadas de funções virtuais</strong> têm alto custo na CPU, causando falhas nos preditores de branch de hardware e quebrando o pipeline da CPU.</p>
+          <p><strong>A Solução:</strong> O Tungsten gera um código Java único que colapsa toda a árvore de operações em uma única função otimizada com um loop "for". O Janino compiler compila esse Java em tempo de execução para bytecode, e a JVM aplica o <strong>JIT (Just-In-Time) compilation</strong> para gerar as instruções de máquina da CPU host.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🔍 Prática: Encontrando o JIT na Spark UI</h4>
+          <p>Como saber se o seu código foi acelerado? Abra a aba <strong>SQL/DataFrame</strong> na Spark UI. Operadores marcados com um asterisco (ex: <code>*(1) Filter</code> ou <code>*(2) HashAggregate</code>) significam que múltiplas etapas foram compiladas dinamicamente em uma única função nativa.</p>
+          <p>Você também pode usar <code>df.explain(True)</code> no console. O plano físico mostrará "WholeStageCodegen" envolvendo os operadores que foram fundidos para rodar na CPU como código nativo otimizado.</p>
+        </div>
+      </div>
+
+      <h3>Catalyst Optimizer: O Coração Estruturado do Spark</h3>
+      <p>O <strong>Catalyst Optimizer</strong> é um otimizador extensível baseado em regras escrito em Scala que gerencia todo o ciclo de compilação lógica de consultas DataFrame/SQL:</p>
+      <ol>
+        <li><strong>Análise (Analysis):</strong> O Spark analisa a sintaxe da query e consulta o Catalog (ex: Glue Data Catalog) para resolver nomes de colunas, tabelas e tipos lógicos. Retorna um <em>Analyzed Logical Plan</em>.</li>
+        <li><strong>Otimização Lógica (Logical Optimization):</strong> Aplica regras de transformação clássicas como <strong>Constant Folding</strong> (calcula valores constantes estáticos em tempo de otimização) e <strong>Predicate Pushdown</strong> (empurra filtros para a leitura do arquivo no S3, evitando carregar dados indesejados).</li>
+        <li><strong>Planejamento Físico (Physical Planning):</strong> Gera múltiplos planos físicos reais baseado nas estatísticas da tabela (Custo Físico). O Spark calcula o custo computacional de cada plano (ex: escolher entre Sort-Merge Join ou Broadcast Hash Join) e seleciona o mais barato.</li>
+        <li><strong>Geração de Código (Code Generation):</strong> Compila o plano físico escolhido em bytecode Java (através do Janino compiler) rodando nativamente na JVM dos executores. O <strong>Whole-Stage CodeGen</strong> colapsa várias operações em um único loop em Java.</li>
+      </ol>
+
+      <div class="abox info">
+        <strong>5. O Pitch de Business Value (Proposta de Valor)</strong>
+        <p>Ao modernizar os pipelines para aproveitar plenamente a API de DataFrame em vez de RDDs ou UDFs complexos, habilitamos o Tungsten e o JIT para atingir <strong>Time-to-Market de dados em frações do tempo original</strong>. Do ponto de vista de <strong>EBITDA e FinOps</strong>, a geração dinâmica de código e alocação eficiente da CPU L1/L2 significa que os jobs executam até 10x mais rápido. Isso reduz diretamente as horas/máquina faturadas (OPEX) no cluster AWS, melhorando margens de lucro operacionais e destravando recursos para outras iniciativas de análise de dados sem aumento do TCO.</p>
+      </div>
+    </section>
+
+    
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+<script src="../../js/progress.js"></script>
+
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+</body>
+</html>

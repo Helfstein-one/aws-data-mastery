@@ -4,14 +4,10 @@
   <meta name="author" content="Mauricio Helfstein">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Containers &amp; Docker para Dados - AWS Data Mastery">
-  <title>Terraform para Engenharia de Dados - AWS Data Mastery</title>
+  <meta name="description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <title>AWS Glue & Flink | AWS Data Mastery</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../style.css">
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
-  </script>
 </head>
 <body>
 
@@ -381,413 +377,290 @@
     </nav>
 
 <div id="main">
-  
-
-  <main class="main-content">
-  <div class="hero" style="background-color: var(--navy)">
-    <div class="hero-ey">Linguagens Analíticas</div>
-    <h1>Terraform &amp; Infra as Code</h1>
-    <p class="hero-d">Arquitetura de infraestrutura como código para Engenharia de Dados. Crie Data Lakes, Buckets, roles IAM e pipelines escaláveis de forma declarativa.</p>
+  <div class="hero">
+    <div class="hero-ey">Processamento Distribuído</div>
+    <h1>Apache Spark &amp; Amazon EMR</h1>
+    <p class="hero-d">Arquitetura profunda de processamento distribuído, otimização física de CPU/memória e guias práticos de tuning e troubleshooting.</p>
   </div>
 
-    <section class="section" id="fundamentos-terraform">
+  <main class="main-content">
+    
+    <!-- ── APACHE SPARK SECTION ── -->
+    <section class="section" id="glue-jobs">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">01</div>
+        <div class="sec-num" style="color:var(--emr)">13</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Conceitos Básicos de Terraform</h2>
-          <p>Declarativo, Agnóstico e Gerenciamento de Estado</p>
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>AWS Glue: ETL Serverless e Dynamic Frames</h2>
+
+      <h3 style="margin-top:40px; color:var(--spark);">Evolução de Schema com AWS Glue Schema Registry</h3>
+      <p>Ao ingerir dados via Streaming (Kafka/Kinesis) para o Glue, o formato Avro/Protobuf é preferível ao JSON por possuir tipagem forte e binária. Mas o que acontece se o time de engenharia de software dropar uma coluna transacional vital? O <strong>AWS Glue Schema Registry</strong> entra como um validador de contrato.</p>
+      <p>Integrando as bibliotecas <em>SerDe</em> (Serializer/Deserializer) do Schema Registry nos Produtores (EC2/Lambdas) e Consumidores (Glue Jobs), garantimos <em>Forward/Backward Compatibility</em>. Se um payload ferir as regras (ex: apagar uma coluna que era required), a mensagem é bloqueada na origem antes mesmo de poluir o Tópico Kafka, evitando o "Data Poisoning" no Data Lake.</p>
+
+          <p>Processamento orientado a eventos e integração nativa com o Data Catalog</p>
         </div>
       </div>
 
-      <p>O <strong>Terraform</strong> (desenvolvido pela HashiCorp) permite criar, alterar e gerenciar infraestrutura de forma segura e previsível usando a linguagem HCL (HashiCorp Configuration Language). Em ambientes de dados, usamos Terraform para criar S3 Buckets, IAM Roles, EMR Clusters, Glue Jobs e todo o perímetro de rede.</p>
-
       <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #8b5cf6;">
-          <div class="cc-tag">Providers</div>
-          <div class="cc-title">AWS Provider</div>
-          <div class="cc-body">
-            O Terraform utiliza <em>Providers</em> (plugins) para interagir com APIs de provedores de nuvem. No nosso caso, o provedor <code>aws</code> é o motor que converte o código HCL em chamadas REST para a AWS (ex: <code>CreateBucket</code>).
-          </div>
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Abstração</div>
+          <div class="cc-title">Dynamic Frames</div>
+          <div class="cc-body">Extensão dos DataFrames do Spark que permite lidar com schemas semi-estruturados e inconsistentes sem necessidade de definir DDLs rígidos previamente.</div>
         </div>
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Estado</div>
+          <div class="cc-title">Job Bookmarks</div>
+          <div class="cc-body">Persiste o estado do processamento para evitar reprocessamento de dados já ingeridos em execuções anteriores no S3 ou JDBC.</div>
+        </div>
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Governança</div>
+          <div class="cc-title">Glue Data Quality</div>
+          <div class="cc-body">Implementa regras automáticas de qualidade (DQDL) para validar a integridade dos dados durante o pipeline de ETL.</div>
+        </div>
+      </div>
 
-        <div class="concept-card" style="border-top: 4px solid #8b5cf6;">
-          <div class="cc-tag">State (Estado)</div>
-          <div class="cc-title">O tfstate e o Backend</div>
-          <div class="cc-body">
-            O Terraform armazena o mapa da infraestrutura real em um arquivo chamado <code>terraform.tfstate</code>. Para colaboração em equipe, esse arquivo NUNCA deve ir para o Git. A melhor prática é usar um <strong>S3 Backend</strong> com bloqueio via <strong>DynamoDB (State Lock)</strong>.
+      <div class="grid-2">
+        <div>
+          <h4>Como Funciona</h4>
+          <p>O Glue utiliza um ambiente Spark totalmente gerenciado. Ele abstrai a gestão de clusters, permitindo focar no código Python/Scala. O <strong>Data Catalog</strong> atua como um Metastore centralizado para o Lakehouse.</p>
+          <ul>
+            <li><strong>Interactive Sessions:</strong> Permite desenvolvimento rápido via Jupyter Notebooks sem esperar minutos pelo provisionamento de clusters.</li>
+            <li><strong>Glue Flex:</strong> Classe de execução de baixo custo (até 35% de economia) para jobs não críticos, utilizando capacidade excedente da AWS (similar ao Spot).</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Performance & Configurações (Sizing de Workers e Executors)</h4>
+          <p>Diferente do Spark tradicional onde você define <code>spark.executor.instances</code>, no AWS Glue você provisiona DPUs (Data Processing Units) e seleciona o <strong>Worker Type</strong>. O runtime do Glue configura a JVM automaticamente:</p>
+          
+          <div class="tbl-wrap" style="margin-top: 10px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Worker Type</th>
+                  <th>DPUs</th>
+                  <th>vCPUs</th>
+                  <th>RAM</th>
+                  <th>Spark Executors por Worker</th>
+                  <th>Recursos por Executor Spark</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>G.1X</strong></td>
+                  <td>1 DPU</td>
+                  <td>4 vCPUs</td>
+                  <td>16 GB</td>
+                  <td>1 Executor</td>
+                  <td>4 vCPUs, 10 GB RAM (restante para OS/YARN)</td>
+                </tr>
+                <tr>
+                  <td><strong>G.2X</strong></td>
+                  <td>2 DPUs</td>
+                  <td>8 vCPUs</td>
+                  <td>32 GB</td>
+                  <td>1 Executor</td>
+                  <td>8 vCPUs, 24 GB RAM (ideal para grandes volumes de dados)</td>
+                </tr>
+                <tr>
+                  <td><strong>G.4X</strong></td>
+                  <td>4 DPUs</td>
+                  <td>16 vCPUs</td>
+                  <td>64 GB</td>
+                  <td>1 Executor</td>
+                  <td>16 vCPUs, 52 GB RAM (processamento massivo e ML local)</td>
+                </tr>
+                <tr>
+                  <td><strong>G.8X</strong></td>
+                  <td>8 DPUs</td>
+                  <td>32 vCPUs</td>
+                  <td>128 GB</td>
+                  <td>1 Executor</td>
+                  <td>32 vCPUs, 108 GB RAM (altamente intensivo em memória)</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+
+          <ul style="margin-top:15px;">
+            <li><strong>Worker Auto Scaling:</strong> Disponível no Glue 3.0+, escala dinamicamente o número de workers conforme a carga do job, reduzindo custos em shuffles ou processamentos variáveis.</li>
+            <li><strong>Regra Prática de Tuning para OOM no Glue:</strong> Se o seu Job do Glue falhar por falta de memória física (OOM) no Worker, alterar de G.1X para G.2X <strong>dobra a memória disponível para o executor Spark (de 10GB para 24GB)</strong> mantendo o mesmo número de tarefas paralelas por nó, eliminando o estouro do contêiner JVM.</li>
+          </ul>
         </div>
       </div>
     </section>
 
-    <section class="section" id="comandos-terraform">
+    <section class="section" id="spark-streaming">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">02</div>
+        <div class="sec-num" style="color:var(--spark)">09</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Estrutura e Comandos Principais</h2>
-          <p>O workflow do Engenheiro IaC</p>
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>Spark Structured Streaming &amp; Stateful Processing</h2>
+          <p>Pipelines de dados continuados exactly-once tolerantes a falhas</p>
         </div>
       </div>
 
-      <p>Um projeto Terraform padrão possui os seguintes arquivos:</p>
-      <ul style="margin-left: 20px; margin-bottom: 20px; line-height: 1.6; color: var(--text-light);">
-        <li><code>main.tf</code>: A lógica central e recursos.</li>
-        <li><code>variables.tf</code>: Declaração de variáveis dinâmicas (ex: env, region).</li>
-        <li><code>outputs.tf</code>: Valores que queremos exportar (ex: ARN do bucket).</li>
-        <li><code>providers.tf</code>: Configuração de backend e provider.</li>
-      </ul>
+      <p>Diferente de sistemas puramente contínuos (como o Flink), o <strong>Spark Structured Streaming</strong> opera nativamente sob o modelo de <strong>Micro-Batching</strong>. A engine aguarda um intervalo de trigger configurável (ex: 10 segundos), coleta as mensagens que chegaram no Kafka/Kinesis nesse intervalo, e as processa usando o mesmo motor otimizado do Spark SQL (Catalyst/Tungsten) como se fossem um DataFrame estático convencional. Esse design unifica a API Batch e Streaming.</p>
 
-      <div class="code-block">
-        <div class="cb-hdr">
-          <span class="cb-lang">HCL (Terraform)</span>
+      <h3>O Core da Semântica Temporal</h3>
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>⏱️ Event Time vs Processing Time</h4>
+          <p>Em processamento de streaming, a confusão entre tempos gera corrupção analítica severa:</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>Event Time:</strong> O exato momento em que o evento ocorreu no mundo físico (ex: o usuário clicou no botão às 10:00). Embutido no payload (JSON). É a única métrica confiável para agregações de negócio.</li>
+            <li><strong>Processing Time:</strong> O momento em que o nó do Spark recebeu e começou a processar o registro (ex: 10:15 devido a um atraso de rede). Se você agrupar por Processing Time, um pico de latência no Kafka agrupará cliques das 10:00 junto com os das 10:15, falsificando a curva de tráfego.</li>
+          </ul>
         </div>
-        <pre><code class="language-hcl"># Exemplo: Criação de um Bucket S3 para o Data Lake Raw
-resource "aws_s3_bucket" "datalake_raw" {
-  bucket = "empresa-datalake-raw-${var.environment}"
-  
-  tags = {
-    Environment = var.environment
-    Team        = "Data Engineering"
-  }
-}
 
-# Bloqueio de acesso público
-resource "aws_s3_bucket_public_access_block" "block_public" {
-  bucket                  = aws_s3_bucket.datalake_raw.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}</code></pre>
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>💧 Watermarking &amp; "Late-arriving Data"</h4>
+          <p>Em operações <em>Stateful</em> (agregações baseadas em janelas temporais baseadas no <strong>Event Time</strong>), o Spark precisa manter na RAM (State Store) o estado parcial das agregações. Se um celular ficar sem sinal, um evento de ontem pode chegar hoje (Late Data).</p>
+          <p>Para evitar que a memória do Spark estoure guardando todas as janelas do passado infinitamente (OOM), usamos o <strong>Watermark</strong>. Ele define o <strong>Allowed Lateness</strong> (Atraso Permitido).
+          <br><br>Ex: <code>.withWatermark("event_time", "10 minutes")</code>. Se o evento mais recente processado tiver o Event Time 12:00, o Watermark avança para 11:50. Se um evento atrasado chegar com tempo 11:45, a janela correspondente já foi ejetada da RAM e finalizada para o sink; o evento atrasado é <strong>descartado silenciosamente</strong> para proteger o cluster.</p>
+        </div>
       </div>
 
-      <h3 style="margin-top: 40px;">O Workflow: Init, Plan, Apply</h3>
-      
-      <div class="concept-grid">
-        <div class="concept-card">
-          <div class="cc-tag">1. Inicialização</div>
-          <div class="cc-title">terraform init</div>
-          <div class="cc-body">
-            Faz o download dos providers (AWS) e inicializa o backend (conexão com S3 para o state).
-          </div>
+      <h3>Mecanismos Avançados de Streaming</h3>
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🗂️ Windowing &amp; Stateful Processing</h4>
+          <p>Spark suporta três tipos de agrupamentos temporais para agregar o stream infinito de dados:</p>
+          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+            <li><strong>Tumbling Windows (Janelas Fixas):</strong> Não sobrepostas. Ex: Das 10:00 às 10:05, das 10:05 às 10:10. Cada evento pertence a uma única janela.</li>
+            <li><strong>Sliding Windows (Janelas Deslizantes):</strong> Sobrepostas. Ex: Tamanho de 10 minutos, deslizando a cada 5 minutos. Um evento das 10:03 participará da janela [09:55-10:05] e [10:00-10:10].</li>
+            <li><strong>Session Windows:</strong> Baseada na inatividade. Ex: Agrupa os cliques do usuário 123. Se ele ficar 30 minutos sem clicar, a janela fecha. Requer intenso uso do State Store.</li>
+          </ul>
         </div>
-        <div class="concept-card">
-          <div class="cc-tag">2. Planejamento</div>
-          <div class="cc-title">terraform plan</div>
-          <div class="cc-body">
-            Gera um plano de execução detalhando exatamente <strong>o que será criado (+), modificado (~) ou deletado (-)</strong>.
-          </div>
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>🔄 Garantias de Entrega (Delivery Guarantees) &amp; Checkpoints</h4>
+          <p>Sistemas distribuídos falham. O Spark garante semântica <strong>Exactly-Once</strong> (fim a fim) combinando sinks idempotentes (como Delta Lake) com seu mecanismo rigoroso de <strong>Checkpoints &amp; Write-Ahead Logs (WAL)</strong>.</p>
+          <p>Antes de iniciar um micro-batch, o Spark escreve de forma síncrona no HDFS/S3 os exatos offsets do Kafka que vai ler. Se um nó Spot morrer durante o processamento, o Spark levanta a tarefa em outro nó, lê o WAL do S3, descobre exatamente em qual offset a falha ocorreu e reprocessa cirurgicamente sem perder ou duplicar dados.</p>
         </div>
-        <div class="concept-card">
-          <div class="cc-tag">3. Execução</div>
-          <div class="cc-title">terraform apply</div>
-          <div class="cc-body">
-            Aplica o plano na nuvem e atualiza o <code>tfstate</code>. Em CI/CD, roda como <code>terraform apply -auto-approve</code>.
-          </div>
-        </div>
+      </div>
+
+      <div class="abox note" style="margin-top:20px; margin-bottom:20px;">
+        <strong>⚠️ Backpressure &amp; Throttling (Proteção de Carga)</strong>
+        <br>Se o tráfego do Kafka explodir 100x na Black Friday, o Spark tentará puxar todos os milhões de registros para um único micro-batch, estourando a RAM (OOM) instantaneamente. Para gerenciar o <strong>Backpressure</strong>, o Spark não sinaliza ativamente ao Kafka para "parar", mas restringe o consumo na ponta do leitor via limites de trigger:
+        <br><code>.option("maxOffsetsPerTrigger", "50000")</code> - Força o Spark a ler, no máximo, 50 mil mensagens por micro-batch, limitando o throughput e mantendo o processamento estável mesmo sob pico severo.
+      </div>
+
+      <h3>Arquitetura End-to-End: Kafka para Delta Lake</h3>
+      <p>Abaixo, um pipeline prático arquitetural que consome de um tópico de mensageria escalável e grava num formato Lakehouse garantindo atomicidade:</p>
+
+      <pre><code class="language-python"># 1. Leitura: Processamento incremental com backpressure controlado
+df_stream = spark.readStream     .format("kafka")     .option("kafka.bootstrap.servers", "broker:9092")     .option("subscribe", "telemetria")     .option("startingOffsets", "earliest")     .option("maxOffsetsPerTrigger", "50000")     .load() # maxOffsetsPerTrigger controla o backpressure
+
+# 2. Transformação, Windowing e Watermark
+import pyspark.sql.functions as F
+df_parsed = df_stream.selectExpr("CAST(value AS STRING) as json_data")     .withColumn("event_time", F.col("json_data.timestamp").cast("timestamp"))     .withWatermark("event_time", "10 minutes")     .groupBy(F.window("event_time", "5 minutes"), "json_data.sensor_id")     .agg(F.avg("json_data.temperatura").alias("media_temp"))
+
+# 3. Escrita: Gravação Delta idempotente usando Triggers
+# OutputModes: "append" (novos), "update" (alterados), "complete" (tabela inteira)
+df_parsed.writeStream     .format("delta")     .outputMode("append")     .option("checkpointLocation", "s3://bucket/checkpoints/telemetria_agg/")     .trigger(processingTime="1 minute")     .start("s3://bucket/tabela_delta_agreggada/")</code></pre>
+
+      <div class="abox info">
+        <strong>⚡ Modos de Trigger</strong>
+        <p>A diretiva <code>.trigger()</code> determina quando o motor vai verificar por novos dados:</p>
+        <ul>
+          <li><code>trigger(processingTime="10 seconds")</code>: Executa micro-batches periodicamente a cada 10s. O mais usado.</li>
+          <li><code>trigger(availableNow=True)</code>: Modo <strong>Batch Híbrido</strong>. Consome todos os dados pendentes no Kafka de uma vez, mas quebrando em micro-batches em background para evitar OOM, e depois desliga o cluster. Ideal para orquestração noturna que precisa da resiliência dos checkpoints de streaming.</li>
+          <li><code>trigger(continuous="1 second")</code>: Ignora o micro-batching. Cada tarefa puxa mensagens em polling contínuo da origem. Menor latência (~1ms), mas perde a capacidade de agregação stateful.</li>
+        </ul>
       </div>
     </section>
 
-    <section class="section" id="arquitetura-terraform">
+    <section class="section" id="flink-streaming">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">03</div>
+        <div class="sec-num" style="color:var(--emr)">21B</div>
         <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Arquitetura e Integração AWS</h2>
-          <p>Como o Terraform interage com a Nuvem</p>
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>Apache Flink &amp; Stateful Stream Processing</h2>
+
+      <h3 style="margin-top:40px; color:var(--spark);">Tuning Avançado: RocksDB StateBackend & Unaligned Checkpoints</h3>
+      <p>Em processamento Stateful de alto débito (bilhões de TPS), salvar o "Estado" de uma janela temporal na Heap do Java causa pausas infernais de Garbage Collection. O <strong>RocksDB StateBackend</strong> serializa o estado em disco local SSD (out-of-core), libertando a JVM e permitindo estados gigantescos. </p>
+      <p>Contudo, durante o Snapshot do Estado (Checkpointing para o S3 via protocolo Chandy-Lamport), o Flink pode gargalar se o throughput for muito alto (Backpressure). A ativação de <strong>Unaligned Checkpoints</strong> permite que os "Barriers" ultrapassem os buffers cheios, garantindo que o checkpoint termine rápido mesmo sob forte pressão de rede, à custa de armazenar os dados em trânsito no S3.</p>
+
+          <p>Processamento contínuo de eventos com baixa latência, tolerância a falhas e controle de estado</p>
         </div>
       </div>
 
-      <p>A arquitetura abaixo demonstra o fluxo de deploy via CI/CD (GitHub Actions) utilizando <strong>OIDC (OpenID Connect)</strong> para assumir uma role efêmera na AWS sem a necessidade de chaves de acesso estáticas, e o backend centralizado no S3/DynamoDB.</p>
-      
-      <div class="mxgraph" style="margin-top:20px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;" data-mxgraph='{&quot;highlight&quot;: &quot;#0000ff&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;24.4.10\&quot;&gt;&lt;diagram name=\&quot;Terraform OIDC\&quot; id=\&quot;723ce7_tf_oidc\&quot;&gt;&lt;mxGraphModel dx=\&quot;1422\&quot; dy=\&quot;746\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;827\&quot; pageHeight=\&quot;1169\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;723ce7_0\&quot; /&gt;&lt;mxCell id=\&quot;723ce7_1\&quot; parent=\&quot;723ce7_0\&quot; /&gt;&lt;mxCell id=\&quot;723ce7_2\&quot; value=\&quot;GitHub Actions (CI/CD)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; width=\&quot;200\&quot; height=\&quot;60\&quot; x=\&quot;80\&quot; y=\&quot;160\&quot; /&gt;&lt;mxCell id=\&quot;723ce7_3\&quot; value=\&quot;AWS IAM (OIDC Provider)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#b91c1c;strokeColor=#991b1b;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; width=\&quot;200\&quot; height=\&quot;60\&quot; x=\&quot;360\&quot; y=\&quot;160\&quot; /&gt;&lt;mxCell id=\&quot;723ce7_4\&quot; value=\&quot;Terraform Backend State (S3)\&quot; style=\&quot;shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#0284c7;strokeColor=#0369a1;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; width=\&quot;160\&quot; height=\&quot;80\&quot; x=\&quot;640\&quot; y=\&quot;280\&quot; /&gt;&lt;mxCell id=\&quot;723ce7_5\&quot; value=\&quot;DynamoDB (State Lock)\&quot; style=\&quot;shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#4f46e5;strokeColor=#4338ca;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; width=\&quot;160\&quot; height=\&quot;80\&quot; x=\&quot;640\&quot; y=\&quot;120\&quot; /&gt;&lt;mxCell id=\&quot;723ce7_6\&quot; value=\&quot;AWS APIs (Resources)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=#0d9488;fontColor=#ffffff;\&quot; vertex=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; width=\&quot;200\&quot; height=\&quot;60\&quot; x=\&quot;360\&quot; y=\&quot;320\&quot; /&gt;&lt;mxCell id=\&quot;723ce7_7\&quot; value=\&quot;1. Autentica\u00e7\u00e3o OIDC\&quot; edge=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; source=\&quot;723ce7_2\&quot; target=\&quot;723ce7_3\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ec2;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;723ce7_8\&quot; value=\&quot;2. Check/Lock State\&quot; edge=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; source=\&quot;723ce7_2\&quot; target=\&quot;723ce7_5\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot; /&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;723ce7_9\&quot; value=\&quot;3. Get/Update State\&quot; edge=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; source=\&quot;723ce7_2\&quot; target=\&quot;723ce7_4\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;180\&quot; y=\&quot;320\&quot; /&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;723ce7_10\&quot; value=\&quot;4. Create Resources\&quot; edge=\&quot;1\&quot; parent=\&quot;723ce7_1\&quot; source=\&quot;723ce7_2\&quot; target=\&quot;723ce7_6\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#10b981;strokeWidth=2;edgeStyle=orthogonalEdgeStyle;\&quot;&gt;&lt;mxGeometry width=\&quot;50\&quot; height=\&quot;50\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;180\&quot; y=\&quot;350\&quot; /&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}'></div>
-    </section>
-  
-    <section class="section" id="terraform-avancado">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">04</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Boas Práticas: Módulos e Meta-Argumentos</h2>
-          <p>Escrevendo código DRY (Don't Repeat Yourself) para a Plataforma</p>
-        </div>
-      </div>
-
-      <p>Quando a infraestrutura de dados cresce, manter tudo num único arquivo `main.tf` torna-se impossível. Engenheiros Seniores utilizam <strong>Módulos</strong> para encapsular lógicas e <strong>Meta-Argumentos</strong> para criar recursos dinamicamente.</p>
-
-      <div class="drawio-container">
-        <div class="drawio-diagram" data-mxgraph='{"highlight":"#8b5cf6","nav":true,"resize":true,"toolbar":"zoom layers lightbox","xml":"<mxfile host=&quot;app.diagrams.net&quot; agent=&quot;Mozilla/5.0&quot; version=&quot;24.4.10&quot;>
-  <diagram name=&quot;Terraform Modules&quot; id=&quot;m1n2b3&quot;>
-    <mxGraphModel dx=&quot;1000&quot; dy=&quot;800&quot; grid=&quot;1&quot; gridSize=&quot;10&quot; guides=&quot;1&quot; tooltips=&quot;1&quot; connect=&quot;1&quot; arrows=&quot;1&quot; fold=&quot;1&quot; page=&quot;1&quot; pageScale=&quot;1&quot; pageWidth=&quot;827&quot; pageHeight=&quot;1169&quot; math=&quot;0&quot; shadow=&quot;0&quot;>
-      <root>
-        <mxCell id=&quot;0&quot; />
-        <mxCell id=&quot;1&quot; parent=&quot;0&quot; />
-        <!-- Root Module -->
-        <mxCell id=&quot;root&quot; value=&quot;&lt;b&gt;Root Module (Main)&lt;/b&gt;&lt;br&gt;main.tf&lt;br&gt;variables.tf&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;align=center;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
-          <mxGeometry x=&quot;350&quot; y=&quot;50&quot; width=&quot;160&quot; height=&quot;80&quot; as=&quot;geometry&quot; />
-        </mxCell>
-        <!-- S3 Module -->
-        <mxCell id=&quot;mod_s3&quot; value=&quot;&lt;b&gt;Module: Data Lake&lt;/b&gt;&lt;hr&gt;S3 Buckets&lt;br&gt;KMS Keys&lt;br&gt;Bucket Policies&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
-          <mxGeometry x=&quot;150&quot; y=&quot;250&quot; width=&quot;140&quot; height=&quot;100&quot; as=&quot;geometry&quot; />
-        </mxCell>
-        <!-- EMR Module -->
-        <mxCell id=&quot;mod_emr&quot; value=&quot;&lt;b&gt;Module: Compute&lt;/b&gt;&lt;hr&gt;EMR Serverless&lt;br&gt;IAM Roles&lt;br&gt;Security Groups&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
-          <mxGeometry x=&quot;550&quot; y=&quot;250&quot; width=&quot;140&quot; height=&quot;100&quot; as=&quot;geometry&quot; />
-        </mxCell>
-        <!-- DynamoDB Lock -->
-        <mxCell id=&quot;dyn&quot; value=&quot;&lt;b&gt;Remote State&lt;/b&gt;&lt;hr&gt;S3 Backend&lt;br&gt;DynamoDB Lock&quot; style=&quot;shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;>
-          <mxGeometry x=&quot;650&quot; y=&quot;40&quot; width=&quot;120&quot; height=&quot;100&quot; as=&quot;geometry&quot; />
-        </mxCell>
-        <!-- Edges -->
-        <mxCell id=&quot;e1&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;root&quot; target=&quot;mod_s3&quot;>
-          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;>
-            <Array as=&quot;points&quot;>
-              <mxPoint x=&quot;430&quot; y=&quot;180&quot; />
-              <mxPoint x=&quot;220&quot; y=&quot;180&quot; />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id=&quot;e2&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;root&quot; target=&quot;mod_emr&quot;>
-          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;>
-            <Array as=&quot;points&quot;>
-              <mxPoint x=&quot;430&quot; y=&quot;180&quot; />
-              <mxPoint x=&quot;620&quot; y=&quot;180&quot; />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id=&quot;e3&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;root&quot; target=&quot;dyn&quot;>
-          <mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot; />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-</mxfile>"}'></div>
-      </div>
-
-      <h3>Meta-Argumentos em Ação</h3>
-      <div class="concept-grid">
-        <div class="concept-card">
-          <div class="cc-tag">for_each</div>
-          <div class="cc-title">Criação Iterativa</div>
-          <div class="cc-body">
-            Ao invés de duplicar blocos para criar 3 buckets diferentes, passamos um mapa ou lista de strings para a propriedade <code>for_each</code>, e o Terraform cria um recurso por item iterado.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">dynamic</div>
-          <div class="cc-title">Blocos Dinâmicos</div>
-          <div class="cc-body">
-            Ideal para criar listas de regras dentro de um recurso (ex: liberar 5 portas em um <em>Security Group</em>). O <code>dynamic block</code> age como um "for loop" dentro da definição de um recurso.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">data sources</div>
-          <div class="cc-title">Leitura de Estado</div>
-          <div class="cc-body">
-            Quando você precisa referenciar uma VPC que já existe na AWS e <em>não</em> foi criada por você via Terraform, você usa blocos <code>data "aws_vpc"</code> para importar seus atributos (como o ID) e anexar ao seu novo recurso.
-          </div>
-        </div>
-      </div>
-
-      <div class="code-block" style="margin-top: 20px;">
-        <div class="cb-hdr"><span class="cb-lang">Terraform - for_each no Data Lake</span></div>
-        <pre><code class="language-hcl">locals {
-  buckets = ["raw", "trusted", "refined"]
-}
-
-resource "aws_s3_bucket" "data_lake" {
-  for_each      = toset(local.buckets)
-  bucket        = "mycompany-datalake-${each.key}-us-east-1"
-  force_destroy = false
-}
-
-# Isso criará 3 buckets com um único bloco de código!</code></pre>
-      
-
-      <h3 style="margin-top: 40px;">Anatomia de um Componente de Dados</h3>
-      <p>Quando desenvolvemos um módulo complexo (como um Cluster EMR ou um Data Lakehouse S3), quebrar a infraestrutura em múltiplos arquivos `.tf` melhora drasticamente a legibilidade em vez de colocar tudo em um <code>main.tf</code> de mil linhas. Abaixo a estrutura ideal de arquivos para um componente:</p>
+      <p>O <strong>Apache Flink</strong> é o principal motor para processamento contínuo de eventos (Streaming) de baixíssima latência (milissegundos) no mercado. Diferente do Spark Streaming (baseado em micro-batches), o Flink processa <strong>registro por registro (event-driven)</strong> e gerencia estados de memória complexos de forma nativa e tolerante a falhas.</p>
 
       <div class="concept-grid">
         <div class="concept-card">
-          <div class="cc-tag">1. providers.tf & backend.tf</div>
-          <div class="cc-title">Conexão & Estado</div>
-          <div class="cc-body">
-            <code>providers.tf</code> define as versões dos provedores (AWS, Random) e a região. <code>backend.tf</code> informa onde o <em>state</em> será salvo (Bucket S3) e o controle de <em>lock</em> (DynamoDB).
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">2. variables.tf & outputs.tf</div>
-          <div class="cc-title">Entradas e Saídas</div>
-          <div class="cc-body">
-            <code>variables.tf</code> declara os parâmetros aceitos pelo componente (tamanho da máquina, ambiente). <code>outputs.tf</code> devolve dados (ARNs, IDs) para que outros módulos possam consumir essa infraestrutura.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">3. locals.tf</div>
-          <div class="cc-title">Variáveis Calculadas</div>
-          <div class="cc-body">
-            Diferente das <em>variables</em> (que vêm de fora), os <code>locals</code> armazenam lógica interna, formatações de string e tags comuns geradas em tempo de execução para evitar repetição.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">4. main.tf</div>
-          <div class="cc-title">Recurso Principal</div>
-          <div class="cc-body">
-            Reserva-se o <code>main.tf</code> estritamente para o coração do componente. Se for um módulo de banco de dados, aqui fica o <code>aws_db_instance</code>. O resto vai para arquivos secundários.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">5. iam.tf</div>
-          <div class="cc-title">Identidade & Permissões</div>
-          <div class="cc-body">
-            Centraliza todas as Roles, Policies e assumable roles (`aws_iam_role`, `aws_iam_policy`). Separar o IAM previne que engenheiros cometam acidentes de segurança ao misturar permissões com recursos computacionais.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">6. security.tf & vpc.tf</div>
-          <div class="cc-title">Redes e Proteção</div>
-          <div class="cc-body">
-            <code>vpc.tf</code> para criação/importação de Subnets, Route Tables e Gateways. <code>security.tf</code> abriga os <em>Security Groups</em>, NACLs e chaves de criptografia KMS.
-          </div>
+          <div class="card-title" style="color:var(--emr)">Checkpoints vs Savepoints</div>
+          <p>Os mecanismos de persistência de estado do Flink servem a propósitos operacionais distintos:</p>
+          <ul style="margin-top:10px; padding-left:15px; font-size:12px; line-height:1.5;">
+            <li><strong>Checkpoints (Automáticos):</strong> São disparados automaticamente pelo Flink para tolerância a falhas. Gravam snapshots assíncronos do estado distribuído no S3. Se um worker cair, o Flink lê o último checkpoint e retoma o processamento com garantia de exatamente-uma-vez (Exactly-Once).</li>
+            <li><strong>Savepoints (Manuais/Administrativos):</strong> São snapshots disparados manualmente pelo administrador do sistema. Salva o estado completo da aplicação de forma portátil. É utilizado para atualizações de código do job, migrações de cluster ou redimensionamento de recursos.</li>
+          </ul>
         </div>
 
         <div class="concept-card">
-          <div class="cc-tag">7. versions.tf</div>
-          <div class="cc-title">Travamento de Versão</div>
-          <div class="cc-body">
-            Garante a imutabilidade do código fixando as versões permitidas do binário do Terraform e dos <em>Providers</em> (ex: AWS), prevenindo quebras catastróficas por atualizações de dependências.
-          </div>
+          <div class="card-title" style="color:var(--arch)">RocksDB State Backend vs HashMap</div>
+          <p>O local onde o Flink armazena os estados das janelas e agregações temporárias em tempo de execução:</p>
+          <ul style="margin-top:10px; padding-left:15px; font-size:12px; line-height:1.5;">
+            <li><strong>HashMap State Backend (Memória):</strong> Guarda todo o estado na heap da JVM do TaskManager. Latência de leitura/escrita extremamente baixa (nanossegundos), mas o tamanho do estado fica limitado à memória RAM disponível, podendo causar OutOfMemory (OOM).</li>
+            <li><strong>RocksDB State Backend (Disco + Cache):</strong> Guarda o estado em um banco de dados embarcado fora do heap da JVM (Off-Heap) gravando em discos locais (NVMe/SSD). Permite armazenar terabytes de estado (maior que a RAM física). O Flink descarrega checkpoints assincronamente no S3.</li>
+          </ul>
         </div>
-
       </div>
+
+                                        <div class="drawio-wrap" style="margin-top: 30px;">
+        <div class="drawio-label"><span class="dot"></span>APACHE FLINK — STATEFUL STREAMING (Kinesis Data Analytics)</div>
+        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;360\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;451341_0\&quot;/&gt;&lt;mxCell id=\&quot;451341_1\&quot; parent=\&quot;451341_0\&quot;/&gt;&lt;mxCell id=\&quot;451341_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_title\&quot; value=\&quot;APACHE FLINK \u2014 STATEFUL STREAMING (Kinesis Data Analytics for Flink)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_msk\&quot; value=\&quot;MSK / Kinesis\n(Event Source)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;15\&quot; y=\&quot;145\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_grp_kda\&quot; value=\&quot;KINESIS DATA ANALYTICS FOR APACHE FLINK\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#7c3aed;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;135\&quot; y=\&quot;45\&quot; width=\&quot;490\&quot; height=\&quot;285\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_jm\&quot; value=\&quot;JobManager\n(Dispatcher + ResourceMgr + JobMaster)\nCoordena checkpoints Chandy-Lamport\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#FF6B00;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;270\&quot; y=\&quot;78\&quot; width=\&quot;220\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_tm1\&quot; value=\&quot;TaskManager 1\n----------\nSlot A - Slot B\nStateBackend: RocksDB\n(off-heap NVMe)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a5c;strokeColor=#60a5fa;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;150\&quot; y=\&quot;195\&quot; width=\&quot;175\&quot; height=\&quot;110\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_tm2\&quot; value=\&quot;TaskManager 2\n----------\nSlot A - Slot B\nStateBackend: RocksDB\n(off-heap NVMe)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a5c;strokeColor=#60a5fa;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;435\&quot; y=\&quot;195\&quot; width=\&quot;175\&quot; height=\&quot;110\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_s3_ckpt\&quot; value=\&quot;S3 Checkpoints\n(Savepoints)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;352\&quot; y=\&quot;300\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_grp_serve\&quot; value=\&quot;SERVING LAYER\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#020e1a;strokeColor=#0284c7;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;665\&quot; y=\&quot;70\&quot; width=\&quot;215\&quot; height=\&quot;230\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_s3out\&quot; value=\&quot;S3 Iceberg\n(Output)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;685\&quot; y=\&quot;105\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_athena\&quot; value=\&quot;Athena\n(Query)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.athena;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;810\&quot; y=\&quot;105\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_qs\&quot; value=\&quot;QuickSight\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.quicksight;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry x=\&quot;810\&quot; y=\&quot;215\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_e1\&quot; value=\&quot;Consume\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;\&quot; edge=\&quot;1\&quot; source=\&quot;451341_msk\&quot; target=\&quot;451341_jm\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_e2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#60a5fa;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;451341_jm\&quot; target=\&quot;451341_tm1\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_e3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#60a5fa;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;451341_jm\&quot; target=\&quot;451341_tm2\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_e4\&quot; value=\&quot;async checkpoint\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;451341_tm1\&quot; target=\&quot;451341_s3_ckpt\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_e5\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;exitDx=0;exitDy=0;\&quot; edge=\&quot;1\&quot; source=\&quot;451341_tm2\&quot; target=\&quot;451341_s3out\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_e6\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;451341_s3out\&quot; target=\&quot;451341_athena\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;451341_e7\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;451341_athena\&quot; target=\&quot;451341_qs\&quot; parent=\&quot;451341_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+
 </div>
-    </section>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+  <strong style="color: var(--accent);">Explicação:</strong>
+  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> MSK / Kinesis (Event Source), KINESIS DATA ANALYTICS FOR APACHE FLINK, JobManager (Dispatcher + ResourceMgr + JobMaster, checkpoints Chandy-Lamport), TaskManager 1 e 2 (Slot A/B, StateBackend RocksDB off-heap NVMe), S3 Checkpoints / Savepoints (async), SERVING LAYER, S3 Iceberg (Output), Athena (Query), QuickSight</li>
+    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas indicam a direcionalidade entre os elementos do diagrama.</li>
+    <li><strong>Contexto:</strong> O diagrama mostra a arquitetura do Flink no Kinesis Data Analytics: JobManager coordena TaskManagers com slots e RocksDB StateBackend (estados off-heap). Checkpoints assíncronos garantem Exactly-Once no S3. Output vai para S3 Iceberg → Athena → QuickSight.</li>
+  </ul>
+</div>
 
-    <section class="section" id="terraform-cases">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">05</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Cases Reais: A Plataforma Self-Service</h2>
-          <p>Como a Engenharia de Dados habilita Analistas de forma segura</p>
-        </div>
-      </div>
+      <h3>Escrita de Query Analítica Real em Flink SQL</h3>
+      <p>O Flink SQL permite descrever computações complexas de tempo real de forma declarativa. O exemplo abaixo implementa uma <strong>Janela Deslizante (Sliding Window)</strong> de 10 minutos que computa a soma de transações a cada 1 minuto a partir de dados brutos lidos do Amazon MSK (Kafka):</p>
 
-      <h3>Case 1: Ambientes Separados (Workspaces vs Pastas)</h3>
-      <p><strong>Cenário:</strong> O time de dados precisava replicar a infraestrutura de Produção para um ambiente de <em>Staging</em> para testar novas versões do Airflow sem quebrar as dags ativas.</p>
-      <p><strong>Ação:</strong> Em vez de criar um código Terraform isolado, foi arquitetada uma estrutura baseada em pastas separadas para cada ambiente (<code>/env/prod</code> e <code>/env/stg</code>), onde ambas invocam o mesmo <strong>Módulo</strong> raiz (<code>/modules/airflow</code>), apenas passando um arquivo <code>.tfvars</code> diferente (com o tamanho reduzido de EC2 para Staging).</p>
+      <pre><code class="language-sql">-- 1. Cria a Tabela de Origem mapeando o tópico do Amazon MSK (Kafka)
+CREATE TABLE msk_transactions (
+    transaction_id STRING,
+    user_id STRING,
+    amount DOUBLE,
+    event_time TIMESTAMP(3),
+    -- Declaração do Watermark: tolerância de atraso de dados de até 5 segundos
+    WATERMARK FOR event_time AS event_time - INTERVAL '5' SECOND
+) WITH (
+    'connector' = 'kafka',
+    'topic' = 'production.transactions',
+    'properties.bootstrap.servers' = 'broker1:9092,broker2:9092',
+    'properties.group.id' = 'flink-sales-aggregation',
+    'scan.startup.mode' = 'latest-offset',
+    'format' = 'json'
+);
 
-      <h3>Case 2: Automação de Roles (IAM) via Módulo</h3>
-      <p><strong>Cenário:</strong> Todo novo Cientista de Dados contratado precisava abrir um ticket no Jira para que a Segurança criasse sua <em>Role</em> de acesso ao SageMaker e ao S3.</p>
-      <p><strong>A Otimização:</strong> O time de Infraestrutura criou um módulo do Terraform chamado <code>aws_data_scientist_role</code>. Agora, um engenheiro só precisa adicionar o nome do cientista em uma lista de strings no `main.tf` do repositório, e o CI/CD (GitHub Actions) aplica o Terraform, gerando a role com o princípio do privilégio mínimo automaticamente.</p>
-    </section>
-
-    <section class="section" id="terraform-estrutura-pastas">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#8b5cf6">06</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#8b5cf6"></div>
-          <h2>Boas Práticas de Modularização e Estrutura</h2>
-          <p>Organizando Repositórios Complexos na AWS</p>
-        </div>
-      </div>
-
-      <p>Um repositório Terraform mal estruturado vira um grande monolito rapidamente, tornando os processos de <em>plan</em> lerdos e arriscados (um erro pode destruir componentes que não deveriam ser tocados). A modularização inteligente é a chave.</p>
-
-      <h3>A Árvore de Pastas Perfeita (Folder Structure)</h3>
-      <p>Uma arquitetura de pastas de nível Sênior separa os Módulos (o "como fazer") das Composições/Ambientes (o "o que criar").</p>
-
-      <div class="code-block">
-        <div class="cb-hdr"><span class="cb-lang">Estrutura de Diretórios</span></div>
-        <pre><code class="language-plaintext">terraform-data-platform/
-├── modules/                         # Módulos Reutilizáveis (Lógica Genérica)
-│   ├── s3-data-lake/                # Módulo para criar buckets criptografados do Lakehouse
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   ├── emr-serverless-app/          # Módulo para o Compute Engine
-│   └── iam-data-role/               # Módulo de Governança de Perfis IAM
-│
-├── environments/                    # Uso prático dos Módulos (State separado)
-│   ├── dev/
-│   │   ├── main.tf                  # Chama os modules/* passando vars pequenas
-│   │   ├── terraform.tfvars         # Ex: instance_count = 1
-│   │   └── backend.tf               # Aponta para o State de Dev
-│   │
-│   ├── stg/
-│   │
-│   └── prod/
-│       ├── main.tf                  # Chama os mesmos modules/*
-│       ├── terraform.tfvars         # Ex: instance_count = 10 (Alta disponibilidade)
-│       └── backend.tf               # Aponta para o State de Prod
-│
-├── scripts/                         # Automações de CI/CD (GitHub Actions / GitLab CI)
-└── README.md</code></pre>
-      </div>
-
-      <div class="concept-grid" style="margin-top: 20px;">
-        <div class="concept-card">
-          <div class="cc-tag">1. Módulos Burros</div>
-          <div class="cc-title">Princípio da Injeção</div>
-          <div class="cc-body">
-            Módulos (<code>/modules</code>) não devem possuir valores <em>hardcoded</em>. Tudo (nomes, VPC IDs, tamanhos) deve vir do <code>variables.tf</code>. Eles devem ser genéricos o suficiente para serem chamados por Dev, Stg ou Prod.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">2. Estados Isolados</div>
-          <div class="cc-title">Blast Radius</div>
-          <div class="cc-body">
-            Ao usar a pasta <code>/environments</code>, cada ambiente possui seu próprio <code>terraform.tfstate</code>. Se houver corrupção no arquivo de estado de <em>Dev</em>, a plataforma de <em>Prod</em> continua intocada e operando 100%.
-          </div>
-        </div>
-        <div class="concept-card">
-          <div class="cc-tag">3. Componentes Granulares</div>
-          <div class="cc-title">State File Size</div>
-          <div class="cc-body">
-            Evite colocar IAM, Redes, S3 e EMR na mesma camada. Times muito maduros até separam o <code>environments/prod/</code> em pastas como <code>network/</code>, <code>storage/</code> e <code>compute/</code>, acelerando os *deploys*.
-          </div>
-        </div>
-      </div>
+-- 2. Executa a agregação contínua usando a Sliding Window (Hop Window)
+SELECT 
+    user_id,
+    -- Início e Fim da Janela temporal
+    window_start,
+    window_end,
+    COUNT(transaction_id) AS total_transactions,
+    SUM(amount) AS total_amount
+FROM TABLE(
+    HOP(TABLE msk_transactions, DESCRIPTOR(event_time), INTERVAL '1' MINUTE, INTERVAL '10' MINUTE)
+)
+GROUP BY 
+    user_id, window_start, window_end;</code></pre>
     </section>
 
     
-    <!-- SEÇÃO DE REFERÊNCIAS -->
-    <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--muted)">REF</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Referências & Bibliografia</h2>
-          <p>Materiais Oficiais e Leituras Recomendadas para este módulo</p>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-lbl">HashiCorp Developer</div>
-          <h4><a href="https://developer.hashicorp.com/terraform/language" target="_blank" style="color:var(--aws)">Terraform Language Docs</a></h4>
-          <p>Guia definitivo sobre a sintaxe HCL e meta-argumentos (for_each, dynamic).</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">Best Practices</div>
-          <h4><a href="https://developer.hashicorp.com/terraform/tutorials/modules/module" target="_blank" style="color:var(--aws)">Modules Tutorial</a></h4>
-          <p>Orientações oficiais de como componentizar repositórios e usar o registry.</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">AWS Registry</div>
-          <h4><a href="https://registry.terraform.io/providers/hashicorp/aws/latest/docs" target="_blank" style="color:var(--aws)">AWS Provider</a></h4>
-          <p>Documentação da provider da AWS com todos os componentes mapeados.</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">Livro Recomendado</div>
-          <h4>Terraform: Up & Running</h4>
-          <p>Por Yevgeniy Brikman. Referência mundial sobre Infra como Código.</p>
-        </div>
-      </div>
-    </section>
-</main>
+  </main>
 </div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
 <script>
 function toggleNav() {
   var sb = document.getElementById('sidebar');
@@ -872,5 +745,7 @@ document.addEventListener('click', function(e) {
 });
 </script>
 <script src="../../js/progress.js"></script>
+
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 </html>
