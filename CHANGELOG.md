@@ -1,103 +1,32 @@
-# Changelog - AWS Data Mastery
+# Changelog
 
-Todas as mudanças notáveis para o repositório **AWS Data Mastery** são documentadas neste arquivo.
+Todos as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [v1.8.1] - Unreleased
+O formato baseia-se em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
+e este projeto adere ao [Semantic Versioning](https://semver.org/).
 
-### Adicionado
-- **Case 36: Arquitetura de Dados para Captação Líquida**: Adicionado novo case avançado explorando a dualidade entre Speed Layer (Intraday Streaming com Kinesis/MSK e Flink) e Batch Layer (Processamento massivo e oficial de 2TB com EMR Serverless e Iceberg).
-- **Data Product 'Captação Líquida'**: Incorporação do README simulado com Dicionário de Dados e Contrato de Dados (dbt) detalhando métricas financeiras (Aportes e Resgates) validadas.
-- **Business Value Pitch**: Detalhamento do valor de negócio focado na melhoria de resposta comercial (Intraday) e conciliação regulatória.
+## [Unreleased]
 
-## [v1.8.0] - 2026-06-16
+### Added
+- **README.md** e **CHANGELOG.md** adicionados para orientar novos desenvolvedores.
+- **Apache Iceberg Deep Dive**: Novos tópicos avançados adicionados em `apache-iceberg.html`, incluindo Time Travel via Amazon Athena e operações de Schema Evolution sem a necessidade de reescrever dados (`Zero Data Rewrite`).
+- Inclusão do **Apache Iceberg** no Roadmap da Index e nos "Bento Cards" principais, destacando sua importância para arquiteturas de Storage & Lakehouse.
+- **Novos Bento Cards na Home Page**: 12 novos cards adicionados ao `index.html` para unificar e referenciar as páginas desmembradas recentemente (DataOps, Plataforma, Networking, Spark API, Spark UI, EMR, Glue & Flink, PMO, Soft Skills).
+- **Ícones Oficiais**: Inclusão do logo oficial do Apache Spark (SVG vetorizado) nos cards referentes a Spark.
 
-### Adicionado
-- **Novos Cases Avançados e Mega Case**: Injeção de novos cenários arquiteturais na aba Prática & Cases (incluindo Health Lakehouse HIPAA e Real-time Fraud Detection), coroados por um **Mega Case** interdisciplinar que engloba desafios práticos simultâneos de MLOps, DataOps, FinOps, Streaming e Batch Processing.
-- **Aprofundamento em Respostas Interativas**: Expansão e refinamento técnico das respostas em Perguntas de Engenharia e Governança, explorando conceitos como OpenSearch Vector Store RAG, DMS Schema Evolution (DDL), Lake Formation Cell-Level Security e Flink Unaligned Checkpoints.
+### Changed
+- Sincronização global da navegação lateral (Sidebar) em **todas as páginas HTML** para incluir a Masterclass sobre Apache Iceberg de maneira unificada.
+- Layout flexbox aprimorado nas seções do Apache Iceberg para acomodar dicas dinâmicas.
+- **Padronização de Layout na Home**: Atualização de cards minimalistas (bento-small) para cards completos (bento-large) com descrições consistentes para Lakehouse, Iceberg, Segurança e FinOps.
 
-### Modificado
-- **Refatoração Massiva de Diagramas (Draw.io)**: Substituição de diversos diagramas "placeholder" (que continham apenas retângulos cinzas genéricos) por topologias completas de rede e infraestrutura utilizando rigorosamente o pacote vetorial atualizado `mxgraph.aws4`.
-- **Renderização e Parsing XML**: Correção sistêmica de erros de sintaxe (aspas não escapadas, quebras de linha irregulares e falta de `&quot;`) em dezenas de instâncias `data-mxgraph` que causavam a "tela branca" ou desaparecimento de diagramas na árvore DOM.
-- **Restauração de Conectores (Edges)**: Injeção programática de tags `<mxGeometry>` ausentes em todos os nós de conexão do Draw.io, restaurando o roteamento visual das setas entre os ícones da arquitetura.
+### Fixed
+- Correção crítica no parser do Draw.io (`DOMParser`) nas páginas do portal, especialmente `financas-dados.html`, convertendo tags literais HTML (`<mxCell`) para as respectivas entidades XML compatíveis (`&lt;mxCell`) dentro dos payloads JSON do Draw.io, evitando erros fatais de renderização.
+- Correção definitiva da arquitetura Draw.io corporativa (`financas-dados.html`) implementando *triple-layer escaping* correto e referenciando os ícones da AWS com caminhos absolutos do repositório para evitar quebras relativas.
+- Correção de quebra do Grid HTML (Bento Cards) no `index.html`, onde fechamentos prematuros e falta de `</div>` causavam aninhamento de cards e evasão do grid principal.
+- Correção no card de DataOps & MLOps removendo ícone inexistente do SageMaker que quebrava o visual, isolando o logo do AWS Bedrock.
 
-## [v1.7.1] - 2026-06-15
-
-### Modificado
-- **Playbook de Crises (Refatoração UX & Consistência)**: 
-  - Adição de Matrizes de Comunicação Executiva para todos os cenários de crises avançados (DynamoDB Hot Partitions, Athena Cost Explosion, SQS Poison Pill, Ransomware).
-  - Reclassificação visual e arquitetural da crise de Ransomware (agora padronizada como *Crise 15*).
-  - O Template de Comunicação *RFO (Reason For Outage)* foi deslocado do playbook técnico para o módulo de Soft Skills & Liderança, respeitando a taxonomia do portal.
-- **Iconografia Arquitetural**: Corrigidos bugs visuais nos diagramas; *DynamoDB Streams* e *AWS KMS* agora utilizam a correta sintaxe e os ícones oficiais do pacote `mxgraph.aws4`.
-
-## [v1.7.0] - 2026-06-14
-
-### Adicionado
-- **Python Legend**: Nova página avançada cobrindo Boas Práticas, OOP Massivo e Design Patterns aplicados à Engenharia de Dados (`pages/fundamentos/python-legend.html`).
-- **Software Testing na Engenharia de Dados**: Nova página dissecando a pirâmide de testes para dados (Unit/Mocks, Integration via PySpark local, E2E) e Data Quality as Code (`pages/linguagem/testing.html`).
-- **SQL Mastery**: Adição oficial do módulo ao portal e integração profunda no menu lateral na aba de Linguagem e IaC (`pages/fundamentos/sql-mastery.html`).
-- **FinOps AWS Cost Explorer**: Nova seção aprofundada com trade-offs entre serviços S3, DynamoDB, EMR e Redshift; dicas de taggeamento e anomalias financeiras.
-- **AWS Certification Gaps**: Injeção de questões e cenários de prova baseados nas certificações SAA-C03 e DEA-C01 referentes a resiliência Multi-Region, Direct Connect, Athena Partition Projection e Redshift Vacuum em `perguntas-arquitetura.html` e `perguntas-engenharia.html`.
-- **Diagramas Técnicos (Draw.io)**: Adição de 3 novos diagramas ilustrativos para ciclo de vida do Python, Estrutura de Projeto em Pastas e Pirâmide de Testes.
-
-### Modificado
-- **Linguagem & IaC Taxonomy**: Menu lateral reestruturado. Python Legend, SQL Mastery, Testes com Pytest e Terraform agora dividem o mesmo pilar no sidebar para fluidez de estudos.
-- **Layout Reference Cards**: Padronização arquitetural da seção de "Referências Bibliográficas" de `testing.html` utilizando o modelo `grid-2` com cartões customizados.
-- **Bento Grid & Roadmap**: Atualização do mapa principal (`index.html`) para englobar as novas rotas. O cartão de Prática & Cases foi reduzido para um tamanho modular simétrico, equilibrando o layout da homepage.
-- **Progresso e Telemetria**: Injeção sistêmica do motor `progress.js` nas novas páginas de GenAI e Testes que estavam sem rastreamento de progresso do usuário.
-
-## [v1.6.0] - 2026-06-14
-
-### Adicionado
-- **Arquitetura de Dados (Power Designer & IaC)**: Mergulho profundo em modelagem física e lógica.
-  - Diagramas lógicos RDBMS para E-Commerce, ERPs (Junction Table N:M) e RH (Self-Referencing) injetados em Computação e Bancos.
-  - Padrões de acesso NoSQL massivos no DynamoDB (Adjacency List para Redes Sociais, Time-Series para IoT e Global Secondary Index para Gaming Leaderboards).
-  - Blocos de infraestrutura como código (Terraform HCL) acoplados diretamente sob cada diagrama para provisionamento imediato.
-- **Deep Dive: Mensageria (SQS & SNS)**: Página inteiramente refatorada com o padrão ouro corporativo.
-  - Dissecados os dilemas e configurações críticas: Long Polling, Batch Window, FIFO vs Standard e Poison Pills.
-  - Novas arquiteturas em Draw.io: Padrão Fan-Out com Filtros SNS (Message Attributes) e Ciclo de Vida da Mensagem detalhando o Visibility Timeout e a Dead Letter Queue (DLQ).
-- **Legendas Dinâmicas Educacionais**: Todos os novos diagramas arquiteturais ganharam painéis de legendas embutidos, mapeando e explicando o comportamento de conectores lógicos, zonas de invisibilidade e índices.
-
-### Modificado
-- **Renderização de Diagramas (CORS/CSP Fix)**: Transição absoluta de todas as referências de imagens da AWS nos arquivos `.drawio` do Github RAW para a CDN Global **JSDelivr**, blindando as pranchas arquiteturais contra bloqueios do visualizador e garantindo 100% de confiabilidade no carregamento dos ícones.
-- **Página Inicial (Index)**: Ajustes de redimensionamento e padronização visual nos cartões Bento Grid, acompanhados da atualização da imagem de *preview* de metadados (`aws-data-mastery-preview.png`).
-
-## [v1.5.0] - 2026-06-14
-
-### Adicionado
-- **Módulo de Containers & Docker**: Novo hub completo focado em infraestrutura de dados moderna (`containers-docker.html`), abrangendo teorias de Cgroups/Namespaces, Fargate vs EC2, imagens customizadas e arquitetura Híbrida (MWAA + ECS Fargate + EMR on EKS).
-- **Aprofundamentos Arquiteturais de Especialista**: Dezenas de novas seções e diagramas interativos (*draw.io*) focados no nível avançado de Engenharia:
-  - **Networking Fundamental**: Blocos CIDR, VPCs Públicas/Privadas e Security Groups.
-  - **Data Perimeter**: Topologia Hub & Spoke com Transit Gateway e VPC Endpoints.
-  - **CDC & DynamoDB**: Arquitetura real-time CDC integrando RDS, DynamoDB Streams e EMR Serverless para Data Lakes (Iceberg).
-  - **FinOps Serverless**: Pipeline Preditivo de anomalias financeiras utilizando Cost Explorer ML, EventBridge e auto-remediação.
-  - **Business & Topologies**: Mapeamento do Value Stream e Topologias de Time de Dados.
-- **Novas Badges & Gameficação**: Novo SVG oficial do Docker implementado no Bento Grid, e nova conquista "*Mestre em Containers*" adicionada ao motor de rastreamento (`progress.js`).
-- **Scripts de Screenshot Automático**: Criação de automação Node.js (Playwright) para captura programática de *previews* visuais do portal para documentação no README.
-
-## [v1.4.0] - 2026-06-14### Adicionado
-- **Data Quality & Business Quality**: Criação de novas páginas completas (`data-quality.html`) englobando os conceitos essenciais da AWS (Circuit Breakers no Glue, Macie, regras Deequ) e o pilar de *Business Quality*.
-- **Gamificação no Bento Grid**: As barras de porcentagem do painel gamificado agora interagem e preenchem progressivamente de forma embutida na base de cada card do Bento Grid.
-
-### Modificado
-- **Nova Interface Bento Box**: Fusão impecável do Ecossistema Core com as Trilhas de Especialização, adotando o design assíncrono moderno (Bento Box) contendo ícones AWS de alta resolução empilhados de forma inteligente.
-- **Dashboard Global Refatorado**: O *dashboard* central de progresso e Conquistas (Badges com animação em SVG) foi reposicionado organicamente ao redor do painel de navegação (Bento Grid) mantendo a estrutura gamificada sem sobrecarregar a UX.
-
-## [v1.3.0] - 2026-06-13
-
-### Adicionado
-- **Macro Temas na Sidebar**: Agrupamento lógico extenso de tópicos do Apache Spark & EMR em categorias (SPARK CORE & INTERNALS, DESENVOLVIMENTO & TUNING, DEBUGGING, AWS EMR & GLUE, OUTROS MOTORES).
-- **Gamificação Integrada Dinâmica**: Arquivo `progress.js` inteiramente refatorado para consumir automaticamente a árvore de links do sidebar, garantindo que o percentual rastreie 100% das páginas adicionadas (Cases, Crises, PMO).
-- **Novos Diagramas AWS 2026**: Adição e injeção de dezenas de novos diagramas lógicos (`mxgraph`) diretamente em seções teóricas que antes não possuíam conteúdo visual (ex: Playbook de Crises, Cases Multirregião, FinOps).
-- **Identidade Visual**: Transição massiva de todos os componentes antigos para a paleta Dark Theme (Fundo `#080f1e`) utilizando ícones oficiais da biblioteca AWS 2026.
-
-### Modificado
-- **Ecossistema Core AWS**: Seção movida no `index.html` para figurar antes do Mapa da Trilha de Especialização.
-- **Limpeza de Repositório**: Refinamento do arquivo `.gitignore` isolando os scripts de engenharia e montagem de artefatos (`*.py`, `*.txt`).
-- **README**: Atualização para refletir os novos temas arquiteturais.
-
-## [v1.2.0] - Versões Anteriores
-
-### Adicionado
-- Páginas Fundamentais: PMO & SME de Dados, Engenharia de Dados & POO, Finanças em Dados.
-- Hubs de Prática: Playbook de Crises, 15+ Cases de Arquitetura.
-- Simuladores Interativos de Entrevista (Arquitetura, Governança, Engenharia).
+## [1.1.0] - 2026-06-30
+### Added
+- Reestruturação completa do projeto (Separação massiva).
+- Criação de diagramas de infraestrutura Draw.io diretamente inseridos através das tags `<mxGraphModel>`.
+- Injeção automática das barras laterais de navegação para interligar todos os tópicos de arquitetura AWS.
