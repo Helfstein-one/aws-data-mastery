@@ -952,15 +952,46 @@
     const badgesContainer = document.getElementById("dashboard-badges");
 
     if (headerContainer) {
+      const currProgress = loadProgress();
+      let nextLink = "#";
+      let nextLinkText = "Começar Trilha";
+      let startedModule = null;
+      
+      for (const modId in stats.modules) {
+        if (stats.modules[modId].percent > 0 && stats.modules[modId].percent < 100) {
+          startedModule = modId;
+          break;
+        }
+      }
+      if (!startedModule) {
+        for (const modId in stats.modules) {
+          if (stats.modules[modId].percent === 0) {
+            startedModule = modId;
+            break;
+          }
+        }
+      }
+      
+      if (startedModule) {
+        const modData = MODULES[startedModule];
+        for (const item of modData.items) {
+          if (!currProgress[item]) {
+            nextLink = item;
+            nextLinkText = "Continuar: " + modData.name.replace(/[^a-zA-Z0-9\s&]/g, '').trim();
+            break;
+          }
+        }
+      }
+
       headerContainer.innerHTML = `
         <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 32px; display: grid; grid-template-columns: 1fr 2fr; gap: 40px; align-items: center; box-shadow: 0 4px 6px rgba(15, 23, 42, 0.05);" class="db-grid-mobile">
           <!-- Circular Progress -->
           <div style="display: flex; flex-direction: column; align-items: center; border-right: 1px solid var(--border); padding-right: 40px;" class="db-circle-mobile">
-            <h3 style="margin: 0 0 16px; font-family: 'Fraunces', serif; font-size: 1.3rem; color: var(--navy);">Progresso Global</h3>
+            <h3 style="margin: 0 0 16px; font-family: var(--body-font); font-size: 1.3rem; color: var(--text);">Progresso Global</h3>
             <div style="position: relative; width: 140px; height: 140px;">
               <svg width="140" height="140" viewBox="0 0 140 140" style="transform: rotate(-90deg);">
                 <!-- Background track -->
-                <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(15, 23, 42, 0.05)" stroke-width="12" />
+                <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255, 255, 255, 0.05)" stroke-width="12" />
                 <!-- Progress bar -->
                 <circle cx="70" cy="70" r="60" fill="none" stroke="url(#global-grad)" stroke-width="12" stroke-linecap="round" 
                   stroke-dasharray="376.99" stroke-dashoffset="${376.99 - (376.99 * stats.percent / 100)}" 
@@ -973,7 +1004,7 @@
                 </defs>
               </svg>
               <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                <span style="font-size: 2rem; font-weight: 800; color: var(--navy); line-height: 1;">${stats.percent}%</span>
+                <span style="font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1;">${stats.percent}%</span>
               </div>
             </div>
           </div>
@@ -981,15 +1012,18 @@
           <!-- Breakdown & Actions -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" class="db-breakdown-mobile">
             <div>
-              <div style="font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Módulos Concluídos</div>
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--navy);">${Object.values(stats.modules).filter(m => m.percent === 100).length} <span style="font-size: 1rem; color: var(--muted); font-weight: 400;">de ${Object.keys(stats.modules).length}</span></div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Módulos Concluídos</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--text);">${Object.values(stats.modules).filter(m => m.percent === 100).length} <span style="font-size: 1rem; color: var(--text-muted); font-weight: 400;">de ${Object.keys(stats.modules).length}</span></div>
             </div>
             <div>
-              <div style="font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Páginas e Tópicos</div>
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--navy);">${stats.completed} <span style="font-size: 1rem; color: var(--muted); font-weight: 400;">de ${stats.total}</span></div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Páginas e Tópicos</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--text);">${stats.completed} <span style="font-size: 1rem; color: var(--text-muted); font-weight: 400;">de ${stats.total}</span></div>
             </div>
-            <div style="grid-column: 1 / -1; margin-top: 12px; display: flex; gap: 12px;">
-              <button id="reset-progress-btn" style="background: transparent; border: 1px dashed var(--warn); color: var(--warn); font-family: 'DM Mono', monospace; font-size: 10px; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+            <div style="grid-column: 1 / -1; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+              <a href="${nextLink}" style="display: inline-flex; align-items: center; justify-content: center; background: var(--spark); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: background 0.2s;">
+                ▶ ${nextLinkText}
+              </a>
+              <button id="reset-progress-btn" style="background: transparent; border: 1px dashed var(--warn); color: var(--warn); font-family: var(--body-font); font-size: 0.9rem; padding: 9px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
                 Resetar Progresso
               </button>
             </div>
