@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphRAG & Knowledge Graphs - AWS Data Specialist</title>
+  <meta name="description" content="GenAI & Dados - Implementando GraphRAG usando grafos de conhecimento com Amazon Neptune e GenAI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<nav id="sidebar"></nav>
+
+<div id="main-content">
+  <header>
+    <div class="hamburger" id="hamburger" onclick="toggleNav()">☰</div>
+    <div class="header-content">
+      <div class="header-titles">
+        <div class="header-breadcrumb">🤖 Operações & IA / GenAI e Dados / Capítulo 8</div>
+        <h1>GraphRAG & Grafos de Conhecimento</h1>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section" id="intro">
+      <h2>1. O Limite do VectorDB Clássico</h2>
+      <p>Bancos de dados vetoriais (OpenSearch, Pinecone, pgvector) são incríveis para buscar <strong>similaridade semântica</strong>. No entanto, eles falham miseravelmente quando a pergunta do usuário exige navegação complexa por relacionamentos (<em>Multi-hop reasoning</em>).</p>
+
+      <div class="alert alert-warning">
+        <strong>O Problema:</strong> Se você perguntar: <em>"Quais diretores que trabalharam na Empresa A também investiram na Startup B?"</em>, o RAG tradicional tentará recuperar textos que falem de "Diretores, Empresa A, Startup B". Ele provavelmente recuperará pedaços de texto irrelevantes e falhará em conectar os pontos lógicos se eles estiverem espalhados em dezoito documentos diferentes.
+      </div>
+    </section>
+
+    <section class="section" id="graphrag">
+      <h2>2. A Solução: GraphRAG</h2>
+      <p><strong>GraphRAG</strong> une a abstração semântica dos LLMs com a precisão relacional estruturada dos Grafos de Conhecimento (Knowledge Graphs). Em vez de extrair pedaços de texto brutos, o fluxo consiste em extrair <em>Entidades</em> e <em>Relacionamentos</em>, populando um Banco de Grafos.</p>
+      
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon" style="background: rgba(167, 139, 250, 0.1); color: #a78bfa;">🧠</div>
+          <h3>1. Extração (LLM)</h3>
+          <p>Você passa documentos brutos para um LLM extrair Triplas: <code>(Sujeito) -> [Predicado] -> (Objeto)</code>. Ex: (João) -> [É_CEO] -> (Empresa_X).</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="background: rgba(22, 163, 74, 0.1); color: #16a34a;">🕸️</div>
+          <h3>2. Armazenamento (Grafo)</h3>
+          <p>Essas conexões são salvas em um banco de grafos especializado como o <strong>Amazon Neptune</strong> (suporta Gremlin ou openCypher).</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">🔍</div>
+          <h3>3. GraphRAG na Prática</h3>
+          <p>Na hora da pergunta, usamos o LLM para gerar uma query de Grafo (Text-to-Cypher), navegamos pelo relacionamento exato e devolvemos o sub-grafo exato como contexto para o prompt final!</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="hibrido">
+      <h2>3. Arquitetura Híbrida: VectorDB + GraphDB</h2>
+      <p>A arquitetura ideal Enterprise não substitui o Vetor pelo Grafo. Ela usa os dois em conjunto!</p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Cenário de Busca</th>
+              <th>Tecnologia Vencedora</th>
+              <th>Por quê?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><em>"Quais são os riscos macroeconômicos descritos no PDF de compliance do ano passado?"</em></td>
+              <td><strong>VectorDB (Embeddings)</strong></td>
+              <td>Busca conceitual abstrata. Não tem caminho relacional claro, é pura semântica.</td>
+            </tr>
+            <tr>
+              <td><em>"Quais filiais do Sudeste compartilham fornecedores que tiveram atraso acima de 30 dias?"</em></td>
+              <td><strong>Knowledge Graph (Neptune)</strong></td>
+              <td>Mapeia relações explícitas: (Filial) -> [COMPRA_DE] -> (Fornecedor) -> [TEVE] -> (Atraso).</td>
+            </tr>
+            <tr>
+              <td><em>"Encontre o processo criminal que cita um padrão de fraude fiscal na rede do executivo Y."</em></td>
+              <td><strong>Vector + Graph (Híbrido)</strong></td>
+              <td>Vetor encontra o "padrão de fraude" (texto abstrato). Grafo mapeia a "rede de contatos do executivo Y". O RAG junta os dois!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-header">
+        <span>Exemplo: Extraindo Conhecimento com Cypher (Neo4j / Neptune)</span>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-sql">MATCH (d:Diretor)-[:TRABALHOU_EM]->(e:Empresa {nome: "Empresa A"})
+MATCH (d)-[:INVESTIU_EM]->(s:Startup {nome: "Startup B"})
+RETURN d.nome, d.cargo</code></pre>
+      </div>
+      <p>O LLM recebe esses resultados diretos e estruturados na nuvem da AWS, garantindo 0% de alucinação na identificação de pessoas!</p>
+    </section>
+
+    <div class="page-nav">
+      <a href="genai-llmops-evaluation.html" class="return-btn" style="background: transparent; border: 1px solid var(--border); color: var(--text);">
+        <span>← LLMOps & Evaluation</span>
+      </a>
+      <a href="genai-multimodal-cognitivo.html" class="return-btn">
+        <span>Próximo: Multimodal & OCR Cognitivo →</span>
+      </a>
+    </div>
+  </main>
+</div>
+
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script>
+  function toggleNav() {
+    var sb = document.getElementById('sidebar');
+    var main = document.getElementById('main-content');
+    if (sb) sb.classList.toggle('open');
+    if (main) main.classList.toggle('sidebar-open');
+  }
+  
+  function toggleCategory(catId, headerEl) {
+    var content = document.getElementById(catId);
+    var arrow = headerEl.querySelector('.arrow');
+    if (!content) return;
+    var isOpen = content.classList.contains('open');
+    if (isOpen) {
+      content.classList.remove('open');
+      headerEl.classList.remove('active');
+      if (arrow) arrow.innerHTML = '▶';
+    } else {
+      content.classList.add('open');
+      headerEl.classList.add('active');
+      if (arrow) arrow.innerHTML = '▼';
+    }
+  }
+</script>
+</body>
+</html>

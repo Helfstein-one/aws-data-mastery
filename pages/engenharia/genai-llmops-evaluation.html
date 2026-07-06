@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLMOps & Evaluation - AWS Data Specialist</title>
+  <meta name="description" content="GenAI & Dados - Métricas de avaliação de RAG (RAGAS), Observabilidade e Tracing com LLMOps.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<nav id="sidebar"></nav>
+
+<div id="main-content">
+  <header>
+    <div class="hamburger" id="hamburger" onclick="toggleNav()">☰</div>
+    <div class="header-content">
+      <div class="header-titles">
+        <div class="header-breadcrumb">🤖 Operações & IA / GenAI e Dados / Capítulo 7</div>
+        <h1>LLMOps & Model Evaluation</h1>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section" id="llmops">
+      <h2>1. O Problema da Avaliação em GenAI</h2>
+      <p>Diferente do Machine Learning tradicional (onde você avalia a acurácia, F1-Score ou RMSE de forma objetiva), avaliar as respostas de um LLM é muito mais subjetivo. Como saber matematicamente se a resposta de um RAG (Retrieval-Augmented Generation) foi "boa" ou "ruim"? É aqui que entram os frameworks de <strong>Evaluation</strong> e a disciplina de <strong>LLMOps</strong>.</p>
+      
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon" style="background: rgba(167, 139, 250, 0.1); color: #a78bfa;">🎯</div>
+          <h3>Model Evaluation (Avaliação)</h3>
+          <p>Medir sistematicamente a qualidade (Alucinação, Relevância, Fidelidade) das respostas geradas pelo seu LLM contra um <em>Ground Truth</em> ou dataset de ouro.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="background: rgba(167, 139, 250, 0.1); color: #a78bfa;">🕵️</div>
+          <h3>Tracing & Observability</h3>
+          <p>Monitorar o pipeline em produção. Capturar o Prompt, a latência do VectorDB, o consumo de tokens e a cadeia de pensamento (CoT) dos agentes.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="background: rgba(167, 139, 250, 0.1); color: #a78bfa;">⚙️</div>
+          <h3>Prompt Tracking</h3>
+          <p>Versionar prompts como código (Git) ou no MLflow. Evita o caos de não saber qual prompt gerou qual resposta em produção.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="ragas">
+      <h2>2. Avaliando RAG (Framework RAGAS)</h2>
+      <p>O <strong>RAGAS</strong> (Retrieval Augmented Generation Assessment) é o padrão de mercado para avaliar sistemas RAG. Ele isola a avaliação em dois eixos: <strong>Retriever</strong> (A busca no VectorDB foi boa?) e <strong>Generator</strong> (O LLM gerou a resposta corretamente baseada no contexto?).</p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Métrica (RAGAS)</th>
+              <th>Avalia o quê?</th>
+              <th>Pergunta Chave</th>
+              <th>Como resolver pontuação baixa?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Faithfulness</strong></td>
+              <td>Generation</td>
+              <td>A resposta foi baseada APENAS no contexto recuperado? (Evita alucinação)</td>
+              <td>Melhorar o Prompt (Ex: <em>"Não use conhecimento prévio, responda apenas com base no texto."</em>)</td>
+            </tr>
+            <tr>
+              <td><strong>Answer Relevance</strong></td>
+              <td>Generation</td>
+              <td>A resposta gerada realmente responde à pergunta inicial do usuário?</td>
+              <td>Usar um LLM mais inteligente (Claude 3.5 Sonnet / LLaMA 3 70B).</td>
+            </tr>
+            <tr>
+              <td><strong>Context Precision</strong></td>
+              <td>Retrieval</td>
+              <td>Os chunks mais relevantes foram retornados no TOPO da busca (rank 1 e 2)?</td>
+              <td>Adicionar um <strong>Re-ranker</strong> (ex: Cohere ReRank) após a busca semântica.</td>
+            </tr>
+            <tr>
+              <td><strong>Context Recall</strong></td>
+              <td>Retrieval</td>
+              <td>O contexto recuperado tem informações suficientes para responder a pergunta?</td>
+              <td>Melhorar a estratégia de <em>Chunking</em> ou fazer Busca Híbrida.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info">
+        <strong>💡 LLM-as-a-Judge:</strong> O RAGAS não usa humanos para dar a nota (0.0 a 1.0) para cada métrica. Ele usa um LLM forte (Geralmente Claude Opus ou GPT-4) atuando como "Juiz" para avaliar a saída do seu sistema RAG de produção.
+      </div>
+    </section>
+
+    <section class="section" id="tracing">
+      <h2>3. Tracing & Observabilidade de Agentes</h2>
+      <p>Quando você constrói Agentes ou fluxos orquestrados via LangChain/LlamaIndex, um simples prompt do usuário gera múltiplas chamadas à API, queries no banco e decisões lógicas ocultas. Sem <strong>Tracing</strong>, você fica cego.</p>
+
+      <div class="code-header">
+        <span>Monitorando o Pipeline (LangSmith / MLflow)</span>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-text">Trace ID: 9f8a-3c2b (Latência Total: 3.4s | Custo Total: $0.003)
+
+└─ User Input: "Quantos clientes temos em atraso e quem é o devedor mestre?"
+   ├─ Tool: Text-to-SQL (Latência: 1.2s | Tokens: 400)
+   │  └─ Output: SELECT COUNT(*) FROM tb_clientes WHERE status = 'atraso'
+   ├─ Tool: Vector Search (Latência: 0.5s | Documents: 3)
+   │  └─ Output: [Doc1: "O devedor mestre é a Empresa X..."]
+   └─ LLM Synthesize (Latência: 1.7s | Tokens: 850)
+      └─ Output: "Temos 450 clientes em atraso. O devedor mestre é a Empresa X."
+</code></pre>
+      </div>
+
+      <p>No ecossistema corporativo, isso é feito interceptando as chamadas via <strong>Callbacks</strong>. Na AWS, você pode enviar esses rastros de telemetria diretamente para o <strong>Amazon Bedrock (Model Invocation Logging)</strong> gravando no CloudWatch ou S3.</p>
+    </section>
+
+    <div class="page-nav">
+      <a href="genai-security-finetuning.html" class="return-btn" style="background: transparent; border: 1px solid var(--border); color: var(--text);">
+        <span>← Segurança & Fine-Tuning</span>
+      </a>
+      <a href="genai-graphrag-neptune.html" class="return-btn">
+        <span>Próximo: GraphRAG & Grafos →</span>
+      </a>
+    </div>
+  </main>
+</div>
+
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script>
+  function toggleNav() {
+    var sb = document.getElementById('sidebar');
+    var main = document.getElementById('main-content');
+    if (sb) sb.classList.toggle('open');
+    if (main) main.classList.toggle('sidebar-open');
+  }
+  
+  function toggleCategory(catId, headerEl) {
+    var content = document.getElementById(catId);
+    var arrow = headerEl.querySelector('.arrow');
+    if (!content) return;
+    var isOpen = content.classList.contains('open');
+    if (isOpen) {
+      content.classList.remove('open');
+      headerEl.classList.remove('active');
+      if (arrow) arrow.innerHTML = '▶';
+    } else {
+      content.classList.add('open');
+      headerEl.classList.add('active');
+      if (arrow) arrow.innerHTML = '▼';
+    }
+  }
+</script>
+</body>
+</html>

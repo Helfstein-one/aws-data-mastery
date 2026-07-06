@@ -219,7 +219,10 @@
         "genai-agents-prompting.html#agentes",
         "genai-data-engineering.html#dataeng",
         "genai-system-design.html#sdd",
-        "genai-security-finetuning.html#finetuning"
+        "genai-security-finetuning.html#finetuning",
+        "genai-llmops-evaluation.html#llmops",
+        "genai-graphrag-neptune.html#intro",
+        "genai-multimodal-cognitivo.html#multimodal"
       ]
     },
     dataops: {
