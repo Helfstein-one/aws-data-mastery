@@ -531,38 +531,58 @@
       return;
     }
     
-    // Cria o FAB
+    // Cria o Container do FAB
     fab = document.createElement("div");
     fab.id = "progress-fab";
-    fab.title = isCompleted ? "Aula Concluída (Clique para desmarcar)" : "Marcar Aula como Concluída";
+    fab.title = isCompleted ? "Aula Concluída (Clique para desmarcar)" : "Rolar a página ou Clicar para concluir";
     
-    // Estilos base do FAB
+    // Estilos base do FAB Container
     fab.style.position = "fixed";
     fab.style.bottom = "110px";
     fab.style.right = "40px";
-    fab.style.width = "60px";
-    fab.style.height = "60px";
+    fab.style.width = "64px";
+    fab.style.height = "64px";
     fab.style.borderRadius = "50%";
     fab.style.display = "flex";
     fab.style.alignItems = "center";
     fab.style.justifyContent = "center";
     fab.style.cursor = "pointer";
     fab.style.zIndex = "9999";
-    fab.style.transition = "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+    fab.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease";
     fab.style.boxShadow = "0 10px 25px rgba(0,0,0,0.5)";
     
-    // Ícone SVG (Checkmark)
-    fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 28px; height: 28px; transition: all 0.3s ease;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    // Raio e Circunferência do anel de progresso
+    const r = 30;
+    const circ = 2 * Math.PI * r;
+    
+    // SVG Complexo com Anel de Progresso + Ícone de Check
+    fab.innerHTML = `
+      <svg width="64" height="64" viewBox="0 0 64 64" style="position: absolute; top: 0; left: 0; transform: rotate(-90deg);">
+        <!-- Fundo Escuro do Botão -->
+        <circle cx="32" cy="32" r="28" fill="rgba(15, 23, 42, 0.8)" stroke="#334155" stroke-width="2" class="fab-bg-circle" style="backdrop-filter: blur(8px); transition: all 0.3s ease;"></circle>
+        
+        <!-- Anel de Progresso de Scroll -->
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="${moduleColor}" stroke-width="4" stroke-linecap="round" 
+                stroke-dasharray="${circ}" stroke-dashoffset="${circ}" class="fab-progress-ring" 
+                style="transition: stroke-dashoffset 0.1s linear; opacity: 0;"></circle>
+      </svg>
+      
+      <!-- Ícone Checkmark -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="fab-icon" style="width: 28px; height: 28px; transition: all 0.3s ease; position: relative; z-index: 2; color: #64748b;">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
     
     // Aplica estado inicial
     updateFabState(fab, isCompleted, moduleColor);
     
-    // Evento Hover
+    // Efeito Hover
     fab.addEventListener("mouseenter", () => {
       fab.style.transform = "scale(1.1) translateY(-5px)";
-      if (!!!loadProgress()[pageName]) {
-        fab.style.borderColor = moduleColor;
-        fab.style.color = moduleColor;
+      const isDone = !!loadProgress()[pageName];
+      if (!isDone) {
+        fab.querySelector('.fab-bg-circle').style.stroke = moduleColor;
+        fab.querySelector('.fab-icon').style.color = moduleColor;
       }
     });
     
@@ -571,10 +591,15 @@
       updateFabState(fab, !!loadProgress()[pageName], moduleColor);
     });
     
-    // Evento de Clique
-    fab.addEventListener("click", () => {
+    // Lógica de Clique e Auto-Complete
+    const handleCompletion = (forceState = null) => {
       const currProgress = loadProgress();
-      const newState = !currProgress[pageName];
+      const currentState = currProgress[pageName];
+      const newState = forceState !== null ? forceState : !currentState;
+      
+      // Se já tá no estado que a gente quer, ignora (útil pro scroll não ficar floodando)
+      if (currentState === newState) return;
+      
       currProgress[pageName] = newState;
       
       // Efeito de pulso no clique
@@ -582,32 +607,76 @@
       setTimeout(() => {
         fab.style.transform = "scale(1.1)";
         updateFabState(fab, newState, moduleColor);
-        saveProgress(currProgress); // salva e atualiza a UI inteira
+        saveProgress(currProgress);
         setTimeout(() => {
           fab.style.transform = "scale(1)";
         }, 150);
       }, 100);
-    });
+    };
+    
+    fab.addEventListener("click", () => handleCompletion());
+    
+    // === TRACKING DE SCROLL ===
+    window.addEventListener("scroll", () => {
+      const isDone = !!loadProgress()[pageName];
+      const ring = fab.querySelector('.fab-progress-ring');
+      
+      // Se já acabou a aula, o anel some e botão fica todo preenchido
+      if (isDone) {
+        ring.style.opacity = "0";
+        return;
+      }
+      
+      // Mostra o anel sutilmente enquanto a pessoa desce a página
+      ring.style.opacity = "1";
+      
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const documentHeight = Math.max(
+        document.body.scrollHeight, document.documentElement.scrollHeight,
+        document.body.offsetHeight, document.documentElement.offsetHeight,
+        document.documentElement.clientHeight
+      );
+      
+      const scrollable = documentHeight - windowHeight;
+      // Calcula porcentagem do scroll (0 a 1)
+      let scrolled = scrollable > 0 ? (scrollY / scrollable) : 1;
+      
+      // Atualiza o círculo SVG (offset)
+      const offset = circ - (scrolled * circ);
+      ring.style.strokeDashoffset = offset;
+      
+      // Se chegou em 98% da página, marca concluído automaticamente
+      if (scrolled >= 0.98) {
+        handleCompletion(true);
+      }
+    }, { passive: true });
     
     document.body.appendChild(fab);
   }
   
   function updateFabState(fab, isCompleted, color) {
+    const bgCircle = fab.querySelector('.fab-bg-circle');
+    const icon = fab.querySelector('.fab-icon');
+    const ring = fab.querySelector('.fab-progress-ring');
+    
     if (isCompleted) {
-      fab.style.background = color;
-      fab.style.color = "#ffffff";
-      fab.style.border = `2px solid ${color}`;
+      bgCircle.style.fill = color;
+      bgCircle.style.stroke = color;
+      icon.style.color = "#ffffff";
       fab.style.boxShadow = `0 10px 25px -5px ${color}80, 0 0 15px ${color}60`;
+      ring.style.opacity = "0"; // Esconde anel de progresso
     } else {
-      fab.style.background = "rgba(15, 23, 42, 0.8)";
-      fab.style.backdropFilter = "blur(8px)";
-      fab.style.color = "#64748b"; // Cinza inativo
-      fab.style.border = "2px solid #334155";
+      bgCircle.style.fill = "rgba(15, 23, 42, 0.8)";
+      bgCircle.style.stroke = "#334155";
+      icon.style.color = "#64748b"; // Cinza inativo
       fab.style.boxShadow = "0 10px 25px rgba(0,0,0,0.5)";
+      
+      // Reseta anel pro estado atual do scroll, senão fica sumido ao desmarcar no final da pag
+      ring.style.opacity = "1";
     }
   }
-
-  // Helper to generate dynamic premium SVG icons for academic badges
+// Helper to generate dynamic premium SVG icons for academic badges
   function getBadgeSVG(modId, hasCompleted) {
     const configs = {
       python: { 
