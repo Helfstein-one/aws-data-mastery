@@ -191,7 +191,7 @@
       items: [
         "data-engineering-oop.html"
       ]
-    },,
+    },
     testing: {
       name: "🧪 Software Testing",
       badge: "Engenheiro de Qualidade",
