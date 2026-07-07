@@ -857,6 +857,13 @@
         for (const item of modData.items) {
           if (!currProgress[item]) {
             nextLink = item;
+            
+            // Busca o link real e completo na sidebar
+            const sbLink = document.querySelector(`#sidebar a[href$="${item}"]`);
+            if (sbLink) {
+              nextLink = sbLink.getAttribute("href");
+            }
+            
             nextLinkText = "Continuar: " + modData.name.replace(/[^a-zA-Z0-9\s&]/g, '').trim();
             break;
           }
@@ -1150,6 +1157,11 @@
     document.head.appendChild(styleEl);
 
     // Renderiza a interface
+    updateAllUI();
+  });
+
+  // Re-renderiza a interface (especialmente o dashboard) quando o sidebar terminar de carregar de forma assíncrona
+  document.addEventListener('sidebarLoaded', () => {
     updateAllUI();
   });
 

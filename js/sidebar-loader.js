@@ -28,10 +28,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const sidebarEl = document.getElementById('sidebar');
             if (sidebarEl) {
                 sidebarEl.innerHTML = modifiedHtml;
-                
-                // Re-bind the toggle logic if the script expects it here, 
-                // but if toggleCategory is defined globally, it should still work since it uses inline onclick="toggleCategory(...)"
             }
+            // Emit custom event so other scripts (like progress.js) know the sidebar is ready
+            document.dispatchEvent(new Event('sidebarLoaded'));
         })
         .catch(err => console.error("Error loading sidebar:", err));
 });
