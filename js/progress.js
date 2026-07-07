@@ -7,455 +7,268 @@
 (function() {
   // Configuração das trilhas e suas respectivas seções/hashes para cálculo de progresso
   const MODULES = {
-    pmo: {
-      name: "📊 PMO & Sustentação",
-      badge: "Gerente de Dados",
+    // 1. Fundamentos & Engenharia de Software
+    sql: {
+      name: "🛢️ SQL Mastery",
+      badge: "Mestre do SQL",
+      color: "#0ea5e9",
+      items: ["sql-mastery.html"]
+    },
+    oop: {
+      name: "🐍 Python Legend",
+      badge: "Lenda Viva do Python",
       color: "#f43f5e",
-      items: [
-        "pmo-sme-dados.html#visao-geral",
-        "pmo-sme-dados.html#gestao-agil",
-        "pmo-sme-dados.html#negociacao-backlog",
-        "pmo-sme-dados.html#sustentacao",
-        "pmo-sme-dados.html#pareto-incidentes",
-        "pmo-sme-dados.html#fluxo-sustentacao",
-        "pmo-sme-dados.html#roadmap"
-      ]
+      items: ["python-legend.html"]
+    },
+    testing: {
+      name: "🧪 Software Testing",
+      badge: "Engenheiro de Qualidade",
+      color: "#10b981",
+      items: ["testing.html"]
     },
     architecture: {
       name: "📐 Arquitetura & Padrões",
       badge: "Arquiteto de Dados",
       color: "var(--arch)",
+      items: ["padroes-arquitetura.html"]
+    },
+    
+    // 2. Cloud & Infraestrutura Base
+    containers_docker: {
+      name: "🐳 Containers & Docker",
+      badge: "Capitão dos Containers",
+      color: "#3b82f6",
+      items: ["containers-docker.html"]
+    },
+    infra_operacional: {
+      name: "🏗️ Computação & Bancos",
+      badge: "Mestre em Computação e Bancos",
+      color: "#f43f5e",
+      items: ["computacao-bancos.html"]
+    },
+    networking: {
+      name: "🌐 Rede & Ingress de Dados",
+      badge: "Mestre das Redes",
+      color: "#06b6d4",
+      items: ["networking-ingress.html"]
+    },
+
+    // 3. Core de Engenharia de Dados
+    ingestion: {
+      name: "⚡ Ingestão & Streaming",
+      badge: "Mestre da Ingestão",
+      color: "var(--emr)",
+      items: ["ingestion.html"]
+    },
+    storage: {
+      name: "💾 Lakehouse & Storage",
+      badge: "Guardião do Storage",
+      color: "var(--arch)",
+      items: ["storage-lakehouse.html"]
+    },
+    "apache-spark-core": {
+      name: "⚙️ Spark Core",
+      badge: "Engenheiro de Spark",
+      color: "var(--spark)",
+      items: ["apache-spark-core.html"]
+    },
+    "apache-spark-api": {
+      name: "🧑‍💻 Spark API",
+      badge: "Mestre em Tuning",
+      color: "var(--spark)",
+      items: ["apache-spark-api.html"]
+    },
+    "spark-ui-troubleshooting": {
+      name: "🩺 UI & Troubleshooting",
+      badge: "Troubleshooter",
+      color: "var(--alert)",
+      items: ["spark-ui-troubleshooting.html"]
+    },
+    "aws-emr": {
+      name: "☁️ Amazon EMR",
+      badge: "Arquiteto EMR",
+      color: "#ec4899",
+      items: ["aws-emr.html"]
+    },
+    "aws-glue-flink": {
+      name: "🧩 Glue & Flink",
+      badge: "Especialista Serverless",
+      color: "var(--ext)",
+      items: ["aws-glue-flink.html"]
+    },
+    orquestracao: {
+      name: "⛓️ Orquestração de Dados",
+      badge: "Mestre da Orquestração",
+      color: "#a78bfa",
+      items: ["orquestracao-dados.html"]
+    },
+    serving: {
+      name: "📊 Analytics & Serving",
+      badge: "Mestre do Analytics",
+      color: "var(--genai)",
+      items: ["serving.html"]
+    },
+
+    // 4. DevOps, Segurança & Operações
+    terraform: {
+      name: "🛠️ Terraform / IaC",
+      badge: "Engenheiro de Automação",
+      color: "#8b5cf6",
+      items: ["terraform.html"]
+    },
+    security: {
+      name: "🛡️ Segurança & IaC",
+      badge: "Guardião de Segurança",
+      color: "var(--muted)",
+      items: ["governance-security.html"]
+    },
+    finops: {
+      name: "💸 FinOps & Custos",
+      badge: "Lenda das Finanças",
+      color: "var(--ok)",
+      items: ["finops.html"]
+    },
+    dataops: {
+      name: "⚙️ DataOps & MLOps",
+      badge: "Líder de Operations",
+      color: "#06b6d4",
+      items: ["dataops-mlops.html"]
+    },
+
+    // 5. Tópicos Avançados & Especialização
+    genai: {
+      name: "🤖 IA & GenAI",
+      badge: "Arquiteto de GenAI",
+      color: "#a78bfa",
       items: [
-        "architecture.html#pilares",
-        "architecture.html#mensageria",
-        "architecture.html#kafka",
-        "architecture.html#triggers",
-        "architecture.html#workflows",
-        "architecture.html#lakeformation",
-        "architecture.html#lambda",
-        "architecture.html#kappa",
-        "architecture.html#lakehouse",
-        "architecture.html#datamesh",
-        "architecture.html#modelagem-dados",
-        "architecture.html#data-product-management"
+        "genai-fundamentos.html",
+        "genai-rag-architectures.html",
+        "genai-agents-prompting.html",
+        "genai-data-engineering.html",
+        "genai-system-design.html",
+        "genai-security-finetuning.html",
+        "genai-llmops-evaluation.html",
+        "genai-graphrag-neptune.html",
+        "genai-multimodal-cognitivo.html"
       ]
     },
     plataforma: {
       name: "🏗️ Plataforma de Dados",
       badge: "Arquiteto de Plataforma",
       color: "var(--accent)",
-      items: [
-        "plataforma-dados.html#estrategico",
-        "plataforma-dados.html#cenario-cdc",
-        "plataforma-dados.html#cenario-sharing",
-        "plataforma-dados.html#cenario-lineage",
-        "plataforma-dados.html#cenario-llmops",
-        "plataforma-dados.html#topologia",
-        "plataforma-dados.html#arquitetura",
-        "plataforma-dados.html#alinhamento",
-        "plataforma-dados.html#perguntas"
-      ]
+      items: ["plataforma-dados.html"]
     },
-    ingestion: {
-      name: "⚡ Ingestão & Streaming",
-      badge: "Mestre da Ingestão",
-      color: "var(--emr)",
-      items: [
-        "ingestion.html#kinesis",
-        "ingestion.html#kinesis-avancado",
-        "ingestion.html#firehose",
-        "ingestion.html#firehose-avancado",
-        "ingestion.html#msk",
-        "ingestion.html#ecs-fargate",
-        "ingestion.html#dms",
-        "ingestion.html#dynamodb"
-      ]
-    },
-    
-    "apache-spark-core": {
-      name: "⚙️ Spark Core",
-      badge: "Engenheiro de Spark",
-      color: "var(--spark)",
-      items: [
-        "apache-spark-core.html#spark-conceitos",
-        "apache-spark-core.html#spark-arch",
-        "apache-spark-core.html#spark-yarn-pyramid",
-        "apache-spark-core.html#tungsten"
-      ]
-    },
-    "apache-spark-api": {
-      name: "🧑‍💻 Spark API",
-      badge: "Mestre em Tuning",
-      color: "var(--spark)",
-      items: [
-        "apache-spark-api.html#spark-skew",
-        "apache-spark-api.html#spark-advanced-functions",
-        "apache-spark-api.html#spark-joins"
-      ]
-    },
-    "spark-ui-troubleshooting": {
-      name: "🩺 UI & Troubleshooting",
-      badge: "Troubleshooter",
-      color: "var(--alert)",
-      items: [
-        "spark-ui-troubleshooting.html#spark-tuning",
-        "spark-ui-troubleshooting.html#spark-ui-deepdive",
-        "spark-ui-troubleshooting.html#spark-ui-advanced"
-      ]
-    },
-    "aws-emr": {
-      name: "☁️ Amazon EMR",
-      badge: "Arquiteto EMR",
-      color: "#ec4899",
-      items: [
-        "aws-emr.html#emr-ec2",
-        "aws-emr.html#emr-serverless",
-        "aws-emr.html#emr-configs"
-      ]
-    },
-    "aws-glue-flink": {
-      name: "🧩 Glue & Flink",
-      badge: "Especialista Serverless",
-      color: "var(--ext)",
-      items: [
-        "aws-glue-flink.html#glue-jobs",
-        "aws-glue-flink.html#flink-streaming"
-      ]
-    },
-    infra_operacional: {
-      name: "🏗️ Computação & Bancos",
-      badge: "Mestre em Computação e Bancos",
+    pmo: {
+      name: "📊 PMO & Sustentação",
+      badge: "Gerente de Dados",
       color: "#f43f5e",
-      items: [
-        "computacao-bancos.html#ecs",
-        "computacao-bancos.html#load-balancers",
-        "computacao-bancos.html#rds-aurora",
-        "computacao-bancos.html#operacao"
-      ]
-    },
-    orquestracao: {
-      name: "⛓️ Orquestração de Dados",
-      badge: "Mestre da Orquestração",
-      color: "#a78bfa",
-      items: [
-        "orquestracao-dados.html#teoria",
-        "orquestracao-dados.html#step-functions",
-        "orquestracao-dados.html#mwaa-airflow",
-        "orquestracao-dados.html#operacional"
-      ]
-    },
-    storage: {
-      name: "💾 Lakehouse & Storage",
-      badge: "Guardião do Storage",
-      color: "var(--arch)",
-      items: [
-        "storage-lakehouse.html#s3-camadas",
-        "storage-lakehouse.html#s3-tiers",
-        "storage-lakehouse.html#formatos",
-        "storage-lakehouse.html#iceberg",
-        "storage-lakehouse.html#iceberg-vs-delta",
-        "storage-lakehouse.html#iceberg-rest-catalog"
-      ]
-    },
-    serving: {
-      name: "📊 Analytics & Serving",
-      badge: "Mestre do Analytics",
-      color: "var(--genai)",
-      items: [
-        "serving.html#athena",
-        "serving.html#athena-trino-arch",
-        "serving.html#athena-avancado",
-        "serving.html#iceberg-manutencao",
-        "serving.html#redshift",
-        "serving.html#explain-tuning"
-      ]
-    },
-    security: {
-      name: "🛡️ Segurança & IaC",
-      badge: "Guardião de Segurança",
-      color: "var(--muted)",
-      items: [
-        "governance-security.html#lakeformation",
-        "governance-security.html#iam-kms",
-        "governance-security.html#secretsmanager",
-        "governance-security.html#observabilidade",
-        "governance-security.html#erros"
-      ]
-    },
-    networking: {
-      name: "🌐 Rede & Ingress de Dados",
-      badge: "Mestre das Redes",
-      color: "#06b6d4",
-      items: [
-        "networking-ingress.html#dns-cdn",
-        "networking-ingress.html#api-alb",
-        "networking-ingress.html#vpc-endpoints"
-      ]
-    },
-    api_gateway: {
-      name: "🔌 API Gateway Deep Dive",
-      badge: "Mestre do API Gateway",
-      color: "#7c3aed",
-      items: [
-        "api-gateway.html#fundamentos",
-        "api-gateway.html#crud-rest",
-        "api-gateway.html#async",
-        "api-gateway.html#terraform",
-        "api-gateway.html#integracoes",
-        "api-gateway.html#boas-praticas",
-        "api-gateway.html#observabilidade",
-        "api-gateway.html#diagramas",
-        "api-gateway.html#perguntas",
-        "api-gateway.html#cases"
-      ]
-    },
-    genai: {
-      name: "🤖 IA & GenAI",
-      badge: "Arquiteto de GenAI",
-      color: "#a78bfa",
-      items: [
-        "genai.html#genai-teoria",
-        "genai.html#rag",
-        "genai.html#pgvector",
-        "genai.html#prompt-engineering"
-      ]
-    },
-    dataops: {
-      name: "⚙️ DataOps & MLOps",
-      badge: "Líder de Operations",
-      color: "#06b6d4",
-      items: [
-        "dataops-mlops.html#dataops-core",
-        "dataops-mlops.html#data-quality-avancado",
-        "dataops-mlops.html#data-contracts",
-        "dataops-mlops.html#data-lineage",
-        "dataops-mlops.html#plataforma-testes",
-        "dataops-mlops.html#mlops-core",
-        "dataops-mlops.html#mlops-feature-store",
-        "dataops-mlops.html#git-flow"
-      ]
+      items: ["pmo-sme-dados.html"]
     },
     business_value: {
       name: "💼 Business Value",
       badge: "Estrategista de Dados",
       color: "#f59e0b",
-      items: [
-        "business-value.html#conceito-ebitda",
-        "business-value.html#pitch-business-value",
-        "business-value.html#case-refatoracao-pipeline"
-      ]
-    },
-    finops: {
-      name: "💸 FinOps & Custos",
-      badge: "Lenda das Finanças",
-      color: "var(--ok)",
-      items: [
-        "finops.html#finops-fundamentos",
-        "finops.html#finops-boas-praticas",
-        "finops.html#finops-analise",
-        "finops.html#finops-terraform"
-      ]
+      items: ["business-value.html"]
     },
     financas: {
       name: "🏦 Conhecimentos Financeiros",
       badge: "Analista Financeiro",
       color: "#0284c7",
-      items: [
-        "financas-dados.html#jornada",
-        "financas-dados.html#matematica",
-        "financas-dados.html#pos-venda",
-        "financas-dados.html#contabilidade"
-      ]
-    },
-    oop: {
-      name: "🐍 Python Legend",
-      badge: "Lenda Viva do Python",
-      color: "#f43f5e",
-      items: [
-        "data-engineering-oop.html#boas-praticas",
-        "data-engineering-oop.html#oop-dados",
-        "data-engineering-oop.html#design-patterns",
-        "data-engineering-oop.html#oop-cases-perguntas",
-        "data-engineering-oop.html#cpython-memoria",
-        "data-engineering-oop.html#core-types",
-        "data-engineering-oop.html#oop-avancado",
-        "data-engineering-oop.html#pandas-projetos"
-      ]
-    },,
-    testing: {
-      name: "🧪 Software Testing",
-      badge: "Engenheiro de Qualidade",
-      color: "#10b981",
-      items: [
-        "testing.html#piramide",
-        "testing.html#code-examples",
-        "testing.html#data-quality"
-      ]
-    },
-    softskills: {
-      name: "🧠 Soft Skills",
-      badge: "Especialista Tático",
-      color: "var(--spark)",
-      items: [
-        "soft-skills.html#personas",
-        "soft-skills.html#como-falar",
-        "soft-skills.html#framework-talk",
-        "soft-skills.html#lideranca",
-        "soft-skills.html#pilares",
-        "soft-skills.html#implementacao",
-        "soft-skills.html#cfo-pitch"
-      ]
+      items: ["financas-dados.html"]
     },
     
-    
-    
-    
-    
-    
-    perguntas_engenharia_core: {
-      name: "❓ Engenharia (Processing)",
-      badge: "Mestre dos Pipelines",
-      color: "#eab308",
-      items: [
-        "perguntas-engenharia-core.html#q3", "perguntas-engenharia-core.html#q6", "perguntas-engenharia-core.html#q62", "perguntas-engenharia-core.html#q64", "perguntas-engenharia-core.html#q68", "perguntas-engenharia-core.html#q87", "perguntas-engenharia-core.html#q94", "perguntas-engenharia-core.html#q11", "perguntas-engenharia-core.html#q42", "perguntas-engenharia-core.html#q58", "perguntas-engenharia-core.html#q65", "perguntas-engenharia-core.html#q70"
-      ]
-    },
-    perguntas_arquitetura_db: {
-      name: "❓ Arquitetura & Bancos",
-      badge: "Mestre das Arquiteturas",
-      color: "#10b981",
-      items: [
-        "perguntas-arquitetura-db.html#q60", "perguntas-arquitetura-db.html#q97", "perguntas-arquitetura-db.html#q98", "perguntas-arquitetura-db.html#q100", "perguntas-arquitetura-db.html#q18", "perguntas-arquitetura-db.html#q59", "perguntas-arquitetura-db.html#q79"
-      ]
-    },
-    perguntas_storage_lakehouse: {
-      name: "❓ Storage & Lakehouse",
-      badge: "Mestre do Storage",
-      color: "#0ea5e9",
-      items: [
-        "perguntas-storage-lakehouse.html#q28", "perguntas-storage-lakehouse.html#q33", "perguntas-storage-lakehouse.html#q92", "perguntas-storage-lakehouse.html#q26", "perguntas-storage-lakehouse.html#q34", "perguntas-storage-lakehouse.html#q52", "perguntas-storage-lakehouse.html#q71", "perguntas-storage-lakehouse.html#q80", "perguntas-storage-lakehouse.html#q89", "perguntas-storage-lakehouse.html#q15", "perguntas-storage-lakehouse.html#q23", "perguntas-storage-lakehouse.html#q77"
-      ]
-    },
-    perguntas_governanca_finops: {
-      name: "❓ Governança & FinOps",
-      badge: "Guardião da Governança",
-      color: "#64748b",
-      items: [
-        "perguntas-governanca-finops.html#q1", "perguntas-governanca-finops.html#q2", "perguntas-governanca-finops.html#q31", "perguntas-governanca-finops.html#q46", "perguntas-governanca-finops.html#q51", "perguntas-governanca-finops.html#q72", "perguntas-governanca-finops.html#q86", "perguntas-governanca-finops.html#q88", "perguntas-governanca-finops.html#q93", "perguntas-governanca-finops.html#q9", "perguntas-governanca-finops.html#q41", "perguntas-governanca-finops.html#q53", "perguntas-governanca-finops.html#q69", "perguntas-governanca-finops.html#q95", "perguntas-governanca-finops.html#q99", "perguntas-governanca-finops.html#q101", "perguntas-governanca-finops.html#q5", "perguntas-governanca-finops.html#q8", "perguntas-governanca-finops.html#q13", "perguntas-governanca-finops.html#q16", "perguntas-governanca-finops.html#q22", "perguntas-governanca-finops.html#q25", "perguntas-governanca-finops.html#q29", "perguntas-governanca-finops.html#q35", "perguntas-governanca-finops.html#q36", "perguntas-governanca-finops.html#q37", "perguntas-governanca-finops.html#q38", "perguntas-governanca-finops.html#q39", "perguntas-governanca-finops.html#q45", "perguntas-governanca-finops.html#q47", "perguntas-governanca-finops.html#q57", "perguntas-governanca-finops.html#q66", "perguntas-governanca-finops.html#q73", "perguntas-governanca-finops.html#q74"
-      ]
-    },
-    perguntas_dataops_ia: {
-      name: "❓ DataOps, MLOps & GenAI",
-      badge: "Mestre em IA & DataOps",
-      color: "#8b5cf6",
-      items: [
-        "perguntas-dataops-ia.html#q7", "perguntas-dataops-ia.html#q14", "perguntas-dataops-ia.html#q20", "perguntas-dataops-ia.html#q32", "perguntas-dataops-ia.html#q4", "perguntas-dataops-ia.html#q30", "perguntas-dataops-ia.html#q63", "perguntas-dataops-ia.html#q67", "perguntas-dataops-ia.html#q78", "perguntas-dataops-ia.html#q82", "perguntas-dataops-ia.html#q90", "perguntas-dataops-ia.html#q96", "perguntas-dataops-ia.html#q10", "perguntas-dataops-ia.html#q12", "perguntas-dataops-ia.html#q17", "perguntas-dataops-ia.html#q19", "perguntas-dataops-ia.html#q21", "perguntas-dataops-ia.html#q24", "perguntas-dataops-ia.html#q27", "perguntas-dataops-ia.html#q40", "perguntas-dataops-ia.html#q43", "perguntas-dataops-ia.html#q44", "perguntas-dataops-ia.html#q48", "perguntas-dataops-ia.html#q49", "perguntas-dataops-ia.html#q50", "perguntas-dataops-ia.html#q54", "perguntas-dataops-ia.html#q55", "perguntas-dataops-ia.html#q56", "perguntas-dataops-ia.html#q61", "perguntas-dataops-ia.html#q75", "perguntas-dataops-ia.html#q76", "perguntas-dataops-ia.html#q77", "perguntas-dataops-ia.html#q79", "perguntas-dataops-ia.html#q81", "perguntas-dataops-ia.html#q83", "perguntas-dataops-ia.html#q84", "perguntas-dataops-ia.html#q85", "perguntas-dataops-ia.html#q91", "perguntas-dataops-ia.html#q81", "perguntas-dataops-ia.html#q83", "perguntas-dataops-ia.html#q84", "perguntas-dataops-ia.html#q85", "perguntas-dataops-ia.html#q91"
-      ]
-    }
-,
+    // System Design & Cases
     cases_streaming: {
       name: "💼 System Design: Streaming",
       badge: "Mestre do Streaming",
       color: "#059669",
-      items: [
-        "cases-streaming.html#case-streaming",
-        "cases-streaming.html#case-iot",
-        "cases-streaming.html#case-recommender",
-        "cases-streaming.html#case-ecs-fargate",
-        "cases-streaming.html#case-athena-federated",
-        "cases-streaming.html#case-risco-mlops",
-        "cases-streaming.html#case-ingress-global",
-        "cases-streaming.html#case-ia-cambio"
-      ]
+      items: ["cases-streaming.html"]
     },
     cases_batch: {
       name: "💼 System Design: Batch & Lakehouse",
       badge: "Mestre do Lakehouse",
       color: "#059669",
-      items: [
-        "cases-batch-lakehouse.html#case-health",
-        "cases-batch-lakehouse.html#case-billing",
-        "cases-batch-lakehouse.html#case-emr-eks",
-        "cases-batch-lakehouse.html#case-finops",
-        "cases-batch-lakehouse.html#case-genai-avancado",
-        "cases-batch-lakehouse.html#case-emr-iceberg-migracao",
-        "cases-batch-lakehouse.html#case-eks-karpenter-migracao",
-        "cases-batch-lakehouse.html#case-advanced-33"
-      ]
+      items: ["cases-batch-lakehouse.html"]
     },
     cases_ecosistema: {
       name: "💼 System Design: Ecosistema",
       badge: "Arquiteto de Ecosistemas",
       color: "#059669",
-      items: [
-        "cases-ecosistema.html#case-banco-digital",
-        "cases-ecosistema.html#case-mesh",
-        "cases-ecosistema.html#case-logistics",
-        "cases-ecosistema.html#case-esg",
-        "cases-ecosistema.html#case-data-quality",
-        "cases-ecosistema.html#case-polaris-flink",
-        "cases-ecosistema.html#case-business-value",
-        "cases-ecosistema.html#case-genai-suporte",
-        "cases-ecosistema.html#case-rds-dynamo-migracao",
-        "cases-ecosistema.html#case-advanced-31",
-        "cases-ecosistema.html#case-advanced-32",
-        "cases-ecosistema.html#case-advanced-34",
-        "cases-ecosistema.html#case-advanced-35",
-        "cases-ecosistema.html#case-captacao-liquida",
-        "cases-ecosistema.html#case-ia-oficios"
-      ]
+      items: ["cases-ecosistema.html"]
     },
     cases_dataops: {
       name: "💼 System Design: DataOps & IA",
       badge: "Engenheiro de IA",
       color: "#059669",
-      items: [
-        "cases-dataops-ia.html#case-genai",
-        "cases-dataops-ia.html#case-reverse-etl",
-        "cases-dataops-ia.html#case-ai-data-quality",
-        "cases-dataops-ia.html#case-ia-cadastro"
-      ]
+      items: ["cases-dataops-ia.html"]
     },
+
+    // Simulados & Entrevistas
+    perguntas_engenharia_core: {
+      name: "❓ Engenharia (Processing)",
+      badge: "Mestre dos Pipelines",
+      color: "#eab308",
+      items: ["perguntas-engenharia-core.html"]
+    },
+    perguntas_arquitetura_db: {
+      name: "❓ Arquitetura & Bancos",
+      badge: "Mestre das Arquiteturas",
+      color: "#10b981",
+      items: ["perguntas-arquitetura-db.html"]
+    },
+    perguntas_storage_lakehouse: {
+      name: "❓ Storage & Lakehouse",
+      badge: "Mestre do Storage",
+      color: "#0ea5e9",
+      items: ["perguntas-storage-lakehouse.html"]
+    },
+    perguntas_governanca_finops: {
+      name: "❓ Governança & FinOps",
+      badge: "Guardião da Governança",
+      color: "#64748b",
+      items: ["perguntas-governanca-finops.html"]
+    },
+    perguntas_dataops_ia: {
+      name: "❓ DataOps, MLOps & GenAI",
+      badge: "Mestre em IA & DataOps",
+      color: "#8b5cf6",
+      items: ["perguntas-dataops-ia.html"]
+    },
+    
+    // Playbooks Extras
     playbook_kinesis: {
       name: "🚒 Playbook: Kinesis & Spark",
       badge: "SRE de Streaming",
       color: "var(--warn)",
-      items: [
-        "playbook-kinesis-spark.html#crise-streaming",
-        "playbook-kinesis-spark.html#crise-sla",
-        "playbook-kinesis-spark.html#crise-schema-drift",
-        "playbook-kinesis-spark.html#crise-dynamo",
-        "playbook-kinesis-spark.html#crise-sqs-poison"
-      ]
+      items: ["playbook-kinesis-spark.html"]
     },
     playbook_governanca: {
       name: "🚒 Playbook: Gov & FinOps",
       badge: "Guardião de Custos",
-      color: "var(--warn)",
-      items: [
-        "playbook-governanca-finops.html#crise-kms",
-        "playbook-governanca-finops.html#crise-genai",
-        "playbook-governanca-finops.html#crise-lgpd",
-        "playbook-governanca-finops.html#crise-leakage-churn",
-        "playbook-governanca-finops.html#crise-athena-custo",
-        "playbook-governanca-finops.html#ransomware-p1"
-      ]
+      color: "#dc2626",
+      items: ["playbook-governanca.html"]
     },
     playbook_data_quality: {
       name: "🚒 Playbook: Data Quality",
-      badge: "Xerife da Qualidade",
-      color: "var(--warn)",
-      items: [
-        "playbook-data-quality.html#introducao",
-        "playbook-data-quality.html#crise-fechamento",
-        "playbook-data-quality.html#crise-duplicacao",
-        "playbook-data-quality.html#crise-nulos",
-        "playbook-data-quality.html#crise-corrupcao",
-        "playbook-data-quality.html#cenarios-conflito"
-      ]
+      badge: "Engenheiro de Qualidade",
+      color: "#b91c1c",
+      items: ["playbook-data-quality.html"]
+    },
+    api_gateway: {
+      name: "🔌 API Gateway Deep Dive",
+      badge: "Mestre do API Gateway",
+      color: "#7c3aed",
+      items: ["api-gateway.html"]
+    },
+    
+    // Fechamento
+    softskills: {
+      name: "🧠 Soft Skills",
+      badge: "Especialista Tático",
+      color: "var(--spark)",
+      items: ["soft-skills.html"]
     }
-
-};
+  };;
 
   // Carrega progresso do localStorage
   function loadProgress() {
@@ -496,7 +309,7 @@
     updateSidebarCheckboxes(progress);
 
     // 3. Atualiza os checkboxes das seções físicas da página atual
-    updatePageSectionCheckboxes(progress);
+    injectFloatingCompletionButton(progress, stats);
 
     // 4. Se estiver no index.html, renderiza o dashboard
     renderDashboard(stats);
@@ -689,89 +502,181 @@
     });
   }
 
-  // Injeta checkboxes interativos diretamente nas seções/cards do conteúdo principal
-  function updatePageSectionCheckboxes(progress) {
+  // Injeta Botão Flutuante (FAB) de conclusão
+  function injectFloatingCompletionButton(progress, stats) {
     const pageName = getCurrentPageName().split("#")[0];
-
-    // Varre todos os hashes conhecidos deste documento e localiza seus containers
+    
+    // Verifica se a página atual pertence a algum módulo
+    let currentModule = null;
+    let pageIsTracked = false;
+    
     for (const modId in MODULES) {
-      MODULES[modId].items.forEach(item => {
-        const parts = item.split("#");
-        if (parts[0] !== pageName) return;
-
-        const hash = parts[1];
-        // Encontra o elemento com o ID correspondente
-        const element = document.getElementById(hash);
-        if (!element) return;
-
-        // Se for um card, seção ou h3/h2, vamos injetar o checkbox interativo de forma visível e elegante
-        let container = element;
-        // Se for um cabeçalho, coloca ao lado. Se for uma seção com classe .section, adiciona dentro do cabeçalho de seção (.sec-meta)
-        let header = container.querySelector(".sec-meta h2") || container.querySelector("h2") || container.querySelector("h4") || container;
-
-        if (header && !header.querySelector(".section-completed-check")) {
-          // Ajusta layout do header para acomodar o check
-          header.style.display = "flex";
-          header.style.alignItems = "center";
-          header.style.gap = "10px";
-
-          const check = document.createElement("span");
-          check.className = "section-completed-check";
-          check.title = "Marcar esta seção como concluída";
-          check.style.width = "20px";
-          check.style.height = "20px";
-          check.style.borderRadius = "50%";
-          check.style.border = "2px solid var(--border)";
-          check.style.display = "inline-flex";
-          check.style.alignItems = "center";
-          check.style.justifyContent = "center";
-          check.style.cursor = "pointer";
-          check.style.transition = "all 0.2s ease";
-          check.style.fontSize = "10px";
-          check.style.fontWeight = "bold";
-
-          // Insere no começo ou após o título principal
-          header.appendChild(check);
-
-          check.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const currProgress = loadProgress();
-            currProgress[item] = !currProgress[item];
-            saveProgress(currProgress);
-            
-            // Disparar micro animação se marcado como concluído
-            if (currProgress[item]) {
-              triggerGlowEffect(check);
-            }
-          });
-        }
-
-        // Atualiza estado do botão de check da seção
-        const checkBtn = header ? header.querySelector(".section-completed-check") : null;
-        if (checkBtn) {
-          if (progress[item]) {
-            checkBtn.style.background = "var(--ok)";
-            checkBtn.style.borderColor = "var(--ok)";
-            checkBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="white" style="width:12px; height:12px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
-            container.classList.add("section-completed-state");
-            if (container.style) {
-              container.style.borderLeft = "4px solid var(--ok)";
-            }
-          } else {
-            checkBtn.style.background = "transparent";
-            checkBtn.style.borderColor = "var(--border)";
-            checkBtn.innerHTML = "";
-            container.classList.remove("section-completed-state");
-            if (container.style && container.classList.contains("card")) {
-              container.style.borderLeft = "";
-            }
-          }
-        }
-      });
+      if (MODULES[modId].items.includes(pageName)) {
+        currentModule = MODULES[modId];
+        pageIsTracked = true;
+        break;
+      }
+    }
+    
+    if (!pageIsTracked) return;
+    
+    // Verifica se já injetou o FAB
+    let fab = document.getElementById("progress-fab");
+    const isCompleted = !!progress[pageName];
+    const moduleColor = currentModule.color || 'var(--accent)';
+    
+    if (fab) {
+      // Apenas atualiza o estado
+      updateFabState(fab, isCompleted, moduleColor);
+      return;
+    }
+    
+    // Cria o Container do FAB
+    fab = document.createElement("div");
+    fab.id = "progress-fab";
+    fab.title = isCompleted ? "Aula Concluída (Clique para desmarcar)" : "Rolar a página ou Clicar para concluir";
+    
+    // Estilos base do FAB Container
+    fab.style.position = "fixed";
+    fab.style.bottom = "110px";
+    fab.style.right = "40px";
+    fab.style.width = "64px";
+    fab.style.height = "64px";
+    fab.style.borderRadius = "50%";
+    fab.style.display = "flex";
+    fab.style.alignItems = "center";
+    fab.style.justifyContent = "center";
+    fab.style.cursor = "pointer";
+    fab.style.zIndex = "9999";
+    fab.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease";
+    fab.style.boxShadow = "0 10px 25px rgba(0,0,0,0.5)";
+    
+    // Raio e Circunferência do anel de progresso
+    const r = 30;
+    const circ = 2 * Math.PI * r;
+    
+    // SVG Complexo com Anel de Progresso + Ícone de Check
+    fab.innerHTML = `
+      <svg width="64" height="64" viewBox="0 0 64 64" style="position: absolute; top: 0; left: 0; transform: rotate(-90deg);">
+        <!-- Fundo Escuro do Botão -->
+        <circle cx="32" cy="32" r="28" fill="rgba(15, 23, 42, 0.8)" stroke="#334155" stroke-width="2" class="fab-bg-circle" style="backdrop-filter: blur(8px); transition: all 0.3s ease;"></circle>
+        
+        <!-- Anel de Progresso de Scroll -->
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="${moduleColor}" stroke-width="4" stroke-linecap="round" 
+                stroke-dasharray="${circ}" stroke-dashoffset="${circ}" class="fab-progress-ring" 
+                style="transition: stroke-dashoffset 0.1s linear; opacity: 0;"></circle>
+      </svg>
+      
+      <!-- Ícone Checkmark -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="fab-icon" style="width: 28px; height: 28px; transition: all 0.3s ease; position: relative; z-index: 2; color: #64748b;">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    
+    // Aplica estado inicial
+    updateFabState(fab, isCompleted, moduleColor);
+    
+    // Efeito Hover
+    fab.addEventListener("mouseenter", () => {
+      fab.style.transform = "scale(1.1) translateY(-5px)";
+      const isDone = !!loadProgress()[pageName];
+      if (!isDone) {
+        fab.querySelector('.fab-bg-circle').style.stroke = moduleColor;
+        fab.querySelector('.fab-icon').style.color = moduleColor;
+      }
+    });
+    
+    fab.addEventListener("mouseleave", () => {
+      fab.style.transform = "scale(1) translateY(0)";
+      updateFabState(fab, !!loadProgress()[pageName], moduleColor);
+    });
+    
+    // Lógica de Clique e Auto-Complete
+    const handleCompletion = (forceState = null) => {
+      const currProgress = loadProgress();
+      const currentState = currProgress[pageName];
+      const newState = forceState !== null ? forceState : !currentState;
+      
+      // Se já tá no estado que a gente quer, ignora (útil pro scroll não ficar floodando)
+      if (currentState === newState) return;
+      
+      currProgress[pageName] = newState;
+      
+      // Efeito de pulso no clique
+      fab.style.transform = "scale(0.9)";
+      setTimeout(() => {
+        fab.style.transform = "scale(1.1)";
+        updateFabState(fab, newState, moduleColor);
+        saveProgress(currProgress);
+        setTimeout(() => {
+          fab.style.transform = "scale(1)";
+        }, 150);
+      }, 100);
+    };
+    
+    fab.addEventListener("click", () => handleCompletion());
+    
+    // === TRACKING DE SCROLL ===
+    window.addEventListener("scroll", () => {
+      const isDone = !!loadProgress()[pageName];
+      const ring = fab.querySelector('.fab-progress-ring');
+      
+      // Se já acabou a aula, o anel some e botão fica todo preenchido
+      if (isDone) {
+        ring.style.opacity = "0";
+        return;
+      }
+      
+      // Mostra o anel sutilmente enquanto a pessoa desce a página
+      ring.style.opacity = "1";
+      
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const documentHeight = Math.max(
+        document.body.scrollHeight, document.documentElement.scrollHeight,
+        document.body.offsetHeight, document.documentElement.offsetHeight,
+        document.documentElement.clientHeight
+      );
+      
+      const scrollable = documentHeight - windowHeight;
+      // Calcula porcentagem do scroll (0 a 1)
+      let scrolled = scrollable > 0 ? (scrollY / scrollable) : 1;
+      
+      // Atualiza o círculo SVG (offset)
+      const offset = circ - (scrolled * circ);
+      ring.style.strokeDashoffset = offset;
+      
+      // Se chegou em 98% da página, marca concluído automaticamente
+      if (scrolled >= 0.98) {
+        handleCompletion(true);
+      }
+    }, { passive: true });
+    
+    document.body.appendChild(fab);
+  }
+  
+  function updateFabState(fab, isCompleted, color) {
+    const bgCircle = fab.querySelector('.fab-bg-circle');
+    const icon = fab.querySelector('.fab-icon');
+    const ring = fab.querySelector('.fab-progress-ring');
+    
+    if (isCompleted) {
+      bgCircle.style.fill = color;
+      bgCircle.style.stroke = color;
+      icon.style.color = "#ffffff";
+      fab.style.boxShadow = `0 10px 25px -5px ${color}80, 0 0 15px ${color}60`;
+      ring.style.opacity = "0"; // Esconde anel de progresso
+    } else {
+      bgCircle.style.fill = "rgba(15, 23, 42, 0.8)";
+      bgCircle.style.stroke = "#334155";
+      icon.style.color = "#64748b"; // Cinza inativo
+      fab.style.boxShadow = "0 10px 25px rgba(0,0,0,0.5)";
+      
+      // Reseta anel pro estado atual do scroll, senão fica sumido ao desmarcar no final da pag
+      ring.style.opacity = "1";
     }
   }
-
-  // Helper to generate dynamic premium SVG icons for academic badges
+// Helper to generate dynamic premium SVG icons for academic badges
   function getBadgeSVG(modId, hasCompleted) {
     const configs = {
       python: { 
@@ -952,15 +857,53 @@
     const badgesContainer = document.getElementById("dashboard-badges");
 
     if (headerContainer) {
+      const currProgress = loadProgress();
+      let nextLink = "#";
+      let nextLinkText = "Começar Trilha";
+      let startedModule = null;
+      
+      for (const modId in stats.modules) {
+        if (stats.modules[modId].percent > 0 && stats.modules[modId].percent < 100) {
+          startedModule = modId;
+          break;
+        }
+      }
+      if (!startedModule) {
+        for (const modId in stats.modules) {
+          if (stats.modules[modId].percent === 0) {
+            startedModule = modId;
+            break;
+          }
+        }
+      }
+      
+      if (startedModule) {
+        const modData = MODULES[startedModule];
+        for (const item of modData.items) {
+          if (!currProgress[item]) {
+            nextLink = item;
+            
+            // Busca o link real e completo na sidebar
+            const sbLink = document.querySelector(`#sidebar a[href$="${item}"]`);
+            if (sbLink) {
+              nextLink = sbLink.getAttribute("href");
+            }
+            
+            nextLinkText = "Continuar: " + modData.name.replace(/[^a-zA-Z0-9\s&]/g, '').trim();
+            break;
+          }
+        }
+      }
+
       headerContainer.innerHTML = `
         <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 32px; display: grid; grid-template-columns: 1fr 2fr; gap: 40px; align-items: center; box-shadow: 0 4px 6px rgba(15, 23, 42, 0.05);" class="db-grid-mobile">
           <!-- Circular Progress -->
           <div style="display: flex; flex-direction: column; align-items: center; border-right: 1px solid var(--border); padding-right: 40px;" class="db-circle-mobile">
-            <h3 style="margin: 0 0 16px; font-family: 'Fraunces', serif; font-size: 1.3rem; color: var(--navy);">Progresso Global</h3>
+            <h3 style="margin: 0 0 16px; font-family: var(--body-font); font-size: 1.3rem; color: var(--text);">Progresso Global</h3>
             <div style="position: relative; width: 140px; height: 140px;">
               <svg width="140" height="140" viewBox="0 0 140 140" style="transform: rotate(-90deg);">
                 <!-- Background track -->
-                <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(15, 23, 42, 0.05)" stroke-width="12" />
+                <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255, 255, 255, 0.05)" stroke-width="12" />
                 <!-- Progress bar -->
                 <circle cx="70" cy="70" r="60" fill="none" stroke="url(#global-grad)" stroke-width="12" stroke-linecap="round" 
                   stroke-dasharray="376.99" stroke-dashoffset="${376.99 - (376.99 * stats.percent / 100)}" 
@@ -973,7 +916,7 @@
                 </defs>
               </svg>
               <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                <span style="font-size: 2rem; font-weight: 800; color: var(--navy); line-height: 1;">${stats.percent}%</span>
+                <span style="font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1;">${stats.percent}%</span>
               </div>
             </div>
           </div>
@@ -981,15 +924,18 @@
           <!-- Breakdown & Actions -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" class="db-breakdown-mobile">
             <div>
-              <div style="font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Módulos Concluídos</div>
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--navy);">${Object.values(stats.modules).filter(m => m.percent === 100).length} <span style="font-size: 1rem; color: var(--muted); font-weight: 400;">de ${Object.keys(stats.modules).length}</span></div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Módulos Concluídos</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--text);">${Object.values(stats.modules).filter(m => m.percent === 100).length} <span style="font-size: 1rem; color: var(--text-muted); font-weight: 400;">de ${Object.keys(stats.modules).length}</span></div>
             </div>
             <div>
-              <div style="font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Páginas e Tópicos</div>
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--navy);">${stats.completed} <span style="font-size: 1rem; color: var(--muted); font-weight: 400;">de ${stats.total}</span></div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Páginas e Tópicos</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--text);">${stats.completed} <span style="font-size: 1rem; color: var(--text-muted); font-weight: 400;">de ${stats.total}</span></div>
             </div>
-            <div style="grid-column: 1 / -1; margin-top: 12px; display: flex; gap: 12px;">
-              <button id="reset-progress-btn" style="background: transparent; border: 1px dashed var(--warn); color: var(--warn); font-family: 'DM Mono', monospace; font-size: 10px; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+            <div style="grid-column: 1 / -1; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+              <a href="${nextLink}" style="display: inline-flex; align-items: center; justify-content: center; background: var(--spark); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: background 0.2s;">
+                ▶ ${nextLinkText}
+              </a>
+              <button id="reset-progress-btn" style="background: transparent; border: 1px dashed var(--warn); color: var(--warn); font-family: var(--body-font); font-size: 0.9rem; padding: 9px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
                 Resetar Progresso
               </button>
             </div>
@@ -1236,6 +1182,11 @@
     document.head.appendChild(styleEl);
 
     // Renderiza a interface
+    updateAllUI();
+  });
+
+  // Re-renderiza a interface (especialmente o dashboard) quando o sidebar terminar de carregar de forma assíncrona
+  document.addEventListener('sidebarLoaded', () => {
     updateAllUI();
   });
 

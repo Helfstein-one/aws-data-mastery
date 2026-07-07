@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="GenAI & Dados - Casos de uso práticos de IA aplicados à Engenharia de Dados usando a API Boto3 do Amazon Bedrock.">
+  <title>GenAI na Engenharia de Dados | AWS Data Mastery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+  
+  <meta property="og:title" content="GenAI na Engenharia de Dados | AWS Data Mastery">
+  <meta property="og:description" content="GenAI & Dados - Casos de uso práticos de IA aplicados à Engenharia de Dados usando a API Boto3 do Amazon Bedrock.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="../../assets/favicon.ico" type="image/x-icon">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+
+<div id="main">
+  <div class="hero">
+    <div class="hero-ey">Módulo: IA & GenAI</div>
+    <h1>IA aplicada à Engenharia de Dados</h1>
+    <p class="hero-d">Utilizando a API Boto3 do Amazon Bedrock para gerar metadados de catálogo, regras de Data Quality e pipelines cognitivos.</p>
+  </div>
+
+  <main class="main-content">
+    <section class="section" id="dataeng">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>Aplicações Práticas (Bedrock API)</h2>
+          <p>Como automatizar tarefas entediantes do Engenheiro de Dados utilizando LLMs.</p>
+        </div>
+      </div>
+
+      <p>Além de criarmos Chatbots para os usuários finais, a GenAI brilha intensamente em produtividade interna para os times de dados. Nós podemos automatizar tarefas de governança, documentação e qualidade injetando a inteligência do Claude diretamente nos nossos scripts Python de pipeline.</p>
+
+      <h3>Caso de Uso 1: Autocatalogação e Enriquecimento de Metadados (Glue Data Catalog)</h3>
+      <p>Este script utiliza a biblioteca `boto3` para conectar ao Bedrock, ler a estrutura física de uma tabela desconhecida e pedir para o Claude 3.5 gerar descrições ricas de negócios para cada coluna, bem como apontar se há dados sensíveis (PII) para mascaramento automático (LGPD).</p>
+
+      <pre style="background:#0f172a; color:#f8fafc;"><span class="k">import</span> boto3
+<span class="k">import</span> json
+
+bedrock = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<span class="s">'us-east-1'</span>)
+
+<span class="k">def</span> <span class="nf">auto_catalog_schema</span>(table_name, schema_fields):
+    <span class="s">"""Analisa o schema e retorna um mapa JSON com descrições e flags de PII."""</span>
+    prompt = f<span class="s">"""
+    Você é um especialista em governança de dados corporativos. Sua tarefa é analisar o schema da tabela '{table_name}' fornecida abaixo e gerar descrições técnicas claras para cada coluna, além de classificar se a coluna contém dados pessoais sensíveis (PII).
+
+    Retorne a resposta estritamente no formato JSON estruturado, sem comentários explicativos adicionais.
+
+    &lt;schema&gt;
+    {json.dumps(schema_fields, indent=2)}
+    &lt;/schema&gt;
+
+    Exemplo de formato de saída esperado:
+    {{
+      "colunas": [
+        {{
+          "nome": "id_usuario",
+          "descricao": "Identificador único sequencial do usuário cadastrado na plataforma",
+          "contem_pii": false
+        }},
+        {{
+          "nome": "num_cpf",
+          "descricao": "Número do registro nacional de Cadastro de Pessoas Físicas do cliente",
+          "contem_pii": true
+        }}
+      ]
+    }}
+    """</span>
+    
+    payload = {
+        <span class="s">"anthropic_version"</span>: <span class="s">"bedrock-2023-05-31"</span>,
+        <span class="s">"max_tokens"</span>: 1000,
+        <span class="s">"temperature"</span>: 0.0,  <span class="c"># Temperatura 0 para respostas puramente analíticas e determinísticas</span>
+        <span class="s">"messages"</span>: [
+            {<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: prompt}
+        ]
+    }
+    
+    response = bedrock.invoke_model(
+        modelId=<span class="s">"anthropic.claude-3-5-sonnet-20240620-v1:0"</span>,
+        contentType=<span class="s">"application/json"</span>,
+        accept=<span class="s">"application/json"</span>,
+        body=json.dumps(payload)
+    )
+    
+    result = json.loads(response[<span class="s">'body'</span>].read())
+    <span class="k">return</span> json.loads(result[<span class="s">'content'</span>][0][<span class="s">'text'</span>])</pre>
+
+      <h3 style="margin-top: 40px;">Caso de Uso 2: Geração Autônoma de Regras de Qualidade (AWS Glue DQDL)</h3>
+      <p>Um desafio comum na ingestão (Fase Bronze) é descobrir as regras de integridade sem conhecer o dado a fundo. Podemos pedir para o Claude analisar o schema e construir blocos lógicos usando o DQDL (Data Quality Definition Language) nativo da AWS, que pode ser integrado em jobs do Glue ou Amazon Deequ (Spark).</p>
+
+      <pre style="background:#0f172a; color:#f8fafc;"><span class="k">def</span> <span class="nf">generate_dqdl_rules</span>(table_name, schema_fields):
+    <span class="s">"""Gera bloco declarativo DQDL com base no perfil de colunas analisado."""</span>
+    prompt = f<span class="s">"""
+    Você é um Engenheiro de Qualidade de Dados sênior. Sua tarefa é analisar o schema fornecido e gerar regras de qualidade de dados escritas em DQDL (Data Quality Definition Language) do AWS Glue.
+
+    &lt;schema&gt;
+    {json.dumps(schema_fields, indent=2)}
+    &lt;/schema&gt;
+
+    Gere regras validando nulidade (IsComplete), consistência de tipos numéricos não negativos e checagens lógicas. Retorne estritamente o bloco de regras DQDL.
+
+    Exemplo de saída esperada:
+    Rules = [
+        IsComplete "id_cliente",
+        ColumnValues "valor_total" >= 0,
+        IsComplete "email"
+    ]
+    """</span>
+    
+    payload = {
+        <span class="s">"anthropic_version"</span>: <span class="s">"bedrock-2023-05-31"</span>,
+        <span class="s">"max_tokens"</span>: 800,
+        <span class="s">"temperature"</span>: 0.1,
+        <span class="s">"messages"</span>: [
+            {<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: prompt}
+        ]
+    }
+    
+    response = bedrock.invoke_model(
+        modelId=<span class="s">"anthropic.claude-3-5-sonnet-20240620-v1:0"</span>,
+        contentType=<span class="s">"application/json"</span>,
+        accept=<span class="s">"application/json"</span>,
+        body=json.dumps(payload)
+    )
+    
+    result = json.loads(response[<span class="s">'body'</span>].read())
+    <span class="k">return</span> result[<span class="s">'content'</span>][0][<span class="s">'text'</span>]</pre>
+    </section>
+
+    <!-- Checkbox Module Completion -->
+    
+
+    <!-- Navegação Inferior -->
+    <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+      <a href="genai-agents-prompting.html" class="return-btn" style="background: transparent; border: 1px solid var(--border); color: var(--text);">
+        <span>← Agentes & Prompting</span>
+      </a>
+      <a href="genai-system-design.html" class="return-btn">
+        <span>System Design & Modelos →</span>
+      </a>
+    </div>
+  </main>
+</div>
+
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script>
+  function toggleNav() {
+    var sb = document.getElementById('sidebar');
+    var main = document.getElementById('main');
+    var hb = document.getElementById('hamburger');
+    if (sb) {
+      if (sb.classList.contains('closed')) {
+        sb.classList.remove('closed');
+        if (main) main.classList.remove('sidebar-closed');
+        if (hb) hb.innerHTML = '✕';
+      } else {
+        sb.classList.add('closed');
+        if (main) main.classList.add('sidebar-closed');
+        if (hb) hb.innerHTML = '☰';
+      }
+    }
+  }
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+</script>
+</body>
+</html>

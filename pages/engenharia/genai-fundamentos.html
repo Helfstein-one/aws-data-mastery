@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="GenAI & Dados - Fundamentos de Modelos Fundacionais, Transformers, Claude vs LLaMA na AWS.">
+  <title>Fundamentos de GenAI | AWS Data Mastery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+  
+  <meta property="og:title" content="Fundamentos de GenAI | AWS Data Mastery">
+  <meta property="og:description" content="GenAI & Dados - Fundamentos de Modelos Fundacionais, Transformers, Claude vs LLaMA na AWS.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="../../assets/favicon.ico" type="image/x-icon">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+
+<div id="main">
+  <div class="hero">
+    <div class="hero-ey">Módulo: IA & GenAI</div>
+    <h1>Fundamentos de LLMs</h1>
+    <p class="hero-d">Arquitetura Transformer, Tokens, Embeddings Semânticos e o embate técnico entre Claude 3.5 e LLaMA 3 para Engenharia de Dados.</p>
+  </div>
+
+  <main class="main-content">
+    <section class="section" id="fundamentos">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">01</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>Introdução Teórica: A Revolução Transformer</h2>
+          <p>Como as máquinas aprenderam a entender contextos profundos e gerar textos como humanos.</p>
+        </div>
+      </div>
+
+      <p>A revolução da inteligência artificial generativa moderna não começou com o ChatGPT, mas sim em 2017 com a publicação do artigo <em>"Attention Is All You Need"</em> pelos pesquisadores do Google. Eles introduziram a arquitetura <strong>Transformer</strong>. Ao contrário das antigas Redes Neurais Recorrentes (RNNs) e LSTMs que liam o texto sequencialmente palavra por palavra e esqueciam o começo da frase ao chegar no final, os Transformers utilizam o mecanismo de <strong>Self-Attention (Auto-Atenção)</strong>.</p>
+      <p>O <em>Self-Attention</em> permite que o modelo processe todos os tokens de um documento simultaneamente, avaliando matematicamente a relevância (o "peso") que cada palavra tem em relação às outras, capturando conexões e dependências de contexto de longas distâncias de maneira massivamente paralela. Por isso eles são tão bons em gerar código SQL ou Python: eles conseguem correlacionar a tabela definida na linha 10 com o JOIN que está acontecendo na linha 300.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Processamento</div>
+          <div class="cc-title">Tokens não são Palavras</div>
+          <div class="cc-body">LLMs não enxergam letras, palavras ou espaços. Eles processam fragmentos chamados <strong>Tokens</strong> (em média, 1 token = 4 caracteres em inglês, ou 0.75 de uma palavra). Em português e código fonte, a tokenização pode ser menos eficiente. O modelo Titan ou Claude enxerga tudo como um array de números inteiros (IDs de tokens).</div>
+        </div>
+
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Limites Físicos</div>
+          <div class="cc-title">A Janela de Contexto</div>
+          <div class="cc-body">A <em>Context Window</em> é a "memória RAM" do modelo. É a quantidade máxima de tokens que o modelo consegue analisar simultaneamente somando o Input (sua pergunta) + Output (a resposta dele). Modelos antigos tinham 4K tokens; hoje, o Claude 3.5 processa <strong>200K tokens</strong> (equivalente a 500 páginas de um livro).</div>
+        </div>
+
+        <div class="concept-card genai-card">
+          <div class="cc-tag">Representação</div>
+          <div class="cc-title">Embeddings Semânticos</div>
+          <div class="cc-body">Para que o LLM entenda que "Rei - Homem + Mulher = Rainha", as palavras são transformadas em <strong>Vetores (Embeddings)</strong> em um espaço n-dimensional (ex: 1536 dimensões). Termos com significados próximos ficam espacialmente próximos, permitindo cálculos de distância matemática (Cosseno).</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Alucinação (Hallucination) e a Falácia da Verdade</h3>
+      <p>É crucial como Engenheiro de Dados entender que um LLM <strong>não é um banco de dados de fatos</strong>, nem uma calculadora. Ele é um preditor probabilístico de tokens. Dado um contexto e uma pergunta, ele calcula matematicamente qual é o próximo token mais provável de aparecer.</p>
+      <p>Se você perguntar algo que não está na sua base de treinamento ou no prompt, ele não dirá "não sei". Ele usará a probabilidade para gerar uma resposta que <em>pareça</em> correta linguisticamente, mas que é factualmente falsa. Chamamos isso de Alucinação. Em arquiteturas de dados corporativas, mitigamos isso através do <strong>Grounding</strong> — ancorando o conhecimento do modelo a dados reais através de <em>RAG (Retrieval-Augmented Generation)</em>, que veremos no próximo módulo.</p>
+    </section>
+
+    <section class="section" id="modelos">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--genai)">02</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--genai)"></div>
+          <h2>A Batalha dos Foundation Models no Amazon Bedrock</h2>
+          <p>Como escolher o LLM correto (Custo vs Qualidade) para o seu pipeline de dados.</p>
+        </div>
+      </div>
+
+      <p>Ao construir aplicações de dados com GenAI na AWS, utilizamos o <strong>Amazon Bedrock</strong>, um serviço serverless que disponibiliza LLMs de várias empresas de ponta através de uma única API unificada. Não existe "um modelo para dominar a todos"; o segredo de um bom Arquiteto de IA é o roteamento dinâmico (Model Routing) baseado no caso de uso, custo e velocidade.</p>
+
+      <div class="tbl-wrap" style="overflow-x: auto;">
+        <table style="min-width: 1100px;">
+          <thead>
+            <tr>
+              <th>Característica</th>
+              <th>Anthropic Claude 3.5 Sonnet</th>
+              <th>Meta Llama 3.1 70B</th>
+              <th>Mistral Large 2</th>
+              <th>Cohere Command R+</th>
+              <th>Amazon Titan Text Premier</th>
+              <th>AI21 J2-Ultra</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Natureza</strong></td>
+              <td>Proprietário (Closed-weight)</td>
+              <td>Open-weights (Aberto)</td>
+              <td>Proprietário</td>
+              <td>Proprietário (Enterprise Focus)</td>
+              <td>Proprietário (Nativo AWS)</td>
+              <td>Proprietário</td>
+            </tr>
+            <tr>
+              <td><strong>Janela de Contexto</strong></td>
+              <td>200.000 tokens (~150 mil palavras)</td>
+              <td>128.000 tokens</td>
+              <td>128.000 tokens</td>
+              <td>128.000 tokens</td>
+              <td>32.000 tokens</td>
+              <td>8.192 tokens</td>
+            </tr>
+            <tr>
+              <td><strong>Forte Principal</strong></td>
+              <td>Raciocínio lógico extremo, análise de código brutalmente precisa, obediência a JSON.</td>
+              <td>Custo-benefício insano para geração de texto e classificação.</td>
+              <td>Suporte Multilíngue (PT-BR) excepcional e balanço de custo/capacidade.</td>
+              <td>Feito especificamente para **RAG Corporativo**, citações (Citations) nativas.</td>
+              <td>Custo baixíssimo, integração rápida e conformidade (Compliance) AWS.</td>
+              <td>Sumarização, reescrita de textos e workflows simples sem perder foco.</td>
+            </tr>
+            <tr>
+              <td><strong>Custo API (Input/Output 1M)</strong></td>
+              <td>~$3.00 / ~$15.00</td>
+              <td>~$0.72 / ~$0.72</td>
+              <td>~$2.00 / ~$6.00</td>
+              <td>~$3.00 / ~$15.00</td>
+              <td>~$0.50 / ~$1.50</td>
+              <td>~$1.25 / ~$3.75</td>
+            </tr>
+            <tr>
+              <td><strong>Caso de Uso em Dados</strong></td>
+              <td><strong>Text-to-SQL complexo</strong> e ETL cognitivo crítico (onde alucinação = prejuízo).</td>
+              <td>Triagem de logs de erro em volume (Airflow), classificação de tickets.</td>
+              <td>Orquestração de agentes multilíngues.</td>
+              <td>RAG avançado (Retrieval-Augmented Generation) com base de conhecimento interna.</td>
+              <td>Tarefas internas simples (ex: gerar documentação do AWS Glue).</td>
+              <td>Resumo de atas de reunião ou relatórios curtos.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top: 30px;">Quando usar qual?</h3>
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--spark);">
+          <h4>A Escolha do Claude 3.5</h4>
+          <p>
+            O Claude é atualmente o <strong>estado da arte para código e estrutura</strong>. Se o seu pipeline de dados precisa que o LLM leia um PDF de 50 páginas de balanço financeiro, extraia os valores de EBITDA e retorne estritamente em um JSON validado, o Claude 3.5 Sonnet (ou o rápido Claude 3.5 Haiku) são incomparáveis. Eles respeitam tags XML de forma quase religiosa, sofrendo de pouquíssima variação de output.
+          </p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--aws);">
+          <h4>A Escolha do Llama 3.1</h4>
+          <p>
+            Llama brilha no volume. Se você tem 1 milhão de avaliações de clientes que precisam ser classificadas como (Positivo/Negativo/Neutro) para alimentar uma tabela do Amazon Athena, rodar isso no Claude custaria milhares de dólares. O Llama 3.1 (especialmente a versão 8B ou 70B) entrega ~90% da qualidade do Claude para esse caso específico, custando <strong>20x menos</strong>. Llama é excelente para "tarefas braçais" de processamento de linguagem natural.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Checkbox Module Completion -->
+    
+
+    <!-- Navegação Inferior -->
+    <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+      <a href="dataops-mlops.html" class="return-btn" style="background: transparent; border: 1px solid var(--border); color: var(--text);">
+        <span>← Módulo Anterior</span>
+      </a>
+      <a href="genai-rag-architectures.html" class="return-btn">
+        <span>Arquiteturas RAG →</span>
+      </a>
+    </div>
+  </main>
+</div>
+
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script>
+  function toggleNav() {
+    var sb = document.getElementById('sidebar');
+    var main = document.getElementById('main');
+    var hb = document.getElementById('hamburger');
+    if (sb) {
+      if (sb.classList.contains('closed')) {
+        sb.classList.remove('closed');
+        if (main) main.classList.remove('sidebar-closed');
+        if (hb) hb.innerHTML = '✕';
+      } else {
+        sb.classList.add('closed');
+        if (main) main.classList.add('sidebar-closed');
+        if (hb) hb.innerHTML = '☰';
+      }
+    }
+  }
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+</script>
+</body>
+</html>
