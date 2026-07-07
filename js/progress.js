@@ -20,7 +20,7 @@
       badge: "Arquiteto de Dados",
       color: "var(--arch)",
       items: [
-        "architecture.html"
+        "padroes-arquitetura.html"
       ]
     },
     plataforma: {
@@ -582,7 +582,7 @@
     
     // Estilos base do FAB
     fab.style.position = "fixed";
-    fab.style.bottom = "40px";
+    fab.style.bottom = "110px";
     fab.style.right = "40px";
     fab.style.width = "60px";
     fab.style.height = "60px";
