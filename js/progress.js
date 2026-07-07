@@ -7,135 +7,135 @@
 (function() {
   // Configuração das trilhas e suas respectivas seções/hashes para cálculo de progresso
   const MODULES = {
-    pmo: {
-      name: "📊 PMO & Sustentação",
-      badge: "Gerente de Dados",
+    // 1. Fundamentos & Engenharia de Software
+    sql: {
+      name: "🛢️ SQL Mastery",
+      badge: "Mestre do SQL",
+      color: "#0ea5e9",
+      items: ["sql-mastery.html"]
+    },
+    oop: {
+      name: "🐍 Python Legend",
+      badge: "Lenda Viva do Python",
       color: "#f43f5e",
-      items: [
-        "pmo-sme-dados.html"
-      ]
+      items: ["python-legend.html"]
+    },
+    testing: {
+      name: "🧪 Software Testing",
+      badge: "Engenheiro de Qualidade",
+      color: "#10b981",
+      items: ["testing.html"]
     },
     architecture: {
       name: "📐 Arquitetura & Padrões",
       badge: "Arquiteto de Dados",
       color: "var(--arch)",
-      items: [
-        "padroes-arquitetura.html"
-      ]
-    },
-    plataforma: {
-      name: "🏗️ Plataforma de Dados",
-      badge: "Arquiteto de Plataforma",
-      color: "var(--accent)",
-      items: [
-        "plataforma-dados.html"
-      ]
-    },
-    ingestion: {
-      name: "⚡ Ingestão & Streaming",
-      badge: "Mestre da Ingestão",
-      color: "var(--emr)",
-      items: [
-        "ingestion.html"
-      ]
+      items: ["padroes-arquitetura.html"]
     },
     
-    "apache-spark-core": {
-      name: "⚙️ Spark Core",
-      badge: "Engenheiro de Spark",
-      color: "var(--spark)",
-      items: [
-        "apache-spark-core.html"
-      ]
-    },
-    "apache-spark-api": {
-      name: "🧑‍💻 Spark API",
-      badge: "Mestre em Tuning",
-      color: "var(--spark)",
-      items: [
-        "apache-spark-api.html"
-      ]
-    },
-    "spark-ui-troubleshooting": {
-      name: "🩺 UI & Troubleshooting",
-      badge: "Troubleshooter",
-      color: "var(--alert)",
-      items: [
-        "spark-ui-troubleshooting.html"
-      ]
-    },
-    "aws-emr": {
-      name: "☁️ Amazon EMR",
-      badge: "Arquiteto EMR",
-      color: "#ec4899",
-      items: [
-        "aws-emr.html"
-      ]
-    },
-    "aws-glue-flink": {
-      name: "🧩 Glue & Flink",
-      badge: "Especialista Serverless",
-      color: "var(--ext)",
-      items: [
-        "aws-glue-flink.html"
-      ]
+    // 2. Cloud & Infraestrutura Base
+    containers_docker: {
+      name: "🐳 Containers & Docker",
+      badge: "Capitão dos Containers",
+      color: "#3b82f6",
+      items: ["containers-docker.html"]
     },
     infra_operacional: {
       name: "🏗️ Computação & Bancos",
       badge: "Mestre em Computação e Bancos",
       color: "#f43f5e",
-      items: [
-        "computacao-bancos.html"
-      ]
-    },
-    orquestracao: {
-      name: "⛓️ Orquestração de Dados",
-      badge: "Mestre da Orquestração",
-      color: "#a78bfa",
-      items: [
-        "orquestracao-dados.html"
-      ]
-    },
-    storage: {
-      name: "💾 Lakehouse & Storage",
-      badge: "Guardião do Storage",
-      color: "var(--arch)",
-      items: [
-        "storage-lakehouse.html"
-      ]
-    },
-    serving: {
-      name: "📊 Analytics & Serving",
-      badge: "Mestre do Analytics",
-      color: "var(--genai)",
-      items: [
-        "serving.html"
-      ]
-    },
-    security: {
-      name: "🛡️ Segurança & IaC",
-      badge: "Guardião de Segurança",
-      color: "var(--muted)",
-      items: [
-        "governance-security.html"
-      ]
+      items: ["computacao-bancos.html"]
     },
     networking: {
       name: "🌐 Rede & Ingress de Dados",
       badge: "Mestre das Redes",
       color: "#06b6d4",
-      items: [
-        "networking-ingress.html"
-      ]
+      items: ["networking-ingress.html"]
     },
-    api_gateway: {
-      name: "🔌 API Gateway Deep Dive",
-      badge: "Mestre do API Gateway",
-      color: "#7c3aed",
-      items: [
-        "api-gateway.html"
-      ]
+
+    // 3. Core de Engenharia de Dados
+    ingestion: {
+      name: "⚡ Ingestão & Streaming",
+      badge: "Mestre da Ingestão",
+      color: "var(--emr)",
+      items: ["ingestion.html"]
     },
+    storage: {
+      name: "💾 Lakehouse & Storage",
+      badge: "Guardião do Storage",
+      color: "var(--arch)",
+      items: ["storage-lakehouse.html"]
+    },
+    "apache-spark-core": {
+      name: "⚙️ Spark Core",
+      badge: "Engenheiro de Spark",
+      color: "var(--spark)",
+      items: ["apache-spark-core.html"]
+    },
+    "apache-spark-api": {
+      name: "🧑‍💻 Spark API",
+      badge: "Mestre em Tuning",
+      color: "var(--spark)",
+      items: ["apache-spark-api.html"]
+    },
+    "spark-ui-troubleshooting": {
+      name: "🩺 UI & Troubleshooting",
+      badge: "Troubleshooter",
+      color: "var(--alert)",
+      items: ["spark-ui-troubleshooting.html"]
+    },
+    "aws-emr": {
+      name: "☁️ Amazon EMR",
+      badge: "Arquiteto EMR",
+      color: "#ec4899",
+      items: ["aws-emr.html"]
+    },
+    "aws-glue-flink": {
+      name: "🧩 Glue & Flink",
+      badge: "Especialista Serverless",
+      color: "var(--ext)",
+      items: ["aws-glue-flink.html"]
+    },
+    orquestracao: {
+      name: "⛓️ Orquestração de Dados",
+      badge: "Mestre da Orquestração",
+      color: "#a78bfa",
+      items: ["orquestracao-dados.html"]
+    },
+    serving: {
+      name: "📊 Analytics & Serving",
+      badge: "Mestre do Analytics",
+      color: "var(--genai)",
+      items: ["serving.html"]
+    },
+
+    // 4. DevOps, Segurança & Operações
+    terraform: {
+      name: "🛠️ Terraform / IaC",
+      badge: "Engenheiro de Automação",
+      color: "#8b5cf6",
+      items: ["terraform.html"]
+    },
+    security: {
+      name: "🛡️ Segurança & IaC",
+      badge: "Guardião de Segurança",
+      color: "var(--muted)",
+      items: ["governance-security.html"]
+    },
+    finops: {
+      name: "💸 FinOps & Custos",
+      badge: "Lenda das Finanças",
+      color: "var(--ok)",
+      items: ["finops.html"]
+    },
+    dataops: {
+      name: "⚙️ DataOps & MLOps",
+      badge: "Líder de Operations",
+      color: "#06b6d4",
+      items: ["dataops-mlops.html"]
+    },
+
+    // 5. Tópicos Avançados & Especialização
     genai: {
       name: "🤖 IA & GenAI",
       badge: "Arquiteto de GenAI",
@@ -152,167 +152,123 @@
         "genai-multimodal-cognitivo.html"
       ]
     },
-    dataops: {
-      name: "⚙️ DataOps & MLOps",
-      badge: "Líder de Operations",
-      color: "#06b6d4",
-      items: [
-        "dataops-mlops.html"
-      ]
+    plataforma: {
+      name: "🏗️ Plataforma de Dados",
+      badge: "Arquiteto de Plataforma",
+      color: "var(--accent)",
+      items: ["plataforma-dados.html"]
+    },
+    pmo: {
+      name: "📊 PMO & Sustentação",
+      badge: "Gerente de Dados",
+      color: "#f43f5e",
+      items: ["pmo-sme-dados.html"]
     },
     business_value: {
       name: "💼 Business Value",
       badge: "Estrategista de Dados",
       color: "#f59e0b",
-      items: [
-        "business-value.html"
-      ]
-    },
-    finops: {
-      name: "💸 FinOps & Custos",
-      badge: "Lenda das Finanças",
-      color: "var(--ok)",
-      items: [
-        "finops.html"
-      ]
+      items: ["business-value.html"]
     },
     financas: {
       name: "🏦 Conhecimentos Financeiros",
       badge: "Analista Financeiro",
       color: "#0284c7",
-      items: [
-        "financas-dados.html"
-      ]
-    },
-    oop: {
-      name: "🐍 Python Legend",
-      badge: "Lenda Viva do Python",
-      color: "#f43f5e",
-      items: [
-        "data-engineering-oop.html"
-      ]
-    },
-    testing: {
-      name: "🧪 Software Testing",
-      badge: "Engenheiro de Qualidade",
-      color: "#10b981",
-      items: [
-        "testing.html"
-      ]
-    },
-    softskills: {
-      name: "🧠 Soft Skills",
-      badge: "Especialista Tático",
-      color: "var(--spark)",
-      items: [
-        "soft-skills.html"
-      ]
+      items: ["financas-dados.html"]
     },
     
-    
-    
-    
-    
-    
-    perguntas_engenharia_core: {
-      name: "❓ Engenharia (Processing)",
-      badge: "Mestre dos Pipelines",
-      color: "#eab308",
-      items: [
-        "perguntas-engenharia-core.html"
-      ]
-    },
-    perguntas_arquitetura_db: {
-      name: "❓ Arquitetura & Bancos",
-      badge: "Mestre das Arquiteturas",
-      color: "#10b981",
-      items: [
-        "perguntas-arquitetura-db.html"
-      ]
-    },
-    perguntas_storage_lakehouse: {
-      name: "❓ Storage & Lakehouse",
-      badge: "Mestre do Storage",
-      color: "#0ea5e9",
-      items: [
-        "perguntas-storage-lakehouse.html"
-      ]
-    },
-    perguntas_governanca_finops: {
-      name: "❓ Governança & FinOps",
-      badge: "Guardião da Governança",
-      color: "#64748b",
-      items: [
-        "perguntas-governanca-finops.html"
-      ]
-    },
-    perguntas_dataops_ia: {
-      name: "❓ DataOps, MLOps & GenAI",
-      badge: "Mestre em IA & DataOps",
-      color: "#8b5cf6",
-      items: [
-        "perguntas-dataops-ia.html"
-      ]
-    }
-,
+    // System Design & Cases
     cases_streaming: {
       name: "💼 System Design: Streaming",
       badge: "Mestre do Streaming",
       color: "#059669",
-      items: [
-        "cases-streaming.html"
-      ]
+      items: ["cases-streaming.html"]
     },
     cases_batch: {
       name: "💼 System Design: Batch & Lakehouse",
       badge: "Mestre do Lakehouse",
       color: "#059669",
-      items: [
-        "cases-batch-lakehouse.html"
-      ]
+      items: ["cases-batch-lakehouse.html"]
     },
     cases_ecosistema: {
       name: "💼 System Design: Ecosistema",
       badge: "Arquiteto de Ecosistemas",
       color: "#059669",
-      items: [
-        "cases-ecosistema.html"
-      ]
+      items: ["cases-ecosistema.html"]
     },
     cases_dataops: {
       name: "💼 System Design: DataOps & IA",
       badge: "Engenheiro de IA",
       color: "#059669",
-      items: [
-        "cases-dataops-ia.html"
-      ]
+      items: ["cases-dataops-ia.html"]
     },
+
+    // Simulados & Entrevistas
+    perguntas_engenharia_core: {
+      name: "❓ Engenharia (Processing)",
+      badge: "Mestre dos Pipelines",
+      color: "#eab308",
+      items: ["perguntas-engenharia-core.html"]
+    },
+    perguntas_arquitetura_db: {
+      name: "❓ Arquitetura & Bancos",
+      badge: "Mestre das Arquiteturas",
+      color: "#10b981",
+      items: ["perguntas-arquitetura-db.html"]
+    },
+    perguntas_storage_lakehouse: {
+      name: "❓ Storage & Lakehouse",
+      badge: "Mestre do Storage",
+      color: "#0ea5e9",
+      items: ["perguntas-storage-lakehouse.html"]
+    },
+    perguntas_governanca_finops: {
+      name: "❓ Governança & FinOps",
+      badge: "Guardião da Governança",
+      color: "#64748b",
+      items: ["perguntas-governanca-finops.html"]
+    },
+    perguntas_dataops_ia: {
+      name: "❓ DataOps, MLOps & GenAI",
+      badge: "Mestre em IA & DataOps",
+      color: "#8b5cf6",
+      items: ["perguntas-dataops-ia.html"]
+    },
+    
+    // Playbooks Extras
     playbook_kinesis: {
       name: "🚒 Playbook: Kinesis & Spark",
       badge: "SRE de Streaming",
       color: "var(--warn)",
-      items: [
-        "playbook-kinesis-spark.html"
-      ]
+      items: ["playbook-kinesis-spark.html"]
     },
     playbook_governanca: {
       name: "🚒 Playbook: Gov & FinOps",
       badge: "Guardião de Custos",
-      color: "var(--warn)",
-      items: [
-        "playbook-governanca-finops.html"
-      ]
+      color: "#dc2626",
+      items: ["playbook-governanca.html"]
     },
     playbook_data_quality: {
       name: "🚒 Playbook: Data Quality",
-      badge: "Xerife da Qualidade",
-      color: "var(--warn)",
-      items: [
-        "playbook-data-quality.html"
-      ]
+      badge: "Engenheiro de Qualidade",
+      color: "#b91c1c",
+      items: ["playbook-data-quality.html"]
+    },
+    api_gateway: {
+      name: "🔌 API Gateway Deep Dive",
+      badge: "Mestre do API Gateway",
+      color: "#7c3aed",
+      items: ["api-gateway.html"]
+    },
+    
+    // Fechamento
+    softskills: {
+      name: "🧠 Soft Skills",
+      badge: "Especialista Tático",
+      color: "var(--spark)",
+      items: ["soft-skills.html"]
     }
-
-};
+  };;
 
   // Carrega progresso do localStorage
   function loadProgress() {
