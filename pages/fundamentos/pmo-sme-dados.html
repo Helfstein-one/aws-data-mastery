@@ -366,18 +366,501 @@ quadrantChart
   </section>
 
   <section class="section" id="roadmap" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
-    <h3 style="margin-top:30px;">Roadmap de Implementação de Projeto (com RUN)</h3>
+    <div class="sec-hdr">
+      <div class="sec-num" style="color:var(--spark)">06</div>
+      <div class="sec-title">
+        <div class="sec-subtitle">Ciclo de Vida Completo</div>
+        <h2>Roadmap de Implementação de Projeto (com RUN)</h2>
+      </div>
+    </div>
     <p>O planejamento de um projeto analítico via PMO moderno engloba todas as fases desde a concepção até a passagem de bastão para a sustentação. Ignorar a fase de <em>Hypercare</em> costuma ser a causa número um de colapso nos primeiros dias pós-deploy.</p>
-    
-    <div style="margin-top:20px; padding:20px; background:#1e293b; border-radius:8px; border: 1px solid var(--border);">
-      <ol style="line-height: 1.8; color: var(--text);">
-        <li><strong>Fase 1: Discovery &amp; Assessment (Semanas 1-2):</strong> Levantamento de requisitos de negócio, análise das fontes de dados, definição de SLAs e aprovação da arquitetura inicial.</li>
-        <li><strong>Fase 2: Build &amp; Development (Semanas 3-10):</strong> Codificação dos pipelines (Ingestão, Processamento, Serving). Execução em sprints ágeis.</li>
-        <li><strong>Fase 3: Quality Assurance &amp; UAT (Semanas 11-12):</strong> Testes de volume, stress (Performance Testing) e aprovação pelo usuário final (UAT - User Acceptance Testing).</li>
-        <li><strong>Fase 4: Deploy &amp; Cutover (Semana 13):</strong> Subida em produção (Deploy Blue/Green ou Go-Live programado), carga histórica de dados.</li>
-        <li><strong>Fase 5: Hypercare (Semanas 14-15):</strong> A equipe de BUILD monitora ativamente a produção dia a dia. É o período de ajustes finos, tuning de recursos e estabilização de bugs inesperados.</li>
-        <li><strong>Fase 6: Transition to RUN (Handover):</strong> Repasse de conhecimento, documentação final, runbooks de erros conhecidos e transição definitiva para a equipe de Sustentação.</li>
-      </ol>
+
+    <!-- ══════ DIAGRAMA: FASES DO PROJETO ══════ -->
+    <style>
+      .phase-diagram { margin: 30px 0 40px 0; }
+      .phase-flow {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        overflow-x: auto;
+        padding-bottom: 12px;
+      }
+      .phase-node {
+        flex: 1;
+        min-width: 130px;
+        position: relative;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      }
+      .phase-node:hover { transform: translateY(-4px); }
+      .phase-chevron {
+        position: relative;
+        padding: 16px 14px 16px 24px;
+        background: #1e293b;
+        clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%, 16px 50%);
+        text-align: center;
+        min-height: 90px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: none;
+        transition: background 0.2s ease;
+      }
+      .phase-node:first-child .phase-chevron {
+        clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%);
+        border-radius: 8px 0 0 8px;
+      }
+      .phase-node:last-child .phase-chevron {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 16px 50%);
+        border-radius: 0 8px 8px 0;
+      }
+      .phase-icon { font-size: 22px; line-height: 1; }
+      .phase-name {
+        font-size: 11px;
+        font-weight: 700;
+        color: #f1f5f9;
+        letter-spacing: 0.3px;
+        line-height: 1.3;
+      }
+      .phase-dur {
+        font-size: 9px;
+        color: #64748b;
+        font-weight: 500;
+      }
+      /* Gate markers */
+      .phase-gate {
+        position: absolute;
+        right: -8px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #0f172a;
+        border: 2px solid #475569;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        color: #94a3b8;
+      }
+      .phase-node:last-child .phase-gate { display: none; }
+      /* Detail cards */
+      .phase-details-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .phase-detail-card {
+        background: #0f172a;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px 20px;
+        border-top: 3px solid;
+      }
+      .pdc-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .pdc-icon { font-size: 20px; }
+      .pdc-title { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+      .pdc-body { font-size: 13px; color: #94a3b8; line-height: 1.65; margin: 0; }
+      .pdc-body strong { color: #cbd5e1; }
+      .pdc-outputs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+      }
+      .pdc-out-tag {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #cbd5e1;
+      }
+      .pdc-gate-label {
+        display: inline-block;
+        margin-top: 10px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+        letter-spacing: 0.5px;
+      }
+    </style>
+
+    <div class="phase-diagram">
+      <div class="phase-flow">
+        <div class="phase-node">
+          <div class="phase-chevron" style="background:#1a2744;">
+            <span class="phase-icon">🔎</span>
+            <span class="phase-name">Discovery</span>
+            <span class="phase-dur">2–3 semanas</span>
+          </div>
+          <div class="phase-gate">G1</div>
+        </div>
+        <div class="phase-node">
+          <div class="phase-chevron" style="background:#261a3d;">
+            <span class="phase-icon">💡</span>
+            <span class="phase-name">Inception</span>
+            <span class="phase-dur">2 semanas</span>
+          </div>
+          <div class="phase-gate">G2</div>
+        </div>
+        <div class="phase-node">
+          <div class="phase-chevron" style="background:#1a2e1a;">
+            <span class="phase-icon">⚙️</span>
+            <span class="phase-name">Desenvolvimento</span>
+            <span class="phase-dur">6–10 sprints</span>
+          </div>
+          <div class="phase-gate">G3</div>
+        </div>
+        <div class="phase-node">
+          <div class="phase-chevron" style="background:#2d1a2d;">
+            <span class="phase-icon">🧪</span>
+            <span class="phase-name">Testes Integrados</span>
+            <span class="phase-dur">2–3 semanas</span>
+          </div>
+          <div class="phase-gate">G4</div>
+        </div>
+        <div class="phase-node">
+          <div class="phase-chevron" style="background:#2d2a1a;">
+            <span class="phase-icon">🛫</span>
+            <span class="phase-name">Piloto Produtivo</span>
+            <span class="phase-dur">2–4 semanas</span>
+          </div>
+          <div class="phase-gate">G5</div>
+        </div>
+        <div class="phase-node">
+          <div class="phase-chevron" style="background:#0d2a1f;">
+            <span class="phase-icon">🚀</span>
+            <span class="phase-name">Produção</span>
+            <span class="phase-dur">Go-Live</span>
+          </div>
+          <div class="phase-gate">G6</div>
+        </div>
+        <div class="phase-node">
+          <div class="phase-chevron" style="background:#1a2530;">
+            <span class="phase-icon">🔄</span>
+            <span class="phase-name">Pós-Implementação</span>
+            <span class="phase-dur">Ongoing</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Cards -->
+      <div class="phase-details-row">
+
+        <div class="phase-detail-card" style="border-top-color:#3b82f6;">
+          <div class="pdc-header">
+            <span class="pdc-icon">🔎</span>
+            <span class="pdc-title">Discovery</span>
+          </div>
+          <p class="pdc-body">Entendimento profundo do problema de negócio. Mapeamento de <strong>fontes de dados</strong>, volumetria, SLAs esperados e stakeholders. Definição do <strong>Business Case</strong> e ROI estimado.</p>
+          <div class="pdc-outputs">
+            <span class="pdc-out-tag">Business Case</span>
+            <span class="pdc-out-tag">Mapa de Fontes</span>
+            <span class="pdc-out-tag">SLA Target</span>
+            <span class="pdc-out-tag">ROI Estimado</span>
+          </div>
+          <span class="pdc-gate-label" style="background:rgba(59,130,246,0.15); color:#60a5fa;">Gate 1: Go / No-Go Decision</span>
+        </div>
+
+        <div class="phase-detail-card" style="border-top-color:#8b5cf6;">
+          <div class="pdc-header">
+            <span class="pdc-icon">💡</span>
+            <span class="pdc-title">Inception</span>
+          </div>
+          <p class="pdc-body">Definição da <strong>arquitetura técnica</strong> (ADR), backlog priorizado em épicos, formação do time e setup do ambiente de desenvolvimento. Sprint 0 com <strong>Proof of Concept</strong>.</p>
+          <div class="pdc-outputs">
+            <span class="pdc-out-tag">ADR</span>
+            <span class="pdc-out-tag">Backlog (Épicos)</span>
+            <span class="pdc-out-tag">Sprint 0 / PoC</span>
+            <span class="pdc-out-tag">Environments</span>
+          </div>
+          <span class="pdc-gate-label" style="background:rgba(139,92,246,0.15); color:#a78bfa;">Gate 2: Architecture Approved</span>
+        </div>
+
+        <div class="phase-detail-card" style="border-top-color:#22c55e;">
+          <div class="pdc-header">
+            <span class="pdc-icon">⚙️</span>
+            <span class="pdc-title">Desenvolvimento</span>
+          </div>
+          <p class="pdc-body">Construção iterativa em <strong>sprints de 2 semanas</strong>. Pipelines de Ingestão, Processamento e Serving. IaC (Terraform/CDK), CI/CD automatizado, code reviews e demos para stakeholders a cada sprint.</p>
+          <div class="pdc-outputs">
+            <span class="pdc-out-tag">Pipelines ETL</span>
+            <span class="pdc-out-tag">IaC</span>
+            <span class="pdc-out-tag">CI/CD</span>
+            <span class="pdc-out-tag">Sprint Reviews</span>
+          </div>
+          <span class="pdc-gate-label" style="background:rgba(34,197,94,0.15); color:#4ade80;">Gate 3: Feature Complete</span>
+        </div>
+
+        <div class="phase-detail-card" style="border-top-color:#ec4899;">
+          <div class="pdc-header">
+            <span class="pdc-icon">🧪</span>
+            <span class="pdc-title">Testes Integrados</span>
+          </div>
+          <p class="pdc-body"><strong>E2E Testing</strong> com dados reais anonimizados. Testes de carga e stress (volume 3x produção). Validação de <strong>Data Quality</strong> (Great Expectations / Deequ). UAT com o usuário final.</p>
+          <div class="pdc-outputs">
+            <span class="pdc-out-tag">Stress Test Report</span>
+            <span class="pdc-out-tag">DQ Validation</span>
+            <span class="pdc-out-tag">UAT Sign-off</span>
+            <span class="pdc-out-tag">Bug Triage</span>
+          </div>
+          <span class="pdc-gate-label" style="background:rgba(236,72,153,0.15); color:#f472b6;">Gate 4: UAT Approved</span>
+        </div>
+
+        <div class="phase-detail-card" style="border-top-color:#f59e0b;">
+          <div class="pdc-header">
+            <span class="pdc-icon">🛫</span>
+            <span class="pdc-title">Piloto Produtivo</span>
+          </div>
+          <p class="pdc-body">Deploy em produção com <strong>escopo restrito</strong> (1 região, 1 produto, subset de clientes). Monitoramento intensivo. Comparação de resultados com o legado (<strong>Shadow Mode</strong>). Ajustes finos de performance.</p>
+          <div class="pdc-outputs">
+            <span class="pdc-out-tag">Shadow Mode</span>
+            <span class="pdc-out-tag">Métricas A/B</span>
+            <span class="pdc-out-tag">Tuning</span>
+            <span class="pdc-out-tag">Rollback Plan</span>
+          </div>
+          <span class="pdc-gate-label" style="background:rgba(245,158,11,0.15); color:#fbbf24;">Gate 5: Pilot Success Criteria Met</span>
+        </div>
+
+        <div class="phase-detail-card" style="border-top-color:#10b981;">
+          <div class="pdc-header">
+            <span class="pdc-icon">🚀</span>
+            <span class="pdc-title">Produção (Go-Live)</span>
+          </div>
+          <p class="pdc-body"><strong>Cutover completo</strong>. Deploy Blue/Green ou Canary. Carga histórica (backfill). Hypercare de 2 semanas com o time de BUILD monitorando 24/7. Dashboards de observabilidade (CloudWatch/Datadog).</p>
+          <div class="pdc-outputs">
+            <span class="pdc-out-tag">Go-Live</span>
+            <span class="pdc-out-tag">Backfill</span>
+            <span class="pdc-out-tag">Hypercare</span>
+            <span class="pdc-out-tag">Alertas Prod</span>
+          </div>
+          <span class="pdc-gate-label" style="background:rgba(16,185,129,0.15); color:#34d399;">Gate 6: Stabilization Confirmed</span>
+        </div>
+
+        <div class="phase-detail-card" style="border-top-color:#06b6d4;">
+          <div class="pdc-header">
+            <span class="pdc-icon">🔄</span>
+            <span class="pdc-title">Pós-Implementação</span>
+          </div>
+          <p class="pdc-body"><strong>Handover para RUN</strong> (Sustentação). Documentação final, runbooks, War Room playbook. <strong>Retrospectiva</strong> do projeto (Lessons Learned). Medição do ROI real vs. estimado. Ciclo de melhoria contínua.</p>
+          <div class="pdc-outputs">
+            <span class="pdc-out-tag">Runbooks</span>
+            <span class="pdc-out-tag">Knowledge Transfer</span>
+            <span class="pdc-out-tag">Retrospectiva</span>
+            <span class="pdc-out-tag">ROI Realizado</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- ══════ FIM DIAGRAMA ══════ -->    
+    <style>
+      .roadmap-timeline { position: relative; padding: 30px 0 10px 0; }
+      .roadmap-timeline::before {
+        content: '';
+        position: absolute;
+        left: 28px;
+        top: 30px;
+        bottom: 10px;
+        width: 3px;
+        background: linear-gradient(180deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #10b981, #06b6d4);
+        border-radius: 3px;
+      }
+      .rm-phase {
+        position: relative;
+        padding: 0 0 32px 72px;
+        transition: transform 0.2s ease;
+      }
+      .rm-phase:last-child { padding-bottom: 0; }
+      .rm-phase:hover { transform: translateX(4px); }
+      .rm-dot {
+        position: absolute;
+        left: 14px;
+        top: 4px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        z-index: 1;
+        box-shadow: 0 0 12px rgba(0,0,0,0.4);
+      }
+      .rm-card {
+        background: #1e293b;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px 22px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      .rm-phase:hover .rm-card {
+        border-color: #475569;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      }
+      .rm-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .rm-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin: 0;
+      }
+      .rm-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 20px;
+        letter-spacing: 0.5px;
+      }
+      .rm-desc {
+        margin: 8px 0 0 0;
+        font-size: 13.5px;
+        color: #94a3b8;
+        line-height: 1.65;
+      }
+      .rm-deliverables {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .rm-tag {
+        font-size: 11px;
+        padding: 3px 9px;
+        border-radius: 4px;
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #cbd5e1;
+      }
+    </style>
+
+    <div class="roadmap-timeline">
+
+      <!-- Fase 1 -->
+      <div class="rm-phase">
+        <div class="rm-dot" style="background:#3b82f6;">🔍</div>
+        <div class="rm-card">
+          <div class="rm-header">
+            <span class="rm-title">Fase 1: Discovery & Assessment</span>
+            <span class="rm-badge" style="background:rgba(59,130,246,0.15); color:#60a5fa;">Semanas 1–2</span>
+          </div>
+          <p class="rm-desc">Levantamento de requisitos de negócio, análise das fontes de dados, definição de SLAs e aprovação da arquitetura inicial. O output principal é o <strong>Architecture Decision Record (ADR)</strong>.</p>
+          <div class="rm-deliverables">
+            <span class="rm-tag">Requisitos</span>
+            <span class="rm-tag">Mapa de Fontes</span>
+            <span class="rm-tag">SLAs</span>
+            <span class="rm-tag">ADR</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fase 2 -->
+      <div class="rm-phase">
+        <div class="rm-dot" style="background:#8b5cf6;">⚙️</div>
+        <div class="rm-card">
+          <div class="rm-header">
+            <span class="rm-title">Fase 2: Build & Development</span>
+            <span class="rm-badge" style="background:rgba(139,92,246,0.15); color:#a78bfa;">Semanas 3–10</span>
+          </div>
+          <p class="rm-desc">Codificação dos pipelines (Ingestão, Processamento, Serving). Execução em sprints ágeis de 2 semanas com demos para stakeholders. Infraestrutura provisionada via IaC (Terraform/CDK).</p>
+          <div class="rm-deliverables">
+            <span class="rm-tag">Pipelines ETL</span>
+            <span class="rm-tag">IaC</span>
+            <span class="rm-tag">CI/CD</span>
+            <span class="rm-tag">Sprint Reviews</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fase 3 -->
+      <div class="rm-phase">
+        <div class="rm-dot" style="background:#ec4899;">🧪</div>
+        <div class="rm-card">
+          <div class="rm-header">
+            <span class="rm-title">Fase 3: Quality Assurance & UAT</span>
+            <span class="rm-badge" style="background:rgba(236,72,153,0.15); color:#f472b6;">Semanas 11–12</span>
+          </div>
+          <p class="rm-desc">Testes de volume, stress (Performance Testing) e aprovação pelo usuário final (UAT — User Acceptance Testing). Data Quality validada com Great Expectations ou Deequ.</p>
+          <div class="rm-deliverables">
+            <span class="rm-tag">Stress Test</span>
+            <span class="rm-tag">UAT Sign-off</span>
+            <span class="rm-tag">Data Quality</span>
+            <span class="rm-tag">Relatório de Bugs</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fase 4 -->
+      <div class="rm-phase">
+        <div class="rm-dot" style="background:#f59e0b;">🚀</div>
+        <div class="rm-card">
+          <div class="rm-header">
+            <span class="rm-title">Fase 4: Deploy & Cutover</span>
+            <span class="rm-badge" style="background:rgba(245,158,11,0.15); color:#fbbf24;">Semana 13</span>
+          </div>
+          <p class="rm-desc">Subida em produção (Deploy Blue/Green ou Go-Live programado), carga histórica de dados (backfill). Rollback plan validado e aprovado pelo Change Advisory Board (CAB).</p>
+          <div class="rm-deliverables">
+            <span class="rm-tag">Go-Live</span>
+            <span class="rm-tag">Blue/Green</span>
+            <span class="rm-tag">Backfill</span>
+            <span class="rm-tag">Rollback Plan</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fase 5 -->
+      <div class="rm-phase">
+        <div class="rm-dot" style="background:#10b981;">🛡️</div>
+        <div class="rm-card">
+          <div class="rm-header">
+            <span class="rm-title">Fase 5: Hypercare</span>
+            <span class="rm-badge" style="background:rgba(16,185,129,0.15); color:#34d399;">Semanas 14–15</span>
+          </div>
+          <p class="rm-desc">A equipe de BUILD monitora ativamente a produção dia a dia. É o período de ajustes finos, tuning de recursos e estabilização de bugs inesperados. Dashboards de observabilidade (CloudWatch / Datadog) acompanhados em tempo real.</p>
+          <div class="rm-deliverables">
+            <span class="rm-tag">Monitoramento 24/7</span>
+            <span class="rm-tag">Tuning</span>
+            <span class="rm-tag">Hotfixes</span>
+            <span class="rm-tag">SLA Tracking</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fase 6 -->
+      <div class="rm-phase">
+        <div class="rm-dot" style="background:#06b6d4;">🤝</div>
+        <div class="rm-card" style="border-color:#06b6d4;">
+          <div class="rm-header">
+            <span class="rm-title">Fase 6: Transition to RUN (Handover)</span>
+            <span class="rm-badge" style="background:rgba(6,182,212,0.15); color:#22d3ee;">Ongoing</span>
+          </div>
+          <p class="rm-desc">Repasse de conhecimento, documentação final, runbooks de erros conhecidos e transição definitiva para a equipe de Sustentação (RUN). A partir daqui, o time de BUILD está liberado para o próximo projeto.</p>
+          <div class="rm-deliverables">
+            <span class="rm-tag">Runbooks</span>
+            <span class="rm-tag">Knowledge Transfer</span>
+            <span class="rm-tag">Docs Finais</span>
+            <span class="rm-tag">Handover Sign-off</span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
