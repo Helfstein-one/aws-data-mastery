@@ -614,15 +614,7 @@
       }, 100);
     };
     
-    fab.addEventListener("click", () => {
-      const quizBlock = document.getElementById('quiz-container');
-      if (quizBlock && quizBlock.dataset.passed !== "true" && !isCompleted) {
-         alert("🏆 Desafio Sênior: Você precisa passar no Quiz de Validação antes de concluir este módulo!");
-         quizBlock.scrollIntoView({behavior: "smooth"});
-         return;
-      }
-      handleCompletion();
-    });
+    fab.addEventListener("click", () => handleCompletion());
     
     // === TRACKING DE SCROLL ===
     window.addEventListener("scroll", () => {
@@ -654,14 +646,9 @@
       const offset = circ - (scrolled * circ);
       ring.style.strokeDashoffset = offset;
       
-      // Se chegou em 98% da página, verifica se há quiz pendente
+      // Se chegou em 98% da página, marca concluído automaticamente
       if (scrolled >= 0.98) {
-        const quizBlock = document.getElementById('quiz-container');
-        if (quizBlock && quizBlock.dataset.passed !== "true" && !isCompleted) {
-           // Tem quiz pendente, não auto-completa
-        } else {
-           handleCompletion(true);
-        }
+        handleCompletion(true);
       }
     }, { passive: true });
     
