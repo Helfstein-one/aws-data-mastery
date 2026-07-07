@@ -415,6 +415,54 @@ aws mwaa create-cli-token --name prod-airflow-environment \
         </div>
       </div>
     </section>
+  
+<section class="section" id="deep-dive-orchestration">
+  <div class="sec-hdr">
+    <div class="sec-num" style="color:#a78bfa">05</div>
+    <div class="sec-title">
+      <div class="sec-subtitle">Aprofundamento Sênior</div>
+      <h2>Infraestrutura Airflow & Idempotência</h2>
+    </div>
+  </div>
+  
+  <h3>1. IaC & DAGs de Automação (Terraform + Python)</h3>
+  <div class="code-tabs" style="margin-top:20px; margin-bottom: 30px; background:#0f172a; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+    <div class="code-tab-header" style="display:flex; border-bottom:1px solid #1e293b; background:#020617;">
+      <button class="code-tab-btn active" style="padding:12px 20px; background:none; border:none; color:var(--aws); font-family:var(--font-mono); font-size:12px; cursor:pointer; border-bottom:2px solid var(--aws);">mwaa.tf</button>
+      <button class="code-tab-btn" style="padding:12px 20px; background:none; border:none; color:#64748b; font-family:var(--font-mono); font-size:12px; cursor:pointer;">dag_etl.py</button>
+    </div>
+    <div class="code-content" style="padding:20px; font-family:var(--font-mono); font-size:13px; color:#e2e8f0; overflow-x:auto; line-height:1.5;">
+<pre style="margin:0;"><code class="language-hcl"># AWS MWAA: Managed Airflow Environment
+resource "aws_mwaa_environment" "data_orchestrator" {
+  name               = "core-data-orchestrator"
+  airflow_version    = "2.6.3"
+  environment_class  = "mw1.medium"
+  execution_role_arn = aws_iam_role.mwaa_execution.arn
+  
+  source_bucket_arn  = aws_s3_bucket.airflow_bucket.arn
+  dag_s3_path        = "dags/"
+
+  network_configuration {
+    security_group_ids = [aws_security_group.mwaa_sg.id]
+    subnet_ids         = aws_subnet.private[*].id
+  }
+
+  webserver_access_mode = "PUBLIC_ONLY" # Ideal = PRIVATE_ONLY para produção
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>2. O Princípio da Idempotência (Golden Rule)</h3>
+  <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid #3b82f6; padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; margin-bottom:40px;">
+    <strong style="color: #3b82f6;">Por que Idempotência separa Juniores de Seniores?</strong>
+    <p style="margin-top:8px;">Em engenharia de dados, <em>Idempotência</em> significa que uma tarefa pode ser re-executada infinitas vezes e o estado final do banco de dados será sempre o mesmo, sem duplicar registros.</p>
+    <ul style="margin-top: 8px; padding-left: 20px;">
+      <li><strong>Abordagem Junior (Não Idempotente):</strong> Fazer <code>INSERT INTO lake_table SELECT * FROM raw_layer</code>. Se a DAG falhar no meio, um retry vai duplicar os dados amanhã.</li>
+      <li><strong>Abordagem Sênior (Idempotente):</strong> Fazer `MERGE` (Upsert no Iceberg), ou deletar a partição D-1 `DELETE FROM table WHERE data='2024-01-01'` antes de rodar o `INSERT` do lote. Airflow depende da idempotência dos workers para garantir a sanidade dos dados em caso de falhas.</li>
+    </ul>
+  </div>
+</section>
+
   </main>
 </div>
 

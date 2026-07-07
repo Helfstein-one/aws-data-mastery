@@ -1141,6 +1141,66 @@ resource "aws_rds_cluster_instance" "aurora_vendas_replica" {
         </div>
       </div>
     </section>
+  
+<section class="section" id="deep-dive-ingestion">
+  <div class="sec-hdr">
+    <div class="sec-num" style="color:var(--emr)">05</div>
+    <div class="sec-title">
+      <div class="sec-subtitle">Aprofundamento Sênior</div>
+      <h2>Infraestrutura e Troubleshooting</h2>
+    </div>
+  </div>
+  
+  <h3>1. IaC & Processamento de Borda</h3>
+  <div class="code-tabs" style="margin-top:20px; margin-bottom: 30px; background:#0f172a; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+    <div class="code-tab-header" style="display:flex; border-bottom:1px solid #1e293b; background:#020617;">
+      <button class="code-tab-btn active" style="padding:12px 20px; background:none; border:none; color:var(--aws); font-family:var(--font-mono); font-size:12px; cursor:pointer; border-bottom:2px solid var(--aws);">firehose.tf</button>
+      <button class="code-tab-btn" style="padding:12px 20px; background:none; border:none; color:#64748b; font-family:var(--font-mono); font-size:12px; cursor:pointer;">consumer.py</button>
+    </div>
+    <div class="code-content" style="padding:20px; font-family:var(--font-mono); font-size:13px; color:#e2e8f0; overflow-x:auto; line-height:1.5;">
+<pre style="margin:0;"><code class="language-hcl"># Kinesis Firehose com conversão nativa para Apache Parquet
+resource "aws_kinesis_firehose_delivery_stream" "raw_to_bronze" {
+  name        = "kds-to-s3-parquet"
+  destination = "extended_s3"
+
+  extended_s3_configuration {
+    role_arn   = aws_iam_role.firehose_role.arn
+    bucket_arn = aws_s3_bucket.bronze.arn
+    
+    # Conversão de Formato (Evita Lambdas!)
+    data_format_conversion_configuration {
+      input_format_configuration {
+        deserializer {
+          open_x_json_ser_de {}
+        }
+      }
+      output_format_configuration {
+        serializer {
+          parquet_ser_de {}
+        }
+      }
+      schema_configuration {
+        database_name = "lake_catalog"
+        table_name    = "events_schema"
+        role_arn      = aws_iam_role.firehose_role.arn
+      }
+    }
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>2. Troubleshooting: ProvisionedThroughputExceededException</h3>
+  <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid #ef4444; padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; margin-bottom:40px;">
+    <strong style="color: #ef4444;">O que causa e como resolver?</strong>
+    <p style="margin-top:8px;">Este erro ocorre quando produtores gravam mais de 1MB/s ou 1.000 requisições/s em um único shard do Kinesis.</p>
+    <ul style="margin-top: 8px; padding-left: 20px;">
+      <li><strong>Causa Comum (Hot Shard):</strong> Uso de <em>Partition Keys</em> não bem distribuídas (ex: hardcoded '1' ou ID do cliente que causa 80% do tráfego).</li>
+      <li><strong>Solução:</strong> Fazer um <em>UpdateShardCount</em> para escalar horizontalmente e usar chaves aleatórias puras (ex: UUID) quando a ordem cronológica estrita não for absolutamente necessária. Alternativamente, usar <strong>Kinesis On-Demand</strong>.</li>
+    </ul>
+  </div>
+</section>
+
   </main>
 </div>
 

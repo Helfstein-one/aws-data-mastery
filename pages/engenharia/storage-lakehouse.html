@@ -872,6 +872,75 @@ CALL glue_catalog.system.rewrite_manifests(
         </div>
       </div>
     </section>
+  
+<section class="section" id="deep-dive-lakehouse">
+  <div class="sec-hdr">
+    <div class="sec-num" style="color:var(--aws)">04</div>
+    <div class="sec-title">
+      <div class="sec-subtitle">Aprofundamento Sênior</div>
+      <h2>Implementação & Otimização de Custos</h2>
+    </div>
+  </div>
+  
+  <h3>1. IaC & Metadados (Terraform + SQL)</h3>
+  <div class="code-tabs" style="margin-top:20px; margin-bottom: 30px; background:#0f172a; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+    <div class="code-tab-header" style="display:flex; border-bottom:1px solid #1e293b; background:#020617;">
+      <button class="code-tab-btn active" style="padding:12px 20px; background:none; border:none; color:var(--aws); font-family:var(--font-mono); font-size:12px; cursor:pointer; border-bottom:2px solid var(--aws);">s3_bucket.tf</button>
+      <button class="code-tab-btn" style="padding:12px 20px; background:none; border:none; color:#64748b; font-family:var(--font-mono); font-size:12px; cursor:pointer;">table_ddl.sql</button>
+    </div>
+    <div class="code-content" style="padding:20px; font-family:var(--font-mono); font-size:13px; color:#e2e8f0; overflow-x:auto; line-height:1.5;">
+<pre style="margin:0;"><code class="language-hcl"># Provisionamento S3 com Lifecycle Rules para Data Lake
+resource "aws_s3_bucket" "datalake_gold" {
+  bucket = "company-datalake-gold-zone"
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "gold_lifecycle" {
+  bucket = aws_s3_bucket.datalake_gold.id
+
+  rule {
+    id     = "archive-old-partitions"
+    status = "Enabled"
+    
+    transition {
+      days          = 90
+      storage_class = "INTELLIGENT_TIERING"
+    }
+    
+    transition {
+      days          = 365
+      storage_class = "GLACIER"
+    }
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>2. Matriz de Custos FinOps: S3 Intelligent-Tiering</h3>
+  <div style="overflow-x:auto; margin-top:20px; margin-bottom:40px;">
+    <table style="width:100%; border-collapse: collapse; text-align: left; font-size:14px; background:var(--card-bg); border-radius:8px; overflow:hidden;">
+      <thead>
+        <tr style="background:#1e293b; color:#94a3b8; border-bottom:1px solid #334155;">
+          <th style="padding:15px;">Estratégia Storage (100 TB)</th>
+          <th style="padding:15px;">Padrão de Acesso</th>
+          <th style="padding:15px;">Custo Estimado ($/Mês)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #334155;">
+          <td style="padding:15px;">S3 Standard (Tudo Frio/Quente misturado)</td>
+          <td style="padding:15px;">Frequente</td>
+          <td style="padding:15px; color:#ef4444; font-weight:bold;">~$2,300.00</td>
+        </tr>
+        <tr>
+          <td style="padding:15px;">S3 Intelligent-Tiering (70% Frio)</td>
+          <td style="padding:15px;">Automação movendo para Archive Access</td>
+          <td style="padding:15px; color:var(--ok); font-weight:bold;">~$1,150.00 (50% de economia)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
   </main>
 </div>
 

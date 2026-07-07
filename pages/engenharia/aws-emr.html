@@ -625,6 +625,77 @@ sudo wget -P /usr/lib/spark/jars/ \
     </section>
 
     
+  
+<section class="section" id="deep-dive-emr">
+  <div class="sec-hdr">
+    <div class="sec-num" style="color:#ec4899">05</div>
+    <div class="sec-title">
+      <div class="sec-subtitle">Aprofundamento Sênior</div>
+      <h2>Instance Fleets & Submissão YARN</h2>
+    </div>
+  </div>
+  
+  <h3>1. IaC & Submissão (Terraform + Bash)</h3>
+  <div class="code-tabs" style="margin-top:20px; margin-bottom: 30px; background:#0f172a; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+    <div class="code-tab-header" style="display:flex; border-bottom:1px solid #1e293b; background:#020617;">
+      <button class="code-tab-btn active" style="padding:12px 20px; background:none; border:none; color:var(--aws); font-family:var(--font-mono); font-size:12px; cursor:pointer; border-bottom:2px solid var(--aws);">emr_cluster.tf</button>
+      <button class="code-tab-btn" style="padding:12px 20px; background:none; border:none; color:#64748b; font-family:var(--font-mono); font-size:12px; cursor:pointer;">spark_submit.sh</button>
+    </div>
+    <div class="code-content" style="padding:20px; font-family:var(--font-mono); font-size:13px; color:#e2e8f0; overflow-x:auto; line-height:1.5;">
+<pre style="margin:0;"><code class="language-hcl"># Cluster EMR Híbrido: Master On-Demand + Core/Task em Spot
+resource "aws_emr_cluster" "spark_cluster" {
+  name          = "data-processing-cluster"
+  release_label = "emr-6.10.0"
+  applications  = ["Spark", "Hadoop", "Hive"]
+
+  core_instance_fleet {
+    target_spot_capacity = 10
+    
+    instance_type_configs {
+      instance_type = "r5.xlarge"
+    }
+    instance_type_configs {
+      instance_type = "r5.2xlarge"
+    }
+    
+    launch_specifications {
+      spot_specification {
+        allocation_strategy      = "capacity-optimized"
+        timeout_duration_minutes = 60
+        timeout_action           = "SWITCH_TO_ON_DEMAND"
+      }
+    }
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>2. Matriz de Custos FinOps: EMR Spots</h3>
+  <div style="overflow-x:auto; margin-top:20px; margin-bottom:40px;">
+    <table style="width:100%; border-collapse: collapse; text-align: left; font-size:14px; background:var(--card-bg); border-radius:8px; overflow:hidden;">
+      <thead>
+        <tr style="background:#1e293b; color:#94a3b8; border-bottom:1px solid #334155;">
+          <th style="padding:15px;">Setup de Cluster EMR (10 Nós r5.2xlarge)</th>
+          <th style="padding:15px;">Nível de Garantia SLA</th>
+          <th style="padding:15px;">Custo Estimado ($/Hora)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #334155;">
+          <td style="padding:15px;">100% On-Demand (Padrão)</td>
+          <td style="padding:15px;">Alto - Garantia de capacidade reservada.</td>
+          <td style="padding:15px; color:#ef4444; font-weight:bold;">~$5.04/hr</td>
+        </tr>
+        <tr>
+          <td style="padding:15px;">Instance Fleets (1 On-Demand + 9 Spot)</td>
+          <td style="padding:15px;">Tolerante a falhas. Master nó garante sobrevivência, Spark recupera executors perdidos.</td>
+          <td style="padding:15px; color:var(--ok); font-weight:bold;">~$1.30/hr (Economia Brutal)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
   </main>
 </div>
 
