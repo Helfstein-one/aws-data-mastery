@@ -353,7 +353,7 @@
     updateSidebarCheckboxes(progress);
 
     // 3. Atualiza os checkboxes das seções físicas da página atual
-    injectPageCompletionBox(progress, stats);
+    injectFloatingCompletionButton(progress, stats);
 
     // 4. Se estiver no index.html, renderiza o dashboard
     renderDashboard(stats);
@@ -546,8 +546,8 @@
     });
   }
 
-  // Injeta bloco unificado de conclusão no rodapé da página
-  function injectPageCompletionBox(progress, stats) {
+  // Injeta Botão Flutuante (FAB) de conclusão
+  function injectFloatingCompletionButton(progress, stats) {
     const pageName = getCurrentPageName().split("#")[0];
     
     // Verifica se a página atual pertence a algum módulo
@@ -564,87 +564,91 @@
     
     if (!pageIsTracked) return;
     
-    const mainContainer = document.querySelector(".main-content") || document.querySelector("main") || document.getElementById("main");
-    if (!mainContainer) return;
+    // Verifica se já injetou o FAB
+    let fab = document.getElementById("progress-fab");
+    const isCompleted = !!progress[pageName];
+    const moduleColor = currentModule.color || 'var(--accent)';
     
-    // Verifica se já injetou
-    if (document.getElementById("unified-completion-box")) {
+    if (fab) {
       // Apenas atualiza o estado
-      const cb = document.getElementById("unified-progress-cb");
-      if (cb) {
-        cb.checked = !!progress[pageName];
-      }
+      updateFabState(fab, isCompleted, moduleColor);
       return;
     }
     
-    // Cria o bloco
-    const box = document.createElement("div");
-    box.id = "unified-completion-box";
-    box.style.marginTop = "60px";
-    box.style.marginBottom = "30px";
-    box.style.padding = "25px 30px";
-    box.style.background = "rgba(30, 41, 59, 0.4)";
-    box.style.border = "1px solid var(--border)";
-    box.style.borderRadius = "16px";
-    box.style.display = "flex";
-    box.style.alignItems = "center";
-    box.style.justifyContent = "space-between";
-    box.style.boxShadow = "0 10px 30px -10px rgba(0, 0, 0, 0.5)";
-    box.style.position = "relative";
-    box.style.overflow = "hidden";
+    // Cria o FAB
+    fab = document.createElement("div");
+    fab.id = "progress-fab";
+    fab.title = isCompleted ? "Aula Concluída (Clique para desmarcar)" : "Marcar Aula como Concluída";
     
-    // Barra de cor sutil na esquerda baseado no módulo
-    const accent = document.createElement("div");
-    accent.style.position = "absolute";
-    accent.style.left = "0";
-    accent.style.top = "0";
-    accent.style.bottom = "0";
-    accent.style.width = "4px";
-    accent.style.background = currentModule.color || "var(--accent)";
-    box.appendChild(accent);
+    // Estilos base do FAB
+    fab.style.position = "fixed";
+    fab.style.bottom = "40px";
+    fab.style.right = "40px";
+    fab.style.width = "60px";
+    fab.style.height = "60px";
+    fab.style.borderRadius = "50%";
+    fab.style.display = "flex";
+    fab.style.alignItems = "center";
+    fab.style.justifyContent = "center";
+    fab.style.cursor = "pointer";
+    fab.style.zIndex = "9999";
+    fab.style.transition = "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+    fab.style.boxShadow = "0 10px 25px rgba(0,0,0,0.5)";
     
-    const textContainer = document.createElement("div");
-    textContainer.innerHTML = `
-      <h3 style="margin: 0 0 6px 0; color: var(--text); font-size: 1.2rem; font-weight: 600;">Concluir Aula: ${currentModule.name.replace(/[^a-zA-Z0-9 ]/g, '').trim()}</h3>
-      <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted);">Marque o checkbox ao lado para registrar que você absorveu o conhecimento desta página.</p>
-    `;
+    // Ícone SVG (Checkmark)
+    fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 28px; height: 28px; transition: all 0.3s ease;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     
-    const label = document.createElement("label");
-    label.className = "custom-checkbox";
-    label.style.transform = "scale(1.2)"; // Deixa o check maior
+    // Aplica estado inicial
+    updateFabState(fab, isCompleted, moduleColor);
     
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.id = "unified-progress-cb";
-    input.checked = !!progress[pageName];
-    
-    const checkmark = document.createElement("span");
-    checkmark.className = "checkmark";
-    
-    label.appendChild(input);
-    label.appendChild(checkmark);
-    
-    box.appendChild(textContainer);
-    box.appendChild(label);
-    
-    // Event listener
-    input.addEventListener("change", function(e) {
-      const currProgress = loadProgress();
-      currProgress[pageName] = e.target.checked;
-      saveProgress(currProgress);
-      
-      if (e.target.checked) {
-        box.style.transition = "all 0.5s ease";
-        box.style.boxShadow = `0 0 30px -5px ${currentModule.color || 'var(--accent)'}40`;
-        box.style.borderColor = currentModule.color || 'var(--accent)';
-        setTimeout(() => {
-          box.style.boxShadow = "0 10px 30px -10px rgba(0, 0, 0, 0.5)";
-          box.style.borderColor = "var(--border)";
-        }, 1000);
+    // Evento Hover
+    fab.addEventListener("mouseenter", () => {
+      fab.style.transform = "scale(1.1) translateY(-5px)";
+      if (!!!loadProgress()[pageName]) {
+        fab.style.borderColor = moduleColor;
+        fab.style.color = moduleColor;
       }
     });
     
-    mainContainer.appendChild(box);
+    fab.addEventListener("mouseleave", () => {
+      fab.style.transform = "scale(1) translateY(0)";
+      updateFabState(fab, !!loadProgress()[pageName], moduleColor);
+    });
+    
+    // Evento de Clique
+    fab.addEventListener("click", () => {
+      const currProgress = loadProgress();
+      const newState = !currProgress[pageName];
+      currProgress[pageName] = newState;
+      
+      // Efeito de pulso no clique
+      fab.style.transform = "scale(0.9)";
+      setTimeout(() => {
+        fab.style.transform = "scale(1.1)";
+        updateFabState(fab, newState, moduleColor);
+        saveProgress(currProgress); // salva e atualiza a UI inteira
+        setTimeout(() => {
+          fab.style.transform = "scale(1)";
+        }, 150);
+      }, 100);
+    });
+    
+    document.body.appendChild(fab);
+  }
+  
+  function updateFabState(fab, isCompleted, color) {
+    if (isCompleted) {
+      fab.style.background = color;
+      fab.style.color = "#ffffff";
+      fab.style.border = `2px solid ${color}`;
+      fab.style.boxShadow = `0 10px 25px -5px ${color}80, 0 0 15px ${color}60`;
+    } else {
+      fab.style.background = "rgba(15, 23, 42, 0.8)";
+      fab.style.backdropFilter = "blur(8px)";
+      fab.style.color = "#64748b"; // Cinza inativo
+      fab.style.border = "2px solid #334155";
+      fab.style.boxShadow = "0 10px 25px rgba(0,0,0,0.5)";
+    }
   }
 
   // Helper to generate dynamic premium SVG icons for academic badges
