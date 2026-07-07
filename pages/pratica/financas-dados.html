@@ -683,28 +683,277 @@ resource "aws_msk_serverless_cluster" "ledger_cluster" {
 </section>
 
 
-<section class="section" id="quiz-container" data-passed="false" style="border: 2px solid var(--aws); border-radius: 12px; padding: 30px; background: #0f172a; margin-top: 40px; margin-bottom: 60px;">
-  <div style="text-align:center; margin-bottom: 20px;">
-    <h2 style="color:var(--aws); margin:0;">🏆 Quiz de Validação Sênior</h2>
-    <p style="color:#94a3b8; font-size:14px; margin-top:5px;">Responda corretamente para liberar o botão de conclusão do módulo.</p>
+
+<style>
+/* Premium Quiz UX */
+.premium-quiz {
+  position: relative;
+  margin: 60px 0;
+  padding: 40px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+
+.premium-quiz::before {
+  content: '';
+  position: absolute;
+  top: -2px; left: -2px; right: -2px;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--aws), transparent);
+  opacity: 0.5;
+}
+
+.quiz-header {
+  text-align: center;
+  margin-bottom: 35px;
+}
+
+.quiz-header h2 {
+  font-size: 24px;
+  background: linear-gradient(135deg, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.quiz-header p {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.quiz-card {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.quiz-question-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 12px;
+}
+
+.quiz-question-text .q-num {
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--aws);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.quiz-option:hover {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.1);
+  transform: translateX(4px);
+}
+
+.quiz-option input[type="radio"] {
+  display: none;
+}
+
+.quiz-option .custom-radio {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #475569;
+  border-radius: 50%;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.quiz-option input[type="radio"]:checked + .custom-radio {
+  border-color: var(--aws);
+}
+
+.quiz-option input[type="radio"]:checked + .custom-radio::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: var(--aws);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--aws);
+}
+
+.quiz-option:has(input[type="radio"]:checked) {
+  background: rgba(56, 189, 248, 0.05);
+  border-color: var(--aws);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.quiz-validate-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--aws), #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.quiz-validate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(56, 189, 248, 0.4);
+}
+
+.quiz-validate-btn:active {
+  transform: translateY(1px);
+}
+
+.quiz-validate-btn.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.quiz-feedback {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  text-align: center;
+  display: none;
+  animation: fadeInDown 0.3s ease forwards;
+}
+
+.quiz-feedback.error {
+  display: block;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.quiz-feedback.success {
+  display: block;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.quiz-feedback.warning {
+  display: block;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+.quiz-shake {
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+</style>
+
+<section class="premium-quiz" id="quiz-container" data-passed="false">
+  <div class="quiz-header">
+    <h2>🏆 Desafio Sênior: Motor de Reconciliação</h2>
+    <p>Valide seu conhecimento para liberar o selo de conclusão desta arquitetura.</p>
   </div>
   
-  <div class="quiz-question" style="margin-bottom: 20px;">
-    <p style="font-weight:bold; color:#e2e8f0; margin-bottom:10px;">1. No fluxo de reconciliação, qual o papel do Apache Flink?</p>
-    <label style="display:block; margin-bottom:8px; color:#cbd5e1; cursor:pointer;"><input type="radio" name="q1" value="a"> Apenas armazenar logs brutos em Parquet.</label>
-    <label style="display:block; margin-bottom:8px; color:#cbd5e1; cursor:pointer;"><input type="radio" name="q1" value="b"> Fazer processamento Stateful cruzando eventos (Match/Unmatch) em janelas de tempo.</label>
-    <label style="display:block; margin-bottom:8px; color:#cbd5e1; cursor:pointer;"><input type="radio" name="q1" value="c"> Servir como banco relacional ACID principal.</label>
+  <div class="quiz-card">
+    <div class="quiz-question-text"><span class="q-num">1</span> No fluxo de reconciliação, qual o papel do Apache Flink?</div>
+    <div class="quiz-options">
+      <label class="quiz-option">
+        <input type="radio" name="q1" value="a">
+        <span class="custom-radio"></span>
+        Apenas armazenar logs brutos em Parquet.
+      </label>
+      <label class="quiz-option">
+        <input type="radio" name="q1" value="b">
+        <span class="custom-radio"></span>
+        Fazer processamento Stateful cruzando eventos (Match/Unmatch) em janelas de tempo.
+      </label>
+      <label class="quiz-option">
+        <input type="radio" name="q1" value="c">
+        <span class="custom-radio"></span>
+        Servir como banco relacional ACID principal.
+      </label>
+    </div>
   </div>
   
-  <div class="quiz-question" style="margin-bottom: 20px;">
-    <p style="font-weight:bold; color:#e2e8f0; margin-bottom:10px;">2. Para armazenar o Ledger Imutável, por que usamos Apache Iceberg em S3 e não RDS?</p>
-    <label style="display:block; margin-bottom:8px; color:#cbd5e1; cursor:pointer;"><input type="radio" name="q2" value="a"> Para suportar Petabytes de escala com Time-Travel e Schema Evolution pagando apenas pelo Storage.</label>
-    <label style="display:block; margin-bottom:8px; color:#cbd5e1; cursor:pointer;"><input type="radio" name="q2" value="b"> Porque RDS não suporta transações bancárias.</label>
-    <label style="display:block; margin-bottom:8px; color:#cbd5e1; cursor:pointer;"><input type="radio" name="q2" value="c"> Porque S3 é um banco de dados NoSQL mais rápido para leituras OLT.</label>
+  <div class="quiz-card">
+    <div class="quiz-question-text"><span class="q-num">2</span> Para armazenar o Ledger Imutável, por que usamos Apache Iceberg em S3 e não RDS?</div>
+    <div class="quiz-options">
+      <label class="quiz-option">
+        <input type="radio" name="q2" value="a">
+        <span class="custom-radio"></span>
+        Para suportar Petabytes de escala com Time-Travel e Schema Evolution pagando apenas pelo Storage.
+      </label>
+      <label class="quiz-option">
+        <input type="radio" name="q2" value="b">
+        <span class="custom-radio"></span>
+        Porque RDS não suporta transações bancárias.
+      </label>
+      <label class="quiz-option">
+        <input type="radio" name="q2" value="c">
+        <span class="custom-radio"></span>
+        Porque S3 é um banco de dados NoSQL mais rápido para leituras OLT.
+      </label>
+    </div>
   </div>
   
-  <button id="btn-validate-quiz" style="background:var(--aws); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; font-size:16px;">Validar Respostas</button>
-  <p id="quiz-feedback" style="text-align:center; margin-top:15px; font-weight:bold; display:none;"></p>
+  <button id="btn-validate-quiz" class="quiz-validate-btn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+    Validar Arquitetura
+  </button>
+  <div id="quiz-feedback" class="quiz-feedback"></div>
 </section>
 
 <script>
@@ -712,32 +961,40 @@ resource "aws_msk_serverless_cluster" "ledger_cluster" {
     const q1 = document.querySelector('input[name="q1"]:checked');
     const q2 = document.querySelector('input[name="q2"]:checked');
     const feedback = document.getElementById('quiz-feedback');
+    const quizContainer = document.getElementById('quiz-container');
+    
+    // Reset classes
+    feedback.className = 'quiz-feedback';
+    quizContainer.classList.remove('quiz-shake');
     
     if (!q1 || !q2) {
-      feedback.style.display = 'block';
-      feedback.style.color = '#f59e0b';
-      feedback.innerText = '⚠️ Responda todas as perguntas.';
+      feedback.classList.add('warning');
+      feedback.innerHTML = '⚠️ Por favor, selecione uma opção para todas as perguntas.';
       return;
     }
     
     if (q1.value === 'b' && q2.value === 'a') {
-      feedback.style.display = 'block';
-      feedback.style.color = '#10b981';
-      feedback.innerText = '✅ Parabéns! Respostas corretas. O módulo foi liberado!';
-      document.getElementById('quiz-container').dataset.passed = 'true';
-      this.style.background = '#10b981';
-      this.innerText = 'Módulo Desbloqueado';
-      this.disabled = true;
+      feedback.classList.add('success');
+      feedback.innerHTML = '✨ <b>Arquitetura Validada!</b> Você domina a Reconciliação. O módulo foi desbloqueado.';
+      quizContainer.dataset.passed = 'true';
       
-      // Try to re-trigger completion if they are at the bottom
-      window.dispatchEvent(new Event('scroll'));
+      this.classList.add('success');
+      this.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Módulo Desbloqueado';
+      this.style.pointerEvents = 'none';
+      
+      // Auto-scroll update
+      setTimeout(() => window.dispatchEvent(new Event('scroll')), 500);
     } else {
-      feedback.style.display = 'block';
-      feedback.style.color = '#ef4444';
-      feedback.innerText = '❌ Respostas incorretas. Revise o material e tente novamente!';
+      feedback.classList.add('error');
+      feedback.innerHTML = '❌ Algumas respostas estão incorretas. Revise o material de FinOps e Flink.';
+      
+      // Trigger reflow for animation restart
+      void quizContainer.offsetWidth;
+      quizContainer.classList.add('quiz-shake');
     }
   });
 </script>
+
 
   </main>
 </div>
