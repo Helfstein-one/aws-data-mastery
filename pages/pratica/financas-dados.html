@@ -231,7 +231,9 @@ def calcular_price(capital, taxa, meses):
       
       <div class="callout callout-warning">
         <strong>Case de Divergência: O "Falso Inadimplente" do Fim de Semana</strong>
-        <p>Um cliente paga o boleto/fatura sexta-feira às 23h. O Sistema de Billing processa na hora, mas a Câmara de Compensação Bancária (CIP) só liquida o lote na segunda-feira pela manhã. Se a rotina analítica de crédito rodar no domingo, o cliente será classificado como "Overdue" (Atrasado) e sua nota de Risco (Rating) será rebaixada no Bacen indevidamente.</p>
+        <p><strong>Cenário:</strong> Sexta-feira às 23h, o cliente paga a fatura via boleto. O sistema de <em>Billing</em> do banco registra o pagamento imediatamente (status = PAGO). Porém, a <strong>Câmara de Compensação (CIP/SLC)</strong> agrupa os boletos processados fora do horário e só liquida financeiramente o lote na manhã de segunda-feira.</p>
+        <p><strong>O Problema:</strong> Se a rotina analítica de crédito roda no sábado ou domingo (batch D-0), ela consulta o <em>Ledger Financeiro</em> — que ainda não recebeu a confirmação de liquidação da CIP. Resultado: o cliente aparece como <strong>"Overdue" (Inadimplente)</strong> e seu Rating no Bacen é rebaixado indevidamente, gerando reclamações e risco regulatório.</p>
+        <p><strong>Solução de Engenharia:</strong> O Motor de Reconciliação deve cruzar a perna do Billing (status PAGO) com a perna do Ledger (confirmação CIP pendente) e marcar esses casos como <em>"Pendente de Liquidação"</em> ao invés de "Overdue".</p>
       </div>
 
       <h4>Arquitetura do Motor de Reconciliação (PySpark)</h4>
@@ -274,8 +276,12 @@ def calcular_price(capital, taxa, meses):
       </div>
 
       <div class="callout callout-info">
-        <strong>Saldo Contábil vs. Saldo Líquido (Curva)</strong>
-        <p>No banco transacional, um contrato de R$ 10.000 a pagar em 12x de R$ 1.000 possui um <strong>Saldo Contábil</strong> de R$ 12.000. Contudo, o <strong>Saldo Líquido (Curva Presente)</strong> é R$ 10.000. Os R$ 2.000 de juros só são reconhecidos como lucro ao longo do tempo (Diferimento).</p>
+        <strong>Saldo Contábil vs. Saldo Devedor Total</strong>
+        <p>No banco transacional, um contrato de empréstimo de R$ 10.000 (principal) a 2% a.m. durante 12 meses gera um <strong>Saldo Devedor Total</strong> (principal + juros futuros) de ~R$ 12.682. Porém, o <strong>Saldo Contábil</strong> (o que consta no Balanço Patrimonial no ativo) é o <strong>valor presente da carteira</strong>: R$ 10.000 no dia da concessão. A diferença de ~R$ 2.682 são juros ainda não incorridos, que serão reconhecidos como receita gradualmente via <strong>Apropriação Diária (Accrual)</strong>. Resumindo:</p>
+        <ul style="margin-top: 8px; padding-left: 20px; color: var(--text);">
+          <li><strong>Saldo Contábil (Curva):</strong> Valor presente do contrato registrado no Ativo do banco. Cresce a cada dia conforme os juros são apropriados.</li>
+          <li><strong>Saldo Devedor Total:</strong> Soma de todas as parcelas futuras (principal + juros). É o que o cliente deve ao banco no cenário de quitação antecipada sem desconto.</li>
+        </ul>
       </div>
 
       <h3>Apropriação Diária (Spot Accrual)</h3>
@@ -294,7 +300,7 @@ def calcular_price(capital, taxa, meses):
         <div class="concept-card" style="border-top: 4px solid var(--warn);">
           <div class="cc-tag">Stop Accrual</div>
           <div class="cc-body">
-            Quando o atraso atinge 60 dias, o banco <strong>para de apropriar juros como receita</strong> (Stop Accrual), pois a chance de calote é alta. A dívida do cliente continua subindo, mas o banco deixa de reconhecer lucro fictício no balanço.
+            Quando o atraso atinge 90 dias, o banco <strong>para de apropriar juros como receita</strong> (Stop Accrual), pois a chance de calote é alta. A dívida do cliente continua subindo, mas o banco deixa de reconhecer lucro fictício no balanço.
           </div>
         </div>
         <div class="concept-card" style="border-top: 4px solid var(--navy);">
