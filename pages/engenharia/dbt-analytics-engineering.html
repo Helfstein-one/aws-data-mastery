@@ -213,6 +213,72 @@
         </div>
       </section>
       
+    
+      <!-- 05. Macros e Jinja Avançado -->
+      <section class="section-block" id="macros-jinja">
+        <span class="section-number">05. DRY (Don't Repeat Yourself)</span>
+        <h2 class="section-title">O Poder das Macros e Jinja</h2>
+        <p style="color: var(--text-muted); margin-bottom: 24px;">Um dos maiores problemas do SQL purista é a repetição de código. Se você precisa anonimizar PII (Personal Identifiable Information) como CPF em 50 tabelas, você repetiria a mesma regra 50 vezes. Com o dbt, você usa <strong>Macros</strong> (funções em Jinja).</p>
+        
+        <div class="code-block">
+          <div class="code-header">
+            <span>macros/mask_cpf.sql</span>
+            <span>Jinja Macro</span>
+          </div>
+          <div class="code-content">
+<span class="jinja-tag">{% macro mask_cpf(column_name) %}</span>
+    <span class="sql-function">REGEXP_REPLACE</span>(<span class="jinja-tag">{{ column_name }}</span>, <span class="sql-string">'^[0-9]{3}\.[0-9]{3}\.[0-9]{3}'</span>, <span class="sql-string">'***.***.***'</span>)
+<span class="jinja-tag">{% endmacro %}</span>
+          </div>
+        </div>
+        
+        <p style="color: var(--text-muted); margin-bottom: 16px;">E no seu modelo, você apenas chama a macro:</p>
+        
+        <div class="code-block">
+          <div class="code-header">
+            <span>models/silver/stg_clientes.sql</span>
+            <span>dbt SQL</span>
+          </div>
+          <div class="code-content">
+<span class="sql-keyword">SELECT</span>
+    id_cliente,
+    nome,
+    <span class="jinja-tag">{{ mask_cpf('documento_cpf') }}</span> <span class="sql-keyword">AS</span> cpf_mascarado,
+    data_cadastro
+<span class="sql-keyword">FROM</span> <span class="jinja-tag">{{ ref('raw_clientes') }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06. Linhagem Dinamica -->
+      <section class="section-block" id="linhagem">
+        <span class="section-number">06. Observabilidade</span>
+        <h2 class="section-title">Linhagem de Dados (Lineage DAG)</h2>
+        <p style="color: var(--text-muted); margin-bottom: 24px;">Graças à função <code>{{ ref('modelo') }}</code>, o dbt constrói o DAG automaticamente. Se a tabela Source quebrar ou atrasar, o dbt sabe exatamente quais Dashboards lá na ponta serão impactados.</p>
+        
+        <div class="mxgraph" style="max-width:100%; border:1px solid #334155; border-radius:8px; overflow:hidden; background:#0f172a; margin-bottom:24px;" data-mxgraph='{"xml": "%3CmxGraphModel%20dx%3D%221000%22%20dy%3D%22600%22%20grid%3D%221%22%20gridSize%3D%2210%22%20guides%3D%221%22%20tooltips%3D%221%22%20connect%3D%221%22%20arrows%3D%221%22%20fold%3D%221%22%20page%3D%221%22%20pageScale%3D%221%22%20pageWidth%3D%22827%22%20pageHeight%3D%221169%22%20background%3D%22%230f172a%22%20math%3D%220%22%20shadow%3D%220%22%3E%0A%20%20%3Croot%3E%0A%20%20%20%20%3CmxCell%20id%3D%220%22%20/%3E%0A%20%20%20%20%3CmxCell%20id%3D%221%22%20parent%3D%220%22%20/%3E%0A%20%20%20%20%3CmxCell%20id%3D%22g1%22%20value%3D%22dbt%20Lineage%20DAG%22%20style%3D%22rounded%3D1%3BwhiteSpace%3Dwrap%3Bhtml%3D1%3BfillColor%3Dnone%3BstrokeColor%3D%23ff694b%3BstrokeWidth%3D2%3Bdashed%3D1%3BfontColor%3D%23ff694b%3BverticalAlign%3Dtop%3Balign%3Dleft%3Bspacing%3D10%3BfontSize%3D14%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%2240%22%20y%3D%2240%22%20width%3D%22560%22%20height%3D%22240%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22src%22%20value%3D%22Source%26%2310%3B%28Raw%20Data%29%22%20style%3D%22shape%3Dcylinder3%3BwhiteSpace%3Dwrap%3Bhtml%3D1%3BboundedLbl%3D1%3BbackgroundOutline%3D1%3Bsize%3D15%3BfillColor%3D%231e293b%3BstrokeColor%3D%23475569%3BstrokeWidth%3D2%3BfontColor%3D%2394a3b8%3B%22%20vertex%3D%221%22%20parent%3D%22g1%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%2240%22%20y%3D%2280%22%20width%3D%2280%22%20height%3D%2280%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22stg%22%20value%3D%22Staging%26%2310%3B%28View%29%22%20style%3D%22rounded%3D1%3BwhiteSpace%3Dwrap%3Bhtml%3D1%3BfillColor%3D%231e293b%3BstrokeColor%3D%2361afef%3BstrokeWidth%3D2%3BfontColor%3D%2361afef%3B%22%20vertex%3D%221%22%20parent%3D%22g1%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22180%22%20y%3D%22100%22%20width%3D%22100%22%20height%3D%2240%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22int%22%20value%3D%22Intermediate%26%2310%3B%28Table%29%22%20style%3D%22rounded%3D1%3BwhiteSpace%3Dwrap%3Bhtml%3D1%3BfillColor%3D%231e293b%3BstrokeColor%3D%23e5c07b%3BstrokeWidth%3D2%3BfontColor%3D%23e5c07b%3B%22%20vertex%3D%221%22%20parent%3D%22g1%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22320%22%20y%3D%2260%22%20width%3D%22100%22%20height%3D%2240%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22mart%22%20value%3D%22Data%20Mart%26%2310%3B%28Incremental%29%22%20style%3D%22rounded%3D1%3BwhiteSpace%3Dwrap%3Bhtml%3D1%3BfillColor%3D%231e293b%3BstrokeColor%3D%2310b981%3BstrokeWidth%3D2%3BfontColor%3D%2310b981%3B%22%20vertex%3D%221%22%20parent%3D%22g1%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22460%22%20y%3D%22100%22%20width%3D%2280%22%20height%3D%2240%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22e1%22%20value%3D%22%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23475569%3BstrokeWidth%3D2%3B%22%20edge%3D%221%22%20parent%3D%22g1%22%20source%3D%22src%22%20target%3D%22stg%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%3CmxCell%20id%3D%22e2%22%20value%3D%22%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%2361afef%3BstrokeWidth%3D2%3B%22%20edge%3D%221%22%20parent%3D%22g1%22%20source%3D%22stg%22%20target%3D%22int%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%3CmxCell%20id%3D%22e3%22%20value%3D%22%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23e5c07b%3BstrokeWidth%3D2%3B%22%20edge%3D%221%22%20parent%3D%22g1%22%20source%3D%22int%22%20target%3D%22mart%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%3CmxCell%20id%3D%22e4%22%20value%3D%22%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%2361afef%3BstrokeWidth%3D2%3B%22%20edge%3D%221%22%20parent%3D%22g1%22%20source%3D%22stg%22%20target%3D%22mart%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%3E%0A%20%20%20%20%20%20%20%20%3CArray%20as%3D%22points%22%3E%0A%20%20%20%20%20%20%20%20%20%20%3CmxPoint%20x%3D%22370%22%20y%3D%22140%22%20/%3E%0A%20%20%20%20%20%20%20%20%3C/Array%3E%0A%20%20%20%20%20%20%3C/mxGeometry%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%3C/root%3E%0A%3C/mxGraphModel%3E"}'>
+        </div>
+      </section>
+
+      <!-- 07. Case de Sucesso -->
+      <section class="section-block" id="case-dbt">
+        <span class="section-number">07. Estudo de Caso</span>
+        <h2 class="section-title">Case Real: Refatoração de 3.000 linhas de Stored Procedures</h2>
+        <p style="color: var(--text-muted); margin-bottom: 16px;"><strong>O Problema:</strong> Uma grande Fintech processava o fechamento contábil rodando Stored Procedures de 3.000 linhas no Redshift. Era impossível testar pedaços do código. Quando dava erro, levava horas para debugar qual sub-select falhou.</p>
+        
+        <p style="color: var(--text-muted); margin-bottom: 24px;"><strong>A Solução com dbt:</strong></p>
+        <div class="concept-grid">
+          <div class="concept-card">
+            <h3><span>🔪</span> Quebra em CTEs Físicas</h3>
+            <p>O monólito de 3.000 linhas foi quebrado em 15 arquivos menores (modelos). Cada pedaço se transformou em uma <i>View</i> intermediária na camada Silver, testável e auditável.</p>
+          </div>
+          <div class="concept-card">
+            <h3><span>✅</span> Testes Automáticos</h3>
+            <p>Foi adicionado um teste de <i>sum(credito) = sum(debito)</i> entre as camadas. O dbt alertava falhas antes mesmo de popular a tabela final (Gold), salvando a contabilidade de reportar erros.</p>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
   
