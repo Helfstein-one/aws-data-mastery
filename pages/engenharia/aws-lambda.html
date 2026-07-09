@@ -284,7 +284,68 @@
       </div>
 
     </section>
-  </main>
+  
+      <h4 style="margin-top:40px; color:var(--warn);">Estrutura de Projeto (Clean Architecture)</h4>
+      <p style="margin-bottom:20px;">O erro mais comum em Lambdas é o "Handler Gordo": colocar validação, regras de negócio e consultas SQL/Boto3 dentro da mesma função <code>lambda_handler</code>. Uma Lambda madura usa Arquitetura Hexagonal para separar responsabilidades. Veja o padrão ouro de diretório de projeto:</p>
+
+      <div style="background-color: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; margin-bottom: 30px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9;">
+<pre style="margin: 0;"><code>📦 order_processor/
+ ┣ 📜 app.py                 <span style="color: #8b949e;"># Lambda Handler (Porta de Entrada / Adaptador Web)</span>
+ ┣ 📜 requirements.txt       <span style="color: #8b949e;"># Dependências externas (ex: boto3, pydantic)</span>
+ ┣ 📂 core/                  <span style="color: #8b949e;"># Regras de Negócio Puras (Hexagonal Core)</span>
+ ┃ ┣ 📜 __init__.py
+ ┃ ┗ 📜 order_service.py     <span style="color: #8b949e;"># Lógica agnóstica de cloud (Pode rodar no Lambda ou on-prem)</span>
+ ┣ 📂 infra/                 <span style="color: #8b949e;"># Adaptadores de Saída (Conexão com Mundo Externo)</span>
+ ┃ ┣ 📜 __init__.py
+ ┃ ┗ 📜 dynamodb_repo.py     <span style="color: #8b949e;"># Isolamento do Boto3 / Chamadas de rede</span>
+ ┗ 📂 tests/                 <span style="color: #8b949e;"># Testes Unitários</span>
+   ┣ 📜 test_app.py
+   ┗ 📜 test_order_service.py</code></pre>
+      </div>
+
+      <p style="margin-bottom:20px;">Com a arquitetura dividida, o seu <code>app.py</code> se torna extremamente "magro" (Thin Handler). Ele apenas traduz a request HTTP/SQS para o seu Core. Além disso, as conexões de banco de dados ficam no escopo global para aproveitar os <em>Warm Starts</em>:</p>
+
+      <div style="background-color: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; margin-bottom: 40px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9;">
+<pre style="margin: 0;"><code><span style="color: #ff7b72;">import</span> json
+<span style="color: #ff7b72;">import</span> logging
+<span style="color: #ff7b72;">from</span> core.order_service <span style="color: #ff7b72;">import</span> process_order
+<span style="color: #ff7b72;">from</span> infra.dynamodb_repo <span style="color: #ff7b72;">import</span> DynamoOrderRepository
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+<span style="color: #8b949e;"># ============================================================</span>
+<span style="color: #8b949e;"># INIT PHASE (Executado UMA vez durante o Cold Start)</span>
+<span style="color: #8b949e;"># Inicializa a conexão com o banco fora do handler!</span>
+<span style="color: #8b949e;"># ============================================================</span>
+repo = DynamoOrderRepository(table_name=<span style="color: #a5d6ff;">"OrdersTable"</span>)
+
+<span style="color: #8b949e;"># ============================================================</span>
+<span style="color: #8b949e;"># INVOKE PHASE (Executado a cada requisição / evento)</span>
+<span style="color: #8b949e;"># ============================================================</span>
+<span style="color: #ff7b72;">def</span> <span style="color: #d2a8ff;">lambda_handler</span>(event, context):
+    <span style="color: #a5d6ff;">"""Handler magro: Apenas extrai o evento e delega para o domínio."""</span>
+    <span style="color: #ff7b72;">try</span>:
+        <span style="color: #8b949e;"># 1. Extração (Adaptador de Entrada SQS)</span>
+        body = json.loads(event[<span style="color: #a5d6ff;">'Records'</span>][<span style="color: #79c0ff;">0</span>][<span style="color: #a5d6ff;">'body'</span>])
+        order_id = body.get(<span style="color: #a5d6ff;">'order_id'</span>)
+        
+        <span style="color: #8b949e;"># 2. Lógica de Negócio Pura (O Handler não sabe como funciona por baixo dos panos)</span>
+        result = process_order(order_id=order_id, repository=repo)
+        
+        <span style="color: #8b949e;"># 3. Resposta de Sucesso</span>
+        <span style="color: #ff7b72;">return</span> {
+            <span style="color: #a5d6ff;">"statusCode"</span>: <span style="color: #79c0ff;">200</span>,
+            <span style="color: #a5d6ff;">"body"</span>: json.dumps({<span style="color: #a5d6ff;">"status"</span>: <span style="color: #a5d6ff;">"SUCCESS"</span>, <span style="color: #a5d6ff;">"data"</span>: result})
+        }
+        
+    <span style="color: #ff7b72;">except</span> <span style="color: #f0883e;">Exception</span> <span style="color: #ff7b72;">as</span> e:
+        logger.error(<span style="color: #a5d6ff;">f"Erro ao processar pedido: {str(e)}"</span>)
+        <span style="color: #8b949e;"># Levanta a exceção para que o serviço da AWS tente um Retry ou envie para a DLQ</span>
+        <span style="color: #ff7b72;">raise</span> e</code></pre>
+      </div>
+
+    </main>
 </div>
 
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
