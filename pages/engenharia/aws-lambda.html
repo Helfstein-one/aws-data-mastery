@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <title>AWS Lambda & Serverless Compute | AWS Data Mastery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+
+  <meta property="og:title" content="AWS Lambda & Serverless Compute | AWS Data Mastery">
+  <meta property="og:description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="../../assets/og-image.jpg">
+  <link rel="icon" href="../../assets/favicon.ico" type="image/x-icon">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar"></nav>
+
+<div id="main">
+  <div class="hero">
+    <div class="hero-ey">Computação Serverless</div>
+    <h1>AWS Lambda &amp; Event-Driven</h1>
+    <p class="hero-d">MicroVMs baseadas no Firecracker, processamento orientado a eventos e integrações assíncronas de alta performance.</p>
+  </div>
+    <h1>AWS Glue &amp; Data Catalog</h1>
+    <p class="hero-d">Arquitetura de processamento serverless, ETL com DynamicFrames e Governança com Data Catalog.</p>
+  </div>
+
+  <main class="main-content">
+    
+    <section class="section" id="lambda-core">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--emr)">14</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--emr)"></div>
+          <h2>AWS Lambda: Computação Sob Demanda</h2>
+          <p>Modelos de invocação, MicroVMs (Firecracker) e estratégias para Data Engineering</p>
+        </div>
+      </div>
+      
+      <p>O <strong>AWS Lambda</strong> é um serviço de computação <em>Serverless</em> que permite executar código sem provisionar ou gerenciar servidores. Por baixo dos panos, quando uma função Lambda é invocada, a AWS utiliza a tecnologia <strong>Firecracker (MicroVMs)</strong> para provisionar ambientes de execução isolados em frações de segundo, garantindo segurança multitenant e isolamento de recursos rígido.</p>
+      
+      <p>Embora amplamente conhecido por arquiteturas web (ex: API Gateway + Lambda), no universo da <strong>Engenharia de Dados</strong>, o Lambda brilha na orquestração de eventos, ingestão em tempo real e transformações leves de <em>micro-batching</em>.</p>
+      
+      <h3 style="margin-top:40px; color:var(--aws);">Modelos de Invocação (Invocation Types)</h3>
+      <div class="concept-grid">
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Request/Response</div>
+          <div class="cc-title">Síncrona (Sync)</div>
+          <div class="cc-body">O chamador (ex: API Gateway) aguarda ativamente a resposta. Se houver falha (timeout, erro 500), é responsabilidade do chamador realizar os retries (Backoff Exponencial).</div>
+        </div>
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Fire and Forget</div>
+          <div class="cc-title">Assíncrona (Async)</div>
+          <div class="cc-body">Usado com S3 (S3 Events) ou SNS. A AWS enfileira o evento internamente. Se a função falhar, o Lambda tenta o <em>retry</em> automaticamente por até 2 vezes.</div>
+        </div>
+        <div class="concept-card emr-card">
+          <div class="cc-tag">Polling Fleet</div>
+          <div class="cc-title">Event Source Mapping</div>
+          <div class="cc-body">Exclusivo para Streams/Queues (Kafka, Kinesis, SQS, DynamoDB Streams). O serviço do Lambda possui <em>pollers</em> ocultos que leem os registros e invocam a função com lotes.</div>
+        </div>
+      </div>
+      
+      <div class="drawio-wrap" style="margin-top: 40px; margin-bottom: 30px;">
+        <div class="drawio-label"><span class="dot"></span>Event Source Mapping (Kinesis to Lambda) — Fluxo de Ingestão e Retries</div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;xml&quot;: &quot;<mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;950\&quot; pageHeight=\&quot;380\&quot; background=\&quot;#080f1e\&quot;>\n  <root>\n    <mxCell id=\&quot;0\&quot;/>\n    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>\n\n    <!-- Title -->\n    <mxCell id=\&quot;title\&quot; value=\&quot;EVENT SOURCE MAPPING: KINESIS + LAMBDA (Data Engineering)\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#cbd5e1;fontSize=14;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;150\&quot; y=\&quot;20\&quot; width=\&quot;650\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <!-- Kinesis Stream -->\n    <mxCell id=\&quot;kinesis\&quot; value=\&quot;Kinesis Data Stream\n(Shards)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#fcd34d;align=center;verticalAlign=middle;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;40\&quot; y=\&quot;140\&quot; width=\&quot;160\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <!-- Event Source Mapping (ESM) -->\n    <mxCell id=\&quot;esm\&quot; value=\&quot;Event Source Mapping\n(Polling Fleet)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#6366f1;fontColor=#c7d2fe;align=center;verticalAlign=middle;fontStyle=1;dashed=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;270\&quot; y=\&quot;140\&quot; width=\&quot;160\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <!-- Lambda Execution Environment -->\n    <mxCell id=\&quot;lambda_env\&quot; value=\&quot;AWS Lambda Execution Environment\n(MicroVM Firecracker)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#3f2c00;strokeColor=#b45309;fontColor=#fcd34d;align=center;verticalAlign=top;spacingTop=10;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;500\&quot; y=\&quot;80\&quot; width=\&quot;220\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;lambda_func\&quot; value=\&quot;Function Handler (Code)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#78350f;strokeColor=#d97706;fontColor=#fde68a;align=center;verticalAlign=middle;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;530\&quot; y=\&quot;150\&quot; width=\&quot;160\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <!-- Destinations (Success / Failure) -->\n    <mxCell id=\&quot;success_dest\&quot; value=\&quot;S3 / Firehose\n(Sucesso)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#022c22;strokeColor=#059669;fontColor=#6ee7b7;align=center;verticalAlign=middle;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;780\&quot; y=\&quot;80\&quot; width=\&quot;120\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;dlq\&quot; value=\&quot;SQS DLQ\n(Falhas / Bad Records)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#450a0a;strokeColor=#b91c1c;fontColor=#fca5a5;align=center;verticalAlign=middle;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;780\&quot; y=\&quot;220\&quot; width=\&quot;120\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <!-- Edges -->\n    <mxCell id=\&quot;e_read\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;esm\&quot; target=\&quot;kinesis\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>\n        <Array as=\&quot;points\&quot;><mxPoint x=\&quot;240\&quot; y=\&quot;160\&quot;/><mxPoint x=\&quot;240\&quot; y=\&quot;160\&quot;/></Array>\n      </mxGeometry>\n    </mxCell>\n    <mxCell id=\&quot;lbl_poll\&quot; value=\&quot;Polls Records\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#8b5cf6;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e_read\&quot;>\n      <mxGeometry x=\&quot;-0.15\&quot; y=\&quot;0\&quot; width=\&quot;80\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>\n        <mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/>\n      </mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e_invoke\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;esm\&quot; target=\&quot;lambda_env\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>\n        <Array as=\&quot;points\&quot;><mxPoint x=\&quot;460\&quot; y=\&quot;180\&quot;/><mxPoint x=\&quot;460\&quot; y=\&quot;180\&quot;/></Array>\n      </mxGeometry>\n    </mxCell>\n    <mxCell id=\&quot;lbl_sync\&quot; value=\&quot;Sync Invoke (Batch)\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#fcd34d;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e_invoke\&quot;>\n      <mxGeometry x=\&quot;0.1\&quot; y=\&quot;0\&quot; width=\&quot;110\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>\n        <mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/>\n      </mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e_succ\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#10b981;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda_env\&quot; target=\&quot;success_dest\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>\n        <Array as=\&quot;points\&quot;><mxPoint x=\&quot;750\&quot; y=\&quot;110\&quot;/><mxPoint x=\&quot;750\&quot; y=\&quot;110\&quot;/></Array>\n      </mxGeometry>\n    </mxCell>\n    <mxCell id=\&quot;e_fail\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ef4444;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda_env\&quot; target=\&quot;dlq\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>\n        <Array as=\&quot;points\&quot;><mxPoint x=\&quot;750\&quot; y=\&quot;250\&quot;/><mxPoint x=\&quot;750\&quot; y=\&quot;250\&quot;/></Array>\n      </mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;lbl_bisect\&quot; value=\&quot;Bisect on Error\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#fca5a5;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;300\&quot; y=\&quot;230\&quot; width=\&quot;100\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n  </root>\n</mxGraphModel>&quot;}'></div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 30px;">
+        <div>
+          <h4>Tratamento de Erros em Event Source Mapping</h4>
+          <p>Quando consumindo de filas (SQS) ou fluxos contínuos (Kinesis), as falhas não afetam apenas um evento isolado, mas sim um <em>Batch</em> inteiro. Se o seu Lambda pegar 100 registros do Kinesis e o 50º der erro, o comportamento padrão do Lambda é <strong>bloquear o Shard</strong>, fazendo retry infinitamente naquele batch inteiro até os registros expirarem (Retention Period).</p>
+          <p>Para evitar esse "Poison Pill", engenheiros usam o <strong>BisectBatchOnFunctionError</strong>: ao falhar, o Lambda divide o batch pela metade e tenta processá-los separadamente até isolar o registro com erro e enviá-lo para um destino de falha (SQS DLQ ou S3 Destination), liberando o shard instantaneamente.</p>
+        </div>
+        
+        <div>
+          <h4>Lambda Destinations vs DLQs</h4>
+          <p>Historicamente, usava-se apenas as <strong>DLQs (Dead Letter Queues)</strong> vinculadas à própria função para capturar invocações falhas. Porém, a prática moderna adota <strong>Lambda Destinations</strong>.</p>
+          <ul style="font-size: 13px;">
+            <li style="margin-bottom: 8px;">As DLQs capturam apenas o payload original. Não há visibilidade sobre a <em>Stack Trace</em> do erro.</li>
+            <li style="margin-bottom: 8px;">Os <strong>Destinations</strong> (OnSuccess, OnFailure) permitem rotear o resultado para SQS, SNS, EventBridge ou outra Lambda, incluindo no envelope JSON todo o <em>Request Payload</em>, o <em>Response Context</em> e a <em>Exception</em> detalhada, facilitando a observabilidade.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h4 style="margin-top:40px; color:var(--warn);">Tuning Avançado & Melhores Práticas</h4>
+      <p>Performance em Serverless é diretamente proporcional aos custos. Entender como a AWS aloca recursos por debaixo dos panos é vital para <em>FinOps</em> e eficiência.</p>
+      
+      <div class="tbl-wrap" style="margin-top: 15px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Conceito / Configuração</th>
+              <th>Impacto Arquitetural</th>
+              <th>Prática Recomendada</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Alocação de Memória vs CPU</strong></td>
+              <td>A CPU do Lambda não é configurável isoladamente. Ela escala de forma estritamente proporcional à memória alocada (1 vCPU íntegra é atingida com ~1.7GB de RAM).</td>
+              <td>Use ferramentas open-source como <strong>AWS Lambda Power Tuning</strong> (Step Functions) para achar o balanço matemático ótimo entre velocidade e custo para workloads pesados em dados (pandas/numpy).</td>
+            </tr>
+            <tr>
+              <td><strong>Conexões com Bancos Relacionais</strong></td>
+              <td>Milhares de concorrências (funções instanciadas rapidamente) esgotam os pools de conexão tradicionais (PostgreSQL/MySQL), causando Connection Timeouts e derrubando o banco.</td>
+              <td>Inicie as conexões de banco de dados <strong>fora do escopo do handler</strong> para aproveitar o reuso em instâncias quentes (Warm Starts) e adote o <strong>Amazon RDS Proxy</strong>.</td>
+            </tr>
+            <tr>
+              <td><strong>Provisioned Concurrency</strong></td>
+              <td>Mantém instâncias prontas e "quentes" o tempo todo, pagando-se um valor fixo por hora. O <em>Init Phase</em> (bota, carrega bibliotecas) nunca acontece no caminho crítico da requisição.</td>
+              <td>Ideal para APIs sensíveis a latência consumidas por UIs. Para ETL em batch/background ou processamento em fila, o <em>Cold Start</em> normal de alguns segundos é perfeitamente tolerável, economizando verba.</td>
+            </tr>
+            <tr>
+              <td><strong>Graviton2 (ARM64)</strong></td>
+              <td>Altera a arquitetura do processador da MicroVM subjacente de x86 para processadores AWS Graviton baseados em ARM.</td>
+              <td>Sempre ligue por padrão em Lambdas Python, Node e Java modernos. Oferece até <strong>34% de melhora</strong> em custo-performance (mais rápido e preço por ms menor). Verifique dependências C++ ou binários pré-compilados.</td>
+            </tr>
+            <tr>
+              <td><strong>/tmp Space Storage (Efêmero)</strong></td>
+              <td>Oferece de 512MB até 10GB de armazenamento local no disco da VM.</td>
+              <td>Perfeito para baixar e manipular arquivos temporários antes de enviar ao S3 ou EFS acoplado, mas atenção: o estado sobrevive a <em>Warm Starts</em>, então limpe o `/tmp` no final da função se manipular dados sensíveis!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+<script src="../../js/progress.js"></script>
+
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+<script src="../../js/sidebar-loader.js"></script>
+</body>
+</html>

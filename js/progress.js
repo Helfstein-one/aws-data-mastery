@@ -96,6 +96,12 @@
       color: "var(--ext)",
       items: ["aws-glue.html"]
     },
+    "aws-lambda": {
+      name: "⚡ AWS Lambda",
+      badge: "Engenheiro Serverless",
+      color: "var(--warn)",
+      items: ["aws-lambda.html"]
+    },
     "apache-flink": {
       name: "🌊 Apache Flink",
       badge: "Engenheiro de Streaming",
