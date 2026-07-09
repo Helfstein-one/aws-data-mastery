@@ -90,11 +90,17 @@
       color: "#ec4899",
       items: ["aws-emr.html"]
     },
-    "aws-glue-flink": {
-      name: "🧩 Glue & Flink",
+    "aws-glue": {
+      name: "🧩 AWS Glue",
       badge: "Especialista Serverless",
       color: "var(--ext)",
-      items: ["aws-glue-flink.html"]
+      items: ["aws-glue.html"]
+    },
+    "apache-flink": {
+      name: "🌊 Apache Flink",
+      badge: "Engenheiro de Streaming",
+      color: "var(--spark)",
+      items: ["apache-flink.html"]
     },
     orquestracao: {
       name: "⛓️ Orquestração de Dados",
