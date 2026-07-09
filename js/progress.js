@@ -348,6 +348,12 @@
 
   // Atualiza dinamicamente as cores e status dos nós do Roadmap SVG
   function updateRoadmapNodes(stats) {
+    // Definimos agrupamentos para nós do roadmap que representam trilhas compostas
+    const roadmapGroups = {
+      "processing": ["apache-spark-core", "apache-spark-api", "spark-ui-troubleshooting", "aws-emr", "aws-glue", "apache-flink", "aws-lambda"]
+    };
+
+    // Primeiro, atualizamos os nós que mapeiam 1:1 com os módulos
     for (const modId in stats.modules) {
       const mod = stats.modules[modId];
       const nodeEl = document.getElementById(`node-${modId}`);
@@ -365,6 +371,39 @@
       }
       if (statusEl) {
         statusEl.textContent = `${mod.percent}%`;
+      }
+    }
+
+    // Segundo, calculamos o progresso dos nós agrupados
+    for (const groupId in roadmapGroups) {
+      const groupMods = roadmapGroups[groupId];
+      let totalCompleted = 0;
+      let totalRequired = 0;
+      
+      groupMods.forEach(modId => {
+        if (stats.modules[modId]) {
+          totalRequired += stats.modules[modId].total;
+          totalCompleted += stats.modules[modId].completed;
+        }
+      });
+      
+      const percent = totalRequired === 0 ? 0 : Math.round((totalCompleted / totalRequired) * 100);
+      const nodeEl = document.getElementById(`node-${groupId}`);
+      const statusEl = document.getElementById(`status-${groupId}`);
+      
+      if (nodeEl) {
+        if (percent === 100) {
+          nodeEl.classList.remove('active');
+          nodeEl.classList.add('completed');
+        } else if (percent > 0) {
+          nodeEl.classList.add('active');
+          nodeEl.classList.remove('completed');
+        } else {
+          nodeEl.classList.remove('active', 'completed');
+        }
+      }
+      if (statusEl) {
+        statusEl.textContent = `${percent}%`;
       }
     }
   }
