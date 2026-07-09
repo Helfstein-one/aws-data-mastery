@@ -340,10 +340,50 @@ spark.sql("""
       </div>
     </section>
 
-    <!-- 7. Manutenção das Tabelas -->
+
+    <!-- 7. Git for Data -->
+    <section class="section" id="wap">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#38bdf8">07</div>
+        <div class="sec-title">
+          <div class="sec-subtitle">O Padrão WAP (Write-Audit-Publish)</div>
+          <h2>Git para Dados (Branching)</h2>
+        </div>
+      </div>
+      <p style="margin-bottom: 25px;">Imagine aplicar práticas de Engenharia de Software (CI/CD) diretamente nos seus dados em produção. Com o Iceberg, você pode criar "branches" dos seus dados com <strong>zero cópia física</strong> (apenas metadados), processar tudo isoladamente e dar um "Merge" para produção de forma atômica. Se um pipeline falhar no meio, a produção (<code>main</code>) continua intacta!</p>
+      
+      <div class="grid-2" style="gap: 20px;">
+        <div style="background-color: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid var(--border);">
+          <h3 style="color:#38bdf8; margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i class="ph ph-git-branch"></i> Isolamento de Ingestão</h3>
+          <p style="font-size: 14px; margin-bottom: 15px; color: #cbd5e1;">Chega de tabelas de <em>Staging</em> ou sufixos <code>_tmp</code>. Você cria uma branch na própria tabela oficial e faz a carga pesada de dados nela. Usuários consultando a branch <code>main</code> continuarão vendo apenas os dados limpos de ontem.</p>
+          <div style="background-color: #0d1117; padding: 15px; border-radius: 6px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9; line-height: 1.5;">
+            <span style="color:#8b949e;">-- 1. Cria a branch</span><br>
+            ALTER TABLE my_db.events CREATE BRANCH etl_job_v1;<br><br>
+            <span style="color:#8b949e;">-- 2. Escreve os novos dados isolado nela</span><br>
+            SET spark.wap.branch = 'etl_job_v1';<br>
+            INSERT INTO my_db.events ...;
+          </div>
+        </div>
+        
+        <div style="background-color: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid var(--border);">
+          <h3 style="color:#4ade80; margin-bottom: 15px; display:flex; align-items:center; gap:8px;"><i class="ph ph-check-circle"></i> Audit & Publish (Fast-Forward)</h3>
+          <p style="font-size: 14px; margin-bottom: 15px; color: #cbd5e1;">Depois de gravar na branch, você roda scripts de Qualidade de Dados (Auditoria). Se passar nos testes, você atualiza o ponteiro da <code>main</code> em 1 milissegundo. É uma operação 100% atômica no AWS Glue Catalog.</p>
+          <div style="background-color: #0d1117; padding: 15px; border-radius: 6px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9; line-height: 1.5;">
+            <span style="color:#8b949e;">-- 3. Atualiza a produção instantaneamente</span><br>
+            CALL catalog.system.fast_forward(<br>
+            &nbsp;&nbsp;'my_db.events', <br>
+            &nbsp;&nbsp;'main', <br>
+            &nbsp;&nbsp;'etl_job_v1'<br>
+            );
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Manutenção das Tabelas -->
     <section class="section" id="maintenance">
       <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--aws)">07</div>
+        <div class="sec-num" style="color:var(--aws)">08</div>
         <div class="sec-title">
           <div class="sec-subtitle">SRE de Dados</div>
           <h2>Saúde da Tabela (VACUUM & OPTIMIZE)</h2>
