@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta name="author" content="Mauricio Helfstein">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <title>AWS Lambda & Serverless Compute | AWS Data Mastery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../style.css">
+
+  <meta property="og:title" content="AWS Lambda & Serverless Compute | AWS Data Mastery">
+  <meta property="og:description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="../../assets/og-image.jpg">
+  <link rel="icon" href="../../assets/favicon.ico" type="image/x-icon">
+</head>
+<body>
+
+<button id="hamburger" onclick="toggleNav()">☰</button>
+
+<nav id="sidebar"></nav>
+
+<div id="main">
+  <div class="hero">
+    <div style="text-align: center; margin-bottom: 24px; position: relative;">
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120px; height: 120px; background: radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, transparent 70%); border-radius: 50%; z-index: -1;"></div>
+      <img src="../../assets/icons/Lambda.png" alt="AWS Lambda" style="width: 84px; height: 84px; filter: drop-shadow(0 10px 15px rgba(245, 158, 11, 0.4)); animation: float-icon 4s ease-in-out infinite;">
+    </div>
+    <div class="hero-ey">Computação Serverless</div>
+    <h1>AWS Lambda &amp; Event-Driven</h1>
+    <p class="hero-d">MicroVMs baseadas no Firecracker, processamento orientado a eventos e integrações assíncronas de alta performance.</p>
+  </div>
+
+  <main class="main-content">
+    
+    <section class="section" id="lambda-core">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--spark)">14</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--spark)"></div>
+          <h2>AWS Lambda: Computação Sob Demanda</h2>
+          <p>Modelos de invocação, MicroVMs (Firecracker) e estratégias para Data Engineering</p>
+        </div>
+      </div>
+      
+      <p>O <strong>AWS Lambda</strong> é um serviço de computação <em>Serverless</em> que permite executar código sem provisionar ou gerenciar servidores. Por baixo dos panos, quando uma função Lambda é invocada, a AWS utiliza a tecnologia <strong>Firecracker (MicroVMs)</strong> para provisionar ambientes de execução isolados em frações de segundo, garantindo segurança multitenant e isolamento de recursos rígido.</p>
+      
+      <p>Embora amplamente conhecido por arquiteturas web (ex: API Gateway + Lambda), no universo da <strong>Engenharia de Dados</strong>, o Lambda brilha na orquestração de eventos, ingestão em tempo real e transformações leves de <em>micro-batching</em>.</p>
+      
+      <h3 style="margin-top:40px; color:var(--aws);">Modelos de Invocação (Invocation Types)</h3>
+      <div class="concept-grid">
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Request/Response</div>
+          <div class="cc-title">Síncrona (Sync)</div>
+          <div class="cc-body">O chamador (ex: API Gateway) aguarda ativamente a resposta. Se houver falha (timeout, erro 500), é responsabilidade do chamador realizar os retries (Backoff Exponencial).</div>
+        </div>
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Fire and Forget</div>
+          <div class="cc-title">Assíncrona (Async)</div>
+          <div class="cc-body">Usado com S3 (S3 Events) ou SNS. A AWS enfileira o evento internamente. Se a função falhar, o Lambda tenta o <em>retry</em> automaticamente por até 2 vezes.</div>
+        </div>
+        <div class="concept-card spark-card">
+          <div class="cc-tag">Polling Fleet</div>
+          <div class="cc-title">Event Source Mapping</div>
+          <div class="cc-body">Exclusivo para Streams/Queues (Kafka, Kinesis, SQS, DynamoDB Streams). O serviço do Lambda possui <em>pollers</em> ocultos que leem os registros e invocam a função com lotes.</div>
+        </div>
+      </div>
+      
+      
+      <h3 style="margin-top:50px; color:var(--aws);">Padrões de Integração Serverless</h3>
+      
+      <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 20px;">
+        <div class="drawio-label"><img src="../../assets/icons/APIGateway.png" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;"><span class="dot"></span>API Gateway + Lambda + DynamoDB (Transacional Síncrono)</div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;xml&quot;: &quot;<mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;950\&quot; pageHeight=\&quot;320\&quot; background=\&quot;#080f1e\&quot;>\n  <root>\n    <mxCell id=\&quot;0\&quot;/>\n    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>\n    <mxCell id=\&quot;title\&quot; value=\&quot;SERVERLESS BACKEND: API GATEWAY + LAMBDA + DYNAMODB\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#cbd5e1;fontSize=14;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;150\&quot; y=\&quot;10\&quot; width=\&quot;650\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;client\&quot; value=\&quot;Client App\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#cbd5e1;align=center;verticalAlign=middle;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;100\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;apigw\&quot; value=\&quot;API Gateway\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/APIGateway.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#f0abfc;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;270\&quot; y=\&quot;120\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;lambda\&quot; value=\&quot;AWS Lambda\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;530\&quot; y=\&quot;120\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;ddb\&quot; value=\&quot;DynamoDB\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/DynamoDB.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#7dd3fc;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;780\&quot; y=\&quot;120\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;e1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#cbd5e1;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;client\&quot; target=\&quot;apigw\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl1\&quot; value=\&quot;HTTP POST\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#94a3b8;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e1\&quot;>\n      <mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;80\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;apigw\&quot; target=\&quot;lambda\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl2\&quot; value=\&quot;Sync Invoke\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#fcd34d;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e2\&quot;>\n      <mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;80\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0ea5e9;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda\&quot; target=\&quot;ddb\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl3\&quot; value=\&quot;PutItem\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#7dd3fc;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e3\&quot;>\n      <mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;60\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n  </root>\n</mxGraphModel>&quot;}'></div>
+      </div>
+      <p style="margin-bottom: 40px;">Este é o padrão ouro para construir microsserviços. O <strong>API Gateway</strong> atua como um escudo, gerenciando <em>Throttling</em>, <em>Rate Limiting</em> e Autenticação (Cognito), enquanto o <strong>Lambda</strong> executa a lógica de negócio e se conecta perfeitamente ao <strong>DynamoDB</strong> sem sofrer de esgotamento de conexões (já que a API do DynamoDB é puramente HTTP/HTTPS e serverless).</p>
+
+
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 20px;">
+        <div class="drawio-label"><img src="../../assets/icons/Lambda.png" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;"><span class="dot"></span>Conexão Privada VPC (Hyperplane ENI) para Data Lakes</div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;xml&quot;: &quot;<mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;950\&quot; pageHeight=\&quot;380\&quot; background=\&quot;#080f1e\&quot;>\n  <root>\n    <mxCell id=\&quot;0\&quot;/>\n    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>\n    <mxCell id=\&quot;title\&quot; value=\&quot;VPC NETWORKING: LAMBDA + HYPERPLANE ENI + RDS\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#cbd5e1;fontSize=14;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;150\&quot; y=\&quot;10\&quot; width=\&quot;650\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;vpc\&quot; value=\&quot;AWS VPC\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#10b981;fontColor=#10b981;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fontStyle=1;dashed=1;strokeWidth=2;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;240\&quot; y=\&quot;70\&quot; width=\&quot;650\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;subnet\&quot; value=\&quot;Private Subnet\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#3b82f6;fontColor=#3b82f6;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;fontStyle=1;dashed=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;270\&quot; y=\&quot;120\&quot; width=\&quot;590\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;lambda_service\&quot; value=\&quot;Lambda Service\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;50\&quot; y=\&quot;180\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;eni\&quot; value=\&quot;Hyperplane ENI\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#6366f1;fontColor=#c7d2fe;align=center;verticalAlign=middle;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;320\&quot; y=\&quot;190\&quot; width=\&quot;120\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;rds\&quot; value=\&quot;Amazon RDS\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/DatabaseMigrationService.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#6ee7b7;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;720\&quot; y=\&quot;180\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;e1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda_service\&quot; target=\&quot;eni\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl1\&quot; value=\&quot;Cross-VPC Link\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#fcd34d;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e1\&quot;>\n      <mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;90\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;eni\&quot; target=\&quot;rds\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl2\&quot; value=\&quot;Internal TCP/IP\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#c7d2fe;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e2\&quot;>\n      <mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;90\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n  </root>\n</mxGraphModel>&quot;}'></div>
+      </div>
+      <p style="margin-bottom: 40px;">No passado, conectar um Lambda a recursos privados (como um cluster Redshift ou RDS em uma sub-rede privada) resultava em <strong>Cold Starts mortais de mais de 10 segundos</strong>, porque a AWS criava uma Interface de Rede elástica (ENI) dedicada para cada microVM em tempo real. Hoje, o Lambda utiliza a arquitetura <strong>Hyperplane</strong>, que cria ENIs de longa duração e realiza um NAT escalável por trás dos panos, reduzindo o penalty de rede em sub-redes privadas para meros milissegundos.</p>
+
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 20px;">
+        <div class="drawio-label"><img src="../../assets/icons/S3.png" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;"><span class="dot"></span>S3 Event Notifications (Gatilho Assíncrono)</div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;xml&quot;: &quot;<mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;950\&quot; pageHeight=\&quot;320\&quot; background=\&quot;#080f1e\&quot;>\n  <root>\n    <mxCell id=\&quot;0\&quot;/>\n    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>\n    <mxCell id=\&quot;title\&quot; value=\&quot;ASYNCHRONOUS INVOCATION: S3 EVENT NOTIFICATIONS\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#cbd5e1;fontSize=14;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;150\&quot; y=\&quot;10\&quot; width=\&quot;650\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;producer\&quot; value=\&quot;App\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#cbd5e1;align=center;verticalAlign=middle;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;80\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;s3\&quot; value=\&quot;Amazon S3\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/S3.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#bbf7d0;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;250\&quot; y=\&quot;120\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;queue\&quot; value=\&quot;Internal Queue\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#6366f1;fontColor=#c7d2fe;align=center;verticalAlign=middle;fontStyle=1;dashed=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;500\&quot; y=\&quot;50\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;lambda\&quot; value=\&quot;AWS Lambda\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;520\&quot; y=\&quot;160\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;dest\&quot; value=\&quot;DLQ Destination\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/SimpleQueueService.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fca5a5;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;780\&quot; y=\&quot;160\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;e1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#cbd5e1;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;producer\&quot; target=\&quot;s3\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl1\&quot; value=\&quot;PutObject\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#94a3b8;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e1\&quot;>\n      <mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;60\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;s3\&quot; target=\&quot;queue\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;450\&quot; y=\&quot;160\&quot;/><mxPoint x=\&quot;450\&quot; y=\&quot;75\&quot;/></Array></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;queue\&quot; target=\&quot;lambda\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;e4\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ef4444;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda\&quot; target=\&quot;dest\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n  </root>\n</mxGraphModel>&quot;}'></div>
+      </div>
+      <p style="margin-bottom: 40px;">O padrão mais comum em Data Lakes: um arquivo aterriza no S3 (<code>PutObject</code>) e dispara a Lambda via notificação assíncrona. Como é um evento <strong>Async</strong>, se a Lambda falhar (ex: schema inválido), a própria infraestrutura da AWS enfileira e tenta reprocessar até 2 vezes (com <em>backoff</em>), antes de enviar para um Destination de falha, garantindo tolerância a falhas de rede de forma totalmente transparente.</p>
+
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 20px;">
+        <div class="drawio-label">
+          <img src="../../assets/icons/SimpleNotificationService.png" style="width:20px;height:20px;vertical-align:middle;margin-right:4px;">
+          <img src="../../assets/icons/SimpleQueueService.png" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;">
+          <span class="dot"></span>Fanout Pattern (Microsserviços Desacoplados)
+        </div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;xml&quot;: &quot;<mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;950\&quot; pageHeight=\&quot;380\&quot; background=\&quot;#080f1e\&quot;>\n  <root>\n    <mxCell id=\&quot;0\&quot;/>\n    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>\n    <mxCell id=\&quot;title\&quot; value=\&quot;FANOUT PATTERN: SNS + SQS + LAMBDA\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#cbd5e1;fontSize=14;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;150\&quot; y=\&quot;10\&quot; width=\&quot;650\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;pub\&quot; value=\&quot;Publisher\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#cbd5e1;align=center;verticalAlign=middle;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;40\&quot; y=\&quot;170\&quot; width=\&quot;80\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;sns\&quot; value=\&quot;Amazon SNS\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/SimpleNotificationService.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ddd6fe;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;220\&quot; y=\&quot;160\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;sqs1\&quot; value=\&quot;SQS (Billing)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/SimpleQueueService.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#e9d5ff;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;450\&quot; y=\&quot;70\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;lambda1\&quot; value=\&quot;Lambda\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;700\&quot; y=\&quot;70\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;sqs2\&quot; value=\&quot;SQS (Inv)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/SimpleQueueService.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#e9d5ff;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;450\&quot; y=\&quot;250\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;lambda2\&quot; value=\&quot;Lambda\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;700\&quot; y=\&quot;250\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;e1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#cbd5e1;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;pub\&quot; target=\&quot;sns\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;e2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#a78bfa;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;sns\&quot; target=\&quot;sqs1\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;360\&quot; y=\&quot;200\&quot;/><mxPoint x=\&quot;360\&quot; y=\&quot;110\&quot;/></Array></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#a78bfa;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;sns\&quot; target=\&quot;sqs2\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;360\&quot; y=\&quot;200\&quot;/><mxPoint x=\&quot;360\&quot; y=\&quot;290\&quot;/></Array></mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e4\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#c084fc;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;sqs1\&quot; target=\&quot;lambda1\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;e5\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#c084fc;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;sqs2\&quot; target=\&quot;lambda2\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n  </root>\n</mxGraphModel>&quot;}'></div>
+      </div>
+      <p style="margin-bottom: 40px;">O padrão <strong>Fanout</strong> é o "Santo Graal" de arquiteturas reativas escaláveis. O <em>Publisher</em> (ex: sistema de vendas) posta no SNS uma única vez. O SNS espalha ("fans out") essa mensagem para múltiplas filas SQS (Billing, Inventory). Cada Lambda consome sua fila de forma autônoma (via ESM Polling). Se o time de Inventory introduzir um bug fatal na Lambda deles, a fila deles trava, mas o sistema de Billing continua intacto.</p>
+
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 20px;">
+        <div class="drawio-label"><img src="../../assets/icons/StepFunctions.png" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;"><span class="dot"></span>Orquestração Stateful (AWS Step Functions)</div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;xml&quot;: &quot;<mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;950\&quot; pageHeight=\&quot;320\&quot; background=\&quot;#080f1e\&quot;>\n  <root>\n    <mxCell id=\&quot;0\&quot;/>\n    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>\n    <mxCell id=\&quot;title\&quot; value=\&quot;STATEFUL ORCHESTRATION: AWS STEP FUNCTIONS + LAMBDA\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#cbd5e1;fontSize=14;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;150\&quot; y=\&quot;10\&quot; width=\&quot;650\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;sfn\&quot; value=\&quot;Step Functions\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/StepFunctions.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fae8ff;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;50\&quot; y=\&quot;120\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;lambda1\&quot; value=\&quot;Extract\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;300\&quot; y=\&quot;50\&quot; width=\&quot;70\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;lambda2\&quot; value=\&quot;Transform\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;300\&quot; y=\&quot;210\&quot; width=\&quot;70\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;lambda3\&quot; value=\&quot;Load (Success)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;570\&quot; y=\&quot;125\&quot; width=\&quot;70\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;s3\&quot; value=\&quot;S3 Data Lake\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/S3.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#bbf7d0;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;800\&quot; y=\&quot;120\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;e1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d946ef;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;sfn\&quot; target=\&quot;lambda1\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;200\&quot; y=\&quot;160\&quot;/><mxPoint x=\&quot;200\&quot; y=\&quot;85\&quot;/></Array></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d946ef;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;sfn\&quot; target=\&quot;lambda2\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;200\&quot; y=\&quot;160\&quot;/><mxPoint x=\&quot;200\&quot; y=\&quot;245\&quot;/></Array></mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda1\&quot; target=\&quot;lambda3\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;470\&quot; y=\&quot;85\&quot;/><mxPoint x=\&quot;470\&quot; y=\&quot;160\&quot;/></Array></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e4\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda2\&quot; target=\&quot;lambda3\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;470\&quot; y=\&quot;245\&quot;/><mxPoint x=\&quot;470\&quot; y=\&quot;160\&quot;/></Array></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e5\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda3\&quot; target=\&quot;s3\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n  </root>\n</mxGraphModel>&quot;}'></div>
+      </div>
+      <p style="margin-bottom: 40px;">A Lambda é <em>Stateless</em> e tem duração máxima de 15 minutos. Quando você precisa orquestrar fluxos lógicos complexos (ex: pipeline ETL longo, aprovações manuais, rollbacks e retries agressivos), envolva suas Lambdas transacionais com o <strong>AWS Step Functions</strong>, que injeta o conceito de estado (State Machine) visualmente.</p>
+
+
+      <div class="drawio-wrap" style="margin-top: 40px; margin-bottom: 30px;">
+        <div class="drawio-label"><img src="../../assets/icons/Kinesis.png" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;"><span class="dot"></span>Event Source Mapping (Kinesis to Lambda) — Fluxo de Ingestão e Retries</div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;xml&quot;: &quot;<mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;950\&quot; pageHeight=\&quot;380\&quot; background=\&quot;#080f1e\&quot;>\n  <root>\n    <mxCell id=\&quot;0\&quot;/>\n    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>\n    <mxCell id=\&quot;title\&quot; value=\&quot;EVENT SOURCE MAPPING: KINESIS + LAMBDA (Data Engineering)\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#cbd5e1;fontSize=14;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;150\&quot; y=\&quot;20\&quot; width=\&quot;650\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;kinesis\&quot; value=\&quot;Kinesis Data Stream\n(Shards)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Kinesis.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;70\&quot; y=\&quot;140\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;esm\&quot; value=\&quot;Event Source Mapping\n(Polling Fleet)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#6366f1;fontColor=#c7d2fe;align=center;verticalAlign=middle;fontStyle=1;dashed=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;270\&quot; y=\&quot;140\&quot; width=\&quot;160\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;lambda_env\&quot; value=\&quot;AWS Lambda Execution Environment\n(MicroVM Firecracker)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#3f2c00;strokeColor=#b45309;fontColor=#fcd34d;align=center;verticalAlign=top;spacingTop=10;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;500\&quot; y=\&quot;80\&quot; width=\&quot;220\&quot; height=\&quot;200\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;lambda_func\&quot; value=\&quot;Function Handler\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fde68a;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;575\&quot; y=\&quot;140\&quot; width=\&quot;70\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;success_dest\&quot; value=\&quot;S3 / Firehose\n(Sucesso)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/S3.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#6ee7b7;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;800\&quot; y=\&quot;70\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;dlq\&quot; value=\&quot;SQS DLQ\n(Falhas)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/SimpleQueueService.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fca5a5;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;800\&quot; y=\&quot;220\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <mxCell id=\&quot;e_read\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;esm\&quot; target=\&quot;kinesis\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl_poll\&quot; value=\&quot;Polls Records\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#8b5cf6;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e_read\&quot;>\n      <mxGeometry x=\&quot;-0.15\&quot; y=\&quot;0\&quot; width=\&quot;80\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e_invoke\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;esm\&quot; target=\&quot;lambda_env\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl_sync\&quot; value=\&quot;Sync Invoke (Batch)\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#fcd34d;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e_invoke\&quot;>\n      <mxGeometry x=\&quot;0.1\&quot; y=\&quot;0\&quot; width=\&quot;110\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e_succ\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#10b981;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda_env\&quot; target=\&quot;success_dest\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;750\&quot; y=\&quot;110\&quot;/><mxPoint x=\&quot;750\&quot; y=\&quot;100\&quot;/></Array></mxGeometry>\n    </mxCell>\n    <mxCell id=\&quot;e_fail\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ef4444;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda_env\&quot; target=\&quot;dlq\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;750\&quot; y=\&quot;250\&quot;/><mxPoint x=\&quot;750\&quot; y=\&quot;250\&quot;/></Array></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;lbl_bisect\&quot; value=\&quot;Bisect on Error\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#fca5a5;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;300\&quot; y=\&quot;230\&quot; width=\&quot;100\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n  </root>\n</mxGraphModel>&quot;}'></div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 30px;">
+        <div>
+          <h4>Tratamento de Erros em Event Source Mapping</h4>
+          <p>Quando consumindo de filas (SQS) ou fluxos contínuos (Kinesis), as falhas não afetam apenas um evento isolado, mas sim um <em>Batch</em> inteiro. Se o seu Lambda pegar 100 registros do Kinesis e o 50º der erro, o comportamento padrão do Lambda é <strong>bloquear o Shard</strong>, fazendo retry infinitamente naquele batch inteiro até os registros expirarem (Retention Period).</p>
+          <p>Para evitar esse "Poison Pill", engenheiros usam o <strong>BisectBatchOnFunctionError</strong>: ao falhar, o Lambda divide o batch pela metade e tenta processá-los separadamente até isolar o registro com erro e enviá-lo para um destino de falha (SQS DLQ ou S3 Destination), liberando o shard instantaneamente.</p>
+        </div>
+        
+        <div>
+          <h4>Lambda Destinations vs DLQs</h4>
+          <p>Historicamente, usava-se apenas as <strong>DLQs (Dead Letter Queues)</strong> vinculadas à própria função para capturar invocações falhas. Porém, a prática moderna adota <strong>Lambda Destinations</strong>.</p>
+          <ul style="font-size: 13px;">
+            <li style="margin-bottom: 8px;">As DLQs capturam apenas o payload original. Não há visibilidade sobre a <em>Stack Trace</em> do erro.</li>
+            <li style="margin-bottom: 8px;">Os <strong>Destinations</strong> (OnSuccess, OnFailure) permitem rotear o resultado para SQS, SNS, EventBridge ou outra Lambda, incluindo no envelope JSON todo o <em>Request Payload</em>, o <em>Response Context</em> e a <em>Exception</em> detalhada, facilitando a observabilidade.</li>
+          </ul>
+        </div>
+      </div>
+
+      
+      
+      <div class="drawio-wrap" style="margin-top: 50px; margin-bottom: 20px;">
+        <div class="drawio-label">
+          <img src="../../assets/icons/APIGateway.png" style="width:20px;height:20px;vertical-align:middle;margin-right:4px;">
+          <img src="../../assets/icons/Lambda.png" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;">
+          <span class="dot"></span>Microservices Architecture (Serverless E-Commerce)
+        </div>
+        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;xml&quot;: &quot;<mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1000\&quot; pageHeight=\&quot;550\&quot; background=\&quot;#080f1e\&quot;>\n  <root>\n    <mxCell id=\&quot;0\&quot;/>\n    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>\n    \n    <mxCell id=\&quot;title\&quot; value=\&quot;SERVERLESS MICROSERVICES: E-COMMERCE API\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#cbd5e1;fontSize=14;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;175\&quot; y=\&quot;20\&quot; width=\&quot;650\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <!-- API Gateway -->\n    <mxCell id=\&quot;apigw\&quot; value=\&quot;API Gateway\n(Routing)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/APIGateway.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#f0abfc;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;80\&quot; y=\&quot;200\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <!-- Users Service -->\n    <mxCell id=\&quot;lambda_users\&quot; value=\&quot;Users Service\n(Lambda)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;320\&quot; y=\&quot;80\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;ddb_users\&quot; value=\&quot;Users DB\n(DynamoDB)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/DynamoDB.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#7dd3fc;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;560\&quot; y=\&quot;80\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <!-- Orders Service -->\n    <mxCell id=\&quot;lambda_orders\&quot; value=\&quot;Orders Service\n(Lambda)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;320\&quot; y=\&quot;320\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <!-- Orders DB -->\n    <mxCell id=\&quot;ddb_orders\&quot; value=\&quot;Orders DB\n(DynamoDB)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/DynamoDB.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#7dd3fc;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;560\&quot; y=\&quot;240\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <!-- Event Bus / SNS -->\n    <mxCell id=\&quot;sns_bus\&quot; value=\&quot;Event Bus\n(SNS Topic)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/SimpleNotificationService.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#ddd6fe;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;560\&quot; y=\&quot;400\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <!-- Email Service -->\n    <mxCell id=\&quot;lambda_email\&quot; value=\&quot;Notification Service\n(Lambda)\&quot; style=\&quot;shape=image;image=https://raw.githubusercontent.com/Helfstein-one/aws-data-mastery/main/assets/icons/Lambda.png;verticalLabelPosition=bottom;verticalAlign=top;align=center;fontColor=#fcd34d;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>\n      <mxGeometry x=\&quot;820\&quot; y=\&quot;400\&quot; width=\&quot;80\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n\n    <!-- Edges -->\n    <mxCell id=\&quot;e1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f0abfc;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;apigw\&quot; target=\&quot;lambda_users\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;200\&quot; y=\&quot;240\&quot;/><mxPoint x=\&quot;200\&quot; y=\&quot;120\&quot;/></Array></mxGeometry>\n    </mxCell>\n    <mxCell id=\&quot;lbl1\&quot; value=\&quot;GET /users\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#f0abfc;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e1\&quot;>\n      <mxGeometry x=\&quot;-0.2\&quot; y=\&quot;0\&quot; width=\&quot;70\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-15\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f0abfc;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;apigw\&quot; target=\&quot;lambda_orders\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;200\&quot; y=\&quot;240\&quot;/><mxPoint x=\&quot;200\&quot; y=\&quot;360\&quot;/></Array></mxGeometry>\n    </mxCell>\n    <mxCell id=\&quot;lbl2\&quot; value=\&quot;POST /orders\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#f0abfc;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e2\&quot;>\n      <mxGeometry x=\&quot;-0.2\&quot; y=\&quot;0\&quot; width=\&quot;80\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-15\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n\n    <mxCell id=\&quot;e3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0ea5e9;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda_users\&quot; target=\&quot;ddb_users\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    \n    <mxCell id=\&quot;e4\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0ea5e9;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda_orders\&quot; target=\&quot;ddb_orders\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;480\&quot; y=\&quot;360\&quot;/><mxPoint x=\&quot;480\&quot; y=\&quot;280\&quot;/></Array></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e5\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#a78bfa;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;lambda_orders\&quot; target=\&quot;sns_bus\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><Array as=\&quot;points\&quot;><mxPoint x=\&quot;480\&quot; y=\&quot;360\&quot;/><mxPoint x=\&quot;480\&quot; y=\&quot;440\&quot;/></Array></mxGeometry>\n    </mxCell>\n    <mxCell id=\&quot;lbl5\&quot; value=\&quot;Publish Event\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#ddd6fe;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e5\&quot;>\n      <mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;80\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;10\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n    \n    <mxCell id=\&quot;e6\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#a78bfa;strokeWidth=2;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;sns_bus\&quot; target=\&quot;lambda_email\&quot;>\n      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>\n    </mxCell>\n    <mxCell id=\&quot;lbl6\&quot; value=\&quot;Async Invoke\&quot; style=\&quot;text;html=1;strokeColor=none;fillColor=#080f1e;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontColor=#ddd6fe;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;e6\&quot;>\n      <mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;80\&quot; height=\&quot;20\&quot; relative=\&quot;1\&quot; as=\&quot;geometry\&quot;><mxPoint x=\&quot;-5\&quot; y=\&quot;-10\&quot; as=\&quot;offset\&quot;/></mxGeometry>\n    </mxCell>\n  </root>\n</mxGraphModel>&quot;}'></div>
+      </div>
+      <p style="margin-bottom: 40px;">Esta é a arquitetura definitiva de <strong>Microsserviços 100% Serverless</strong>. O API Gateway expõe as rotas (<code>/users</code>, <code>/orders</code>) e faz o roteamento para Lambdas independentes (cada um sendo um microsserviço com seu próprio banco de dados isolado no DynamoDB). Para comunicação entre eles sem criar acoplamento síncrono rígido (Choreography), o serviço de Orders publica um evento no <strong>SNS</strong> ou EventBridge, e um serviço de Notificação independente consome esse evento assincronamente para enviar um e-mail de confirmação, garantindo resiliência extrema.</p>
+
+      <h3 style="margin-top:50px; color:var(--aws);">Ciclo de Vida da Execução (Execution Lifecycle)</h3>
+      <p>Uma MicroVM no Lambda não surge magicamente rodando o seu código. O <em>Cold Start</em> é composto de 3 grandes sub-fases de inicialização (Init Phase):</p>
+      
+      <div class="concept-grid" style="margin-top:20px; margin-bottom:40px;">
+        <div class="concept-card spark-card">
+          <div class="cc-tag">1. Extension Init</div>
+          <div class="cc-title">Carregamento de Camadas</div>
+          <div class="cc-body">Se você usa Lambda Extensions (ex: Datadog agent, AppConfig) ou Layers grossas, o ambiente gasta tempo montando esses binários na pasta <code>/opt</code> da MicroVM antes de tudo.</div>
+        </div>
+        <div class="concept-card spark-card">
+          <div class="cc-tag">2. Runtime Init</div>
+          <div class="cc-title">Boot do Interpretador</div>
+          <div class="cc-body">Subida da JVM (para Java), do Node v8 Engine, ou do interpretador CPython. É aqui que os <em>Custom Runtimes</em> (Rust/Go) brilham por não precisarem disso.</div>
+        </div>
+        <div class="concept-card spark-card">
+          <div class="cc-tag">3. Function Init</div>
+          <div class="cc-title">Escopo Global (Seu Código)</div>
+          <div class="cc-body">Execução de todo o código que está <strong>FORA</strong> do seu handler (ex: <code>import pandas</code>, `boto3.client()`). É onde a conexão de banco de dados deve ficar para aproveitamento de Warm Starts.</div>
+        </div>
+      </div>
+      
+      <h3 style="margin-top:50px; color:var(--aws);">Concurrency Limits & IAM Security</h3>
+      <div class="grid-2" style="margin-top: 30px;">
+        <div>
+          <h4>Estratégias de Concorrência</h4>
+          <p>O limite padrão da AWS é de 1000 concorrências por região <em>(Unreserved)</em>, o que significa que todas as suas Lambdas dividem essa cota. Se uma Lambda estourar e consumir tudo, as outras tomarão <strong>Throttling (Erro 429)</strong>.</p>
+          <ul style="font-size: 13px;">
+            <li style="margin-bottom: 8px;"><strong>Reserved Concurrency:</strong> Dedica X conexões exclusivas para uma função. Se definido como 0, funciona como um *Kill Switch* emergencial para parar a função (útil contra DDoS).</li>
+            <li style="margin-bottom: 8px;"><strong>Provisioned Concurrency:</strong> Paga-se por hora para manter X ambientes permanentemente "quentes", eliminando 100% o <em>Init Phase</em> e os Cold Starts em picos de acesso repentino.</li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4>Segurança IAM (O Dilema de quem acessa o quê)</h4>
+          <p>Entender a diferença entre Roles e Policies é mandatório em provas de certificação e entrevistas AWS:</p>
+          <ul style="font-size: 13px;">
+            <li style="margin-bottom: 8px;"><strong>Execution Role (Resource: IAM Role)</strong>: Define as permissões "de saída" da sua função. "A minha função Lambda <em>TEM PERMISSÃO PARA</em> escrever num DynamoDB?"</li>
+            <li style="margin-bottom: 8px;"><strong>Resource-based Policy</strong>: Define as permissões "de entrada" na função. "Quem <em>TEM PERMISSÃO PARA</em> invocar essa Lambda?" (Ex: Permitir que o bucket S3 X tenha autorização de invocar sua função assíncrona).</li>
+          </ul>
+        </div>
+      </div>
+
+      
+      
+
+      <h4 style="margin-top:40px; color:var(--warn);">Tuning Avançado & Melhores Práticas</h4>
+      <p>Performance em Serverless é diretamente proporcional aos custos. Entender como a AWS aloca recursos por debaixo dos panos é vital para <em>FinOps</em> e eficiência.</p>
+      
+      <div class="tbl-wrap" style="margin-top: 15px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Conceito / Configuração</th>
+              <th>Impacto Arquitetural</th>
+              <th>Prática Recomendada</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Lambda Layers & Zip Sizes</strong></td>
+              <td>O tamanho máximo de um pacote Lambda é 50MB (zip) e 250MB (descompactado). O tempo de descompactação afeta drasticamente o <em>Cold Start</em>.</td>
+              <td>Mova pacotes pesados (pandas, scipy, drivers jdbc) para <strong>Lambda Layers</strong>. A camada é montada no `/opt` da VM de forma eficiente, permitindo deploys muito mais rápidos do código de negócio.</td>
+            </tr>
+            <tr>
+              <td><strong>Custom Runtimes & Rust/Go</strong></td>
+              <td>Linguagens dinâmicas (Python/Node) exigem subida de interpretador. Java tem a JVM. Tudo impacta FinOps em bilhões de execuções.</td>
+              <td>Para extrema performance, reescreva lógicas críticas em Rust ou Go, e use a imagem <code>provided.al2023</code> (Amazon Linux 2023). O Cold Start cai para menos de 30ms, reduzindo absurdamente a conta final.</td>
+            </tr>
+            <tr>
+              <td><strong>Alocação de Memória vs CPU</strong></td>
+              <td>A CPU do Lambda não é configurável isoladamente. Ela escala de forma estritamente proporcional à memória alocada (1 vCPU íntegra é atingida com ~1.7GB de RAM).</td>
+              <td>Use ferramentas open-source como <strong>AWS Lambda Power Tuning</strong> (Step Functions) para achar o balanço matemático ótimo entre velocidade e custo para workloads pesados em dados (pandas/numpy).</td>
+            </tr>
+            <tr>
+              <td><strong>Conexões com Bancos Relacionais</strong></td>
+              <td>Milhares de concorrências (funções instanciadas rapidamente) esgotam os pools de conexão tradicionais (PostgreSQL/MySQL), causando Connection Timeouts e derrubando o banco.</td>
+              <td>Inicie as conexões de banco de dados <strong>fora do escopo do handler</strong> para aproveitar o reuso em instâncias quentes (Warm Starts) e adote o <strong>Amazon RDS Proxy</strong>.</td>
+            </tr>
+            <tr>
+              <td><strong>Provisioned Concurrency</strong></td>
+              <td>Mantém instâncias prontas e "quentes" o tempo todo, pagando-se um valor fixo por hora. O <em>Init Phase</em> (bota, carrega bibliotecas) nunca acontece no caminho crítico da requisição.</td>
+              <td>Ideal para APIs sensíveis a latência consumidas por UIs. Para ETL em batch/background ou processamento em fila, o <em>Cold Start</em> normal de alguns segundos é perfeitamente tolerável, economizando verba.</td>
+            </tr>
+            <tr>
+              <td><strong>Graviton2 (ARM64)</strong></td>
+              <td>Altera a arquitetura do processador da MicroVM subjacente de x86 para processadores AWS Graviton baseados em ARM.</td>
+              <td>Sempre ligue por padrão em Lambdas Python, Node e Java modernos. Oferece até <strong>34% de melhora</strong> em custo-performance (mais rápido e preço por ms menor). Verifique dependências C++ ou binários pré-compilados.</td>
+            </tr>
+            <tr>
+              <td><strong>/tmp Space Storage (Efêmero)</strong></td>
+              <td>Oferece de 512MB até 10GB de armazenamento local no disco da VM.</td>
+              <td>Perfeito para baixar e manipular arquivos temporários antes de enviar ao S3 ou EFS acoplado, mas atenção: o estado sobrevive a <em>Warm Starts</em>, então limpe o `/tmp` no final da função se manipular dados sensíveis!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+  
+      
+
+      <p style="margin-bottom:20px;">Com a arquitetura dividida, o seu <code>app.py</code> se torna extremamente "magro" (Thin Handler). Ele apenas traduz a request HTTP/SQS para o seu Core. Além disso, as conexões de banco de dados ficam no escopo global para aproveitar os <em>Warm Starts</em>:</p>
+
+      <div style="background-color: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; margin-bottom: 40px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9;">
+<pre style="margin: 0;"><code><span style="color: #ff7b72;">import</span> json
+<span style="color: #ff7b72;">import</span> logging
+<span style="color: #ff7b72;">from</span> core.order_service <span style="color: #ff7b72;">import</span> process_order
+<span style="color: #ff7b72;">from</span> infra.dynamodb_repo <span style="color: #ff7b72;">import</span> DynamoOrderRepository
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+<span style="color: #8b949e;"># ============================================================</span>
+<span style="color: #8b949e;"># INIT PHASE (Executado UMA vez durante o Cold Start)</span>
+<span style="color: #8b949e;"># Inicializa a conexão com o banco fora do handler!</span>
+<span style="color: #8b949e;"># ============================================================</span>
+repo = DynamoOrderRepository(table_name=<span style="color: #a5d6ff;">"OrdersTable"</span>)
+
+<span style="color: #8b949e;"># ============================================================</span>
+<span style="color: #8b949e;"># INVOKE PHASE (Executado a cada requisição / evento)</span>
+<span style="color: #8b949e;"># ============================================================</span>
+<span style="color: #ff7b72;">def</span> <span style="color: #d2a8ff;">lambda_handler</span>(event, context):
+    <span style="color: #a5d6ff;">"""Handler magro: Apenas extrai o evento e delega para o domínio."""</span>
+    <span style="color: #ff7b72;">try</span>:
+        <span style="color: #8b949e;"># 1. Extração (Adaptador de Entrada SQS)</span>
+        body = json.loads(event[<span style="color: #a5d6ff;">'Records'</span>][<span style="color: #79c0ff;">0</span>][<span style="color: #a5d6ff;">'body'</span>])
+        order_id = body.get(<span style="color: #a5d6ff;">'order_id'</span>)
+        
+        <span style="color: #8b949e;"># 2. Lógica de Negócio Pura (O Handler não sabe como funciona por baixo dos panos)</span>
+        result = process_order(order_id=order_id, repository=repo)
+        
+        <span style="color: #8b949e;"># 3. Resposta de Sucesso</span>
+        <span style="color: #ff7b72;">return</span> {
+            <span style="color: #a5d6ff;">"statusCode"</span>: <span style="color: #79c0ff;">200</span>,
+            <span style="color: #a5d6ff;">"body"</span>: json.dumps({<span style="color: #a5d6ff;">"status"</span>: <span style="color: #a5d6ff;">"SUCCESS"</span>, <span style="color: #a5d6ff;">"data"</span>: result})
+        }
+        
+    <span style="color: #ff7b72;">except</span> <span style="color: #f0883e;">Exception</span> <span style="color: #ff7b72;">as</span> e:
+        logger.error(<span style="color: #a5d6ff;">f"Erro ao processar pedido: {str(e)}"</span>)
+        <span style="color: #8b949e;"># Levanta a exceção para que o serviço da AWS tente um Retry ou envie para a DLQ</span>
+        <span style="color: #ff7b72;">raise</span> e</code></pre>
+      </div>
+
+    
+      <h3 style="margin-top:60px; color:var(--aws); border-bottom: 2px solid var(--aws); padding-bottom: 10px;">Hands-on: IaC & Clean Architecture</h3>
+      <p style="margin-bottom:20px;">Engenharia de Dados moderna exige automação e qualidade de software. Abaixo, juntamos o padrão ouro de infraestrutura (Terraform avançado) com o padrão ouro de arquitetura de código (Hexagonal/Clean Architecture em Python).</p>
+      
+      <div style="margin-bottom: 20px;">
+        <div style="margin-bottom: 40px;">
+          <h4 style="color:var(--warn); margin-bottom: 10px;">1. Estrutura do Repositório</h4>
+          <p style="font-size: 14px; margin-bottom: 15px;">A separação de responsabilidades evita o "Handler Gordo". A lógica de negócios não deve conhecer o <code>event</code> da AWS.</p>
+          <div style="background-color: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 12px; color: #c9d1d9;">
+<pre style="margin: 0;"><code>📦 lambda-orders-api/
+ ┣ 📜 main.tf                <span style="color: #8b949e;"># Infraestrutura</span>
+ ┣ 📜 src/app.py             <span style="color: #8b949e;"># Lambda Handler (Porta)</span>
+ ┣ 📜 src/requirements.txt   <span style="color: #8b949e;"># libs (boto3, aws-xray-sdk)</span>
+ ┣ 📂 src/core/              <span style="color: #8b949e;"># Regras de Negócio (Isoladas)</span>
+ ┃ ┣ 📜 __init__.py
+ ┃ ┗ 📜 order_service.py     <span style="color: #8b949e;"># process_order()</span>
+ ┗ 📂 src/infra/             <span style="color: #8b949e;"># Conectores Externos</span>
+   ┣ 📜 __init__.py
+   ┗ 📜 dynamodb_repo.py     <span style="color: #8b949e;"># Repositório Boto3</span></code></pre>
+          </div>
+        </div>
+        
+        <div>
+          <h4 style="color:var(--warn); margin-bottom: 10px;">2. O "Thin Handler" (Python)</h4>
+          <p style="font-size: 14px; margin-bottom: 15px;">Instanciamos o banco <strong>fora</strong> do handler (Warm Start) e usamos <em>Type Hinting</em> para maior previsibilidade.</p>
+          <div style="background-color: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 12px; color: #c9d1d9;">
+<pre style="margin: 0;"><code><span style="color: #ff7b72;">import</span> json, logging
+<span style="color: #ff7b72;">from</span> typing <span style="color: #ff7b72;">import</span> Dict, Any
+<span style="color: #ff7b72;">from</span> core.order_service <span style="color: #ff7b72;">import</span> process_order
+<span style="color: #ff7b72;">from</span> infra.dynamodb_repo <span style="color: #ff7b72;">import</span> DynamoRepo
+
+logger = logging.getLogger(); logger.setLevel(logging.INFO)
+
+<span style="color: #8b949e;"># INIT PHASE (Executado apenas 1x no Cold Start)</span>
+repo = DynamoRepo(table_name=<span style="color: #a5d6ff;">"Orders"</span>)
+
+<span style="color: #ff7b72;">def</span> <span style="color: #d2a8ff;">lambda_handler</span>(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    <span style="color: #ff7b72;">try</span>:
+        <span style="color: #8b949e;"># 1. Extração SQS (Adaptador)</span>
+        body = json.loads(event[<span style="color: #a5d6ff;">'Records'</span>][<span style="color: #79c0ff;">0</span>][<span style="color: #a5d6ff;">'body'</span>])
+        
+        <span style="color: #8b949e;"># 2. Core Domain (Agnóstico de Cloud)</span>
+        result = process_order(body.get(<span style="color: #a5d6ff;">'order_id'</span>), repo)
+        
+        <span style="color: #ff7b72;">return</span> {<span style="color: #a5d6ff;">"statusCode"</span>: <span style="color: #79c0ff;">200</span>, <span style="color: #a5d6ff;">"body"</span>: json.dumps(result)}
+        
+    <span style="color: #ff7b72;">except</span> <span style="color: #f0883e;">Exception</span> <span style="color: #ff7b72;">as</span> e:
+        logger.error(<span style="color: #a5d6ff;">f"Order failed: {e}"</span>)
+        <span style="color: #ff7b72;">raise</span> e <span style="color: #8b949e;"># Trigger AWS Retry / DLQ</span></code></pre>
+          </div>
+        </div>
+      </div>
+      
+      <h4 style="color:var(--warn); margin-bottom: 10px;">3. Terraform Avançado (Configurações de Produção)</h4>
+      <p style="margin-bottom:20px;">Provisionar Lambdas exige dezenas de travas de segurança. Este template bloqueia concorrência descontrolada, habilita rastreabilidade (X-Ray), anexa a uma VPC (Subnet Privada) e define Dead Letter Queues (DLQ).</p>
+      
+      <div style="background-color: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; margin-bottom: 40px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9;">
+<pre style="margin: 0;"><code><span style="color: #ff7b72;">resource</span> <span style="color: #a5d6ff;">"aws_lambda_function"</span> <span style="color: #a5d6ff;">"processor"</span> {
+  function_name    = <span style="color: #a5d6ff;">"order_processor_api"</span>
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = <span style="color: #a5d6ff;">"app.lambda_handler"</span>
+  runtime          = <span style="color: #a5d6ff;">"python3.11"</span>
+  filename         = <span style="color: #a5d6ff;">"src/deployment_package.zip"</span>
+  
+  <span style="color: #8b949e;"># Tuning de Performance</span>
+  memory_size      = <span style="color: #79c0ff;">1024</span> <span style="color: #8b949e;"># Aloca 1GB de RAM (e consequentemente + CPU proporcional)</span>
+  timeout          = <span style="color: #79c0ff;">30</span>   <span style="color: #8b949e;"># Fail-fast (Evita cobranças longas por travamento)</span>
+  
+  <span style="color: #8b949e;"># Controle de Custo e Anti-DDoS</span>
+  reserved_concurrent_executions = <span style="color: #79c0ff;">50</span> <span style="color: #8b949e;"># Limita a 50 execuções paralelas máximas</span>
+  
+  <span style="color: #8b949e;"># Rastreabilidade Distribuída (Observability)</span>
+  tracing_config {
+    mode = <span style="color: #a5d6ff;">"Active"</span> <span style="color: #8b949e;"># Habilita o AWS X-Ray para traçar tempo de execução no DynamoDB</span>
+  }
+  
+  <span style="color: #8b949e;"># Conexão de Rede (Bancos de Dados Privados / RDS / ElastiCache)</span>
+  vpc_config {
+    subnet_ids         = [aws_subnet.private_1a.id, aws_subnet.private_1b.id]
+    security_group_ids = [aws_security_group.lambda_sg.id]
+  }
+
+  <span style="color: #8b949e;"># Tolerância a Falhas (Gatilhos Assíncronos)</span>
+  dead_letter_config {
+    target_arn = aws_sqs_queue.dlq.arn <span style="color: #8b949e;"># Envia eventos tóxicos para a DLQ após retries</span>
+  }
+
+  environment {
+    variables = {
+      STAGE      = <span style="color: #a5d6ff;">"production"</span>
+      TABLE_NAME = aws_dynamodb_table.orders.name
+      LOG_LEVEL  = <span style="color: #a5d6ff;">"INFO"</span>
+    }
+  }
+}
+
+<span style="color: #8b949e;"># Mapeamento do Gatilho: Lê do SQS e aciona o Lambda</span>
+<span style="color: #ff7b72;">resource</span> <span style="color: #a5d6ff;">"aws_lambda_event_source_mapping"</span> <span style="color: #a5d6ff;">"sqs_trigger"</span> {
+  event_source_arn = aws_sqs_queue.main_queue.arn
+  function_name    = aws_lambda_function.processor.arn
+  batch_size       = <span style="color: #79c0ff;">10</span>
+  maximum_batching_window_in_seconds = <span style="color: #79c0ff;">1</span> <span style="color: #8b949e;"># Aguarda até 1s para juntar 10 mensagens antes de invocar</span>
+}</code></pre>
+      </div>
+
+    </main>
+</div>
+
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+<script>
+function toggleNav() {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  var main = document.getElementById('main');
+  if (!sb) return;
+  
+  var isMobile = window.innerWidth <= 960;
+  if (isMobile) {
+    var isOpen = sb.classList.contains('open');
+    if (!isOpen) {
+      sb.classList.add('open');
+      if (hb) hb.innerHTML = '✕';
+    } else {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  } else {
+    var isClosed = sb.classList.contains('closed');
+    if (!isClosed) {
+      sb.classList.add('closed');
+      if (main) main.classList.add('sidebar-closed');
+      if (hb) hb.innerHTML = '☰';
+    } else {
+      sb.classList.remove('closed');
+      if (main) main.classList.remove('sidebar-closed');
+      if (hb) hb.innerHTML = '✕';
+    }
+  }
+}
+
+function toggleCategory(catId, headerEl) {
+  var content = document.getElementById(catId);
+  var arrow = headerEl.querySelector('.arrow');
+  if (!content) return;
+  var isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    headerEl.classList.remove('active');
+    if (arrow) arrow.innerHTML = '▶';
+  } else {
+    content.classList.add('open');
+    headerEl.classList.add('active');
+    if (arrow) arrow.innerHTML = '▼';
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', function() {
+  var scrollY = window.pageYOffset;
+  var btn = document.getElementById('scrollTop');
+  if (btn) {
+    if (scrollY > 400) btn.classList.add('show');
+    else btn.classList.remove('show');
+  }
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', function() {
+  var hb = document.getElementById('hamburger');
+  var sb = document.getElementById('sidebar');
+  if (hb && sb) {
+    if (window.innerWidth > 960) {
+      hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+    } else {
+      hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+    }
+  }
+});
+
+document.addEventListener('click', function(e) {
+  var sb = document.getElementById('sidebar');
+  var hb = document.getElementById('hamburger');
+  if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      if (hb) hb.innerHTML = '☰';
+    }
+  }
+});
+</script>
+<script src="../../js/progress.js"></script>
+
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+<script src="../../js/sidebar-loader.js"></script>
+</body>
+</html>
