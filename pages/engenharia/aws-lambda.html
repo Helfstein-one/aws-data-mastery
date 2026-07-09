@@ -183,53 +183,7 @@
       </div>
 
       
-      <h3 style="margin-top:50px; color:var(--aws);">Infraestrutura como Código (Terraform)</h3>
-      <p style="margin-bottom:20px;">Provisionar Lambdas manualmente pelo Console da AWS é um anti-pattern em grandes empresas. Veja um exemplo prático de como declarar uma Lambda conectada a uma fila SQS usando Terraform (IaC):</p>
       
-      <div style="background-color: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; margin-bottom: 40px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9;">
-<pre style="margin: 0;"><code><span style="color: #ff7b72;">resource</span> <span style="color: #a5d6ff;">"aws_iam_role"</span> <span style="color: #a5d6ff;">"lambda_exec_role"</span> {
-  name = <span style="color: #a5d6ff;">"lambda_sqs_processor_role"</span>
-  assume_role_policy = <span style="color: #a5d6ff;">jsonencode</span>({
-    Version = <span style="color: #a5d6ff;">"2012-10-17"</span>
-    Statement = [{
-      Action = <span style="color: #a5d6ff;">"sts:AssumeRole"</span>
-      Effect = <span style="color: #a5d6ff;">"Allow"</span>
-      Principal = { Service = <span style="color: #a5d6ff;">"lambda.amazonaws.com"</span> }
-    }]
-  })
-}
-
-<span style="color: #8b949e;"># Anexa permissão para a Lambda ler a fila SQS (Execution Role)</span>
-<span style="color: #ff7b72;">resource</span> <span style="color: #a5d6ff;">"aws_iam_role_policy_attachment"</span> <span style="color: #a5d6ff;">"sqs_read"</span> {
-  role       = aws_iam_role.lambda_exec_role.name
-  policy_arn = <span style="color: #a5d6ff;">"arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"</span>
-}
-
-<span style="color: #8b949e;"># Declara a função Lambda</span>
-<span style="color: #ff7b72;">resource</span> <span style="color: #a5d6ff;">"aws_lambda_function"</span> <span style="color: #a5d6ff;">"processor"</span> {
-  function_name    = <span style="color: #a5d6ff;">"order_processor"</span>
-  role             = aws_iam_role.lambda_exec_role.arn
-  handler          = <span style="color: #a5d6ff;">"app.lambda_handler"</span>
-  runtime          = <span style="color: #a5d6ff;">"python3.11"</span>
-  filename         = <span style="color: #a5d6ff;">"deployment_package.zip"</span>
-  
-  memory_size      = <span style="color: #79c0ff;">256</span>
-  timeout          = <span style="color: #79c0ff;">30</span>
-  
-  environment {
-    variables = {
-      STAGE = <span style="color: #a5d6ff;">"production"</span>
-    }
-  }
-}
-
-<span style="color: #8b949e;"># Cria o Event Source Mapping (Gatilho da Fila SQS)</span>
-<span style="color: #ff7b72;">resource</span> <span style="color: #a5d6ff;">"aws_lambda_event_source_mapping"</span> <span style="color: #a5d6ff;">"sqs_trigger"</span> {
-  event_source_arn = aws_sqs_queue.my_queue.arn
-  function_name    = aws_lambda_function.processor.arn
-  batch_size       = <span style="color: #79c0ff;">10</span> <span style="color: #8b949e;"># Processa de 10 em 10 mensagens</span>
-}</code></pre>
-      </div>
 
       <h4 style="margin-top:40px; color:var(--warn);">Tuning Avançado & Melhores Práticas</h4>
       <p>Performance em Serverless é diretamente proporcional aos custos. Entender como a AWS aloca recursos por debaixo dos panos é vital para <em>FinOps</em> e eficiência.</p>
@@ -285,23 +239,7 @@
 
     </section>
   
-      <h4 style="margin-top:40px; color:var(--warn);">Estrutura de Projeto (Clean Architecture)</h4>
-      <p style="margin-bottom:20px;">O erro mais comum em Lambdas é o "Handler Gordo": colocar validação, regras de negócio e consultas SQL/Boto3 dentro da mesma função <code>lambda_handler</code>. Uma Lambda madura usa Arquitetura Hexagonal para separar responsabilidades. Veja o padrão ouro de diretório de projeto:</p>
-
-      <div style="background-color: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; margin-bottom: 30px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9;">
-<pre style="margin: 0;"><code>📦 order_processor/
- ┣ 📜 app.py                 <span style="color: #8b949e;"># Lambda Handler (Porta de Entrada / Adaptador Web)</span>
- ┣ 📜 requirements.txt       <span style="color: #8b949e;"># Dependências externas (ex: boto3, pydantic)</span>
- ┣ 📂 core/                  <span style="color: #8b949e;"># Regras de Negócio Puras (Hexagonal Core)</span>
- ┃ ┣ 📜 __init__.py
- ┃ ┗ 📜 order_service.py     <span style="color: #8b949e;"># Lógica agnóstica de cloud (Pode rodar no Lambda ou on-prem)</span>
- ┣ 📂 infra/                 <span style="color: #8b949e;"># Adaptadores de Saída (Conexão com Mundo Externo)</span>
- ┃ ┣ 📜 __init__.py
- ┃ ┗ 📜 dynamodb_repo.py     <span style="color: #8b949e;"># Isolamento do Boto3 / Chamadas de rede</span>
- ┗ 📂 tests/                 <span style="color: #8b949e;"># Testes Unitários</span>
-   ┣ 📜 test_app.py
-   ┗ 📜 test_order_service.py</code></pre>
-      </div>
+      
 
       <p style="margin-bottom:20px;">Com a arquitetura dividida, o seu <code>app.py</code> se torna extremamente "magro" (Thin Handler). Ele apenas traduz a request HTTP/SQS para o seu Core. Além disso, as conexões de banco de dados ficam no escopo global para aproveitar os <em>Warm Starts</em>:</p>
 
@@ -343,6 +281,111 @@ repo = DynamoOrderRepository(table_name=<span style="color: #a5d6ff;">"OrdersTab
         logger.error(<span style="color: #a5d6ff;">f"Erro ao processar pedido: {str(e)}"</span>)
         <span style="color: #8b949e;"># Levanta a exceção para que o serviço da AWS tente um Retry ou envie para a DLQ</span>
         <span style="color: #ff7b72;">raise</span> e</code></pre>
+      </div>
+
+    
+      <h3 style="margin-top:60px; color:var(--aws); border-bottom: 2px solid var(--aws); padding-bottom: 10px;">Hands-on: IaC & Clean Architecture</h3>
+      <p style="margin-bottom:20px;">Engenharia de Dados moderna exige automação e qualidade de software. Abaixo, juntamos o padrão ouro de infraestrutura (Terraform avançado) com o padrão ouro de arquitetura de código (Hexagonal/Clean Architecture em Python).</p>
+      
+      <div class="grid-2" style="margin-bottom: 20px;">
+        <div>
+          <h4 style="color:var(--warn); margin-bottom: 10px;">1. Estrutura do Repositório</h4>
+          <p style="font-size: 14px; margin-bottom: 15px;">A separação de responsabilidades evita o "Handler Gordo". A lógica de negócios não deve conhecer o <code>event</code> da AWS.</p>
+          <div style="background-color: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 12px; color: #c9d1d9;">
+<pre style="margin: 0;"><code>📦 lambda-orders-api/
+ ┣ 📜 main.tf                <span style="color: #8b949e;"># Infraestrutura</span>
+ ┣ 📜 src/app.py             <span style="color: #8b949e;"># Lambda Handler (Porta)</span>
+ ┣ 📜 src/requirements.txt   <span style="color: #8b949e;"># libs (boto3, aws-xray-sdk)</span>
+ ┣ 📂 src/core/              <span style="color: #8b949e;"># Regras de Negócio (Isoladas)</span>
+ ┃ ┣ 📜 __init__.py
+ ┃ ┗ 📜 order_service.py     <span style="color: #8b949e;"># process_order()</span>
+ ┗ 📂 src/infra/             <span style="color: #8b949e;"># Conectores Externos</span>
+   ┣ 📜 __init__.py
+   ┗ 📜 dynamodb_repo.py     <span style="color: #8b949e;"># Repositório Boto3</span></code></pre>
+          </div>
+        </div>
+        
+        <div>
+          <h4 style="color:var(--warn); margin-bottom: 10px;">2. O "Thin Handler" (Python)</h4>
+          <p style="font-size: 14px; margin-bottom: 15px;">Instanciamos o banco <strong>fora</strong> do handler (Warm Start) e usamos <em>Type Hinting</em> para maior previsibilidade.</p>
+          <div style="background-color: #0d1117; padding: 15px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 12px; color: #c9d1d9;">
+<pre style="margin: 0;"><code><span style="color: #ff7b72;">import</span> json, logging
+<span style="color: #ff7b72;">from</span> typing <span style="color: #ff7b72;">import</span> Dict, Any
+<span style="color: #ff7b72;">from</span> core.order_service <span style="color: #ff7b72;">import</span> process_order
+<span style="color: #ff7b72;">from</span> infra.dynamodb_repo <span style="color: #ff7b72;">import</span> DynamoRepo
+
+logger = logging.getLogger(); logger.setLevel(logging.INFO)
+
+<span style="color: #8b949e;"># INIT PHASE (Executado apenas 1x no Cold Start)</span>
+repo = DynamoRepo(table_name=<span style="color: #a5d6ff;">"Orders"</span>)
+
+<span style="color: #ff7b72;">def</span> <span style="color: #d2a8ff;">lambda_handler</span>(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    <span style="color: #ff7b72;">try</span>:
+        <span style="color: #8b949e;"># 1. Extração SQS (Adaptador)</span>
+        body = json.loads(event[<span style="color: #a5d6ff;">'Records'</span>][<span style="color: #79c0ff;">0</span>][<span style="color: #a5d6ff;">'body'</span>])
+        
+        <span style="color: #8b949e;"># 2. Core Domain (Agnóstico de Cloud)</span>
+        result = process_order(body.get(<span style="color: #a5d6ff;">'order_id'</span>), repo)
+        
+        <span style="color: #ff7b72;">return</span> {<span style="color: #a5d6ff;">"statusCode"</span>: <span style="color: #79c0ff;">200</span>, <span style="color: #a5d6ff;">"body"</span>: json.dumps(result)}
+        
+    <span style="color: #ff7b72;">except</span> <span style="color: #f0883e;">Exception</span> <span style="color: #ff7b72;">as</span> e:
+        logger.error(<span style="color: #a5d6ff;">f"Order failed: {e}"</span>)
+        <span style="color: #ff7b72;">raise</span> e <span style="color: #8b949e;"># Trigger AWS Retry / DLQ</span></code></pre>
+          </div>
+        </div>
+      </div>
+      
+      <h4 style="color:var(--warn); margin-bottom: 10px;">3. Terraform Avançado (Configurações de Produção)</h4>
+      <p style="margin-bottom:20px;">Provisionar Lambdas exige dezenas de travas de segurança. Este template bloqueia concorrência descontrolada, habilita rastreabilidade (X-Ray), anexa a uma VPC (Subnet Privada) e define Dead Letter Queues (DLQ).</p>
+      
+      <div style="background-color: #0d1117; padding: 20px; border-radius: 8px; border: 1px solid #30363d; overflow-x: auto; margin-bottom: 40px; font-family: 'Fira Code', monospace; font-size: 13px; color: #c9d1d9;">
+<pre style="margin: 0;"><code><span style="color: #ff7b72;">resource</span> <span style="color: #a5d6ff;">"aws_lambda_function"</span> <span style="color: #a5d6ff;">"processor"</span> {
+  function_name    = <span style="color: #a5d6ff;">"order_processor_api"</span>
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = <span style="color: #a5d6ff;">"app.lambda_handler"</span>
+  runtime          = <span style="color: #a5d6ff;">"python3.11"</span>
+  filename         = <span style="color: #a5d6ff;">"src/deployment_package.zip"</span>
+  
+  <span style="color: #8b949e;"># Tuning de Performance</span>
+  memory_size      = <span style="color: #79c0ff;">1024</span> <span style="color: #8b949e;"># Aloca 1GB de RAM (e consequentemente + CPU proporcional)</span>
+  timeout          = <span style="color: #79c0ff;">30</span>   <span style="color: #8b949e;"># Fail-fast (Evita cobranças longas por travamento)</span>
+  
+  <span style="color: #8b949e;"># Controle de Custo e Anti-DDoS</span>
+  reserved_concurrent_executions = <span style="color: #79c0ff;">50</span> <span style="color: #8b949e;"># Limita a 50 execuções paralelas máximas</span>
+  
+  <span style="color: #8b949e;"># Rastreabilidade Distribuída (Observability)</span>
+  tracing_config {
+    mode = <span style="color: #a5d6ff;">"Active"</span> <span style="color: #8b949e;"># Habilita o AWS X-Ray para traçar tempo de execução no DynamoDB</span>
+  }
+  
+  <span style="color: #8b949e;"># Conexão de Rede (Bancos de Dados Privados / RDS / ElastiCache)</span>
+  vpc_config {
+    subnet_ids         = [aws_subnet.private_1a.id, aws_subnet.private_1b.id]
+    security_group_ids = [aws_security_group.lambda_sg.id]
+  }
+
+  <span style="color: #8b949e;"># Tolerância a Falhas (Gatilhos Assíncronos)</span>
+  dead_letter_config {
+    target_arn = aws_sqs_queue.dlq.arn <span style="color: #8b949e;"># Envia eventos tóxicos para a DLQ após retries</span>
+  }
+
+  environment {
+    variables = {
+      STAGE      = <span style="color: #a5d6ff;">"production"</span>
+      TABLE_NAME = aws_dynamodb_table.orders.name
+      LOG_LEVEL  = <span style="color: #a5d6ff;">"INFO"</span>
+    }
+  }
+}
+
+<span style="color: #8b949e;"># Mapeamento do Gatilho: Lê do SQS e aciona o Lambda</span>
+<span style="color: #ff7b72;">resource</span> <span style="color: #a5d6ff;">"aws_lambda_event_source_mapping"</span> <span style="color: #a5d6ff;">"sqs_trigger"</span> {
+  event_source_arn = aws_sqs_queue.main_queue.arn
+  function_name    = aws_lambda_function.processor.arn
+  batch_size       = <span style="color: #79c0ff;">10</span>
+  maximum_batching_window_in_seconds = <span style="color: #79c0ff;">1</span> <span style="color: #8b949e;"># Aguarda até 1s para juntar 10 mensagens antes de invocar</span>
+}</code></pre>
       </div>
 
     </main>
