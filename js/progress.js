@@ -280,7 +280,119 @@
       color: "var(--spark)",
       items: ["soft-skills.html"]
     }
-  };;
+  
+
+    "modern-data-integration": {
+      name: "🧊 Modern ELT & Zero-ETL",
+      badge: "Especialista Modern",
+      color: "#0ea5e9",
+      items: ["modern-data-integration.html"]
+    },
+
+    "dynamodb": {
+      name: "🧊 NoSQL & DynamoDB",
+      badge: "Especialista NoSQL",
+      color: "#f43f5e",
+      items: ["nosql-dynamodb.html"]
+    },
+
+    "mensageria": {
+      name: "🧊 Event-Driven & Mensageria",
+      badge: "Especialista Event-Driven",
+      color: "#f43f5e",
+      items: ["event-driven-mensageria.html"]
+    },
+
+    "python": {
+      name: "🧊 Python Legend",
+      badge: "Especialista Python",
+      color: "#f43f5e",
+      items: ["python-legend.html"]
+    },
+
+    "apache-iceberg": {
+      name: "🧊 Apache Iceberg",
+      badge: "Especialista Apache",
+      color: "#0ea5e9",
+      items: ["apache-iceberg.html"]
+    },
+
+    "dbt-analytics-engineering": {
+      name: "🧊 Analytics Engineering (dbt)",
+      badge: "Especialista Analytics",
+      color: "#0ea5e9",
+      items: ["dbt-analytics-engineering.html"]
+    },
+
+    "data_quality_cicd": {
+      name: "🧊 Data Quality & CI/CD",
+      badge: "Especialista Data",
+      color: "#10b981",
+      items: ["data-quality-cicd.html"]
+    },
+
+    "dataops_mlops": {
+      name: "🧊 DataOps & MLOps",
+      badge: "Especialista DataOps",
+      color: "var(--alert)",
+      items: ["dataops-mlops.html"]
+    },
+
+    "soft_skills": {
+      name: "🧊 Soft Skills",
+      badge: "Especialista Soft",
+      color: "#f43f5e",
+      items: ["soft-skills.html"]
+    },
+
+    "troubleshooting": {
+      name: "🧊 Troubleshooting",
+      badge: "Especialista Troubleshooting",
+      color: "var(--alert)",
+      items: ["troubleshooting-tuning.html"]
+    },
+
+    "financas_dados": {
+      name: "🧊 Finanças & Dados",
+      badge: "Especialista Finanças",
+      color: "#0ea5e9",
+      items: ["financas-dados.html"]
+    },
+
+    "cases": {
+      name: "🧊 Cases Reais & Arquiteturas",
+      badge: "Especialista Cases",
+      color: "#059669",
+      items: ["cases-reais.html"]
+    },
+
+    "system_design": {
+      name: "🧊 System Design & Arquitetura",
+      badge: "Especialista System",
+      color: "#0ea5e9",
+      items: ["padroes-arquitetura.html"]
+    },
+
+    "gov_finops": {
+      name: "🧊 Operações & Troubleshooting",
+      badge: "Especialista Operações",
+      color: "var(--alert)",
+      items: ["governanca-finops.html"]
+    },
+
+    "entrevistas": {
+      name: "🧊 Preparação para Entrevistas",
+      badge: "Especialista Preparação",
+      color: "#0ea5e9",
+      items: ["perguntas-processamento-spark.html"]
+    },
+
+    "data_quality": {
+      name: "🧊 Data Quality Engineering",
+      badge: "Especialista Data",
+      color: "#10b981",
+      items: ["data-quality.html"]
+    },};;
 
   // Carrega progresso do localStorage
   function loadProgress() {
