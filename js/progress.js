@@ -60,6 +60,18 @@
       color: "var(--emr)",
       items: ["ingestion.html"]
     },
+    "modern-data-integration": {
+      name: "🔄 Modern ELT",
+      badge: "SaaS Integrator",
+      color: "#8b5cf6",
+      items: ["modern-data-integration.html"]
+    },
+    "dbt-analytics-engineering": {
+      name: "🛠️ Analytics Engineering",
+      badge: "Analytics Engineer",
+      color: "#ff694b",
+      items: ["dbt-analytics-engineering.html"]
+    },
     storage: {
       name: "💾 Lakehouse & Storage",
       badge: "Guardião do Storage",
@@ -279,8 +291,7 @@
       badge: "Especialista Tático",
       color: "var(--spark)",
       items: ["soft-skills.html"]
-    }
-  
+    },
 
     "modern-data-integration": {
       name: "🧊 Modern ELT & Zero-ETL",
@@ -392,7 +403,8 @@
       badge: "Especialista Data",
       color: "#10b981",
       items: ["data-quality.html"]
-    },};;
+    }
+  };
 
   // Carrega progresso do localStorage
   function loadProgress() {
@@ -842,6 +854,94 @@
 // Helper to generate dynamic premium SVG icons for academic badges
   function getBadgeSVG(modId, hasCompleted) {
     const configs = {
+      "data_quality_cicd": { 
+        colors: ["#f59e0b", "#d97706"], 
+        icon: `<circle cx="32" cy="32" r="8" fill="none" stroke="url(#grad-data_quality_cicd)" stroke-width="2"/><path d="M32 20 v-4 M32 48 v-4 M20 32 h-4 M48 32 h-4 M23.5 23.5 l-2.8 -2.8 M43.3 40.5 l-2.8 -2.8 M23.5 40.5 l-2.8 2.8 M43.3 23.5 l-2.8 2.8" stroke="url(#grad-data_quality_cicd)" stroke-width="2"/>` 
+      },
+      "apache-spark-core": { 
+        colors: ["#0284c7", "#0369a1"], 
+        icon: `<path d="M 32 16 L 36 28 L 48 28 L 38 36 L 42 48 L 32 40 L 22 48 L 26 36 L 16 28 L 28 28 Z" fill="none" stroke="url(#grad-apache-spark-core)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      "containers_docker": { 
+        colors: ["#3b82f6", "#2563eb"], 
+        icon: `<path d="M 22 36 A 6 6 0 0 1 22 24 A 10 10 0 0 1 42 24 A 6 6 0 0 1 42 36 Z" fill="none" stroke="url(#grad-containers_docker)" stroke-width="2"/>` 
+      },
+      "troubleshooting": { 
+        colors: ["#ef4444", "#b91c1c"], 
+        icon: `<circle cx="32" cy="32" r="8" fill="none" stroke="url(#grad-troubleshooting)" stroke-width="2"/><path d="M32 20 v-4 M32 48 v-4 M20 32 h-4 M48 32 h-4 M23.5 23.5 l-2.8 -2.8 M43.3 40.5 l-2.8 -2.8 M23.5 40.5 l-2.8 2.8 M43.3 23.5 l-2.8 2.8" stroke="url(#grad-troubleshooting)" stroke-width="2"/>` 
+      },
+      "aws-glue": { 
+        colors: ["#8b5cf6", "#7c3aed"], 
+        icon: `<path class="badge-db" d="M16 22 C 16 18, 48 18, 48 22 V 42 C 48 46, 16 46, 16 42 Z M 16 32 C 16 36, 48 36, 48 32" fill="none" stroke="url(#grad-aws-glue)" stroke-width="2"/>` 
+      },
+      "soft_skills": { 
+        colors: ["#38bdf8", "#0ea5e9"], 
+        icon: `<path d="M 18 20 H 32 V 44 H 18 Z M 32 20 H 46 V 44 H 32 Z M 32 20 V 44" fill="none" stroke="url(#grad-soft_skills)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      "pmo": { 
+        colors: ["#10b981", "#059669"], 
+        icon: `<path d="M 16 44 h 32 M 20 44 v -12 M 28 44 v -24 M 36 44 v -16 M 44 44 v -8" fill="none" stroke="url(#grad-pmo)" stroke-width="2" stroke-linecap="round"/>` 
+      },
+      "apache-flink": { 
+        colors: ["#f97316", "#ea580c"], 
+        icon: `<path d="M 32 16 L 36 28 L 48 28 L 38 36 L 42 48 L 32 40 L 22 48 L 26 36 L 16 28 L 28 28 Z" fill="none" stroke="url(#grad-apache-flink)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      "financas_dados": { 
+        colors: ["#84cc16", "#65a30d"], 
+        icon: `<path d="M 16 44 h 32 M 20 44 v -12 M 28 44 v -24 M 36 44 v -16 M 44 44 v -8" fill="none" stroke="url(#grad-financas_dados)" stroke-width="2" stroke-linecap="round"/>` 
+      },
+      "cases_streaming": { 
+        colors: ["#ec4899", "#db2777"], 
+        icon: `<path d="M 32 16 L 36 28 L 48 28 L 38 36 L 42 48 L 32 40 L 22 48 L 26 36 L 16 28 L 28 28 Z" fill="none" stroke="url(#grad-cases_streaming)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      "dynamodb": { 
+        colors: ["#3b82f6", "#1d4ed8"], 
+        icon: `<path class="badge-db" d="M16 22 C 16 18, 48 18, 48 22 V 42 C 48 46, 16 46, 16 42 Z M 16 32 C 16 36, 48 36, 48 32" fill="none" stroke="url(#grad-dynamodb)" stroke-width="2"/>` 
+      },
+      "apache-spark-api": { 
+        colors: ["#0284c7", "#0369a1"], 
+        icon: `<path d="M 32 16 L 36 28 L 48 28 L 38 36 L 42 48 L 32 40 L 22 48 L 26 36 L 16 28 L 28 28 Z" fill="none" stroke="url(#grad-apache-spark-api)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      "system_design": { 
+        colors: ["#f59e0b", "#d97706"], 
+        icon: `<circle cx="32" cy="32" r="8" fill="none" stroke="url(#grad-system_design)" stroke-width="2"/><path d="M32 20 v-4 M32 48 v-4 M20 32 h-4 M48 32 h-4 M23.5 23.5 l-2.8 -2.8 M43.3 40.5 l-2.8 -2.8 M23.5 40.5 l-2.8 2.8 M43.3 23.5 l-2.8 2.8" stroke="url(#grad-system_design)" stroke-width="2"/>` 
+      },
+      "aws-lambda": { 
+        colors: ["#f97316", "#ea580c"], 
+        icon: `<path d="M 22 36 A 6 6 0 0 1 22 24 A 10 10 0 0 1 42 24 A 6 6 0 0 1 42 36 Z" fill="none" stroke="url(#grad-aws-lambda)" stroke-width="2"/>` 
+      },
+      "spark-ui-troubleshooting": { 
+        colors: ["#0284c7", "#0369a1"], 
+        icon: `<path d="M 32 16 L 36 28 L 48 28 L 38 36 L 42 48 L 32 40 L 22 48 L 26 36 L 16 28 L 28 28 Z" fill="none" stroke="url(#grad-spark-ui-troubleshooting)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      "testing": { 
+        colors: ["#10b981", "#059669"], 
+        icon: `<path d="M 20 32 L 28 40 L 44 24" fill="none" stroke="url(#grad-testing)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` 
+      },
+      "aws-emr": { 
+        colors: ["#8b5cf6", "#7c3aed"], 
+        icon: `<path d="M 22 36 A 6 6 0 0 1 22 24 A 10 10 0 0 1 42 24 A 6 6 0 0 1 42 36 Z" fill="none" stroke="url(#grad-aws-emr)" stroke-width="2"/>` 
+      },
+      "dataops_mlops": { 
+        colors: ["#14b8a6", "#0d9488"], 
+        icon: `<circle cx="32" cy="32" r="8" fill="none" stroke="url(#grad-dataops_mlops)" stroke-width="2"/><path d="M32 20 v-4 M32 48 v-4 M20 32 h-4 M48 32 h-4 M23.5 23.5 l-2.8 -2.8 M43.3 40.5 l-2.8 -2.8 M23.5 40.5 l-2.8 2.8 M43.3 23.5 l-2.8 2.8" stroke="url(#grad-dataops_mlops)" stroke-width="2"/>` 
+      },
+      "entrevistas": { 
+        colors: ["#8b5cf6", "#7c3aed"], 
+        icon: `<path d="M 18 20 H 32 V 44 H 18 Z M 32 20 H 46 V 44 H 32 Z M 32 20 V 44" fill="none" stroke="url(#grad-entrevistas)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      "mensageria": { 
+        colors: ["#f43f5e", "#e11d48"], 
+        icon: `<path d="M 22 36 A 6 6 0 0 1 22 24 A 10 10 0 0 1 42 24 A 6 6 0 0 1 42 36 Z" fill="none" stroke="url(#grad-mensageria)" stroke-width="2"/>` 
+      },
+      "gov_finops": { 
+        colors: ["#10b981", "#059669"], 
+        icon: `<path d="M 16 44 h 32 M 20 44 v -12 M 28 44 v -24 M 36 44 v -16 M 44 44 v -8" fill="none" stroke="url(#grad-gov_finops)" stroke-width="2" stroke-linecap="round"/>` 
+      },
+      "apache-iceberg": { 
+        colors: ["#38bdf8", "#0284c7"], 
+        icon: `<path class="badge-db" d="M16 22 C 16 18, 48 18, 48 22 V 42 C 48 46, 16 46, 16 42 Z M 16 32 C 16 36, 48 36, 48 32" fill="none" stroke="url(#grad-apache-iceberg)" stroke-width="2"/>` 
+      },
       python: { 
         colors: ["#f43f5e", "#e11d48"],
         icon: `<path fill="url(#grad-python)" d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/>`
@@ -955,6 +1055,14 @@
       softskills: { 
         colors: ["#38bdf8", "#7dd3fc"], 
         icon: `<path class="badge-soft-brain" d="M32 16 c-8 0 -12 6 -12 12 c0 4 2 8 6 10 c1 2 2 6 -2 8 c6 0 10 -2 12 -4 c2 2 6 4 12 4 c-4 -2 -3 -6 -2 -8 c4 -2 6 -6 6 -10 c0 -6 -4 -12 -12 -12 z" fill="none" stroke="url(#grad-softskills)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+      "modern-data-integration": { 
+        colors: ["#8b5cf6", "#7c3aed"], 
+        icon: `<path class="badge-sync" d="M18 26 h16 M30 20 l8 6 l-8 6 M46 38 h-16 M34 32 l-8 6 l8 6" fill="none" stroke="url(#grad-modern-data-integration)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` 
+      },
+      "dbt-analytics-engineering": { 
+        colors: ["#ff694b", "#ef4444"], 
+        icon: `<path class="badge-cube" d="M32 18 L20 25 L20 39 L32 46 L44 39 L44 25 Z M32 18 L32 32 M20 25 L32 32 M44 25 L32 32" fill="none" stroke="url(#grad-dbt-analytics-engineering)" stroke-width="2.5" stroke-linejoin="round"/>` 
       }
     };
 
