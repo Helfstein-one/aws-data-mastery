@@ -1,782 +1,679 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-  <meta name="author" content="Mauricio Helfstein">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
-  <title>Spark UI & Troubleshooting | AWS Data Mastery</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../style.css">
-
-  <meta property="og:title" content="Spark UI & Troubleshooting | AWS Data Mastery">
-  <meta property="og:description" content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="../../assets/og-image.jpg">
-  <link rel="icon" href="../../assets/favicon.ico" type="image/x-icon">
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code." name="description"/>
+<title>Spark UI &amp; Troubleshooting | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="Spark UI &amp; Troubleshooting | AWS Data Mastery" property="og:title"/>
+<meta content="Processamento de dados distribuído de alta performance com AWS Glue e Amazon EMR. Spark Tuning e PySpark Clean Code." property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="../../assets/og-image.jpg" property="og:image"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
 </head>
 <body>
-
 <button id="hamburger" onclick="toggleNav()">☰</button>
-
 <nav id="sidebar"></nav>
-
 <div id="main">
-  <div class="hero">
-    <div class="hero-ey">Processamento Distribuído</div>
-    <h1>Apache Spark &amp; Amazon EMR</h1>
-    <p class="hero-d">Arquitetura profunda de processamento distribuído, otimização física de CPU/memória e guias práticos de tuning e troubleshooting.</p>
-  </div>
+<div class="hero">
+<div class="hero-ey">Processamento Distribuído</div>
+<h1>Apache Spark &amp; Amazon EMR</h1>
+<p class="hero-d">Arquitetura profunda de processamento distribuído, otimização física de CPU/memória e guias práticos de tuning e troubleshooting.</p>
+</div>
+<main class="main-content">
+<!-- ── APACHE SPARK SECTION ── -->
 
-  <main class="main-content">
-    
-    <!-- ── APACHE SPARK SECTION ── -->
-    <section class="section" id="spark-tuning">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--spark)">10</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Tuning do Spark — Guia Completo de Produção</h2>
-          <p>Receitas de configurações de performance detalhadas e seguras para workloads analíticos corporativos</p>
+
+
+
+<!-- ── AWS GLUE SECTION ── -->
+
+
+<section class="section" id="spark-ui-deepdive">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Guia Prático da Interface Spark UI</h2>
+<p>Como ler métricas e depurar gargalos de memória e rede nas principais abas da interface</p>
+</div>
+</div>
+<p>A <strong>Spark UI</strong> é a ferramenta de monitoramento em tempo real padrão do ecossistema. Engenheiros de dados seniores utilizam as abas lógicas abaixo para caçar gargalos de desempenho físico:</p>
+<div class="grid-2">
+<div class="card" style="border-left: 3px solid var(--spark);">
+<h4>1. Jobs Tab</h4>
+<p>Fornece uma linha do tempo macro de todas as ações de dados executadas no código da aplicação. Cada Action de escrita, agrupamento ou contagem gera uma entrada de Job.</p>
+<ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+<li><strong>O que buscar:</strong> Padrões de execução em paralelo e o tempo total decorrido de processamento de ponta a ponta.</li>
+<li><strong>Alerta vermelho:</strong> Múltiplos jobs sequenciais pequenos executados um após o outro, indicando que o desenvolvedor inseriu ações desnecessárias como <code>.count()</code> ou <code>.show()</code> no meio do pipeline de produção, forçando a quebra de lazy evaluation.</li>
+</ul>
+</div>
+<div class="card" style="border-left: 3px solid var(--spark);">
+<h4>2. Stages Tab</h4>
+<p>Detalhamento de cada estágio isolado separado por Shuffles físicos. Fornece uma tabela descritiva das Tasks executadas.</p>
+<ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+<li><strong>Métrica Chave - GC Time (Tempo de Coleta de Lixo):</strong> Indica quanto tempo os executores Java passaram congelados para limpar objetos obsoletos da Heap. <strong>Se o GC Time ultrapassar 10% do tempo do Stage</strong>, aumente a Heap ou ative o Garbage Collector G1.</li>
+<li><strong>Métrica Chave - Spill (Memory) / Spill (Disk):</strong> Ocorre quando os dados de uma partição não cabem na Execution Memory reservada. O Spark serializa os registros excedentes e grava no disco local. Isso <strong>degrada a performance em até 10x</strong>. Solução: aumente o paralelismo de partições ou mude para instâncias de maior RAM.</li>
+<li><strong>Métrica Chave - Shuffle Read Blocked Time:</strong> Tempo que uma Task passou esperando dados chegarem via rede de outros executores. Valores altos indicam congestionamento de rede ou saturação física dos nós do cluster.</li>
+</ul>
+</div>
+</div>
+<div class="grid-2" style="margin-top: 15px;">
+<div class="card" style="border-left: 3px solid var(--spark);">
+<h4>3. Storage Tab</h4>
+<p>Exibe os DataFrames ou RDDs que foram explicitamente colocados na memória do cluster por meio de comandos de cache (<code>.cache()</code> ou <code>.persist()</code>).</p>
+<ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+<li><strong>O que analisar:</strong> A fração do conjunto de dados que de fato reside na RAM do cluster (Fraction Cached). Se estiver abaixo de 100%, significa que o cluster sofreu eviction e está recalculando partições direto da fonte S3 durante as ações, gerando lentidão severa.</li>
+</ul>
+</div>
+<div class="card" style="border-left: 3px solid var(--spark);">
+<h4>4. Executors Tab</h4>
+<p>Visão física de hardware de cada executor em execução na JVM dos workers.</p>
+<ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+<li><strong>O que monitorar:</strong> O volume total de dados gravados fisicamente em disco por executor e a contagem de tarefas ativas por core. É a melhor aba para identificar desvios bruscos de desbalanceamento de processamento por nó.</li>
+</ul>
+</div>
+</div>
+<div class="card" style="border-left: 3px solid var(--spark); margin-top:15px;">
+<h4>5. SQL Tab (Execution Plan Visualization)</h4>
+<p>Desenha graficamente o plano físico compilado e otimizado pelo Catalyst Optimizer. É a aba mais importante para entender o comportamento computacional das queries.</p>
+<ul style="padding-left:15px; margin-top:5px; font-size:12px;">
+<li><strong>Whole-Stage CodeGen Inspection:</strong> Elementos e operadores agrupados em caixas azul-escuras marcadas com um asterisco (ex: <code>*(1) Sort</code> ou <code>*(2) HashAggregate</code>) representam trechos de código que foram compilados em um único loop em Java físico nativo, otimizados para velocidade.</li>
+<li><strong>Join Selection Validation:</strong> Verifique se a query utilizou um <code>BroadcastHashJoin</code> ou se realizou um dispendioso <code>SortMergeJoin</code> com troca massiva de dados (Exchange). Isso valida se as regras de tamanho dinâmico do AQE funcionaram.</li>
+</ul>
+</div>
+
+
+<div class="section-spacer"></div>
+<h3>4. Padrões Mortais do DAG: SortMergeJoin vs BroadcastHashJoin</h3>
+<p>A melhor forma de testar sua habilidade em ler DAGs é analisando planos de <strong>Join</strong>. Quando você cruza duas tabelas, o comportamento do Spark muda radicalmente dependendo do tamanho das tabelas envolvidas.</p>
+<h4>Caso A: O DAG Pesado (SortMergeJoin)</h4>
+<p>Ocorre quando as duas tabelas são gigas ou terabytes (Default do Spark). As duas tabelas são lidas em paralelo, e ambas sofrem um <strong>Exchange (Shuffle)</strong> simultâneo para que as chaves idênticas sejam enviadas para o mesmo executor. A visualização se parece com um "Y" de ponta cabeça.</p>
+<!-- Simulated DAG: SortMergeJoin -->
+<div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
+<div style="display:flex; width:100%; max-width:600px; justify-content:space-between; gap:20px;">
+<!-- Stage 1 (Left Table) -->
+<div style="flex:1; border: 2px solid #3b82f6; border-radius:8px; padding:15px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+<div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 11 (Tabela Fato)</div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+<strong>Scan parquet</strong>
+</div>
+<div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+<div style="text-align:center; padding:5px;">
+<span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange</span>
+</div>
+</div>
+<!-- Stage 2 (Right Table) -->
+<div style="flex:1; border: 2px solid #ec4899; border-radius:8px; padding:15px; background:rgba(236, 72, 153, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+<div style="font-family:monospace; color:#ec4899; font-weight:bold; margin-bottom:10px;">Stage 12 (Tabela Dim)</div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+<strong>Scan parquet</strong>
+</div>
+<div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+<div style="text-align:center; padding:5px;">
+<span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange</span>
+</div>
+</div>
+</div>
+<div style="display:flex; justify-content:space-around; width:100%; max-width:600px;">
+<i class="ph ph-arrow-down-right" style="color:var(--alert); font-size:18px;"></i>
+<i class="ph ph-arrow-down-left" style="color:var(--alert); font-size:18px;"></i>
+</div>
+<!-- Stage 3 (Merge) -->
+<div style="border: 2px solid #8b5cf6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(139, 92, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+<div style="font-family:monospace; color:#8b5cf6; font-weight:bold; margin-bottom:10px;">Stage 13 (Join &amp; Sort)</div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+<strong>*(3) SortMergeJoin</strong><br/><span style="color:var(--text-muted)">Inner Join</span>
+</div>
+</div>
+</div>
+<div class="abox warning">
+<div class="abox-icon"><i class="ph ph-warning-circle"></i></div>
+<div class="abox-content">
+<strong>Perigo Iminente:</strong> A presença de dois Stages lado-a-lado engatilhando "Exchanges" significa que o cluster parou o processamento e está traficando Terabytes na rede. Se uma das chaves for mal distribuída, haverá Spill ou OOM (como vimos no tópico de Desbalanceamento).
         </div>
-      </div>
-
-      <div class="tuning-recipe">
-        <div class="tuning-recipe-title">🔧 Receitas de Configurações Base de Alta Performance (spark-defaults.conf)</div>
-        
-        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">1. Otimização Adaptativa (Adaptive Query Execution - AQE)</h4>
-        <div class="recipe-row">
-          <div class="recipe-icon">⚙️</div>
-          <div class="recipe-text">
-            <strong>spark.sql.adaptive.enabled = true:</strong> Ativa o AQE, permitindo otimizações em tempo de execução.
-            <br><strong>spark.sql.adaptive.coalescePartitions.enabled = true:</strong> Junta partições pequenas pós-shuffle automaticamente para evitar overhead de agendamento de tasks minúsculas (small files na memória).
-            <br><strong>spark.sql.adaptive.advisoryPartitionSizeInBytes = 134217728:</strong> Define o tamanho ideal de partição lida pós-shuffle como 128 MB (ótimo para vazão de I/O).
-            <br><strong>spark.sql.adaptive.skewJoin.enabled = true:</strong> Detecta automaticamente desvios bruscos (skew) em chaves de join e divide partições gigantes em sub-tasks menores para processamento paralelo uniforme.
-          </div>
+</div>
+<div class="section-spacer"></div>
+<h4>Caso B: A Bala de Prata (BroadcastHashJoin)</h4>
+<p>Ocorre quando aplicamos o comando <code>broadcast(df_pequeno)</code> ou quando o Spark AQE detecta que uma das tabelas tem menos de 10MB. O Spark envia a tabela inteira para todos os executores usando BitTorrent (BroadcastExchange), <strong>aniquilando o Shuffle pesado da tabela Fato</strong>.</p>
+<!-- Simulated DAG: BroadcastHashJoin -->
+<div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
+<div style="display:flex; width:100%; max-width:600px; justify-content:space-between; gap:20px;">
+<!-- Stage 1 (Left Table - Massive) -->
+<div style="flex:1; border: 2px solid #3b82f6; border-radius:8px; padding:15px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+<div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 11 (Tabela Fato)</div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+<strong>Scan parquet</strong>
+</div>
+<div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+<strong>*(1) Filter</strong>
+</div>
+</div>
+<!-- Stage 2 (Right Table - Tiny) -->
+<div style="flex:1; border: 2px solid #ec4899; border-radius:8px; padding:15px; background:rgba(236, 72, 153, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+<div style="font-family:monospace; color:#ec4899; font-weight:bold; margin-bottom:10px;">Stage 12 (Tabela Dim Pequena)</div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+<strong>Scan parquet</strong>
+</div>
+<div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+<div style="text-align:center; padding:5px;">
+<span style="font-family:monospace; color:#0ea5e9; font-size:11px; font-weight:bold;">BroadcastExchange</span>
+</div>
+</div>
+</div>
+<div style="display:flex; justify-content:space-around; width:100%; max-width:600px;">
+<i class="ph ph-arrow-down" style="color:var(--text-muted); font-size:18px;"></i>
+<i class="ph ph-arrow-down-left" style="color:#0ea5e9; font-size:18px;"></i>
+</div>
+<!-- Stage 1 (Merge in place) -->
+<div style="border: 2px solid #3b82f6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+<div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Ainda no Stage 11!</div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+<strong>*(1) BroadcastHashJoin</strong><br/><span style="color:var(--text-muted)">Inner Join</span>
+</div>
+</div>
+</div>
+<div class="abox success">
+<div class="abox-icon"><i class="ph ph-check-circle"></i></div>
+<div class="abox-content">
+<strong>Vitória Arquitetural:</strong> A Tabela Fato inteira <strong>não teve um único bloco de Shuffle</strong>. O processamento ocorre localmente no mesmo Stage (Stage 11), consumindo o <em>Broadcast</em>. O tempo do seu job deve cair de horas para minutos. Esta é a assinatura visual perfeita de um Job ultra otimizado!
         </div>
-
-        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">2. Tuning de Rede &amp; Timeouts de Shuffle</h4>
-        <div class="recipe-row">
-          <div class="recipe-icon">🌐</div>
-          <div class="recipe-text">
-            <strong>spark.network.timeout = 800s:</strong> Limite máximo de tempo que o Spark espera por pacotes de rede entre nós (default 120s). Evita erros de executor perdido por oscilações na rede AWS ou pausas longas de GC.
-            <br><strong>spark.core.connection.ack.wait.timeout = 600s:</strong> Aumenta o tempo limite de aceno de conexões TCP físicas.
-            <br><strong>spark.shuffle.file.buffer = 1m:</strong> Buffer em RAM (default 32 KB) usado antes de escrever blocos de shuffle temporários no disco local, reduzindo a concorrência e o tempo de busca de cabeçote do EBS.
-            <br><strong>spark.reducer.maxSizeInFlight = 128m:</strong> Tamanho máximo de dados requisitados simultaneamente de outros executores de forma assíncrona, acelerando o throughput do shuffle read.
-          </div>
-        </div>
-
-        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">3. Gerenciamento de Memória &amp; Project Tungsten</h4>
-        <div class="recipe-row">
-          <div class="recipe-icon">🧠</div>
-          <div class="recipe-text">
-            <strong>spark.memory.fraction = 0.8:</strong> Eleva o espaço do Spark Memory para 80% da Heap da JVM em instâncias r5 de grande porte, deixando menos área ociosa na User Memory para jobs puramente SQL/DataFrame.
-            <br><strong>spark.memory.storageFraction = 0.2:</strong> Limita a área imune de Storage a 20% do pool Spark. Excelente para ETLs que não usam cache/persistência de dados, liberando espaço máximo imune para a Execution Memory resolver Shuffles e Joins complexos.
-            <br><strong>spark.memory.offHeap.enabled = true:</strong> Ativa a alocação de dados Off-Heap.
-            <br><strong>spark.memory.offHeap.size = 4294967296:</strong> Reserva 4 GB de memória do sistema operacional (Off-Heap) por executor para o Project Tungsten ordenar dados em formato binário sem poluição de GC.
-          </div>
-        </div>
-
-        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">4. Serialização e Compressão</h4>
-        <div class="recipe-row">
-          <div class="recipe-icon">📦</div>
-          <div class="recipe-text">
-            <strong>spark.serializer = org.apache.spark.serializer.KryoSerializer:</strong> Substitui a serialização Java padrão pela Kryo, que é até 10x mais rápida e gera representações de objetos muito menores.
-            <br><strong>spark.kryoserializer.buffer.max = 1024m:</strong> Define o tamanho máximo de buffer do Kryo para lidar com registros extremamente grandes de forma segura.
-            <br><strong>spark.io.compression.codec = zstd:</strong> Utiliza compressão ZSTD para dados internos temporários de shuffle, reduzindo I/O e uso de rede no cluster com baixo consumo de CPU.
-          </div>
-        </div>
-
-        <h4 style="color:var(--spark); margin: 15px 0 5px 0;">5. Escrita no Data Lake (Evitando Small Files)</h4>
-        <div class="recipe-row">
-          <div class="recipe-icon">💾</div>
-          <div class="recipe-text">
-            <strong>spark.sql.sources.commitProtocolClass = org.apache.spark.internal.io.cloud.PathOutputCommitProtocol:</strong> Utiliza protocolo otimizado de commmit para S3 que elimina operações de rename demoradas.
-            <br><strong>spark.sql.parquet.compression.codec = zstd:</strong> Força arquivos finais Parquet a serem compactados com ZSTD no S3.
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="spark-debug">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--spark)">11</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Debugging Spark UI &amp; Metodologia</h2>
-          <p>Entendendo as métricas chave e gargalos de execução na interface de diagnóstico</p>
-        </div>
-      </div>
-
-      <div class="spark-ui-map">
-        <div class="sui-tab">
-          <div class="sui-tab-name">Jobs Tab</div>
-          <div class="sui-tab-body">Mapeamento temporal dos Jobs analíticos de ponta a ponta.</div>
-        </div>
-        <div class="sui-tab">
-          <div class="sui-tab-name">Stages Tab</div>
-          <div class="sui-tab-body">Detalhamento dos tempos de GC e volumes físicos de shuffle read/write. Verifique a métrica <strong>Shuffle Read Blocked Time</strong> (tempo de espera pela rede) e <strong>Spill to Disk</strong> (indício claro de RAM insuficiente, causando escrita em disco).</div>
-        </div>
-        <div class="sui-tab">
-          <div class="sui-tab-name">SQL / Execution Tab</div>
-          <div class="sui-tab-body">Plano físico compilado com operadores codificados Tungsten. A presença de um operador com o prefixo <code>*</code> (ex: <code>*HashAggregate</code>) indica o uso de WholeStageCodegen.</div>
-        </div>
-      </div>
-
-      <h3 style="margin-top: 32px;">Fluxo Físico de um Plano de Execução (DAG)</h3>
-      <p>Um join típico na aba SQL apresentará o seguinte fluxo de nós codificados em Tungsten:</p>
-
-                                        <div class="drawio-wrap" style="margin-top: 30px;">
-        <div class="drawio-label"><span class="dot"></span>SPARK UI — HIERARQUIA DE DIAGNÓSTICO</div>
-        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;340\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;b670f5_0\&quot;/&gt;&lt;mxCell id=\&quot;b670f5_1\&quot; parent=\&quot;b670f5_0\&quot;/&gt;&lt;mxCell id=\&quot;b670f5_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;340\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_title\&quot; value=\&quot;SPARK UI \u2014 HIERARQUIA DE DIAGNOSTICO (Application - Job - Stage - Task)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_app\&quot; value=\&quot;Application\n(SparkSession)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#FF6B00;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;375\&quot; y=\&quot;48\&quot; width=\&quot;150\&quot; height=\&quot;52\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_jobs_tab\&quot; value=\&quot;Jobs Tab\n---------\nDAG timeline\nJob duration total\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e3a5c;strokeColor=#60a5fa;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;15\&quot; y=\&quot;155\&quot; width=\&quot;140\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_stages_tab\&quot; value=\&quot;Stages Tab\n---------\nShuffle Read/Write\nSpill to Disk\nGC Time\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1a3a2a;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;190\&quot; y=\&quot;155\&quot; width=\&quot;140\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_sql_tab\&quot; value=\&quot;SQL Tab\n---------\nPhysical Plan\n*(1) HashAggregate\nWholeStageCodegen\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1a1200;strokeColor=#b45309;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;155\&quot; width=\&quot;140\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_exec_tab\&quot; value=\&quot;Executors Tab\n---------\nGC Time &amp;gt; 10%?\nStorage Memory\nShuffle Write MB\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#2a1040;strokeColor=#a855f7;fontColor=#d8b4fe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;570\&quot; y=\&quot;155\&quot; width=\&quot;140\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_env_tab\&quot; value=\&quot;Environment Tab\n---------\nspark.* configs\nJava / Scala version\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0a1628;strokeColor=#334155;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;745\&quot; y=\&quot;155\&quot; width=\&quot;140\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_task\&quot; value=\&quot;Tasks / Stage Detail \u2014 Diagnostico de Data Skew\nDuration (P50 / P99 / Max) \u2014 Shuffle Read Size \u2014 Max &amp;gt; 5x Median = Skew\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1a0000;strokeColor=#ef4444;fontColor=#fca5a5;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry x=\&quot;190\&quot; y=\&quot;280\&quot; width=\&quot;520\&quot; height=\&quot;44\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_e1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#60a5fa;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;b670f5_app\&quot; target=\&quot;b670f5_jobs_tab\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_e2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;b670f5_app\&quot; target=\&quot;b670f5_stages_tab\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_e3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;b670f5_app\&quot; target=\&quot;b670f5_sql_tab\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_e4\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a855f7;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;b670f5_app\&quot; target=\&quot;b670f5_exec_tab\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_e5\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#334155;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;b670f5_app\&quot; target=\&quot;b670f5_env_tab\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;b670f5_e6\&quot; value=\&quot;drill-down\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;b670f5_stages_tab\&quot; target=\&quot;b670f5_task\&quot; parent=\&quot;b670f5_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
-
+</div>
+</section><section class="section" id="spark-debug">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Debugging Spark UI &amp; Metodologia</h2>
+<p>Entendendo as métricas chave e gargalos de execução na interface de diagnóstico</p>
+</div>
+</div>
+<div class="spark-ui-map">
+<div class="sui-tab">
+<div class="sui-tab-name">Jobs Tab</div>
+<div class="sui-tab-body">Mapeamento temporal dos Jobs analíticos de ponta a ponta.</div>
+</div>
+<div class="sui-tab">
+<div class="sui-tab-name">Stages Tab</div>
+<div class="sui-tab-body">Detalhamento dos tempos de GC e volumes físicos de shuffle read/write. Verifique a métrica <strong>Shuffle Read Blocked Time</strong> (tempo de espera pela rede) e <strong>Spill to Disk</strong> (indício claro de RAM insuficiente, causando escrita em disco).</div>
+</div>
+<div class="sui-tab">
+<div class="sui-tab-name">SQL / Execution Tab</div>
+<div class="sui-tab-body">Plano físico compilado com operadores codificados Tungsten. A presença de um operador com o prefixo <code>*</code> (ex: <code>*HashAggregate</code>) indica o uso de WholeStageCodegen.</div>
+</div>
+</div>
+<h3 style="margin-top: 32px;">Fluxo Físico de um Plano de Execução (DAG)</h3>
+<p>Um join típico na aba SQL apresentará o seguinte fluxo de nós codificados em Tungsten:</p>
+<div class="drawio-wrap" style="margin-top: 30px;">
+<div class="drawio-label"><span class="dot"></span>SPARK UI — HIERARQUIA DE DIAGNÓSTICO</div>
+<div class="mxgraph" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"340\" math=\"0\" shadow=\"0\"&gt;&lt;root&gt;&lt;mxCell id=\"b670f5_0\"/&gt;&lt;mxCell id=\"b670f5_1\" parent=\"b670f5_0\"/&gt;&lt;mxCell id=\"b670f5_bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"340\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_title\" value=\"SPARK UI \u2014 HIERARQUIA DE DIAGNOSTICO (Application - Job - Stage - Task)\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_app\" value=\"Application\n(SparkSession)\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#FF6B00;strokeColor=none;fontColor=#fff;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"375\" y=\"48\" width=\"150\" height=\"52\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_jobs_tab\" value=\"Jobs Tab\n---------\nDAG timeline\nJob duration total\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1e3a5c;strokeColor=#60a5fa;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"15\" y=\"155\" width=\"140\" height=\"80\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_stages_tab\" value=\"Stages Tab\n---------\nShuffle Read/Write\nSpill to Disk\nGC Time\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1a3a2a;strokeColor=#10b981;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"190\" y=\"155\" width=\"140\" height=\"80\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_sql_tab\" value=\"SQL Tab\n---------\nPhysical Plan\n*(1) HashAggregate\nWholeStageCodegen\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1a1200;strokeColor=#b45309;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"380\" y=\"155\" width=\"140\" height=\"80\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_exec_tab\" value=\"Executors Tab\n---------\nGC Time &amp;gt; 10%?\nStorage Memory\nShuffle Write MB\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#2a1040;strokeColor=#a855f7;fontColor=#d8b4fe;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"570\" y=\"155\" width=\"140\" height=\"80\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_env_tab\" value=\"Environment Tab\n---------\nspark.* configs\nJava / Scala version\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#0a1628;strokeColor=#334155;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"745\" y=\"155\" width=\"140\" height=\"80\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_task\" value=\"Tasks / Stage Detail \u2014 Diagnostico de Data Skew\nDuration (P50 / P99 / Max) \u2014 Shuffle Read Size \u2014 Max &amp;gt; 5x Median = Skew\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1a0000;strokeColor=#ef4444;fontColor=#fca5a5;fontFamily=DM Sans;fontSize=9;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"b670f5_1\"&gt;&lt;mxGeometry x=\"190\" y=\"280\" width=\"520\" height=\"44\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#60a5fa;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"b670f5_app\" target=\"b670f5_jobs_tab\" parent=\"b670f5_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"b670f5_app\" target=\"b670f5_stages_tab\" parent=\"b670f5_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b45309;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"b670f5_app\" target=\"b670f5_sql_tab\" parent=\"b670f5_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_e4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a855f7;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"b670f5_app\" target=\"b670f5_exec_tab\" parent=\"b670f5_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_e5\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#334155;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"b670f5_app\" target=\"b670f5_env_tab\" parent=\"b670f5_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"b670f5_e6\" value=\"drill-down\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"b670f5_stages_tab\" target=\"b670f5_task\" parent=\"b670f5_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;background:#0f172a;"></div>
 </div>
 <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> Application (SparkSession), Jobs Tab (DAG timeline, job duration), Stages Tab (Shuffle Read/Write, Spill to Disk, GC Time), SQL Tab (Physical Plan, *WholeStageCodegen, *(1) HashAggregate), Executors Tab (GC Time &gt; 10%?, Storage Memory, Shuffle Write MB), Environment Tab (spark.* configs), Tasks / Stage Detail (Duration P50/P99/Max, Shuffle Read Size por Task, Data Skew: Max &gt; 5x Median)</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas indicam a direcionalidade entre os elementos do diagrama.</li>
-    <li><strong>Contexto:</strong> O diagrama mapeia as 5 abas da Spark UI e o que diagnosticar em cada uma. O drill-down vai de Application → Stages → Tasks para identificar Data Skew e outros gargalos físicos de execução.</li>
-  </ul>
+<strong style="color: var(--accent);">Explicação:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes:</strong> Application (SparkSession), Jobs Tab (DAG timeline, job duration), Stages Tab (Shuffle Read/Write, Spill to Disk, GC Time), SQL Tab (Physical Plan, *WholeStageCodegen, *(1) HashAggregate), Executors Tab (GC Time &gt; 10%?, Storage Memory, Shuffle Write MB), Environment Tab (spark.* configs), Tasks / Stage Detail (Duration P50/P99/Max, Shuffle Read Size por Task, Data Skew: Max &gt; 5x Median)</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas indicam a direcionalidade entre os elementos do diagrama.</li>
+<li><strong>Contexto:</strong> O diagrama mapeia as 5 abas da Spark UI e o que diagnosticar em cada uma. O drill-down vai de Application → Stages → Tasks para identificar Data Skew e outros gargalos físicos de execução.</li>
+</ul>
 </div>
-    </section>
-
-    <section class="section" id="spark-erros">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--spark)">12</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Guia de Resolução de Erros &amp; Troubleshooting</h2>
-          <p>Receitas e diagnósticos para os 10 problemas e exceções clássicos da JVM e do Spark em produção</p>
+</section><section class="section" id="spark-ui-advanced">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Leitura Avançada: DAG, Environments &amp; Desbalanceamento</h2>
+<p>Dominando as entranhas da Spark UI para orquestração de alta performance</p>
+</div>
+</div>
+<h3>1. A Aba "Environment" (O Checkup Inicial)</h3>
+<p>Muitos engenheiros ignoram a aba Environment, mas ela é o primeiro lugar que você deve olhar ao assumir o troubleshooting de um job legado. Ela lista todas as variáveis de ambiente, dependências (Jars) e as <strong>Spark Properties</strong> em vigor.</p>
+<div class="abox info">
+<div class="abox-icon"><i class="ph ph-list-magnifying-glass"></i></div>
+<div class="abox-content">
+<strong>Propriedades Chave para Auditar:</strong>
+<ul style="margin-top:5px; padding-left:15px; font-size:13px;">
+<li><code>spark.sql.shuffle.partitions</code>: Se estiver no valor default (200) e você estiver processando Terabytes de dados, os executores vão colapsar (Spill). A regra prática é ter partições de 100MB a 200MB.</li>
+<li><code>spark.memory.fraction</code>: (Default 0.6). Define a divisão da memória Heap entre a <em>Execution Memory</em> (para joins e shuffles) e <em>Storage Memory</em> (para caches). Se o job tem muito cache, aumente. Se tem muitos Joins, reduza.</li>
+<li><code>spark.executor.memoryOverhead</code>: Memória extra alocada fora da Heap (Off-Heap). Vital se você estiver usando PySpark (Python Pandas UDFs executam na memória Overhead, não na Heap Java!).</li>
+</ul>
+</div>
+</div>
+<div class="section-spacer"></div>
+<h3>2. Desbalanceamento Crítico: Lendo a Aba Tasks</h3>
+<p>Além do tempo (Duration), o maior delator de um Skew violento são as colunas de I/O. Veja este exemplo clássico onde a quantidade de registros destruiu um executor.</p>
+<!-- Spark UI Mock: Tasks Imbalance -->
+<div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0; overflow-x:auto;">
+<div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Tasks Details (Task Imbalance Detection)</div>
+<table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
+<tr style="background:#1e293b; color:var(--text-muted);">
+<th style="padding:8px;">Task ID</th>
+<th style="padding:8px;">Status</th>
+<th style="padding:8px;">Duration</th>
+<th style="padding:8px; color:var(--alert);">Shuffle Read Size / Records</th>
+<th style="padding:8px;">Shuffle Write Size / Records</th>
+</tr>
+<tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
+<td style="padding:8px;">34</td>
+<td style="padding:8px; color:var(--alert);">RUNNING</td>
+<td style="padding:8px;">22.5 min</td>
+<td style="padding:8px; color:var(--alert); font-weight:bold;">12.4 GB / 45,000,000</td>
+<td style="padding:8px;">---</td>
+</tr>
+<tr style="border-bottom:1px solid #334155;">
+<td style="padding:8px;">35</td>
+<td style="padding:8px; color:#4ade80;">SUCCESS</td>
+<td style="padding:8px;">0.8 s</td>
+<td style="padding:8px;">4.2 MB / 1,500</td>
+<td style="padding:8px;">2.1 MB / 800</td>
+</tr>
+</table>
+</div>
+<div class="abox tip">
+<div class="abox-icon"><i class="ph ph-lightbulb"></i></div>
+<div class="abox-content">
+<strong>A Solução (Salting Technique):</strong> Para resolver isso, adicionamos uma coluna "Salt" (um número aleatório de 1 a N) na chave problemática. Isso força o Hash Partitioner a quebrar esses 45 milhões de registros da chave "999" em N partições (distribuindo para diferentes tasks), realizando um Join em duas etapas (Partial Aggregation -&gt; Global Aggregation).
         </div>
+</div>
+<div class="section-spacer"></div>
+<h3>3. Como Interpretar o DAG (Directed Acyclic Graph)</h3>
+<p>O DAG é a bússola do Engenheiro de Dados. Cada caixa representa uma transformação, e as linhas representam a movimentação dos dados. As barreiras entre <strong>Stages</strong> são invariavelmente criadas por operações que requerem a rede do cluster (Shuffles / Exchanges).</p>
+<!-- Simulated DAG Node Flow -->
+<div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
+<!-- Stage 1 -->
+<div style="border: 2px solid #3b82f6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+<div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 1</div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
+<strong>Scan parquet</strong><br/><span style="color:var(--text-muted)">S3://bucket/table_A</span>
+</div>
+<div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+<strong>*(1) Project &amp; Filter</strong><br/><span style="color:var(--text-muted)">WholeStageCodegen (JIT)</span>
+</div>
+</div>
+<!-- Exchange -->
+<div style="text-align:center; padding:5px;">
+<i class="ph ph-arrow-down" style="color:var(--alert); font-size:18px;"></i><br/>
+<span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange (Shuffle)</span>
+</div>
+<!-- Stage 2 -->
+<div style="border: 2px solid #8b5cf6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(139, 92, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+<div style="font-family:monospace; color:#8b5cf6; font-weight:bold; margin-bottom:10px;">Stage 2</div>
+<div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
+<strong>*(2) HashAggregate</strong><br/><span style="color:var(--text-muted)">WholeStageCodegen (JIT)</span>
+</div>
+</div>
+</div>
+<div class="abox info">
+<div class="abox-icon"><i class="ph ph-graph"></i></div>
+<div class="abox-content">
+<strong>A Regra de Ouro do DAG:</strong>
+<br/>1. Onde você vê <code>*(1)</code> ou <code>*(2)</code>, o Spark pegou todas as transformações daquele bloco (ex: ler, filtrar, selecionar colunas) e compilou num único loop em linguagem de máquina nativa (Tungsten WholeStageCodegen). É ultra-rápido!
+          <br/>2. Onde você vê a palavra <strong>Exchange</strong>, o motor foi obrigado a pausar a execução, serializar todos os dados no disco local e traficá-los pela rede para que os executores consigam montar os agrupamentos ou joins globais. <strong>É aqui que os Jobs gargalam.</strong> Minimizar <em>Exchanges</em> é a essência do Tuning.
+        </div>
+</div>
+</section><section class="section" id="spark-specialist-debug">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Estratégias de Diagnóstico Especialista</h2>
+<p>Mecanismos profundos de inspeção: Thread Dumps, Heap Dumps e Log de GC</p>
+</div>
+</div>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--err);">
+<h4>🧵 Thread Dumps (Caça a Deadlocks)</h4>
+<p>Se o job estiver <strong>BLOCKED</strong> mas a CPU estiver em 0%, você tem um Deadlock ou contenção de recurso externo.</p>
+<ul style="font-size: 12px; line-height: 1.4;">
+<li><strong>Como gerar:</strong> Use <code>jstack &lt;pid&gt;</code> no nó worker ou veja pela Spark UI (Executors -&gt; Thread Dump).</li>
+<li><strong>O que buscar:</strong> Threads no estado <code>WAITING (on object monitor)</code> apontando para a mesma referência de memória.</li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--err);">
+<h4>🧠 Heap Dumps sob OOM</h4>
+<p>Para descobrir vazamentos de memória (Memory Leaks) em bibliotecas customizadas.</p>
+<ul style="font-size: 12px; line-height: 1.4;">
+<li><strong>Configuração:</strong> Adicione <code>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/spark-heapdump.hprof</code> nas <code>extraJavaOptions</code>.</li>
+<li><strong>Análise:</strong> Abra o arquivo <code>.hprof</code> no <strong>Eclipse Memory Analyzer (MAT)</strong> para ver quais objetos estão retendo a Heap.</li>
+</ul>
+</div>
+</div>
+<div class="abox note" style="margin-top: 15px;">
+<strong>Análise Proativa de Garbage Collection:</strong>
+<br/>Habilite <code>-XX:+PrintGCDetails -XX:+PrintGCTimeStamps</code>. Se você observar "Full GC" frequentes seguidos de pouca liberação de memória, sua <strong>Old Generation</strong> está saturada. Aumentar a <code>spark.memory.fraction</code> pode piorar a situação; o fix real é aumentar a memória física do nó ou reduzir o paralelismo local.
       </div>
-
-      <div class="errors-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--err); color: #fff;">OOM / JVM</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">java.lang.OutOfMemoryError: Java heap space</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> Os executores ou o Driver esgotaram a memória Heap física devido a partições excessivamente grandes (Data Skew), processamento de registros gigantes de texto (JSON/XML) ou chamadas abusivas de <code>.collect()</code> de DataFrames volumosos para a memória do Driver.
-            <br><br><strong>Fix:</strong> Aumente a quantidade de partições lidas, ative o AQE (<code>spark.sql.adaptive.skewJoin.enabled</code>) ou reduza o número de cores por executor (liberando mais RAM por tarefa). Evite UDFs tradicionais que acumulam referências.
+</section><section class="section" id="spark-erros">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Guia de Resolução de Erros &amp; Troubleshooting</h2>
+<p>Receitas e diagnósticos para os 10 problemas e exceções clássicos da JVM e do Spark em produção</p>
+</div>
+</div>
+<div class="errors-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+<div class="err-card">
+<div class="err-tag" style="background: var(--err); color: #fff;">OOM / JVM</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">java.lang.OutOfMemoryError: Java heap space</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> Os executores ou o Driver esgotaram a memória Heap física devido a partições excessivamente grandes (Data Skew), processamento de registros gigantes de texto (JSON/XML) ou chamadas abusivas de <code>.collect()</code> de DataFrames volumosos para a memória do Driver.
+            <br/><br/><strong>Fix:</strong> Aumente a quantidade de partições lidas, ative o AQE (<code>spark.sql.adaptive.skewJoin.enabled</code>) ou reduza o número de cores por executor (liberando mais RAM por tarefa). Evite UDFs tradicionais que acumulam referências.
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--err); color: #fff;">YARN / OS</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Container killed by YARN for exceeding memory limits</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> A memória total do container (Heap + Off-Heap) excedeu o limite provisionado no ResourceManager. Ocorre frequentemente em jobs PySpark com uso pesado de Pandas/PyArrow (vetorização) ou bibliotecas C++ nativas.
-            <br><br><strong>Fix:</strong> Eleve a memória de overhead configurando <code>spark.executor.memoryOverhead</code>. Como regra prática, defina entre 15% a 20% do valor total de <code>spark.executor.memory</code> (mínimo de 384 MB).
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--err); color: #fff;">YARN / OS</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">Container killed by YARN for exceeding memory limits</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> A memória total do container (Heap + Off-Heap) excedeu o limite provisionado no ResourceManager. Ocorre frequentemente em jobs PySpark com uso pesado de Pandas/PyArrow (vetorização) ou bibliotecas C++ nativas.
+            <br/><br/><strong>Fix:</strong> Eleve a memória de overhead configurando <code>spark.executor.memoryOverhead</code>. Como regra prática, defina entre 15% a 20% do valor total de <code>spark.executor.memory</code> (mínimo de 384 MB).
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--warn); color: #000;">PERFORMANCE</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Straggler Tasks (Job travado em 99%)</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> Severo desbalanceamento de partições (Data Skew). Uma única partição contém a maior parte dos dados e é direcionada a um único executor, mantendo-o ocupado por horas enquanto os demais ficam ociosos.
-            <br><br><strong>Fix:</strong> Ative a partição automática de skew join do AQE ou aplique a técnica manual de <strong>Salting</strong> adicionando um prefixo aleatório às chaves de junção para distribuí-las horizontalmente pelo cluster.
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--warn); color: #000;">PERFORMANCE</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">Straggler Tasks (Job travado em 99%)</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> Severo desbalanceamento de partições (Data Skew). Uma única partição contém a maior parte dos dados e é direcionada a um único executor, mantendo-o ocupado por horas enquanto os demais ficam ociosos.
+            <br/><br/><strong>Fix:</strong> Ative a partição automática de skew join do AQE ou aplique a técnica manual de <strong>Salting</strong> adicionando um prefixo aleatório às chaves de junção para distribuí-las horizontalmente pelo cluster.
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--warn); color: #000;">PERFORMANCE</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Too many small files (Overhead de metadados)</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> Milhares de pequenos arquivos gravados no S3/HDFS. Isso gera milhões de chamadas I/O HTTP `GET`/`LIST` para leitura no Driver do Spark, travando a compilação de metadados e o planejamento do job.
-            <br><br><strong>Fix:</strong> Utilize <code>df.coalesce(N)</code> antes da escrita final para arquivos em lote ou configure <code>spark.sql.files.maxPartitionBytes</code> (padrão 128 MB) para juntar arquivos menores durante a leitura.
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--warn); color: #000;">PERFORMANCE</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">Too many small files (Overhead de metadados)</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> Milhares de pequenos arquivos gravados no S3/HDFS. Isso gera milhões de chamadas I/O HTTP `GET`/`LIST` para leitura no Driver do Spark, travando a compilação de metadados e o planejamento do job.
+            <br/><br/><strong>Fix:</strong> Utilize <code>df.coalesce(N)</code> antes da escrita final para arquivos em lote ou configure <code>spark.sql.files.maxPartitionBytes</code> (padrão 128 MB) para juntar arquivos menores durante a leitura.
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--err); color: #fff;">SERIALIZAÇÃO</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">SparkException: Task not serializable</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> O Spark tenta serializar o código de uma transformação para despachar para os executores, mas encontra referências a objetos do Driver não serializáveis (ex: conexões de banco de dados HTTP, loggers, ou a própria SparkSession).
-            <br><br><strong>Fix:</strong> Instancie e feche conexões JDBC/HTTP dentro de um escopo local na task usando <code>foreachPartition</code>, evitando referenciar variáveis globais criadas fora do loop executor.
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--err); color: #fff;">SERIALIZAÇÃO</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">SparkException: Task not serializable</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> O Spark tenta serializar o código de uma transformação para despachar para os executores, mas encontra referências a objetos do Driver não serializáveis (ex: conexões de banco de dados HTTP, loggers, ou a própria SparkSession).
+            <br/><br/><strong>Fix:</strong> Instancie e feche conexões JDBC/HTTP dentro de um escopo local na task usando <code>foreachPartition</code>, evitando referenciar variáveis globais criadas fora do loop executor.
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--err); color: #fff;">SHUFFLE / REDE</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">FetchFailedException - shuffle data lost</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> Um executor morreu no meio do pipeline (por OOM ou encerramento de nó Spot da AWS) e os arquivos intermediários de shuffle gerados por ele foram perdidos, fazendo com que as tarefas dependentes falhem.
-            <br><br><strong>Fix:</strong> Se estiver no EKS/Kubernetes, ative o <strong>Shuffle Tracking</strong> do Spark 3.x+; se estiver no YARN, habilite o <strong>External Shuffle Service</strong> (<code>spark.shuffle.service.enabled = true</code>) para desacoplar e salvar arquivos locais.
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--err); color: #fff;">SHUFFLE / REDE</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">FetchFailedException - shuffle data lost</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> Um executor morreu no meio do pipeline (por OOM ou encerramento de nó Spot da AWS) e os arquivos intermediários de shuffle gerados por ele foram perdidos, fazendo com que as tarefas dependentes falhem.
+            <br/><br/><strong>Fix:</strong> Se estiver no EKS/Kubernetes, ative o <strong>Shuffle Tracking</strong> do Spark 3.x+; se estiver no YARN, habilite o <strong>External Shuffle Service</strong> (<code>spark.shuffle.service.enabled = true</code>) para desacoplar e salvar arquivos locais.
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--err); color: #fff;">SCHEMA / COMPILAÇÃO</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">AnalysisException: cannot resolve column</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> Erro ortográfico ou conflito de namespace de colunas ao referenciar colunas em estruturas de junção de DataFrames de nomes idênticos sem apelidos (aliases) explícitos.
-            <br><br><strong>Fix:</strong> Utilize namespaces claros, renomeie colunas duplicadas usando <code>withColumnRenamed</code> antes da junção e execute diagnósticos prévios imprimindo o schema lógicos com <code>df.printSchema()</code>.
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--err); color: #fff;">SCHEMA / COMPILAÇÃO</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">AnalysisException: cannot resolve column</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> Erro ortográfico ou conflito de namespace de colunas ao referenciar colunas em estruturas de junção de DataFrames de nomes idênticos sem apelidos (aliases) explícitos.
+            <br/><br/><strong>Fix:</strong> Utilize namespaces claros, renomeie colunas duplicadas usando <code>withColumnRenamed</code> antes da junção e execute diagnósticos prévios imprimindo o schema lógicos com <code>df.printSchema()</code>.
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--err); color: #fff;">STREAMING</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">StreamingQueryException: checkpoint incompatível</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> O schema dos dados de origem ou a estrutura lógica da query de streaming (ex: novos operadores de janela) foram alterados, tornando incompatíveis os estados e offsets persistidos no diretório de checkpoint.
-            <br><br><strong>Fix:</strong> Delete o diretório antigo de metadados de checkpoint do S3 ou crie e aponte para um novo diretório exclusivo de versionamento de checkpoint antes do deploy do novo código em produção.
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--err); color: #fff;">STREAMING</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">StreamingQueryException: checkpoint incompatível</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> O schema dos dados de origem ou a estrutura lógica da query de streaming (ex: novos operadores de janela) foram alterados, tornando incompatíveis os estados e offsets persistidos no diretório de checkpoint.
+            <br/><br/><strong>Fix:</strong> Delete o diretório antigo de metadados de checkpoint do S3 ou crie e aponte para um novo diretório exclusivo de versionamento de checkpoint antes do deploy do novo código em produção.
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--err); color: #fff;">GC / TIMEOUT</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Executor heartbeat timed out</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> Pausa de Garbage Collection extremamente longa da JVM Heap (Stop-the-world). O executor congela todas as threads para liberar espaço e falha em responder as mensagens de heartbeat de saúde do Driver.
-            <br><br><strong>Fix:</strong> Altere o Garbage Collector padrão para o <strong>G1GC</strong> (<code>-XX:+UseG1GC</code>), configure tamanhos maiores de Heap ou aumente o timeout limite de rede configurando <code>spark.network.timeout = 800s</code>.
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--err); color: #fff;">GC / TIMEOUT</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">Executor heartbeat timed out</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> Pausa de Garbage Collection extremamente longa da JVM Heap (Stop-the-world). O executor congela todas as threads para liberar espaço e falha em responder as mensagens de heartbeat de saúde do Driver.
+            <br/><br/><strong>Fix:</strong> Altere o Garbage Collector padrão para o <strong>G1GC</strong> (<code>-XX:+UseG1GC</code>), configure tamanhos maiores de Heap ou aumente o timeout limite de rede configurando <code>spark.network.timeout = 800s</code>.
           </div>
-        </div>
-
-        <div class="err-card">
-          <div class="err-tag" style="background: var(--warn); color: #000;">I/O / STORAGE</div>
-          <div class="err-title" style="font-weight: 700; margin-top: 5px;">Full scan desnecessário em tabelas Parquet</div>
-          <div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
-            <strong>Causa:</strong> Consultas lentas em tabelas Parquet/Delta devido à ausência de filtros baseados nas colunas físicas de partição estruturadas na gravação, forçando o Spark a ler e deserializar arquivos inteiros.
-            <br><br><strong>Fix:</strong> Certifique-se de salvar os arquivos usando <code>.partitionBy("ano", "mes")</code> nas colunas mais acessadas e verifique se as queries analíticas de leitura utilizam ativamente esses mesmos campos de partição nos filtros.
+</div>
+<div class="err-card">
+<div class="err-tag" style="background: var(--warn); color: #000;">I/O / STORAGE</div>
+<div class="err-title" style="font-weight: 700; margin-top: 5px;">Full scan desnecessário em tabelas Parquet</div>
+<div class="err-body" style="font-size: 12px; margin-top: 10px; line-height: 1.4;">
+<strong>Causa:</strong> Consultas lentas em tabelas Parquet/Delta devido à ausência de filtros baseados nas colunas físicas de partição estruturadas na gravação, forçando o Spark a ler e deserializar arquivos inteiros.
+            <br/><br/><strong>Fix:</strong> Certifique-se de salvar os arquivos usando <code>.partitionBy("ano", "mes")</code> nas colunas mais acessadas e verifique se as queries analíticas de leitura utilizam ativamente esses mesmos campos de partição nos filtros.
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="spark-specialist-debug">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--spark)">12.5</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Estratégias de Diagnóstico Especialista</h2>
-          <p>Mecanismos profundos de inspeção: Thread Dumps, Heap Dumps e Log de GC</p>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="card" style="border-top: 3px solid var(--err);">
-          <h4>🧵 Thread Dumps (Caça a Deadlocks)</h4>
-          <p>Se o job estiver <strong>BLOCKED</strong> mas a CPU estiver em 0%, você tem um Deadlock ou contenção de recurso externo.</p>
-          <ul style="font-size: 12px; line-height: 1.4;">
-            <li><strong>Como gerar:</strong> Use <code>jstack &lt;pid&gt;</code> no nó worker ou veja pela Spark UI (Executors -> Thread Dump).</li>
-            <li><strong>O que buscar:</strong> Threads no estado <code>WAITING (on object monitor)</code> apontando para a mesma referência de memória.</li>
-          </ul>
-        </div>
-        <div class="card" style="border-top: 3px solid var(--err);">
-          <h4>🧠 Heap Dumps sob OOM</h4>
-          <p>Para descobrir vazamentos de memória (Memory Leaks) em bibliotecas customizadas.</p>
-          <ul style="font-size: 12px; line-height: 1.4;">
-            <li><strong>Configuração:</strong> Adicione <code>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/spark-heapdump.hprof</code> nas <code>extraJavaOptions</code>.</li>
-            <li><strong>Análise:</strong> Abra o arquivo <code>.hprof</code> no <strong>Eclipse Memory Analyzer (MAT)</strong> para ver quais objetos estão retendo a Heap.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="abox note" style="margin-top: 15px;">
-        <strong>Análise Proativa de Garbage Collection:</strong>
-        <br>Habilite <code>-XX:+PrintGCDetails -XX:+PrintGCTimeStamps</code>. Se você observar "Full GC" frequentes seguidos de pouca liberação de memória, sua <strong>Old Generation</strong> está saturada. Aumentar a <code>spark.memory.fraction</code> pode piorar a situação; o fix real é aumentar a memória física do nó ou reduzir o paralelismo local.
-      </div>
-    </section>
-
-    <!-- ── AWS GLUE SECTION ── -->
-    <section class="section" id="spark-ui-deepdive">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--spark)">16.5</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Guia Prático da Interface Spark UI</h2>
-          <p>Como ler métricas e depurar gargalos de memória e rede nas principais abas da interface</p>
-        </div>
-      </div>
-
-      <p>A <strong>Spark UI</strong> é a ferramenta de monitoramento em tempo real padrão do ecossistema. Engenheiros de dados seniores utilizam as abas lógicas abaixo para caçar gargalos de desempenho físico:</p>
-
-      <div class="grid-2">
-        <div class="card" style="border-left: 3px solid var(--spark);">
-          <h4>1. Jobs Tab</h4>
-          <p>Fornece uma linha do tempo macro de todas as ações de dados executadas no código da aplicação. Cada Action de escrita, agrupamento ou contagem gera uma entrada de Job.</p>
-          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
-            <li><strong>O que buscar:</strong> Padrões de execução em paralelo e o tempo total decorrido de processamento de ponta a ponta.</li>
-            <li><strong>Alerta vermelho:</strong> Múltiplos jobs sequenciais pequenos executados um após o outro, indicando que o desenvolvedor inseriu ações desnecessárias como <code>.count()</code> ou <code>.show()</code> no meio do pipeline de produção, forçando a quebra de lazy evaluation.</li>
-          </ul>
-        </div>
-
-        <div class="card" style="border-left: 3px solid var(--spark);">
-          <h4>2. Stages Tab</h4>
-          <p>Detalhamento de cada estágio isolado separado por Shuffles físicos. Fornece uma tabela descritiva das Tasks executadas.</p>
-          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
-            <li><strong>Métrica Chave - GC Time (Tempo de Coleta de Lixo):</strong> Indica quanto tempo os executores Java passaram congelados para limpar objetos obsoletos da Heap. <strong>Se o GC Time ultrapassar 10% do tempo do Stage</strong>, aumente a Heap ou ative o Garbage Collector G1.</li>
-            <li><strong>Métrica Chave - Spill (Memory) / Spill (Disk):</strong> Ocorre quando os dados de uma partição não cabem na Execution Memory reservada. O Spark serializa os registros excedentes e grava no disco local. Isso <strong>degrada a performance em até 10x</strong>. Solução: aumente o paralelismo de partições ou mude para instâncias de maior RAM.</li>
-            <li><strong>Métrica Chave - Shuffle Read Blocked Time:</strong> Tempo que uma Task passou esperando dados chegarem via rede de outros executores. Valores altos indicam congestionamento de rede ou saturação física dos nós do cluster.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="grid-2" style="margin-top: 15px;">
-        <div class="card" style="border-left: 3px solid var(--spark);">
-          <h4>3. Storage Tab</h4>
-          <p>Exibe os DataFrames ou RDDs que foram explicitamente colocados na memória do cluster por meio de comandos de cache (<code>.cache()</code> ou <code>.persist()</code>).</p>
-          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
-            <li><strong>O que analisar:</strong> A fração do conjunto de dados que de fato reside na RAM do cluster (Fraction Cached). Se estiver abaixo de 100%, significa que o cluster sofreu eviction e está recalculando partições direto da fonte S3 durante as ações, gerando lentidão severa.</li>
-          </ul>
-        </div>
-
-        <div class="card" style="border-left: 3px solid var(--spark);">
-          <h4>4. Executors Tab</h4>
-          <p>Visão física de hardware de cada executor em execução na JVM dos workers.</p>
-          <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
-            <li><strong>O que monitorar:</strong> O volume total de dados gravados fisicamente em disco por executor e a contagem de tarefas ativas por core. É a melhor aba para identificar desvios bruscos de desbalanceamento de processamento por nó.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="card" style="border-left: 3px solid var(--spark); margin-top:15px;">
-        <h4>5. SQL Tab (Execution Plan Visualization)</h4>
-        <p>Desenha graficamente o plano físico compilado e otimizado pelo Catalyst Optimizer. É a aba mais importante para entender o comportamento computacional das queries.</p>
-        <ul style="padding-left:15px; margin-top:5px; font-size:12px;">
-          <li><strong>Whole-Stage CodeGen Inspection:</strong> Elementos e operadores agrupados em caixas azul-escuras marcadas com um asterisco (ex: <code>*(1) Sort</code> ou <code>*(2) HashAggregate</code>) representam trechos de código que foram compilados em um único loop em Java físico nativo, otimizados para velocidade.</li>
-          <li><strong>Join Selection Validation:</strong> Verifique se a query utilizou um <code>BroadcastHashJoin</code> ou se realizou um dispendioso <code>SortMergeJoin</code> com troca massiva de dados (Exchange). Isso valida se as regras de tamanho dinâmico do AQE funcionaram.</li>
-        </ul>
-      </div>
-    
-    <section class="section" id="spark-troubleshooting-simulations">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--alert)">16.6</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--alert)"></div>
-          <h2>Troubleshooting Visual: Skew, Spill, OOM e GC</h2>
-          <p>Exemplos reais de código e como os problemas se materializam na interface do Spark</p>
-        </div>
-      </div>
-
-      <h3>1. O Código (Data Skew & Spill Intencional)</h3>
-      <p>O <strong>Data Skew</strong> (Viés de Dados) ocorre quando uma chave de Join ou GroupBy concentra a esmagadora maioria dos registros (ex: ID de "Cliente Não Cadastrado" = -1). Isso joga quase todos os dados para um único <em>Executor</em> (Core), que invariavelmente sofre <strong>Spill</strong> (transbordo para o disco) e eventual <strong>OOM</strong> (Falta de Memória).</p>
-
-      <div class="code-header">
-        <span class="code-lang">python</span>
-        <span class="code-copy" onclick="copyCode(this)"><i class="ph ph-copy"></i></span>
-      </div>
-      <pre><code># Criando Skew Intencional: 99% dos dados possuem customer_id = 999
+</div>
+</div>
+</section><section class="section" id="spark-performance-callout">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--emr)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--emr)"></div>
+<h2>Performance Callout: Dicas de Tuning</h2>
+<p>Otimizações cruciais para grandes volumes de dados</p>
+</div>
+</div>
+<div class="grid-2">
+<div class="card">
+<h4>📦 Small Files em Spark</h4>
+<p>Ter milhares de arquivos pequenos no S3 causa overhead massivo de metadados. <strong>Solução:</strong> Use <code>df.repartition(n)</code> ou <code>df.coalesce(n)</code> visando arquivos de ~128MB.</p>
+</div>
+<div class="card">
+<h4>🚀 Speculative Execution</h4>
+<p>Evita que "stragglers" (tasks lentas) atrasem o job inteiro ao lançar cópias em outros nós. Configure <code>spark.speculation=true</code>.</p>
+</div>
+</div>
+</section><section class="section" id="spark-tuning">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">07</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Tuning do Spark — Guia Completo de Produção</h2>
+<p>Receitas de configurações de performance detalhadas e seguras para workloads analíticos corporativos</p>
+</div>
+</div>
+<div class="tuning-recipe">
+<div class="tuning-recipe-title">🔧 Receitas de Configurações Base de Alta Performance (spark-defaults.conf)</div>
+<h4 style="color:var(--spark); margin: 15px 0 5px 0;">1. Otimização Adaptativa (Adaptive Query Execution - AQE)</h4>
+<div class="recipe-row">
+<div class="recipe-icon">⚙️</div>
+<div class="recipe-text">
+<strong>spark.sql.adaptive.enabled = true:</strong> Ativa o AQE, permitindo otimizações em tempo de execução.
+            <br/><strong>spark.sql.adaptive.coalescePartitions.enabled = true:</strong> Junta partições pequenas pós-shuffle automaticamente para evitar overhead de agendamento de tasks minúsculas (small files na memória).
+            <br/><strong>spark.sql.adaptive.advisoryPartitionSizeInBytes = 134217728:</strong> Define o tamanho ideal de partição lida pós-shuffle como 128 MB (ótimo para vazão de I/O).
+            <br/><strong>spark.sql.adaptive.skewJoin.enabled = true:</strong> Detecta automaticamente desvios bruscos (skew) em chaves de join e divide partições gigantes em sub-tasks menores para processamento paralelo uniforme.
+          </div>
+</div>
+<h4 style="color:var(--spark); margin: 15px 0 5px 0;">2. Tuning de Rede &amp; Timeouts de Shuffle</h4>
+<div class="recipe-row">
+<div class="recipe-icon">🌐</div>
+<div class="recipe-text">
+<strong>spark.network.timeout = 800s:</strong> Limite máximo de tempo que o Spark espera por pacotes de rede entre nós (default 120s). Evita erros de executor perdido por oscilações na rede AWS ou pausas longas de GC.
+            <br/><strong>spark.core.connection.ack.wait.timeout = 600s:</strong> Aumenta o tempo limite de aceno de conexões TCP físicas.
+            <br/><strong>spark.shuffle.file.buffer = 1m:</strong> Buffer em RAM (default 32 KB) usado antes de escrever blocos de shuffle temporários no disco local, reduzindo a concorrência e o tempo de busca de cabeçote do EBS.
+            <br/><strong>spark.reducer.maxSizeInFlight = 128m:</strong> Tamanho máximo de dados requisitados simultaneamente de outros executores de forma assíncrona, acelerando o throughput do shuffle read.
+          </div>
+</div>
+<h4 style="color:var(--spark); margin: 15px 0 5px 0;">3. Gerenciamento de Memória &amp; Project Tungsten</h4>
+<div class="recipe-row">
+<div class="recipe-icon">🧠</div>
+<div class="recipe-text">
+<strong>spark.memory.fraction = 0.8:</strong> Eleva o espaço do Spark Memory para 80% da Heap da JVM em instâncias r5 de grande porte, deixando menos área ociosa na User Memory para jobs puramente SQL/DataFrame.
+            <br/><strong>spark.memory.storageFraction = 0.2:</strong> Limita a área imune de Storage a 20% do pool Spark. Excelente para ETLs que não usam cache/persistência de dados, liberando espaço máximo imune para a Execution Memory resolver Shuffles e Joins complexos.
+            <br/><strong>spark.memory.offHeap.enabled = true:</strong> Ativa a alocação de dados Off-Heap.
+            <br/><strong>spark.memory.offHeap.size = 4294967296:</strong> Reserva 4 GB de memória do sistema operacional (Off-Heap) por executor para o Project Tungsten ordenar dados em formato binário sem poluição de GC.
+          </div>
+</div>
+<h4 style="color:var(--spark); margin: 15px 0 5px 0;">4. Serialização e Compressão</h4>
+<div class="recipe-row">
+<div class="recipe-icon">📦</div>
+<div class="recipe-text">
+<strong>spark.serializer = org.apache.spark.serializer.KryoSerializer:</strong> Substitui a serialização Java padrão pela Kryo, que é até 10x mais rápida e gera representações de objetos muito menores.
+            <br/><strong>spark.kryoserializer.buffer.max = 1024m:</strong> Define o tamanho máximo de buffer do Kryo para lidar com registros extremamente grandes de forma segura.
+            <br/><strong>spark.io.compression.codec = zstd:</strong> Utiliza compressão ZSTD para dados internos temporários de shuffle, reduzindo I/O e uso de rede no cluster com baixo consumo de CPU.
+          </div>
+</div>
+<h4 style="color:var(--spark); margin: 15px 0 5px 0;">5. Escrita no Data Lake (Evitando Small Files)</h4>
+<div class="recipe-row">
+<div class="recipe-icon">💾</div>
+<div class="recipe-text">
+<strong>spark.sql.sources.commitProtocolClass = org.apache.spark.internal.io.cloud.PathOutputCommitProtocol:</strong> Utiliza protocolo otimizado de commmit para S3 que elimina operações de rename demoradas.
+            <br/><strong>spark.sql.parquet.compression.codec = zstd:</strong> Força arquivos finais Parquet a serem compactados com ZSTD no S3.
+          </div>
+</div>
+</div>
+</section><section class="section" id="spark-troubleshooting-simulations">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--alert)">08</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--alert)"></div>
+<h2>Troubleshooting Visual: Skew, Spill, OOM e GC</h2>
+<p>Exemplos reais de código e como os problemas se materializam na interface do Spark</p>
+</div>
+</div>
+<h3>1. O Código (Data Skew &amp; Spill Intencional)</h3>
+<p>O <strong>Data Skew</strong> (Viés de Dados) ocorre quando uma chave de Join ou GroupBy concentra a esmagadora maioria dos registros (ex: ID de "Cliente Não Cadastrado" = -1). Isso joga quase todos os dados para um único <em>Executor</em> (Core), que invariavelmente sofre <strong>Spill</strong> (transbordo para o disco) e eventual <strong>OOM</strong> (Falta de Memória).</p>
+<div class="code-header">
+<span class="code-lang">python</span>
+<span class="code-copy" onclick="copyCode(this)"><i class="ph ph-copy"></i></span>
+</div>
+<pre><code># Criando Skew Intencional: 99% dos dados possuem customer_id = 999
 spark.conf.set("spark.sql.shuffle.partitions", "200")
 spark.conf.set("spark.executor.memory", "2g")
 
 skewed_data = spark.range(0, 10000000) \
-    .withColumn("customer_id", F.when(F.col("id") < 9900000, 999).otherwise(F.col("id")))
+    .withColumn("customer_id", F.when(F.col("id") &lt; 9900000, 999).otherwise(F.col("id")))
 
 # O Shuffle joga todos os "999" para a mesma Partição!
 result = skewed_data.groupBy("customer_id").count()
 result.write.format("noop").mode("overwrite").save()</code></pre>
-
-      <div class="section-spacer"></div>
-
-      <h3>2. Como o Skew aparece na Spark UI (Aba Stages)</h3>
-      <p>Na aba de Stages, o sintoma clássico de Skew é o <strong>Max Task Time</strong> ser absurdamente superior ao <strong>Median Task Time</strong>. Veja o simulador da UI abaixo:</p>
-      
-      <!-- Spark UI Mock: Stages -->
-      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0;">
-        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
-          <div style="font-family:monospace; font-weight:bold; color:var(--text)">Spark UI > Stages > Stage 12</div>
-          <div style="font-family:monospace; color:var(--text-muted)">Total Tasks: 200</div>
-        </div>
-        
-        <table style="width:100%; text-align:left; font-family:monospace; font-size:12px; border-collapse: collapse;">
-          <tr style="background:#1e293b; color:var(--text-muted);">
-            <th style="padding:8px;">Metric</th>
-            <th style="padding:8px;">Min</th>
-            <th style="padding:8px;">25th percentile</th>
-            <th style="padding:8px;">Median</th>
-            <th style="padding:8px;">75th percentile</th>
-            <th style="padding:8px; color:var(--alert);">Max</th>
-          </tr>
-          <tr style="border-bottom:1px solid #334155;">
-            <td style="padding:8px;">Duration</td>
-            <td style="padding:8px;">0.8 s</td>
-            <td style="padding:8px;">1.1 s</td>
-            <td style="padding:8px; font-weight:bold;">1.2 s</td>
-            <td style="padding:8px;">1.5 s</td>
-            <td style="padding:8px; color:var(--alert); font-weight:bold;">14.5 min</td>
-          </tr>
-          <tr style="border-bottom:1px solid #334155;">
-            <td style="padding:8px;">GC Time</td>
-            <td style="padding:8px;">10 ms</td>
-            <td style="padding:8px;">15 ms</td>
-            <td style="padding:8px;">22 ms</td>
-            <td style="padding:8px;">35 ms</td>
-            <td style="padding:8px; color:var(--alert); font-weight:bold;">3.2 min</td>
-          </tr>
-        </table>
-        <div style="margin-top:10px; font-family:monospace; font-size:12px; color:#4ade80;">
-          <i class="ph ph-check-circle"></i> 199/200 Tasks Succeeded
-          <br>
-          <span style="color:var(--alert)"><i class="ph ph-spinner"></i> 1/200 Tasks Active (Stuck)</span>
-        </div>
-      </div>
-
-      <div class="abox tip">
-        <div class="abox-icon"><i class="ph ph-magnifying-glass"></i></div>
-        <div class="abox-content">
-          <strong>O Veredito:</strong> 199 cores (Tasks) acabaram em 1 segundo. 1 único Core recebeu 99% dos dados e está "preso" calculando o agrupamento do cliente "999" por mais de 14 minutos. O <strong>GC Time</strong> (Garbage Collection) dessa Task está altíssimo (3.2 min), provando que o executor está lutando para não estourar a memória.
-        </div>
-      </div>
-
-      <div class="section-spacer"></div>
-
-      <h3>3. Como o Spill aparece na Spark UI (Aba Tasks)</h3>
-      <p>Quando a memória alocada para execução (Execution Memory) enche, o Spark salva o excesso em disco (Spill). O Spill degrada a performance do nó violentamente devido ao I/O físico (Disco e Rede).</p>
-      
-      <!-- Spark UI Mock: Tasks -->
-      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0; overflow-x:auto;">
-        <div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Tasks Details (Sorted by Duration)</div>
-        <table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
-          <tr style="background:#1e293b; color:var(--text-muted);">
-            <th style="padding:8px;">Task ID</th>
-            <th style="padding:8px;">Status</th>
-            <th style="padding:8px;">Duration</th>
-            <th style="padding:8px;">Shuffle Read Size</th>
-            <th style="padding:8px; color:var(--alert);">Spill (Memory)</th>
-            <th style="padding:8px; color:var(--alert);">Spill (Disk)</th>
-          </tr>
-          <tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
-            <td style="padding:8px;">145</td>
-            <td style="padding:8px; color:var(--alert);">RUNNING</td>
-            <td style="padding:8px;">14.5 min</td>
-            <td style="padding:8px;">8.2 GB</td>
-            <td style="padding:8px; color:var(--alert); font-weight:bold;">24.5 GB</td>
-            <td style="padding:8px; color:var(--alert); font-weight:bold;">4.1 GB</td>
-          </tr>
-          <tr style="border-bottom:1px solid #334155;">
-            <td style="padding:8px;">146</td>
-            <td style="padding:8px; color:#4ade80;">SUCCESS</td>
-            <td style="padding:8px;">1.2 s</td>
-            <td style="padding:8px;">14.2 MB</td>
-            <td style="padding:8px;">0.0 B</td>
-            <td style="padding:8px;">0.0 B</td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="abox info">
-        <div class="abox-icon"><i class="ph ph-hard-drives"></i></div>
-        <div class="abox-content">
-          <strong>A Matemática do Spill:</strong> Note que o <em>Spill (Memory)</em> é muito maior que o <em>Spill (Disk)</em>. Isso ocorre porque o tamanho em memória considera objetos Java inflados (uncompressed deserialized), enquanto no disco os dados são gravados serializados e comprimidos. <strong>Qualquer valor > 0.0 B nessas colunas exige sua atenção!</strong>
-        </div>
-      </div>
-
-      <div class="section-spacer"></div>
-
-      <h3>4. O Destino Final: OOM (Out of Memory) na Aba Executors</h3>
-      <p>Se o Spill não for suficiente e a sobrecarga do Garbage Collector for extrema (passando mais tempo reciclando do que calculando), a JVM do nó Worker irá travar e será morta pelo YARN/Kubernetes (Status: Dead).</p>
-      
-      <!-- Spark UI Mock: Executors -->
-      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0;">
-        <div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Executors</div>
-        <table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
-          <tr style="background:#1e293b; color:var(--text-muted);">
-            <th style="padding:8px;">Executor ID</th>
-            <th style="padding:8px;">Status</th>
-            <th style="padding:8px;">Cores</th>
-            <th style="padding:8px;">Active Tasks</th>
-            <th style="padding:8px;">Failed Tasks</th>
-            <th style="padding:8px;">Task Time</th>
-          </tr>
-          <tr style="border-bottom:1px solid #334155;">
-            <td style="padding:8px;">driver</td>
-            <td style="padding:8px; color:#4ade80;">Active</td>
-            <td style="padding:8px;">0</td>
-            <td style="padding:8px;">0</td>
-            <td style="padding:8px;">0</td>
-            <td style="padding:8px;">0 ms</td>
-          </tr>
-          <tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
-            <td style="padding:8px;">1</td>
-            <td style="padding:8px; color:var(--alert); font-weight:bold;">Dead</td>
-            <td style="padding:8px;">4</td>
-            <td style="padding:8px;">0</td>
-            <td style="padding:8px; color:var(--alert);">1</td>
-            <td style="padding:8px;">15.1 min</td>
-          </tr>
-          <tr style="border-bottom:1px solid #334155;">
-            <td style="padding:8px;">2</td>
-            <td style="padding:8px; color:#4ade80;">Active</td>
-            <td style="padding:8px;">4</td>
-            <td style="padding:8px;">0</td>
-            <td style="padding:8px;">0</td>
-            <td style="padding:8px;">1.4 s</td>
-          </tr>
-        </table>
-        <div style="margin-top:10px; font-family:monospace; font-size:12px; color:var(--alert);">
-          <strong>Reason for Death:</strong> Container killed by YARN for exceeding memory limits. 2.5G of 2G physical memory used. Consider boosting spark.executor.memoryOverhead.
-        </div>
-      </div>
-
-    </section>
-
-    <section class="section" id="spark-ui-advanced">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--spark)">16.7</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--spark)"></div>
-          <h2>Leitura Avançada: DAG, Environments & Desbalanceamento</h2>
-          <p>Dominando as entranhas da Spark UI para orquestração de alta performance</p>
-        </div>
-      </div>
-
-      <h3>1. A Aba "Environment" (O Checkup Inicial)</h3>
-      <p>Muitos engenheiros ignoram a aba Environment, mas ela é o primeiro lugar que você deve olhar ao assumir o troubleshooting de um job legado. Ela lista todas as variáveis de ambiente, dependências (Jars) e as <strong>Spark Properties</strong> em vigor.</p>
-      
-      <div class="abox info">
-        <div class="abox-icon"><i class="ph ph-list-magnifying-glass"></i></div>
-        <div class="abox-content">
-          <strong>Propriedades Chave para Auditar:</strong>
-          <ul style="margin-top:5px; padding-left:15px; font-size:13px;">
-            <li><code>spark.sql.shuffle.partitions</code>: Se estiver no valor default (200) e você estiver processando Terabytes de dados, os executores vão colapsar (Spill). A regra prática é ter partições de 100MB a 200MB.</li>
-            <li><code>spark.memory.fraction</code>: (Default 0.6). Define a divisão da memória Heap entre a <em>Execution Memory</em> (para joins e shuffles) e <em>Storage Memory</em> (para caches). Se o job tem muito cache, aumente. Se tem muitos Joins, reduza.</li>
-            <li><code>spark.executor.memoryOverhead</code>: Memória extra alocada fora da Heap (Off-Heap). Vital se você estiver usando PySpark (Python Pandas UDFs executam na memória Overhead, não na Heap Java!).</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="section-spacer"></div>
-
-      <h3>2. Desbalanceamento Crítico: Lendo a Aba Tasks</h3>
-      <p>Além do tempo (Duration), o maior delator de um Skew violento são as colunas de I/O. Veja este exemplo clássico onde a quantidade de registros destruiu um executor.</p>
-
-      <!-- Spark UI Mock: Tasks Imbalance -->
-      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0; overflow-x:auto;">
-        <div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Tasks Details (Task Imbalance Detection)</div>
-        <table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
-          <tr style="background:#1e293b; color:var(--text-muted);">
-            <th style="padding:8px;">Task ID</th>
-            <th style="padding:8px;">Status</th>
-            <th style="padding:8px;">Duration</th>
-            <th style="padding:8px; color:var(--alert);">Shuffle Read Size / Records</th>
-            <th style="padding:8px;">Shuffle Write Size / Records</th>
-          </tr>
-          <tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
-            <td style="padding:8px;">34</td>
-            <td style="padding:8px; color:var(--alert);">RUNNING</td>
-            <td style="padding:8px;">22.5 min</td>
-            <td style="padding:8px; color:var(--alert); font-weight:bold;">12.4 GB / 45,000,000</td>
-            <td style="padding:8px;">---</td>
-          </tr>
-          <tr style="border-bottom:1px solid #334155;">
-            <td style="padding:8px;">35</td>
-            <td style="padding:8px; color:#4ade80;">SUCCESS</td>
-            <td style="padding:8px;">0.8 s</td>
-            <td style="padding:8px;">4.2 MB / 1,500</td>
-            <td style="padding:8px;">2.1 MB / 800</td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="abox tip">
-        <div class="abox-icon"><i class="ph ph-lightbulb"></i></div>
-        <div class="abox-content">
-          <strong>A Solução (Salting Technique):</strong> Para resolver isso, adicionamos uma coluna "Salt" (um número aleatório de 1 a N) na chave problemática. Isso força o Hash Partitioner a quebrar esses 45 milhões de registros da chave "999" em N partições (distribuindo para diferentes tasks), realizando um Join em duas etapas (Partial Aggregation -> Global Aggregation).
-        </div>
-      </div>
-
-      <div class="section-spacer"></div>
-
-      <h3>3. Como Interpretar o DAG (Directed Acyclic Graph)</h3>
-      <p>O DAG é a bússola do Engenheiro de Dados. Cada caixa representa uma transformação, e as linhas representam a movimentação dos dados. As barreiras entre <strong>Stages</strong> são invariavelmente criadas por operações que requerem a rede do cluster (Shuffles / Exchanges).</p>
-
-      <!-- Simulated DAG Node Flow -->
-      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
-        
-        <!-- Stage 1 -->
-        <div style="border: 2px solid #3b82f6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-          <div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 1</div>
-          
-          <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
-            <strong>Scan parquet</strong><br><span style="color:var(--text-muted)">S3://bucket/table_A</span>
-          </div>
-          <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
-          
-          <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
-            <strong>*(1) Project & Filter</strong><br><span style="color:var(--text-muted)">WholeStageCodegen (JIT)</span>
-          </div>
-        </div>
-
-        <!-- Exchange -->
-        <div style="text-align:center; padding:5px;">
-          <i class="ph ph-arrow-down" style="color:var(--alert); font-size:18px;"></i><br>
-          <span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange (Shuffle)</span>
-        </div>
-
-        <!-- Stage 2 -->
-        <div style="border: 2px solid #8b5cf6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(139, 92, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-          <div style="font-family:monospace; color:#8b5cf6; font-weight:bold; margin-bottom:10px;">Stage 2</div>
-          
-          <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
-            <strong>*(2) HashAggregate</strong><br><span style="color:var(--text-muted)">WholeStageCodegen (JIT)</span>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="abox info">
-        <div class="abox-icon"><i class="ph ph-graph"></i></div>
-        <div class="abox-content">
-          <strong>A Regra de Ouro do DAG:</strong> 
-          <br>1. Onde você vê <code>*(1)</code> ou <code>*(2)</code>, o Spark pegou todas as transformações daquele bloco (ex: ler, filtrar, selecionar colunas) e compilou num único loop em linguagem de máquina nativa (Tungsten WholeStageCodegen). É ultra-rápido!
-          <br>2. Onde você vê a palavra <strong>Exchange</strong>, o motor foi obrigado a pausar a execução, serializar todos os dados no disco local e traficá-los pela rede para que os executores consigam montar os agrupamentos ou joins globais. <strong>É aqui que os Jobs gargalam.</strong> Minimizar <em>Exchanges</em> é a essência do Tuning.
-        </div>
-      </div>
-
-    </section>
-
-      <div class="section-spacer"></div>
-
-      <h3>4. Padrões Mortais do DAG: SortMergeJoin vs BroadcastHashJoin</h3>
-      <p>A melhor forma de testar sua habilidade em ler DAGs é analisando planos de <strong>Join</strong>. Quando você cruza duas tabelas, o comportamento do Spark muda radicalmente dependendo do tamanho das tabelas envolvidas.</p>
-
-      <h4>Caso A: O DAG Pesado (SortMergeJoin)</h4>
-      <p>Ocorre quando as duas tabelas são gigas ou terabytes (Default do Spark). As duas tabelas são lidas em paralelo, e ambas sofrem um <strong>Exchange (Shuffle)</strong> simultâneo para que as chaves idênticas sejam enviadas para o mesmo executor. A visualização se parece com um "Y" de ponta cabeça.</p>
-
-      <!-- Simulated DAG: SortMergeJoin -->
-      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
-        
-        <div style="display:flex; width:100%; max-width:600px; justify-content:space-between; gap:20px;">
-          <!-- Stage 1 (Left Table) -->
-          <div style="flex:1; border: 2px solid #3b82f6; border-radius:8px; padding:15px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-            <div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 11 (Tabela Fato)</div>
-            
-            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
-              <strong>Scan parquet</strong>
-            </div>
-            <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
-            <div style="text-align:center; padding:5px;">
-              <span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange</span>
-            </div>
-          </div>
-
-          <!-- Stage 2 (Right Table) -->
-          <div style="flex:1; border: 2px solid #ec4899; border-radius:8px; padding:15px; background:rgba(236, 72, 153, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-            <div style="font-family:monospace; color:#ec4899; font-weight:bold; margin-bottom:10px;">Stage 12 (Tabela Dim)</div>
-            
-            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
-              <strong>Scan parquet</strong>
-            </div>
-            <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
-            <div style="text-align:center; padding:5px;">
-              <span style="font-family:monospace; color:var(--alert); font-size:11px; font-weight:bold;">Exchange</span>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-around; width:100%; max-width:600px;">
-          <i class="ph ph-arrow-down-right" style="color:var(--alert); font-size:18px;"></i>
-          <i class="ph ph-arrow-down-left" style="color:var(--alert); font-size:18px;"></i>
-        </div>
-
-        <!-- Stage 3 (Merge) -->
-        <div style="border: 2px solid #8b5cf6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(139, 92, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-          <div style="font-family:monospace; color:#8b5cf6; font-weight:bold; margin-bottom:10px;">Stage 13 (Join & Sort)</div>
-          
-          <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
-            <strong>*(3) SortMergeJoin</strong><br><span style="color:var(--text-muted)">Inner Join</span>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="abox warning">
-        <div class="abox-icon"><i class="ph ph-warning-circle"></i></div>
-        <div class="abox-content">
-          <strong>Perigo Iminente:</strong> A presença de dois Stages lado-a-lado engatilhando "Exchanges" significa que o cluster parou o processamento e está traficando Terabytes na rede. Se uma das chaves for mal distribuída, haverá Spill ou OOM (como vimos no tópico de Desbalanceamento).
-        </div>
-      </div>
-
-      <div class="section-spacer"></div>
-
-      <h4>Caso B: A Bala de Prata (BroadcastHashJoin)</h4>
-      <p>Ocorre quando aplicamos o comando <code>broadcast(df_pequeno)</code> ou quando o Spark AQE detecta que uma das tabelas tem menos de 10MB. O Spark envia a tabela inteira para todos os executores usando BitTorrent (BroadcastExchange), <strong>aniquilando o Shuffle pesado da tabela Fato</strong>.</p>
-
-      <!-- Simulated DAG: BroadcastHashJoin -->
-      <div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:20px; margin: 20px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
-        
-        <div style="display:flex; width:100%; max-width:600px; justify-content:space-between; gap:20px;">
-          <!-- Stage 1 (Left Table - Massive) -->
-          <div style="flex:1; border: 2px solid #3b82f6; border-radius:8px; padding:15px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-            <div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Stage 11 (Tabela Fato)</div>
-            
-            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
-              <strong>Scan parquet</strong>
-            </div>
-            <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
-            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
-              <strong>*(1) Filter</strong>
-            </div>
-          </div>
-
-          <!-- Stage 2 (Right Table - Tiny) -->
-          <div style="flex:1; border: 2px solid #ec4899; border-radius:8px; padding:15px; background:rgba(236, 72, 153, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-            <div style="font-family:monospace; color:#ec4899; font-weight:bold; margin-bottom:10px;">Stage 12 (Tabela Dim Pequena)</div>
-            
-            <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #4ade80; text-align:center; font-family:monospace; font-size:12px;">
-              <strong>Scan parquet</strong>
-            </div>
-            <div style="text-align:center; padding:5px;"><i class="ph ph-arrow-down" style="color:var(--text-muted)"></i></div>
-            <div style="text-align:center; padding:5px;">
-              <span style="font-family:monospace; color:#0ea5e9; font-size:11px; font-weight:bold;">BroadcastExchange</span>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-around; width:100%; max-width:600px;">
-          <i class="ph ph-arrow-down" style="color:var(--text-muted); font-size:18px;"></i>
-          <i class="ph ph-arrow-down-left" style="color:#0ea5e9; font-size:18px;"></i>
-        </div>
-
-        <!-- Stage 1 (Merge in place) -->
-        <div style="border: 2px solid #3b82f6; border-radius:8px; padding:15px; width:80%; max-width:400px; background:rgba(59, 130, 246, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-          <div style="font-family:monospace; color:#3b82f6; font-weight:bold; margin-bottom:10px;">Ainda no Stage 11!</div>
-          
-          <div style="background:#0f172a; color:#ffffff; border-radius:6px; padding:10px; border-left:4px solid #facc15; text-align:center; font-family:monospace; font-size:12px;">
-            <strong>*(1) BroadcastHashJoin</strong><br><span style="color:var(--text-muted)">Inner Join</span>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="abox success">
-        <div class="abox-icon"><i class="ph ph-check-circle"></i></div>
-        <div class="abox-content">
-          <strong>Vitória Arquitetural:</strong> A Tabela Fato inteira <strong>não teve um único bloco de Shuffle</strong>. O processamento ocorre localmente no mesmo Stage (Stage 11), consumindo o <em>Broadcast</em>. O tempo do seu job deve cair de horas para minutos. Esta é a assinatura visual perfeita de um Job ultra otimizado!
-        </div>
-      </div>
-</section>
-
-    <section class="section" id="spark-performance-callout">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--emr)">17</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--emr)"></div>
-          <h2>Performance Callout: Dicas de Tuning</h2>
-          <p>Otimizações cruciais para grandes volumes de dados</p>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="card">
-          <h4>📦 Small Files em Spark</h4>
-          <p>Ter milhares de arquivos pequenos no S3 causa overhead massivo de metadados. <strong>Solução:</strong> Use <code>df.repartition(n)</code> ou <code>df.coalesce(n)</code> visando arquivos de ~128MB.</p>
-        </div>
-        <div class="card">
-          <h4>🚀 Speculative Execution</h4>
-          <p>Evita que "stragglers" (tasks lentas) atrasem o job inteiro ao lançar cópias em outros nós. Configure <code>spark.speculation=true</code>.</p>
-        </div>
-      </div>
-    </section>
-
-    
-  </main>
+<div class="section-spacer"></div>
+<h3>2. Como o Skew aparece na Spark UI (Aba Stages)</h3>
+<p>Na aba de Stages, o sintoma clássico de Skew é o <strong>Max Task Time</strong> ser absurdamente superior ao <strong>Median Task Time</strong>. Veja o simulador da UI abaixo:</p>
+<!-- Spark UI Mock: Stages -->
+<div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0;">
+<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px;">
+<div style="font-family:monospace; font-weight:bold; color:var(--text)">Spark UI &gt; Stages &gt; Stage 12</div>
+<div style="font-family:monospace; color:var(--text-muted)">Total Tasks: 200</div>
 </div>
-
+<table style="width:100%; text-align:left; font-family:monospace; font-size:12px; border-collapse: collapse;">
+<tr style="background:#1e293b; color:var(--text-muted);">
+<th style="padding:8px;">Metric</th>
+<th style="padding:8px;">Min</th>
+<th style="padding:8px;">25th percentile</th>
+<th style="padding:8px;">Median</th>
+<th style="padding:8px;">75th percentile</th>
+<th style="padding:8px; color:var(--alert);">Max</th>
+</tr>
+<tr style="border-bottom:1px solid #334155;">
+<td style="padding:8px;">Duration</td>
+<td style="padding:8px;">0.8 s</td>
+<td style="padding:8px;">1.1 s</td>
+<td style="padding:8px; font-weight:bold;">1.2 s</td>
+<td style="padding:8px;">1.5 s</td>
+<td style="padding:8px; color:var(--alert); font-weight:bold;">14.5 min</td>
+</tr>
+<tr style="border-bottom:1px solid #334155;">
+<td style="padding:8px;">GC Time</td>
+<td style="padding:8px;">10 ms</td>
+<td style="padding:8px;">15 ms</td>
+<td style="padding:8px;">22 ms</td>
+<td style="padding:8px;">35 ms</td>
+<td style="padding:8px; color:var(--alert); font-weight:bold;">3.2 min</td>
+</tr>
+</table>
+<div style="margin-top:10px; font-family:monospace; font-size:12px; color:#4ade80;">
+<i class="ph ph-check-circle"></i> 199/200 Tasks Succeeded
+          <br/>
+<span style="color:var(--alert)"><i class="ph ph-spinner"></i> 1/200 Tasks Active (Stuck)</span>
+</div>
+</div>
+<div class="abox tip">
+<div class="abox-icon"><i class="ph ph-magnifying-glass"></i></div>
+<div class="abox-content">
+<strong>O Veredito:</strong> 199 cores (Tasks) acabaram em 1 segundo. 1 único Core recebeu 99% dos dados e está "preso" calculando o agrupamento do cliente "999" por mais de 14 minutos. O <strong>GC Time</strong> (Garbage Collection) dessa Task está altíssimo (3.2 min), provando que o executor está lutando para não estourar a memória.
+        </div>
+</div>
+<div class="section-spacer"></div>
+<h3>3. Como o Spill aparece na Spark UI (Aba Tasks)</h3>
+<p>Quando a memória alocada para execução (Execution Memory) enche, o Spark salva o excesso em disco (Spill). O Spill degrada a performance do nó violentamente devido ao I/O físico (Disco e Rede).</p>
+<!-- Spark UI Mock: Tasks -->
+<div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0; overflow-x:auto;">
+<div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Tasks Details (Sorted by Duration)</div>
+<table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
+<tr style="background:#1e293b; color:var(--text-muted);">
+<th style="padding:8px;">Task ID</th>
+<th style="padding:8px;">Status</th>
+<th style="padding:8px;">Duration</th>
+<th style="padding:8px;">Shuffle Read Size</th>
+<th style="padding:8px; color:var(--alert);">Spill (Memory)</th>
+<th style="padding:8px; color:var(--alert);">Spill (Disk)</th>
+</tr>
+<tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
+<td style="padding:8px;">145</td>
+<td style="padding:8px; color:var(--alert);">RUNNING</td>
+<td style="padding:8px;">14.5 min</td>
+<td style="padding:8px;">8.2 GB</td>
+<td style="padding:8px; color:var(--alert); font-weight:bold;">24.5 GB</td>
+<td style="padding:8px; color:var(--alert); font-weight:bold;">4.1 GB</td>
+</tr>
+<tr style="border-bottom:1px solid #334155;">
+<td style="padding:8px;">146</td>
+<td style="padding:8px; color:#4ade80;">SUCCESS</td>
+<td style="padding:8px;">1.2 s</td>
+<td style="padding:8px;">14.2 MB</td>
+<td style="padding:8px;">0.0 B</td>
+<td style="padding:8px;">0.0 B</td>
+</tr>
+</table>
+</div>
+<div class="abox info">
+<div class="abox-icon"><i class="ph ph-hard-drives"></i></div>
+<div class="abox-content">
+<strong>A Matemática do Spill:</strong> Note que o <em>Spill (Memory)</em> é muito maior que o <em>Spill (Disk)</em>. Isso ocorre porque o tamanho em memória considera objetos Java inflados (uncompressed deserialized), enquanto no disco os dados são gravados serializados e comprimidos. <strong>Qualquer valor &gt; 0.0 B nessas colunas exige sua atenção!</strong>
+</div>
+</div>
+<div class="section-spacer"></div>
+<h3>4. O Destino Final: OOM (Out of Memory) na Aba Executors</h3>
+<p>Se o Spill não for suficiente e a sobrecarga do Garbage Collector for extrema (passando mais tempo reciclando do que calculando), a JVM do nó Worker irá travar e será morta pelo YARN/Kubernetes (Status: Dead).</p>
+<!-- Spark UI Mock: Executors -->
+<div class="spark-ui-mock" style="width:100%; border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:15px; margin: 15px 0;">
+<div style="font-family:monospace; font-weight:bold; color:var(--text); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">Executors</div>
+<table style="width:100%; text-align:left; font-family:monospace; font-size:11px; border-collapse: collapse;">
+<tr style="background:#1e293b; color:var(--text-muted);">
+<th style="padding:8px;">Executor ID</th>
+<th style="padding:8px;">Status</th>
+<th style="padding:8px;">Cores</th>
+<th style="padding:8px;">Active Tasks</th>
+<th style="padding:8px;">Failed Tasks</th>
+<th style="padding:8px;">Task Time</th>
+</tr>
+<tr style="border-bottom:1px solid #334155;">
+<td style="padding:8px;">driver</td>
+<td style="padding:8px; color:#4ade80;">Active</td>
+<td style="padding:8px;">0</td>
+<td style="padding:8px;">0</td>
+<td style="padding:8px;">0</td>
+<td style="padding:8px;">0 ms</td>
+</tr>
+<tr style="border-bottom:1px solid #334155; background:rgba(239, 68, 68, 0.1);">
+<td style="padding:8px;">1</td>
+<td style="padding:8px; color:var(--alert); font-weight:bold;">Dead</td>
+<td style="padding:8px;">4</td>
+<td style="padding:8px;">0</td>
+<td style="padding:8px; color:var(--alert);">1</td>
+<td style="padding:8px;">15.1 min</td>
+</tr>
+<tr style="border-bottom:1px solid #334155;">
+<td style="padding:8px;">2</td>
+<td style="padding:8px; color:#4ade80;">Active</td>
+<td style="padding:8px;">4</td>
+<td style="padding:8px;">0</td>
+<td style="padding:8px;">0</td>
+<td style="padding:8px;">1.4 s</td>
+</tr>
+</table>
+<div style="margin-top:10px; font-family:monospace; font-size:12px; color:var(--alert);">
+<strong>Reason for Death:</strong> Container killed by YARN for exceeding memory limits. 2.5G of 2G physical memory used. Consider boosting spark.executor.memoryOverhead.
+        </div>
+</div>
+</section></main>
+</div>
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
-
 <script>
 function toggleNav() {
   var sb = document.getElementById('sidebar');
@@ -861,8 +758,7 @@ document.addEventListener('click', function(e) {
 });
 </script>
 <script src="../../js/progress.js"></script>
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
 <script src="../../js/sidebar-loader.js"></script>
 <script src="../../js/a11y.js"></script>
 </body>
