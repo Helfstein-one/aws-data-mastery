@@ -1,237 +1,444 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-  <meta name="author" content="Mauricio Helfstein">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado.">
-  <title>Computação &amp; Bancos - AWS Data Specialist</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../style.css">
-
-  <meta property="og:title" content="Computação &amp; Bancos - AWS Data Specialist">
-  <meta property="og:description" content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="../../assets/og-image.jpg">
-  <link rel="icon" href="../../assets/favicon.ico" type="image/x-icon">
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado." name="description"/>
+<title>Computação &amp; Bancos - AWS Data Specialist</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="Computação &amp; Bancos - AWS Data Specialist" property="og:title"/>
+<meta content="Guia avançado sobre ECS, Load Balancers e RDS/Aurora. Teoria completa, IaC Terraform, troubleshooting e comandos de operação do iniciante ao avançado." property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="../../assets/og-image.jpg" property="og:image"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
 </head>
 <body>
-
 <button id="hamburger" onclick="toggleNav()">☰</button>
-
 <nav id="sidebar"></nav>
-
 <div id="main">
-  <div class="hero" style="background-color: var(--navy)">
-    <div class="hero-ey">Infraestrutura Operacional &amp; Bancos de Dados</div>
-    <h1>Containers ECS, Load Balancers &amp; RDS/Aurora</h1>
-    <p class="hero-d">Arquitetura de microsserviços orientada a dados, balanceamento de carga de alta concorrência e engines de bancos relacionais OLTP escaláveis na AWS.</p>
-  </div>
+<div class="hero" style="background-color: var(--navy)">
+<div class="hero-ey">Infraestrutura Operacional &amp; Bancos de Dados</div>
+<h1>Containers ECS, Load Balancers &amp; RDS/Aurora</h1>
+<p class="hero-d">Arquitetura de microsserviços orientada a dados, balanceamento de carga de alta concorrência e engines de bancos relacionais OLTP escaláveis na AWS.</p>
+</div>
+<main class="main-content">
+<!-- SECTION 1: ECS -->
 
-  <main class="main-content">
-    
-    <!-- SECTION 1: ECS -->
-    <section class="section" id="ecs">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">01</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Amazon ECS: Teoria de Containers &amp; Launch Types</h2>
-          <p>Diferenças fundamentais entre ECS Fargate e ECS on EC2, estrutura de blueprints e segurança</p>
-        </div>
-      </div>
+<hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;"/>
+<!-- SECTION 3.5: DYNAMODB DEEP DIVE -->
 
-      <p>O <strong>Amazon ECS (Elastic Container Service)</strong> é o serviço de orquestração de containers altamente escalável e de alta performance nativo da AWS. Diferente do Kubernetes (EKS), o ECS foca em simplificar o deploy eliminando a necessidade de gerenciar nós de controle complexos (Control Plane).</p>
+<hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;"/>
+<!-- SECTION 4: OPERACAO & TROUBLESHOOTING -->
 
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
-          <div class="cc-tag">Launch Type</div>
-          <div class="cc-title">ECS Fargate (Serverless)</div>
-          <div class="cc-body">
-            <strong>Como funciona:</strong> A AWS gerencia toda a computação. O engenheiro declara apenas o tamanho de CPU e Memória da Task.
-            <br><strong>Tradeoffs:</strong> Menor overhead operacional, isolamento físico de segurança por task (micro-VMs Firecracker). Custo ligeiramente superior por recurso ativo e boot time mais longo.
-          </div>
-        </div>
+<!-- SECTION 5: GUIA E COMPARAÇÃO DE BANCOS DE DADOS AWS -->
 
-        <div class="concept-card" style="border-top: 4px solid #f43f5e;">
-          <div class="cc-tag">Launch Type</div>
-          <div class="cc-title">ECS on EC2 (Gerenciado)</div>
-          <div class="cc-body">
-            <strong>Como funciona:</strong> O cluster ECS usa instâncias EC2 gerenciadas no seu próprio grupo de Auto Scaling como workers de container.
-            <br><strong>Tradeoffs:</strong> Controle total do sistema operacional, suporte a volumes EBS locais e GPUs dedicadas. Exige gerenciar patches do SO e agentes do ECS instalados nas máquinas.
-          </div>
-        </div>
-      </div>
+<!-- SECTION 6: COMPARATIVO SQL VS NOSQL VS SQS -->
 
-      <h3>Arquitetura ECS: Cluster, Service, Task &amp; Task Definition</h3>
-      <p>A tabela a seguir explica a hierarquia de objetos lógicos dentro do ecossistema do ECS:</p>
 
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Componente</th>
-              <th>Propósito</th>
-              <th>Análogo Físico</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Cluster</strong></td>
-              <td>Agrupamento lógico de computação (Fargate ou EC2) em subredes privadas.</td>
-              <td>Data Center Virtualizado</td>
-            </tr>
-            <tr>
-              <td><strong>Task Definition</strong></td>
-              <td>O blueprint em formato JSON definindo a imagem Docker, portas, variáveis de ambiente e volumes.</td>
-              <td>Dockerfile / Docker Compose</td>
-            </tr>
-            <tr>
-              <td><strong>Task</strong></td>
-              <td>A instância ativa e executável do container em si, rodando de forma isolada na VPC.</td>
-              <td>Container Ativo (Docker Run)</td>
-            </tr>
-            <tr>
-              <td><strong>Service</strong></td>
-              <td>Gerenciador que garante que a quantidade solicitada de Tasks esteja saudável, integrando-as ao Load Balancer.</td>
-              <td>Process Daemon / Orquestrador</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+<!-- SEÇÃO DE REFERÊNCIAS -->
 
-      <h3>Segurança de Containers: Task Role vs. Task Execution Role</h3>
-      <p>Um erro de segurança recorrente em projetos de ECS é conceder permissões excessivas às instâncias que executam os containers. A AWS divide a identidade IAM no ECS em duas camadas de privilégio de grão fino:</p>
-      
-      <ul>
-        <li><strong>Task Execution Role:</strong> Utilizada pelo <strong>agente do ECS</strong> rodando na infraestrutura (antes do container iniciar). Permissões típicas: baixar a imagem do container do ECR, enviar logs de stdout para o CloudWatch, descriptografar variáveis sensíveis vindas do Secrets Manager ou System Manager Parameter Store.</li>
-        <li><strong>Task Role:</strong> Utilizada pela <strong>sua aplicação</strong> de fato rodando dentro do container (após a inicialização). Permissões típicas: ler/gravar dados em um bucket S3, consultar uma tabela do DynamoDB, ou publicar mensagens em um tópico SNS.</li>
-      </ul>
-
-            <div class="drawio-wrap" style="margin-top: 30px;">
-        <div class="drawio-label"><span class="dot"></span>ECS Fargate — Ingestão Customizada de Alta Escala</div>
-        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;860\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;757f14_0\&quot;/&gt;    &lt;mxCell id=\&quot;757f14_1\&quot; parent=\&quot;757f14_0\&quot;/&gt;    &lt;mxCell id=\&quot;757f14_bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;860\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_title\&quot; value=\&quot;RDS VS AURORA STORAGE ARCHITECTURE\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;860\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\&quot;757f14_rds_grp\&quot; value=\&quot;AMAZON RDS TRADICIONAL\&quot; style=\&quot;rounded=1;fillColor=#02160a;strokeColor=#16a34a;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#bbf7d0;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;50\&quot; width=\&quot;340\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_rds_p\&quot; value=\&quot;Primary Node(EC2 Compute)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;96\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_rds_s\&quot; value=\&quot;Secondary Node(Standby)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;236\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_ebs_p\&quot; value=\&quot;Amazon EBS(Data &amp;amp; Logs)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ebs;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;96\&quot; y=\&quot;240\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_ebs_s\&quot; value=\&quot;Amazon EBS(Replica)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ebs;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;236\&quot; y=\&quot;240\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\&quot;757f14_aur_grp\&quot; value=\&quot;AMAZON AURORA\&quot; style=\&quot;rounded=1;fillColor=#170802;strokeColor=#ea580c;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#fed7aa;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;420\&quot; y=\&quot;50\&quot; width=\&quot;400\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_aur_p\&quot; value=\&quot;Primary Instance\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;486\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_aur_r1\&quot; value=\&quot;Read Replica\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;616\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_aur_r2\&quot; value=\&quot;Read Replica\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;716\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_aur_sto\&quot; value=\&quot;Aurora Distributed Storage Volume(6 Copies across 3 AZs)\&quot; style=\&quot;rounded=1;fillColor=#1a0e00;strokeColor=#ea580c;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;240\&quot; width=\&quot;320\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\&quot;757f14_e_rp_ep\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;757f14_rds_p\&quot; target=\&quot;757f14_ebs_p\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_e_rs_es\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;757f14_rds_s\&quot; target=\&quot;757f14_ebs_s\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_e_ep_es\&quot; value=\&quot;SynchronousBlock Replication\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;dashed=1;fontColor=#dcfce7;fontFamily=DM Sans;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;757f14_ebs_p\&quot; target=\&quot;757f14_ebs_s\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_e_ap_st\&quot; value=\&quot;Redo Logs\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#fed7aa;fontFamily=DM Sans;fontSize=9;exitX=0.5;exitY=1;entryX=0.15;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;757f14_aur_p\&quot; target=\&quot;757f14_aur_sto\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_e_ar1_st\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;757f14_aur_r1\&quot; target=\&quot;757f14_aur_sto\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;757f14_e_ar2_st\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;exitX=0.5;exitY=1;entryX=0.85;entryY=0;\&quot; edge=\&quot;1\&quot; source=\&quot;757f14_aur_r2\&quot; target=\&quot;757f14_aur_sto\&quot; parent=\&quot;757f14_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
-
+<section class="section" id="aws-databases-guide">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#f43f5e">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#f43f5e"></div>
+<h2>Tipos de Bancos de Dados AWS: Guia de Tomada de Decisão</h2>
+<p>Mapeamento completo de engines de banco, tipos de dados e quando usar</p>
+</div>
+</div>
+<div class="tbl-wrap">
+<table>
+<thead>
+<tr>
+<th>Banco AWS</th>
+<th>Modelo / Engine</th>
+<th>Vantagem Crítica</th>
+<th>trade-offs / Limites</th>
+<th>Caso de Uso Recomendado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Amazon RDS</strong></td>
+<td>Relacional (OLTP) - Postgres, MySQL, Oracle, SQL Server</td>
+<td>Compatibilidade total com drivers e bibliotecas tradicionais.</td>
+<td>Replicação Multi-AZ lenta baseada em EBS. Dificuldade de escalar escritas globalmente.</td>
+<td>Sistemas transacionais legados, ERPs clássicos, CRMs com relações complexas de chaves estrangeiras.</td>
+</tr>
+<tr>
+<td><strong>Amazon Aurora</strong></td>
+<td>Relacional (OLTP compatível) - Postgres/MySQL</td>
+<td>Armazenamento compartilhado atômico de log, auto-healing, failover em 3s, até 15 réplicas sem lag de leitura.</td>
+<td>Custo superior ao RDS tradicional para instâncias muito pequenas (não analíticas).</td>
+<td><strong>Sistemas transacionais modernos de altíssima concorrência</strong> e APIs corporativas escaláveis.</td>
+</tr>
+<tr>
+<td><strong>Amazon DynamoDB</strong></td>
+<td>NoSQL (Chave-Valor / Documento)</td>
+<td>Serverless, escala infinita com latência estável inferior a 10ms (single-digit). Latência global via Global Tables.</td>
+<td>Não suporta joins relacionais natively. Exige modelagem rigorosa de acesso (Single-Table Design).</td>
+<td>Carrinhos de compras, catálogo de produtos, sessão de usuários e logs de auditoria rápida.</td>
+</tr>
+<tr>
+<td><strong>Amazon DocumentDB</strong></td>
+<td>NoSQL (Documento compatível com MongoDB)</td>
+<td>Totalmente gerenciado, escala para milhões de leituras por segundo integrando JSON nativo.</td>
+<td>Não suporta queries de joins analíticos complexos de forma performática.</td>
+<td>Gerenciadores de conteúdo (CMS), catálogos com atributos altamente dinâmicos e variáveis.</td>
+</tr>
+<tr>
+<td><strong>Amazon ElastiCache</strong></td>
+<td>Em Memória (Redis / Memcached)</td>
+<td>Latência sub-milissegundo para queries repetidas e processamento de pub/sub rápido.</td>
+<td>Dados voláteis na RAM (mesmo com persistência ligada, o custo de RAM por GB é altíssimo).</td>
+<td>Caching de sessões HTTP, tabelas de classificação em tempo real e buffers de mensagens de alta vazão.</td>
+</tr>
+<tr>
+<td><strong>Amazon Neptune</strong></td>
+<td>Grafo (RDF / Property Graph)</td>
+<td>Armazena e navega em relacionamentos altamente interconectados com velocidade milissegunda.</td>
+<td>Linguagens de query específicas (Gremlin, SPARQL).</td>
+<td>Sistemas de detecção de fraude, motores de recomendação de amigos/produtos e redes sociais.</td>
+</tr>
+<tr>
+<td><strong>Amazon Timestream</strong></td>
+<td>Séries Temporais (Time-Series)</td>
+<td>Auto-scaling nativo para bilhões de métricas de IoT diárias, ciclo de vida automático (in-memory para magnetic storage).</td>
+<td>Restrito a dados ordenados por timestamp imutáveis.</td>
+<td>Telemetria IoT de sensores industriais, métricas de aplicações de infraestrutura, logs de cliques.</td>
+</tr>
+<tr>
+<td><strong>Amazon Redshift</strong></td>
+<td>MPP Data Warehouse (OLAP)</td>
+<td>Armazenamento colunar com processamento massivo em paralelo para petabytes de dados analíticos.</td>
+<td>Latência de gravação linha a linha péssima. Não deve ser usado como banco de API de microsserviços.</td>
+<td><strong>Data Warehousing corporativo centralizado</strong>, agregação histórica pesada e queries de BI corporativo.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section><section class="section" id="sql-nosql-sqs">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#f43f5e">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#f43f5e"></div>
+<h2>Comparativo e Matriz de Decisão: SQL vs. NoSQL vs. SQS</h2>
+<p> trade-offs arquiteturais entre persistência transacional, escalabilidade e desacoplamento assíncrono</p>
+</div>
+</div>
+<p>Um erro de design comum em arquiteturas distribuídas na AWS é tentar usar a mesma tecnologia para objetivos computacionais opostos. Abaixo detalhamos a comparação física e lógica das soluções:</p>
+<div class="tbl-wrap">
+<table>
+<thead>
+<tr>
+<th>Característica</th>
+<th>SQL (ex: Aurora Postgres)</th>
+<th>NoSQL (ex: DynamoDB)</th>
+<th>SQS (Simple Queue Service)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Natureza do Serviço</strong></td>
+<td>Banco de Dados Relacional estruturado (Tabelas/Esquemas rígidos).</td>
+<td>Banco de Dados Não-Relacional distribuído (Chave-Valor/Documento).</td>
+<td>Mensageria / Fila de Mensagens distribuída (Fila FIFO ou Standard).</td>
+</tr>
+<tr>
+<td><strong>Garantias de Consistência</strong></td>
+<td>Transações ACID estritas (isolação serializável, chaves estrangeiras, consistência forte imediata).</td>
+<td>Eventualmente consistente (consistência forte sob demanda pagando taxa adicional). Sem ACID nativo multi-tabelas clássico.</td>
+<td>Exactly-Once (em filas FIFO) ou At-Least-Once (filas Standard). Desacoplamento temporal.</td>
+</tr>
+<tr>
+<td><strong>Escalabilidade de Escrita</strong></td>
+<td>Vertical (Writer único no Aurora, escala até limites da máquina). Réplicas apenas lêem.</td>
+<td>Horizontal infinita (auto-scaling automático adicionando partições baseadas nas PKs).</td>
+<td>Praticamente infinita (escala automaticamente sem provisionamento prévio).</td>
+</tr>
+<tr>
+<td><strong>Padrão de Consulta</strong></td>
+<td>Queries ad-hoc altamente complexas, joins multi-tabelas, agregações arbitrárias (<code>GROUP BY</code>).</td>
+<td>Apenas por chaves primárias e índices secundários conhecidos (GSI/LSI). Sem joins.</td>
+<td>Apenas leitura destrutiva sequencial (consumidor lê a mensagem da fila e a deleta após processar).</td>
+</tr>
+<tr>
+<td><strong>Decisão de Uso (Quando Escolher?)</strong></td>
+<td><strong>Quando a integridade relacional é lei</strong> e as queries são imprevisíveis (ex: fechamento contábil, BI flexível).</td>
+<td><strong>Quando o padrão de acesso é conhecido</strong> e você exige escala linear infinita com latência estável milissegunda.</td>
+<td><strong>Para desacoplar microsserviços</strong>, amortecer picos de carga de escrita (Buffer/Throttling) e garantir resiliência assíncrona.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 style="margin-top: 30px;">Qual a Melhor Decisão de Quando Usar? (Arquitetura de Ingress Segura)</h3>
+<p>Em sistemas produtivos resilientes, o design de ingress combina os três serviços em um fluxo cooperativo:</p>
+<div class="drawio-wrap" style="margin-top: 30px;">
+<div class="drawio-label"><span class="dot"></span>Arquitetura Event-Driven — SNS · SQS · EventBridge</div>
+<div class="mxgraph" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"380\" math=\"0\" shadow=\"0\"&gt;&lt;root&gt;&lt;mxCell id=\"11d3ae_0\"/&gt;&lt;mxCell id=\"11d3ae_1\" parent=\"11d3ae_0\"/&gt;&lt;mxCell id=\"11d3ae_bg\" value=\"\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"380\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_title\" value=\"ARQUITETURA EVENT-DRIVEN \u2014 SNS \u00b7 SQS \u00b7 EVENTBRIDGE\" style=\"labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_aurora\" value=\"Aurora DBPostgreSQL\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"40\" y=\"160\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_evb\" value=\"EventBridgeCustom Bus\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"200\" y=\"160\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_a_evb\" value=\"CDC/DMS\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"11d3ae_aurora\" target=\"11d3ae_evb\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_sns\" value=\"SNSTopic\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"380\" y=\"80\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_sqs\" value=\"SQSQueue\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"380\" y=\"240\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_evb_sns\" value=\"Broadcast\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"11d3ae_evb\" target=\"11d3ae_sns\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_evb_sqs\" value=\"Buffer\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"11d3ae_evb\" target=\"11d3ae_sqs\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_grp_sf\" value=\"AWS STEP FUNCTIONS\" style=\"labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#7c3aed;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"550\" y=\"50\" width=\"200\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_sf\" value=\"StepFunctions\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"570\" y=\"80\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_glue\" value=\"Glue JobSpark\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"570\" y=\"170\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_sns_err\" value=\"SNSAlert\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"660\" y=\"170\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_sqs_sf\" value=\"Trigger\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"11d3ae_sqs\" target=\"11d3ae_sf\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_sf_glue\" value=\"On Success\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"11d3ae_sf\" target=\"11d3ae_glue\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_sf_err\" value=\"On Error\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"11d3ae_sf\" target=\"11d3ae_sns_err\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_s3\" value=\"S3 SilverParquet\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"800\" y=\"100\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_cw\" value=\"CloudWatchAlarms\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"800\" y=\"230\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_glue_s3\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"11d3ae_glue\" target=\"11d3ae_s3\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_err_cw\" value=\"\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"11d3ae_sns_err\" target=\"11d3ae_cw\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_lmb\" value=\"Lambda(Notif)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry x=\"550\" y=\"310\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"11d3ae_e_sns_lmb\" value=\"Fan-out\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\" edge=\"1\" source=\"11d3ae_sns\" target=\"11d3ae_lmb\" parent=\"11d3ae_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;background:#0f172a;"></div>
 </div>
 <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> RDS VS AURORA STORAGE ARCHITECTURE, AMAZON RDS TRADICIONAL, Primary Node (EC2 Compute), Secondary Node (Standby), Amazon EBS (Data &amp; Logs), Amazon EBS (Replica), AMAZON AURORA, Primary Instance, Read Replica, Aurora Distributed Storage Volume (6 Copies across 3 AZs), Synchronous Block Replication, Redo Logs</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "RDS VS AURORA STORAGE ARCHITECTURE" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
+<strong style="color: var(--accent);">Explicação:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes:</strong> ARQUITETURA EVENT-DRIVEN — SNS · SQS · EVENTBRIDGE, Aurora DB PostgreSQL, EventBridge Custom Bus, CDC/DMS, SNS Topic, SQS Queue, Broadcast, Buffer, AWS STEP FUNCTIONS, Step Functions, Glue Job Spark, SNS Alert, Trigger, On Success, On Error, S3 Silver Parquet, CloudWatch Alarms, Lambda (Notif), Fan-out</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+<li><strong>Contexto:</strong> O diagrama "Arquitetura Event-Driven — SNS · SQS · EventBridge" ilustra a arquitetura da solução para o tópico em questão.</li>
+</ul>
 </div>
-
-      <div class="grid-2">
-        <div>
-          <h4>Escrita em Quorum (Write Quorum) no Aurora</h4>
-          <p>Para otimizar escritas, o Aurora utiliza um sistema de quórum distribuído. Cada bloco de dados é segmentado e gravado em 6 instâncias de storage (2 por AZ). Uma escrita é considerada um commit válido assim que <strong>4 das 6 instâncias confirmam a gravação física (4/6 Write Quorum)</strong>. Leituras de blocos requerem a confirmação de <strong>3 de 6 cópias (3/6 Read Quorum)</strong> para reconstruir dados consistentes caso ocorram falhas parciais em storage pools.</p>
-        </div>
-        <div>
-          <h4>Multi-AZ DB Instance vs DB Cluster (RDS Tradicional)</h4>
-          <p>Se você não utiliza Aurora, a AWS oferece dois modelos de alta disponibilidade no RDS PostgreSQL/MySQL: <strong>Multi-AZ DB Instance</strong>, onde o Standby é fisicamente idêntico mas bloqueado para leitura (failover de ~60-120s); e o novo <strong>Multi-AZ DB Cluster</strong>, que usa três instâncias ativas (2 Readers e 1 Writer) e acelera commits escrevendo simultaneamente nos SSDs locais de duas réplicas legíveis, diminuindo o failover para ~35s.</p>
-        </div>
+<h3 style="margin-top: 40px; margin-bottom: 20px;">SQL vs NoSQL: O Veredito de Quando Usar</h3>
+<div class="bento-grid" style="margin-bottom: 30px;">
+<div class="card" style="border-top: 4px solid var(--ok);">
+<div class="card-lbl" style="color: var(--ok);">✅ Quando usar SQL (Relacional)</div>
+<ul style="margin-top: 10px; padding-left: 20px; font-size: 0.9em; line-height: 1.6;">
+<li><strong>Integridade Financeira/ACID:</strong> Quando o sistema transaciona dinheiro (ex: transferências bancárias, pagamentos) e não pode existir a mínima chance de o débito ocorrer sem o crédito.</li>
+<li><strong>Padrão de Consulta Imprevisível:</strong> Quando os analistas de negócio ou usuários precisam fazer buscas flexíveis e dinâmicas, exigindo <code>JOIN</code>, <code>GROUP BY</code>, ou filtros ad-hoc complexos.</li>
+<li><strong>Relacionamentos Complexos M:N:</strong> Quando você tem muitas entidades fortemente acopladas (ex: ERPs, sistemas de RH, Gestão de Inventário).</li>
+<li><strong>Dados Estritamente Tabulares:</strong> Onde o <em>schema</em> (colunas) raramente muda.</li>
+</ul>
+</div>
+<div class="card" style="border-top: 4px solid var(--accent);">
+<div class="card-lbl" style="color: var(--accent);">✅ Quando usar NoSQL (Chave-Valor/Doc)</div>
+<ul style="margin-top: 10px; padding-left: 20px; font-size: 0.9em; line-height: 1.6;">
+<li><strong>Ultra Baixa Latência em Escala:</strong> Quando o banco precisa responder em menos de 10ms, seja para 100 usuários ou 10 milhões de usuários (ex: Leaderboards de Jogos, Catálogos de Streaming, Sessões Web).</li>
+<li><strong>Esquema Flexível / JSON:</strong> Quando cada item pode ter atributos diferentes (ex: catálogo de E-commerce, onde uma camisa tem "Tamanho" e uma TV tem "Polegadas").</li>
+<li><strong>Padrão de Acesso Previsível:</strong> Quando você sabe de antemão que 95% das buscas serão "Busque o Usuário pelo ID" e não precisa de relacionamentos em tempo de consulta.</li>
+<li><strong>Carga Massiva de Escrita (High Write Throughput):</strong> Sistemas de IoT, logs e tracking de cliques que bombardeiam o banco de dados o tempo todo.</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-info" style="margin-top:20px;">
+<strong>Regra de Ouro da Arquitetura Decisória:</strong>
+<br/>1. Use <strong>SQS</strong> na borda (Ingress) sempre que receber dados de sensores ou eventos externos massivos de e-commerce. A fila garante que a sua API responda "202 Accepted" em milissegundos, impedindo que picos de tráfego derrubem ou gerem exaustão de conexões físicas no banco de dados.
+        <br/>2. Use o <strong>NoSQL (DynamoDB)</strong> para dados operacionais desestruturados ou rastreamento rápido de estado de curta duração (ex: se o pagamento foi processado ou não).
+        <br/>3. Use o <strong>SQL (Aurora)</strong> apenas quando a mensagem for validada e precisar de consistência relacional estrita (ex: alterar balanço de contas bancárias ou gerar a fatura consolidada final do cliente).
       </div>
-
-      <h3 style="margin-top: 30px;">Estratégias de Snapshots, Backups e RTO/RPO</h3>
-      <ul>
-        <li><strong>Automated Backups (RDS Tradicional):</strong> A AWS tira um snapshot diário do disco EBS inteiro e arquiva os <em>Transaction Logs (WAL)</em> a cada 5 minutos no S3. O RPO (Recovery Point Objective) máximo é de ~5 minutos para Point-in-Time Recovery (PiTR). Restaurações demoram o tempo necessário para provisionar e "esquentar" (hydrate) os blocos do S3 para um novo disco EBS.</li>
-        <li><strong>Continuous Backups (Aurora):</strong> No Aurora, o backup é completamente contínuo e streaming. Como a camada de storage é baseada em logs, o storage engine transfere micro-blocos para o S3 em tempo real de forma assíncrona, sem impactar a CPU do banco, atingindo impacto nulo de I/O em backups pesados.</li>
-      </ul>
-
-      <div class="grid-2" style="margin-top: 20px;">
-        <div>
-          <h4>Amazon RDS Proxy: Connection Pooling</h4>
-          <p>Microsserviços serverless esgotam rapidamente a memória (RAM) da instância RDS por conexões ociosas (o Postgres consome ~10MB por TCP inativa). O <strong>RDS Proxy</strong> gerencia um <em>Connection Pool</em>, multiplexando dezenas de clientes em poucas conexões físicas com o DB. Além disso, em caso de failover do Aurora, ele redireciona instantaneamente as chamadas HTTP para o novo Writer, mascarando a interrupção da aplicação (sem timeouts de DNS).</p>
-        </div>
-        <div>
-          <h4>Migração e CDC com AWS DMS e SCT</h4>
-          <p>Para migrar de bancos legados (ex: Oracle local ou RDS Monolítico) para Aurora sem downtime, utiliza-se o <strong>AWS Database Migration Service (DMS)</strong> acompanhado do <strong>SCT (Schema Conversion Tool)</strong>.</p>
-          <p>O DMS se conecta ao banco de origem, realiza o <em>Full Load</em> da base inicial e então ativa o <strong>CDC (Change Data Capture)</strong>. O CDC lê nativamente os transaction logs do banco de origem (ex: <code>wal2json</code> no Postgres) e aplica os <code>INSERT/UPDATES</code> na nova base Aurora. Quando o "Lag" do DMS se aproxima de 0s, a engenharia simplesmente "vira a chave" do tráfego na aplicação.</p>
-        </div>
-      </div>
-    </section>
-
-    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
-
-    <!-- SECTION 3.5: DYNAMODB DEEP DIVE -->
-    <section class="section" id="dynamodb-deep-dive">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#10b981">03.5</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#10b981"></div>
-          <h2>Amazon DynamoDB: Architecture &amp; Single-Table Design</h2>
-          <p>Modelagem NoSQL avançada, RCU/WCU, GSI, LSI e Hot Partitions</p>
-        </div>
-      </div>
-
-      <p>Bancos NoSQL corporativos como o DynamoDB diferem substancialmente do modelo relacional tradicional. Eles são otimizados para latência milissegunda consistente independente do tamanho da tabela, desde que as chaves de acesso sejam perfeitamente modeladas (Acesso em O(1)).</p>
-
-      <!-- DIAGRAMA DYNAMODB PARTITIONS -->
-                    <div class="drawio-wrap" style="margin-top: 30px;">
-        <div class="drawio-label"><span class="dot"></span>DYNAMODB PARTITIONING MODEL</div>
-        <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;640\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;ec3602_0\&quot;/&gt;    &lt;mxCell id=\&quot;ec3602_1\&quot; parent=\&quot;ec3602_0\&quot;/&gt;    &lt;mxCell id=\&quot;ec3602_bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;640\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ec3602_title\&quot; value=\&quot;DYNAMODB PARTITIONING MODEL\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;640\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\&quot;ec3602_req\&quot; value=\&quot;Item Request(Partition Key)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;120\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ec3602_router\&quot; value=\&quot;Request Router(MD5 Hash Function)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.endpoint;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry x=\&quot;246\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\&quot;ec3602_p1\&quot; value=\&quot;Partition 1Hash: 0000-3333\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry x=\&quot;466\&quot; y=\&quot;40\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ec3602_p2\&quot; value=\&quot;Partition 2Hash: 3334-6666\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry x=\&quot;466\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ec3602_p3\&quot; value=\&quot;Partition 3Hash: 6667-FFFF\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry x=\&quot;466\&quot; y=\&quot;200\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\&quot;ec3602_e_r_ro\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;ec3602_req\&quot; target=\&quot;ec3602_router\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ec3602_e_ro_p1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;ec3602_router\&quot; target=\&quot;ec3602_p1\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ec3602_e_ro_p2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;ec3602_router\&quot; target=\&quot;ec3602_p2\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;ec3602_e_ro_p3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;ec3602_router\&quot; target=\&quot;ec3602_p3\&quot; parent=\&quot;ec3602_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
-
+</section><section class="section" id="modelagem-rds">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--rds)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--rds)"></div>
+<h2>Modelagem Física e Lógica (RDBMS)</h2>
+<p>O Modo Clássico (Power Designer) de Garantir Integridade (ACID)</p>
+</div>
+</div>
+<p>Bancos Relacionais (como Amazon RDS PostgreSQL ou Aurora) baseiam-se na Normalização. O objetivo não é "pre-juntar" os dados no disco como no NoSQL, mas sim separá-los logicamente para evitar redundância, garantindo a integridade via <strong>Foreign Keys (Chaves Estrangeiras)</strong>.</p>
+<!-- Exemplo 1 -->
+<h3 style="margin-top:40px;">Exemplo 1: E-commerce (Relações 1:1 e 1:N)</h3>
+<p>Em um sistema transacional, um Usuário pode ter apenas um Perfil (Relação 1:1 usando constraint <code>UNIQUE</code> na FK) e pode ter vários Pedidos (Relação 1:N).</p>
+<div class="drawio-wrap" style="margin-top: 20px; margin-bottom: 30px;">
+<div class="drawio-label"><span class="dot"></span>RDS ERD: E-COMMERCE</div>
+<div class="mxgraph" data-mxgraph='{"highlight": "#FF6B00", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxfile host=\"Electron\" modified=\"2026-06-17T00:00:00.000Z\" agent=\"Mozilla/5.0\" version=\"21.2.8\" type=\"device\"&gt;\n  &lt;diagram id=\"4451be_rds_ecommerce_1n\" name=\"RDS ECOMMERCE\"&gt;\n    &lt;mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"340\" math=\"0\" shadow=\"0\" background=\"#080f1e\"&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\"4451be_0\"/&gt;&lt;mxCell id=\"4451be_1\" parent=\"4451be_0\"/&gt;\n\n        &lt;!-- RDS Icon --&gt;\n        &lt;mxCell id=\"4451be_rds_icon\" value=\"Amazon RDS\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#1d6fa5;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"20\" y=\"120\" width=\"60\" height=\"60\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Cliente table --&gt;\n        &lt;mxCell id=\"4451be_cli_hdr\" value=\"CLIENTE\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1d3a6b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"120\" y=\"80\" width=\"160\" height=\"32\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_cli_pk\"  value=\"\ud83d\udd11 id_cliente (PK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#1e3a5f;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"120\" y=\"112\" width=\"160\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_cli_nm\"  value=\"nome\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"120\" y=\"136\" width=\"160\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_cli_em\"  value=\"email\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"120\" y=\"158\" width=\"160\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_cli_ct\"  value=\"cidade\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"120\" y=\"180\" width=\"160\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Pedido table --&gt;\n        &lt;mxCell id=\"4451be_ped_hdr\" value=\"PEDIDO\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1d3a6b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"380\" y=\"60\" width=\"170\" height=\"32\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_ped_pk\"  value=\"\ud83d\udd11 id_pedido (PK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#1e3a5f;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"380\" y=\"92\" width=\"170\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_ped_fk\"  value=\"\ud83d\udd17 id_cliente (FK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#f59e0b;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"380\" y=\"116\" width=\"170\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_ped_dt\"  value=\"data_pedido\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"380\" y=\"140\" width=\"170\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_ped_vl\"  value=\"valor_total\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"380\" y=\"162\" width=\"170\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_ped_st\"  value=\"status\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"380\" y=\"184\" width=\"170\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Item table --&gt;\n        &lt;mxCell id=\"4451be_itm_hdr\" value=\"ITEM_PEDIDO\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1d3a6b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"650\" y=\"40\" width=\"185\" height=\"32\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_itm_pk1\" value=\"\ud83d\udd11 id_item (PK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#1e3a5f;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"650\" y=\"72\" width=\"185\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_itm_fk\"  value=\"\ud83d\udd17 id_pedido (FK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#f59e0b;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"650\" y=\"96\" width=\"185\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_itm_pr\"  value=\"id_produto\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"650\" y=\"120\" width=\"185\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_itm_qt\"  value=\"quantidade\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"650\" y=\"142\" width=\"185\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_itm_pu\"  value=\"preco_unitario\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"650\" y=\"164\" width=\"185\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Cardinality labels --&gt;\n        &lt;mxCell id=\"4451be_lbl_1n1\" value=\"1\" style=\"labelBackgroundColor=none;text;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"282\" y=\"140\" width=\"20\" height=\"20\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_lbl_1n2\" value=\"N\" style=\"labelBackgroundColor=none;text;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"355\" y=\"140\" width=\"20\" height=\"20\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_lbl_1n3\" value=\"1\" style=\"labelBackgroundColor=none;text;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"552\" y=\"120\" width=\"20\" height=\"20\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_lbl_1n4\" value=\"N\" style=\"labelBackgroundColor=none;text;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"624\" y=\"120\" width=\"20\" height=\"20\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Caption --&gt;\n        &lt;mxCell id=\"4451be_cap\" value=\"Rela\u00e7\u00f5es 1:N \u2014 Um cliente tem N pedidos; um pedido tem N itens\" style=\"labelBackgroundColor=none;text;html=1;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=9;fontStyle=2;\" vertex=\"1\" parent=\"4451be_1\"&gt;&lt;mxGeometry x=\"100\" y=\"260\" width=\"700\" height=\"20\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Edges --&gt;\n        &lt;mxCell id=\"4451be_e1\" value=\"\" edge=\"1\" parent=\"4451be_1\" source=\"4451be_cli_fk_ref\" target=\"4451be_ped_fk\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontFamily=DM Sans;\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_cli_fk_ref\" value=\"\" style=\"point;x=0.5;y=0.5;fillColor=none;strokeColor=none;\" vertex=\"1\" parent=\"4451be_cli_pk\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_e2\" value=\"\" edge=\"1\" parent=\"4451be_1\" source=\"4451be_ped_pk_ref\" target=\"4451be_itm_fk\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontFamily=DM Sans;\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"4451be_ped_pk_ref\" value=\"\" style=\"point;x=0.5;y=0.5;fillColor=none;strokeColor=none;\" vertex=\"1\" parent=\"4451be_ped_pk\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;"}' style="max-width:100%;border:1px solid transparent;"></div>
+</div>
+<!-- Exemplo 2 -->
+<h3 style="margin-top:40px;">Exemplo 2: ERP de Inventário (Relação N:M)</h3>
+<p>Aqui está o coração do RDBMS: Relações <strong>Muitos-Para-Muitos</strong>. Um Produto tem vários Fornecedores, e um Fornecedor fornece vários Produtos. O banco relacional exige a criação de uma Tabela Associativa (Junction Table) para mapear essa cardinalidade.</p>
+<div class="drawio-wrap" style="margin-top: 20px; margin-bottom: 30px;">
+<div class="drawio-label"><span class="dot"></span>RDS ERD: ERP INVENTÁRIO (JUNCTION TABLE)</div>
+<div class="mxgraph" data-mxgraph='{"highlight": "#FF6B00", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxfile host=\"Electron\" modified=\"2026-06-17T00:00:00.000Z\" agent=\"Mozilla/5.0\" version=\"21.2.8\" type=\"device\"&gt;\n  &lt;diagram id=\"1519a5_rds_erp_nm\" name=\"RDS ERP\"&gt;\n    &lt;mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"320\" math=\"0\" shadow=\"0\" background=\"#080f1e\"&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\"1519a5_0\"/&gt;&lt;mxCell id=\"1519a5_1\" parent=\"1519a5_0\"/&gt;\n\n        &lt;!-- Aurora Icon (ERP usually Multi-AZ) --&gt;\n        &lt;mxCell id=\"1519a5_aurora_icon\" value=\"Aurora&amp;#xa;PostgreSQL\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#2d6a4f;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"20\" y=\"110\" width=\"60\" height=\"60\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Funcionario --&gt;\n        &lt;mxCell id=\"1519a5_func_hdr\" value=\"FUNCION\u00c1RIO\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#14532d;strokeColor=#16a34a;strokeWidth=2;fontColor=#86efac;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"120\" y=\"80\" width=\"170\" height=\"32\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_func_pk\"  value=\"\ud83d\udd11 id_func (PK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f2a1a;strokeColor=#1a3a2a;fontColor=#86efac;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"120\" y=\"112\" width=\"170\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_func_nm\"  value=\"nome\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#071811;strokeColor=#1a3a2a;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"120\" y=\"136\" width=\"170\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_func_dp\"  value=\"departamento\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#071811;strokeColor=#1a3a2a;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"120\" y=\"158\" width=\"170\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Projeto_Func (associativa N:M) --&gt;\n        &lt;mxCell id=\"1519a5_assoc_hdr\" value=\"PROJETO_FUNC\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#451a03;strokeColor=#f59e0b;strokeWidth=2;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"370\" y=\"60\" width=\"170\" height=\"32\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_assoc_f\"  value=\"\ud83d\udd17 id_func (FK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#2a1500;strokeColor=#78350f;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"370\" y=\"92\" width=\"170\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_assoc_p\"  value=\"\ud83d\udd17 id_proj (FK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#2a1500;strokeColor=#78350f;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"370\" y=\"116\" width=\"170\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_assoc_h\"  value=\"horas_alocadas\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#1a0f00;strokeColor=#78350f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"370\" y=\"140\" width=\"170\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_assoc_r\"  value=\"papel\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#1a0f00;strokeColor=#78350f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"370\" y=\"162\" width=\"170\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_nm_note\" value=\"\u2b06 Tabela Associativa (N:M)\" style=\"labelBackgroundColor=none;text;html=1;align=center;fontColor=#f59e0b;fontFamily=DM Sans;fontSize=9;fontStyle=2;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"360\" y=\"188\" width=\"190\" height=\"18\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Projeto --&gt;\n        &lt;mxCell id=\"1519a5_proj_hdr\" value=\"PROJETO\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1e1b4b;strokeColor=#818cf8;strokeWidth=2;fontColor=#c7d2fe;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"630\" y=\"80\" width=\"175\" height=\"32\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_proj_pk\"  value=\"\ud83d\udd11 id_proj (PK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#1e1b4b;strokeColor=#312e81;fontColor=#c7d2fe;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"630\" y=\"112\" width=\"175\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_proj_nm\"  value=\"nome_projeto\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f0e24;strokeColor=#312e81;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"630\" y=\"136\" width=\"175\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_proj_dt\"  value=\"data_inicio / data_fim\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f0e24;strokeColor=#312e81;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"630\" y=\"158\" width=\"175\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_proj_bd\"  value=\"orcamento\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f0e24;strokeColor=#312e81;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"630\" y=\"180\" width=\"175\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Caption --&gt;\n        &lt;mxCell id=\"1519a5_cap\" value=\"Rela\u00e7\u00e3o N:M \u2014 Um funcion\u00e1rio participa de N projetos; um projeto tem N funcion\u00e1rios. Tabela associativa resolve a N:M.\" style=\"labelBackgroundColor=none;text;html=1;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=9;fontStyle=2;\" vertex=\"1\" parent=\"1519a5_1\"&gt;&lt;mxGeometry x=\"100\" y=\"250\" width=\"700\" height=\"20\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Edges --&gt;\n        &lt;mxCell id=\"1519a5_e1\" value=\"N\" edge=\"1\" parent=\"1519a5_1\" source=\"1519a5_func_pk\" target=\"1519a5_assoc_f\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontColor=#10b981;fontFamily=DM Sans;fontSize=11;fontStyle=1;\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"1519a5_e2\" value=\"N\" edge=\"1\" parent=\"1519a5_1\" source=\"1519a5_proj_pk\" target=\"1519a5_assoc_p\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#818cf8;strokeWidth=1.5;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontColor=#818cf8;fontFamily=DM Sans;fontSize=11;fontStyle=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;"}' style="max-width:100%;border:1px solid transparent;"></div>
+</div>
+<div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #ec4899; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
+<h4 style="margin-top:0; color:#fbcfe8; font-size:14px;">Legenda do Diagrama</h4>
+<ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
+<li><strong>Junction Table</strong>: Tabela <code>PRODUCT_SUPPLIER</code> essencial para mapear a relação N:M. No banco, ela contém Duas Foreign Keys compondo sua Primary Key.</li>
+<li><strong>Garantia ACID</strong>: Se tentar deletar um Fornecedor que já tem Produto associado, o RDBMS barra a exclusão (Restrict) garantindo Integridade Referencial.</li>
+</ul>
+</div>
+<div class="code-block" style="margin-top:20px; margin-bottom:40px;">
+<div class="code-header"><span class="code-lang">Terraform: Provisionando Banco RDS PostgreSQL</span><button class="copy-btn">Copiar</button></div>
+<pre><code># Provisionamento Físico da Instância RDS onde as Tabelas viverão
+resource "aws_db_instance" "erp_db" {
+  allocated_storage    = 100
+  storage_type         = "gp3"
+  engine               = "postgres"
+  engine_version       = "15.4"
+  instance_class       = "db.t4g.micro"
+  identifier           = "erp-production-db"
+  username             = "admin"
+  password             = "Senh4SupeRSecreta" # Usar SecretsManager!
+  parameter_group_name = "default.postgres15"
+  skip_final_snapshot  = true
+  publicly_accessible  = false # Trancado na Subnet Privada
+}</code></pre>
+</div>
+<!-- Exemplo 3 -->
+<h3 style="margin-top:40px;">Exemplo 3: RH e Organograma (Self-Referencing)</h3>
+<p>Uma relação hierárquica (Árvore) dentro de uma mesma entidade. Um Funcionário (Employee) possui um Gerente, que também é um Funcionário na mesma tabela. A FK aponta para a própria PK da tabela.</p>
+<div class="drawio-wrap" style="margin-top: 20px; margin-bottom: 30px;">
+<div class="drawio-label"><span class="dot"></span>RDS ERD: RECURSOS HUMANOS (SELF-REFERENCING)</div>
+<div class="mxgraph" data-mxgraph='{"highlight": "#FF6B00", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxfile host=\"Electron\" modified=\"2026-06-17T00:00:00.000Z\" agent=\"Mozilla/5.0\" version=\"21.2.8\" type=\"device\"&gt;\n  &lt;diagram id=\"21c0d4_rds_hr_self\" name=\"RDS HR\"&gt;\n    &lt;mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"700\" pageHeight=\"300\" math=\"0\" shadow=\"0\" background=\"#080f1e\"&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\"21c0d4_0\"/&gt;&lt;mxCell id=\"21c0d4_1\" parent=\"21c0d4_0\"/&gt;\n\n        &lt;!-- RDS Icon --&gt;\n        &lt;mxCell id=\"21c0d4_rds_icon\" value=\"Amazon RDS\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#1d6fa5;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"21c0d4_1\"&gt;&lt;mxGeometry x=\"20\" y=\"100\" width=\"55\" height=\"55\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Empregado table --&gt;\n        &lt;mxCell id=\"21c0d4_emp_hdr\" value=\"EMPREGADO\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1a2a4a;strokeColor=#3b82f6;strokeWidth=2;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\" vertex=\"1\" parent=\"21c0d4_1\"&gt;&lt;mxGeometry x=\"200\" y=\"70\" width=\"280\" height=\"32\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"21c0d4_emp_pk\"  value=\"\ud83d\udd11 id_empregado (PK)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#1e3a5f;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"21c0d4_1\"&gt;&lt;mxGeometry x=\"200\" y=\"102\" width=\"280\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"21c0d4_emp_nm\"  value=\"nome\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"21c0d4_1\"&gt;&lt;mxGeometry x=\"200\" y=\"126\" width=\"280\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"21c0d4_emp_fk\"  value=\"\ud83d\udd17 id_gerente (FK \u2192 id_empregado)\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#2a1500;strokeColor=#f59e0b;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"21c0d4_1\"&gt;&lt;mxGeometry x=\"200\" y=\"148\" width=\"280\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\"21c0d4_emp_dpt\" value=\"departamento\" style=\"labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\" vertex=\"1\" parent=\"21c0d4_1\"&gt;&lt;mxGeometry x=\"200\" y=\"172\" width=\"280\" height=\"22\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Self-referencing arrow --&gt;\n        &lt;mxCell id=\"21c0d4_sr_edge\" value=\"reporta_a (0..1 gerente para N subordinados)\" edge=\"1\" parent=\"21c0d4_1\" source=\"21c0d4_emp_fk\" target=\"21c0d4_emp_pk\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=2;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"&gt;&lt;Array as=\"points\"&gt;&lt;mxPoint x=\"580\" y=\"160\"/&gt;&lt;mxPoint x=\"580\" y=\"114\"/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Note --&gt;\n        &lt;mxCell id=\"21c0d4_note\" value=\"Self-Referencing FK: o campo id_gerente aponta para id_empregado&amp;#xa;na mesma tabela. Representa hierarquias (organograma, categorias).\" style=\"labelBackgroundColor=none;rounded=1;fillColor=#1a2a1a;strokeColor=#10b981;strokeWidth=1;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=9;align=left;\" vertex=\"1\" parent=\"21c0d4_1\"&gt;&lt;mxGeometry x=\"130\" y=\"230\" width=\"440\" height=\"40\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;"}' style="max-width:100%;border:1px solid transparent;"></div>
+</div>
+</section><section class="section" id="dynamodb-deep-dive">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#10b981">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#10b981"></div>
+<h2>Amazon DynamoDB: Architecture &amp; Single-Table Design</h2>
+<p>Modelagem NoSQL avançada, RCU/WCU, GSI, LSI e Hot Partitions</p>
+</div>
+</div>
+<p>Bancos NoSQL corporativos como o DynamoDB diferem substancialmente do modelo relacional tradicional. Eles são otimizados para latência milissegunda consistente independente do tamanho da tabela, desde que as chaves de acesso sejam perfeitamente modeladas (Acesso em O(1)).</p>
+<!-- DIAGRAMA DYNAMODB PARTITIONS -->
+<div class="drawio-wrap" style="margin-top: 30px;">
+<div class="drawio-label"><span class="dot"></span>DYNAMODB PARTITIONING MODEL</div>
+<div class="mxgraph" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"640\" pageHeight=\"300\" math=\"0\" shadow=\"0\"&gt;  &lt;root&gt;    &lt;mxCell id=\"ec3602_0\"/&gt;    &lt;mxCell id=\"ec3602_1\" parent=\"ec3602_0\"/&gt;    &lt;mxCell id=\"ec3602_bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"ec3602_1\"&gt;&lt;mxGeometry x=\"0\" y=\"0\" width=\"640\" height=\"300\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"ec3602_title\" value=\"DYNAMODB PARTITIONING MODEL\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"ec3602_1\"&gt;&lt;mxGeometry x=\"0\" y=\"8\" width=\"640\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\"ec3602_req\" value=\"Item Request(Partition Key)\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"ec3602_1\"&gt;&lt;mxGeometry x=\"20\" y=\"120\" width=\"120\" height=\"50\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"ec3602_router\" value=\"Request Router(MD5 Hash Function)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.endpoint;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ec3602_1\"&gt;&lt;mxGeometry x=\"246\" y=\"120\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\"ec3602_p1\" value=\"Partition 1Hash: 0000-3333\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ec3602_1\"&gt;&lt;mxGeometry x=\"466\" y=\"40\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"ec3602_p2\" value=\"Partition 2Hash: 3334-6666\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ec3602_1\"&gt;&lt;mxGeometry x=\"466\" y=\"120\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"ec3602_p3\" value=\"Partition 3Hash: 6667-FFFF\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ec3602_1\"&gt;&lt;mxGeometry x=\"466\" y=\"200\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\"ec3602_e_r_ro\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"ec3602_req\" target=\"ec3602_router\" parent=\"ec3602_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"ec3602_e_ro_p1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"ec3602_router\" target=\"ec3602_p1\" parent=\"ec3602_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"ec3602_e_ro_p2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"ec3602_router\" target=\"ec3602_p2\" parent=\"ec3602_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"ec3602_e_ro_p3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;dashed=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"ec3602_router\" target=\"ec3602_p3\" parent=\"ec3602_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;background:#080f1e;"></div>
 </div>
 <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> DYNAMODB PARTITIONING MODEL, Item Request (Partition Key), Request Router (MD5 Hash Function), Partition 1 Hash: 0000-3333, Partition 2 Hash: 3334-6666, Partition 3 Hash: 6667-FFFF</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "DYNAMODB PARTITIONING MODEL" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
+<strong style="color: var(--accent);">Explicação:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes:</strong> DYNAMODB PARTITIONING MODEL, Item Request (Partition Key), Request Router (MD5 Hash Function), Partition 1 Hash: 0000-3333, Partition 2 Hash: 3334-6666, Partition 3 Hash: 6667-FFFF</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+<li><strong>Contexto:</strong> O diagrama "DYNAMODB PARTITIONING MODEL" ilustra a arquitetura da solução para o tópico em questão.</li>
+</ul>
 </div>
-
-      <div class="grid-2">
-        <div>
-          <h4>Capacity: RCU, WCU e Modo On-Demand</h4>
-          <p>Em modo Provisionado, a métrica raiz de throughput são <strong>RCUs (Read Capacity Units)</strong> e <strong>WCUs (Write Capacity Units)</strong>. 1 WCU permite gravar 1 KB por segundo. 1 RCU permite ler 4 KB/s se a consistência for eventual, ou requer 2 RCUs para garantir <em>Strong Consistency</em>.</p>
-          <p>O modo <strong>On-Demand</strong> é recomendado quando a carga é altamente imprevisível. Você paga por requisição sem estipular limites prévios, deixando o Dynamo escalonar agressivamente por debaixo dos panos.</p>
-        </div>
-        <div>
-          <h4>Balanceamento HASH e Hot Partitions</h4>
-          <p>O throughput provisionado de uma tabela (ex: 3.000 WCU) é dividido <strong>igualmente</strong> pelo número de partições físicas SSD (ex: 3 partições = 1.000 WCU por partição). Se a sua <strong>Partition Key (PK)</strong> for uma data atual (<code>2026-06-10</code>), todas as gravações do dia cairão na mesma partição (<em>Hot Partition</em>). O Dynamo estourará um <code>ProvisionedThroughputExceededException</code> ao atingir 1.000 WCU, mesmo com 2.000 WCUs sobrando na tabela. Use Hash Sharding/UUIDs para a PK.</p>
-        </div>
-      </div>
-
-      <h3 style="margin-top: 30px;">Modelagem: Single-Table Design, GSI e LSI</h3>
-      <ul>
-        <li><strong>Single-Table Design:</strong> Diferente do modelo Relacional (Normalização 3NF com FKs), no DynamoDB a regra de ouro é colocar <em>todos os tipos de entidades em uma única tabela física</em>. Para relacionar entidades 1:N (Ex: Usuário e seus Pedidos), você agrupa os itens empilhando as <strong>Sort Keys (SK)</strong> sob a mesma Partition Key. Exemplo: <code>PK="USER#123", SK="PROFILE"</code> para dados do usuário; <code>PK="USER#123", SK="ORDER#99"</code> para seus pedidos.</li>
-        <li><strong>Global Secondary Index (GSI):</strong> Se você precisa buscar pedidos por "Data" em vez de "Usuário", você cria um GSI. O GSI é uma tabela réplica física, mantida asíncronamente pela AWS, que escolhe novos atributos para assumirem os papéis de nova PK/SK. Cuidado: GSIs possuem seu próprio pool de RCU/WCUs e podem sofrer throttling se mal dimensionados.</li>
-        <li><strong>Local Secondary Index (LSI):</strong> Compartilha a mesma PK da tabela base, mas muda a SK. Só pode ser criado no momento de criação da tabela (limite físico de 10GB por partição).</li>
-      </ul>
-
-      <div class="callout callout-tip">
-        <strong>Integração Zero-ETL do DynamoDB com Aurora/Redshift:</strong>
-        <p>A nova feature de integração AWS permite espelhar o DynamoDB para o Amazon Redshift ou S3 (usando DynamoDB Export/Kinesis Streams) sem escrever código Lambda, habilitando queries analíticas SQL complexas (com JOINs) em tempo quase real sem prejudicar o desempenho transacional da tabela NoSQL.</p>
-      </div>
-
-      <h3 style="margin-top: 40px; margin-bottom: 15px;">Desenho de Arquitetura: Data Engineering CDC (DynamoDB &amp; RDS para Iceberg)</h3>
-      <p style="margin-bottom: 15px;">Para um engenheiro de dados, o desafio de bancos transacionais NoSQL e SQL (DynamoDB e Aurora) é que não é possível rodar queries analíticas pesadas (<code>GROUP BY</code>, <code>JOIN</code> em milhões de linhas) diretamente na origem sem derrubar a aplicação. A solução é montar um <strong>Change Data Capture (CDC)</strong> contínuo para extrair apenas o delta (o que mudou) e consolidar num formato colunar como Apache Iceberg no S3.</p>
-
-      <div class="mxgraph" style="max-width:100%;background:#080f1e;margin-top:15px;margin-bottom:30px;" data-mxgraph='{&quot;highlight&quot;: &quot;#10b981&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;880\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;911a90_0\&quot;/&gt;    &lt;mxCell id=\&quot;911a90_1\&quot; parent=\&quot;911a90_0\&quot;/&gt;    &lt;mxCell id=\&quot;911a90_bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;880\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_t1\&quot; value=\&quot;CDC PIPELINE (OLTP para OLAP)\&quot; style=\&quot;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;10\&quot; width=\&quot;880\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_db1\&quot; value=\&quot;Amazon RDS / Aurora\\n(Transacional SQL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;60\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_db2\&quot; value=\&quot;Amazon DynamoDB\\n(Transacional NoSQL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;180\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_c1\&quot; value=\&quot;AWS DMS\\n(L\u00ea BinLog/WAL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database_migration_service;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;60\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_c2\&quot; value=\&quot;DynamoDB Streams\\n(Eventos de Modifica\u00e7\u00e3o)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;180\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_str\&quot; value=\&quot;Amazon Kinesis / Kafka\\n(Buffer / T\u00f3pico CDC)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;400\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_proc\&quot; value=\&quot;EMR Serverless (Spark)\\nMerge INTO (ACID)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;560\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_lake\&quot; value=\&quot;Apache Iceberg (S3)\\n(Data Lake Anal\u00edtico)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry x=\&quot;740\&quot; y=\&quot;120\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_e1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;911a90_db1\&quot; target=\&quot;911a90_c1\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_e2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;911a90_db2\&quot; target=\&quot;911a90_c2\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_e3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.25;\&quot; edge=\&quot;1\&quot; source=\&quot;911a90_c1\&quot; target=\&quot;911a90_str\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_e4\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.75;\&quot; edge=\&quot;1\&quot; source=\&quot;911a90_c2\&quot; target=\&quot;911a90_str\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_e5\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;911a90_str\&quot; target=\&quot;911a90_proc\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\&quot;911a90_e6\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\&quot; edge=\&quot;1\&quot; source=\&quot;911a90_proc\&quot; target=\&quot;911a90_lake\&quot; parent=\&quot;911a90_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
-
-      <div class="callout callout-tip">
-        <strong>📚 Documentação Oficial AWS:</strong>
-        <p>A AWS recomenda arquiteturas de CDC orientadas a eventos utilizando <strong>DynamoDB Streams</strong> nativo para capturar alterações em nível de item. Isso não consome WCU/RCU da tabela principal e garante ordem estrita para entrega ao Kinesis ou Lambda (<em>AWS Prescriptive Guidance: Stream data from DynamoDB to S3</em>).</p>
-      </div>
-    </section>
-
-    <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
-
-    <!-- SECTION 4: OPERACAO & TROUBLESHOOTING -->
-    <section class="section" id="operacao">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">04</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Guia Operacional: Monitoramento &amp; Troubleshooting Avançado</h2>
-          <p>Queries SQL de tuning de bancos, comandos CLI cruciais de diagnóstico do ECS e Load Balancers</p>
-        </div>
-      </div>
-
-      <h3>CLI Cheat Sheet: Operando e Diagnosticando ECS &amp; Load Balancers</h3>
-      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Obter informações de tarefas rodando no ECS</span>
+<div class="grid-2">
+<div>
+<h4>Capacity: RCU, WCU e Modo On-Demand</h4>
+<p>Em modo Provisionado, a métrica raiz de throughput são <strong>RCUs (Read Capacity Units)</strong> e <strong>WCUs (Write Capacity Units)</strong>. 1 WCU permite gravar 1 KB por segundo. 1 RCU permite ler 4 KB/s se a consistência for eventual, ou requer 2 RCUs para garantir <em>Strong Consistency</em>.</p>
+<p>O modo <strong>On-Demand</strong> é recomendado quando a carga é altamente imprevisível. Você paga por requisição sem estipular limites prévios, deixando o Dynamo escalonar agressivamente por debaixo dos panos.</p>
+</div>
+<div>
+<h4>Balanceamento HASH e Hot Partitions</h4>
+<p>O throughput provisionado de uma tabela (ex: 3.000 WCU) é dividido <strong>igualmente</strong> pelo número de partições físicas SSD (ex: 3 partições = 1.000 WCU por partição). Se a sua <strong>Partition Key (PK)</strong> for uma data atual (<code>2026-06-10</code>), todas as gravações do dia cairão na mesma partição (<em>Hot Partition</em>). O Dynamo estourará um <code>ProvisionedThroughputExceededException</code> ao atingir 1.000 WCU, mesmo com 2.000 WCUs sobrando na tabela. Use Hash Sharding/UUIDs para a PK.</p>
+</div>
+</div>
+<h3 style="margin-top: 30px;">Modelagem: Single-Table Design, GSI e LSI</h3>
+<ul>
+<li><strong>Single-Table Design:</strong> Diferente do modelo Relacional (Normalização 3NF com FKs), no DynamoDB a regra de ouro é colocar <em>todos os tipos de entidades em uma única tabela física</em>. Para relacionar entidades 1:N (Ex: Usuário e seus Pedidos), você agrupa os itens empilhando as <strong>Sort Keys (SK)</strong> sob a mesma Partition Key. Exemplo: <code>PK="USER#123", SK="PROFILE"</code> para dados do usuário; <code>PK="USER#123", SK="ORDER#99"</code> para seus pedidos.</li>
+<li><strong>Global Secondary Index (GSI):</strong> Se você precisa buscar pedidos por "Data" em vez de "Usuário", você cria um GSI. O GSI é uma tabela réplica física, mantida asíncronamente pela AWS, que escolhe novos atributos para assumirem os papéis de nova PK/SK. Cuidado: GSIs possuem seu próprio pool de RCU/WCUs e podem sofrer throttling se mal dimensionados.</li>
+<li><strong>Local Secondary Index (LSI):</strong> Compartilha a mesma PK da tabela base, mas muda a SK. Só pode ser criado no momento de criação da tabela (limite físico de 10GB por partição).</li>
+</ul>
+<div class="callout callout-tip">
+<strong>Integração Zero-ETL do DynamoDB com Aurora/Redshift:</strong>
+<p>A nova feature de integração AWS permite espelhar o DynamoDB para o Amazon Redshift ou S3 (usando DynamoDB Export/Kinesis Streams) sem escrever código Lambda, habilitando queries analíticas SQL complexas (com JOINs) em tempo quase real sem prejudicar o desempenho transacional da tabela NoSQL.</p>
+</div>
+<h3 style="margin-top: 40px; margin-bottom: 15px;">Desenho de Arquitetura: Data Engineering CDC (DynamoDB &amp; RDS para Iceberg)</h3>
+<p style="margin-bottom: 15px;">Para um engenheiro de dados, o desafio de bancos transacionais NoSQL e SQL (DynamoDB e Aurora) é que não é possível rodar queries analíticas pesadas (<code>GROUP BY</code>, <code>JOIN</code> em milhões de linhas) diretamente na origem sem derrubar a aplicação. A solução é montar um <strong>Change Data Capture (CDC)</strong> contínuo para extrair apenas o delta (o que mudou) e consolidar num formato colunar como Apache Iceberg no S3.</p>
+<div class="mxgraph" data-mxgraph='{"highlight": "#10b981", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"880\" pageHeight=\"320\" math=\"0\" shadow=\"0\"&gt;  &lt;root&gt;    &lt;mxCell id=\"911a90_0\"/&gt;    &lt;mxCell id=\"911a90_1\" parent=\"911a90_0\"/&gt;    &lt;mxCell id=\"911a90_bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"0\" y=\"0\" width=\"880\" height=\"320\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_t1\" value=\"CDC PIPELINE (OLTP para OLAP)\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"0\" y=\"10\" width=\"880\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_db1\" value=\"Amazon RDS / Aurora\\n(Transacional SQL)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"60\" y=\"60\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_db2\" value=\"Amazon DynamoDB\\n(Transacional NoSQL)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"60\" y=\"180\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_c1\" value=\"AWS DMS\\n(L\u00ea BinLog/WAL)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database_migration_service;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"220\" y=\"60\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_c2\" value=\"DynamoDB Streams\\n(Eventos de Modifica\u00e7\u00e3o)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"220\" y=\"180\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_str\" value=\"Amazon Kinesis / Kafka\\n(Buffer / T\u00f3pico CDC)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"400\" y=\"120\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_proc\" value=\"EMR Serverless (Spark)\\nMerge INTO (ACID)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"560\" y=\"120\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_lake\" value=\"Apache Iceberg (S3)\\n(Data Lake Anal\u00edtico)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"911a90_1\"&gt;&lt;mxGeometry x=\"740\" y=\"120\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"911a90_db1\" target=\"911a90_c1\" parent=\"911a90_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"911a90_db2\" target=\"911a90_c2\" parent=\"911a90_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_e3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.25;\" edge=\"1\" source=\"911a90_c1\" target=\"911a90_str\" parent=\"911a90_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_e4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.75;\" edge=\"1\" source=\"911a90_c2\" target=\"911a90_str\" parent=\"911a90_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_e5\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"911a90_str\" target=\"911a90_proc\" parent=\"911a90_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"911a90_e6\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#475569;strokeWidth=1.5;fillColor=none;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"911a90_proc\" target=\"911a90_lake\" parent=\"911a90_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;background:#080f1e;margin-top:15px;margin-bottom:30px;"></div>
+<div class="callout callout-tip">
+<strong>📚 Documentação Oficial AWS:</strong>
+<p>A AWS recomenda arquiteturas de CDC orientadas a eventos utilizando <strong>DynamoDB Streams</strong> nativo para capturar alterações em nível de item. Isso não consome WCU/RCU da tabela principal e garante ordem estrita para entrega ao Kinesis ou Lambda (<em>AWS Prescriptive Guidance: Stream data from DynamoDB to S3</em>).</p>
+</div>
+</section><section class="section" id="ecs">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#f43f5e">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#f43f5e"></div>
+<h2>Amazon ECS: Teoria de Containers &amp; Launch Types</h2>
+<p>Diferenças fundamentais entre ECS Fargate e ECS on EC2, estrutura de blueprints e segurança</p>
+</div>
+</div>
+<p>O <strong>Amazon ECS (Elastic Container Service)</strong> é o serviço de orquestração de containers altamente escalável e de alta performance nativo da AWS. Diferente do Kubernetes (EKS), o ECS foca em simplificar o deploy eliminando a necessidade de gerenciar nós de controle complexos (Control Plane).</p>
+<div class="concept-grid">
+<div class="concept-card" style="border-top: 4px solid #f43f5e;">
+<div class="cc-tag">Launch Type</div>
+<div class="cc-title">ECS Fargate (Serverless)</div>
+<div class="cc-body">
+<strong>Como funciona:</strong> A AWS gerencia toda a computação. O engenheiro declara apenas o tamanho de CPU e Memória da Task.
+            <br/><strong>Tradeoffs:</strong> Menor overhead operacional, isolamento físico de segurança por task (micro-VMs Firecracker). Custo ligeiramente superior por recurso ativo e boot time mais longo.
+          </div>
+</div>
+<div class="concept-card" style="border-top: 4px solid #f43f5e;">
+<div class="cc-tag">Launch Type</div>
+<div class="cc-title">ECS on EC2 (Gerenciado)</div>
+<div class="cc-body">
+<strong>Como funciona:</strong> O cluster ECS usa instâncias EC2 gerenciadas no seu próprio grupo de Auto Scaling como workers de container.
+            <br/><strong>Tradeoffs:</strong> Controle total do sistema operacional, suporte a volumes EBS locais e GPUs dedicadas. Exige gerenciar patches do SO e agentes do ECS instalados nas máquinas.
+          </div>
+</div>
+</div>
+<h3>Arquitetura ECS: Cluster, Service, Task &amp; Task Definition</h3>
+<p>A tabela a seguir explica a hierarquia de objetos lógicos dentro do ecossistema do ECS:</p>
+<div class="tbl-wrap">
+<table>
+<thead>
+<tr>
+<th>Componente</th>
+<th>Propósito</th>
+<th>Análogo Físico</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cluster</strong></td>
+<td>Agrupamento lógico de computação (Fargate ou EC2) em subredes privadas.</td>
+<td>Data Center Virtualizado</td>
+</tr>
+<tr>
+<td><strong>Task Definition</strong></td>
+<td>O blueprint em formato JSON definindo a imagem Docker, portas, variáveis de ambiente e volumes.</td>
+<td>Dockerfile / Docker Compose</td>
+</tr>
+<tr>
+<td><strong>Task</strong></td>
+<td>A instância ativa e executável do container em si, rodando de forma isolada na VPC.</td>
+<td>Container Ativo (Docker Run)</td>
+</tr>
+<tr>
+<td><strong>Service</strong></td>
+<td>Gerenciador que garante que a quantidade solicitada de Tasks esteja saudável, integrando-as ao Load Balancer.</td>
+<td>Process Daemon / Orquestrador</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3>Segurança de Containers: Task Role vs. Task Execution Role</h3>
+<p>Um erro de segurança recorrente em projetos de ECS é conceder permissões excessivas às instâncias que executam os containers. A AWS divide a identidade IAM no ECS em duas camadas de privilégio de grão fino:</p>
+<ul>
+<li><strong>Task Execution Role:</strong> Utilizada pelo <strong>agente do ECS</strong> rodando na infraestrutura (antes do container iniciar). Permissões típicas: baixar a imagem do container do ECR, enviar logs de stdout para o CloudWatch, descriptografar variáveis sensíveis vindas do Secrets Manager ou System Manager Parameter Store.</li>
+<li><strong>Task Role:</strong> Utilizada pela <strong>sua aplicação</strong> de fato rodando dentro do container (após a inicialização). Permissões típicas: ler/gravar dados em um bucket S3, consultar uma tabela do DynamoDB, ou publicar mensagens em um tópico SNS.</li>
+</ul>
+<div class="drawio-wrap" style="margin-top: 30px;">
+<div class="drawio-label"><span class="dot"></span>ECS Fargate — Ingestão Customizada de Alta Escala</div>
+<div class="mxgraph" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"860\" pageHeight=\"400\" math=\"0\" shadow=\"0\"&gt;  &lt;root&gt;    &lt;mxCell id=\"757f14_0\"/&gt;    &lt;mxCell id=\"757f14_1\" parent=\"757f14_0\"/&gt;    &lt;mxCell id=\"757f14_bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"0\" y=\"0\" width=\"860\" height=\"400\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_title\" value=\"RDS VS AURORA STORAGE ARCHITECTURE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"0\" y=\"8\" width=\"860\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\"757f14_rds_grp\" value=\"AMAZON RDS TRADICIONAL\" style=\"rounded=1;fillColor=#02160a;strokeColor=#16a34a;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#bbf7d0;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"20\" y=\"50\" width=\"340\" height=\"320\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_rds_p\" value=\"Primary Node(EC2 Compute)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"96\" y=\"90\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_rds_s\" value=\"Secondary Node(Standby)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"236\" y=\"90\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_ebs_p\" value=\"Amazon EBS(Data &amp;amp; Logs)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ebs;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"96\" y=\"240\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_ebs_s\" value=\"Amazon EBS(Replica)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ebs;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"236\" y=\"240\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\"757f14_aur_grp\" value=\"AMAZON AURORA\" style=\"rounded=1;fillColor=#170802;strokeColor=#ea580c;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#fed7aa;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"420\" y=\"50\" width=\"400\" height=\"320\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_aur_p\" value=\"Primary Instance\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"486\" y=\"90\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_aur_r1\" value=\"Read Replica\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"616\" y=\"90\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_aur_r2\" value=\"Read Replica\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"716\" y=\"90\" width=\"48\" height=\"48\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_aur_sto\" value=\"Aurora Distributed Storage Volume(6 Copies across 3 AZs)\" style=\"rounded=1;fillColor=#1a0e00;strokeColor=#ea580c;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"757f14_1\"&gt;&lt;mxGeometry x=\"460\" y=\"240\" width=\"320\" height=\"60\" as=\"geometry\"/&gt;&lt;/mxCell&gt;        &lt;mxCell id=\"757f14_e_rp_ep\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"757f14_rds_p\" target=\"757f14_ebs_p\" parent=\"757f14_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_e_rs_es\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;\" edge=\"1\" source=\"757f14_rds_s\" target=\"757f14_ebs_s\" parent=\"757f14_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_e_ep_es\" value=\"SynchronousBlock Replication\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;dashed=1;fontColor=#dcfce7;fontFamily=DM Sans;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;\" edge=\"1\" source=\"757f14_ebs_p\" target=\"757f14_ebs_s\" parent=\"757f14_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_e_ap_st\" value=\"Redo Logs\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#fed7aa;fontFamily=DM Sans;fontSize=9;exitX=0.5;exitY=1;entryX=0.15;entryY=0;\" edge=\"1\" source=\"757f14_aur_p\" target=\"757f14_aur_sto\" parent=\"757f14_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_e_ar1_st\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;exitX=0.5;exitY=1;entryX=0.5;entryY=0;\" edge=\"1\" source=\"757f14_aur_r1\" target=\"757f14_aur_sto\" parent=\"757f14_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;    &lt;mxCell id=\"757f14_e_ar2_st\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;exitX=0.5;exitY=1;entryX=0.85;entryY=0;\" edge=\"1\" source=\"757f14_aur_r2\" target=\"757f14_aur_sto\" parent=\"757f14_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;background:#080f1e;"></div>
+</div>
+<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">Explicação:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes:</strong> RDS VS AURORA STORAGE ARCHITECTURE, AMAZON RDS TRADICIONAL, Primary Node (EC2 Compute), Secondary Node (Standby), Amazon EBS (Data &amp; Logs), Amazon EBS (Replica), AMAZON AURORA, Primary Instance, Read Replica, Aurora Distributed Storage Volume (6 Copies across 3 AZs), Synchronous Block Replication, Redo Logs</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
+<li><strong>Contexto:</strong> O diagrama "RDS VS AURORA STORAGE ARCHITECTURE" ilustra a arquitetura da solução para o tópico em questão.</li>
+</ul>
+</div>
+<div class="grid-2">
+<div>
+<h4>Escrita em Quorum (Write Quorum) no Aurora</h4>
+<p>Para otimizar escritas, o Aurora utiliza um sistema de quórum distribuído. Cada bloco de dados é segmentado e gravado em 6 instâncias de storage (2 por AZ). Uma escrita é considerada um commit válido assim que <strong>4 das 6 instâncias confirmam a gravação física (4/6 Write Quorum)</strong>. Leituras de blocos requerem a confirmação de <strong>3 de 6 cópias (3/6 Read Quorum)</strong> para reconstruir dados consistentes caso ocorram falhas parciais em storage pools.</p>
+</div>
+<div>
+<h4>Multi-AZ DB Instance vs DB Cluster (RDS Tradicional)</h4>
+<p>Se você não utiliza Aurora, a AWS oferece dois modelos de alta disponibilidade no RDS PostgreSQL/MySQL: <strong>Multi-AZ DB Instance</strong>, onde o Standby é fisicamente idêntico mas bloqueado para leitura (failover de ~60-120s); e o novo <strong>Multi-AZ DB Cluster</strong>, que usa três instâncias ativas (2 Readers e 1 Writer) e acelera commits escrevendo simultaneamente nos SSDs locais de duas réplicas legíveis, diminuindo o failover para ~35s.</p>
+</div>
+</div>
+<h3 style="margin-top: 30px;">Estratégias de Snapshots, Backups e RTO/RPO</h3>
+<ul>
+<li><strong>Automated Backups (RDS Tradicional):</strong> A AWS tira um snapshot diário do disco EBS inteiro e arquiva os <em>Transaction Logs (WAL)</em> a cada 5 minutos no S3. O RPO (Recovery Point Objective) máximo é de ~5 minutos para Point-in-Time Recovery (PiTR). Restaurações demoram o tempo necessário para provisionar e "esquentar" (hydrate) os blocos do S3 para um novo disco EBS.</li>
+<li><strong>Continuous Backups (Aurora):</strong> No Aurora, o backup é completamente contínuo e streaming. Como a camada de storage é baseada em logs, o storage engine transfere micro-blocos para o S3 em tempo real de forma assíncrona, sem impactar a CPU do banco, atingindo impacto nulo de I/O em backups pesados.</li>
+</ul>
+<div class="grid-2" style="margin-top: 20px;">
+<div>
+<h4>Amazon RDS Proxy: Connection Pooling</h4>
+<p>Microsserviços serverless esgotam rapidamente a memória (RAM) da instância RDS por conexões ociosas (o Postgres consome ~10MB por TCP inativa). O <strong>RDS Proxy</strong> gerencia um <em>Connection Pool</em>, multiplexando dezenas de clientes em poucas conexões físicas com o DB. Além disso, em caso de failover do Aurora, ele redireciona instantaneamente as chamadas HTTP para o novo Writer, mascarando a interrupção da aplicação (sem timeouts de DNS).</p>
+</div>
+<div>
+<h4>Migração e CDC com AWS DMS e SCT</h4>
+<p>Para migrar de bancos legados (ex: Oracle local ou RDS Monolítico) para Aurora sem downtime, utiliza-se o <strong>AWS Database Migration Service (DMS)</strong> acompanhado do <strong>SCT (Schema Conversion Tool)</strong>.</p>
+<p>O DMS se conecta ao banco de origem, realiza o <em>Full Load</em> da base inicial e então ativa o <strong>CDC (Change Data Capture)</strong>. O CDC lê nativamente os transaction logs do banco de origem (ex: <code>wal2json</code> no Postgres) e aplica os <code>INSERT/UPDATES</code> na nova base Aurora. Quando o "Lag" do DMS se aproxima de 0s, a engenharia simplesmente "vira a chave" do tráfego na aplicação.</p>
+</div>
+</div>
+</section><section class="section" id="operacao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#f43f5e">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#f43f5e"></div>
+<h2>Guia Operacional: Monitoramento &amp; Troubleshooting Avançado</h2>
+<p>Queries SQL de tuning de bancos, comandos CLI cruciais de diagnóstico do ECS e Load Balancers</p>
+</div>
+</div>
+<h3>CLI Cheat Sheet: Operando e Diagnosticando ECS &amp; Load Balancers</h3>
+<pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Obter informações de tarefas rodando no ECS</span>
 aws ecs list-tasks --cluster prod-analytics-cluster
 
 <span class="c"># 2. Descrever detalhes de uma task específica (verificar se há erros de Out of Memory - OOM)</span>
@@ -256,25 +463,22 @@ aws ecs execute-command \
 <span class="c"># 5. Verificar o status de integridade do ALB Target Group</span>
 aws elbv2 describe-target-health \
   --target-group-arn arn:aws:elasticloadbalancing:us-east-1:12345678:targetgroup/tg-ecs-analytics/bc51</pre>
-
-      <h3 style="margin-top: 30px;">SQL Diagnostics para Administradores de Bancos (PostgreSQL RDS / Aurora)</h3>
-      <p>Em momentos de travamento no banco, utilize as queries estruturadas abaixo para descobrir e encerrar locks e processos órfãos consumindo CPU:</p>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Query 1: Listar conexões ativas ordenadas por tempo de execução (identificar queries travando)</div>
-        <div class="abox-body">
-          <pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span> pid, age(query_start, clock_timestamp()), usename, state, query 
+<h3 style="margin-top: 30px;">SQL Diagnostics para Administradores de Bancos (PostgreSQL RDS / Aurora)</h3>
+<p>Em momentos de travamento no banco, utilize as queries estruturadas abaixo para descobrir e encerrar locks e processos órfãos consumindo CPU:</p>
+<div class="abox">
+<div class="abox-hdr" style="background: var(--navy)">Query 1: Listar conexões ativas ordenadas por tempo de execução (identificar queries travando)</div>
+<div class="abox-body">
+<pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span> pid, age(query_start, clock_timestamp()), usename, state, query 
 <span class="k">FROM</span> pg_stat_activity 
 <span class="k">WHERE</span> state != <span class="s">'idle'</span> 
 <span class="k">ORDER BY</span> query_start <span class="k">ASC</span> 
 <span class="k">LIMIT</span> 10;</pre>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Query 2: Identificar Locks Ativos (Tabelas bloqueadas por transações pendentes)</div>
-        <div class="abox-body">
-          <pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span>
+</div>
+</div>
+<div class="abox">
+<div class="abox-hdr" style="background: var(--navy)">Query 2: Identificar Locks Ativos (Tabelas bloqueadas por transações pendentes)</div>
+<div class="abox-body">
+<pre style="background:#0f172a; color:#f8fafc;"><span class="k">SELECT</span>
     blocked_locks.pid     <span class="k">AS</span> blocked_pid,
     blocked_activity.usename  <span class="k">AS</span> blocked_user,
     blocking_locks.pid    <span class="k">AS</span> blocking_pid,
@@ -297,300 +501,42 @@ aws elbv2 describe-target-health \
     <span class="k">AND</span> blocking_locks.pid != blocked_locks.pid
 <span class="k">JOIN</span> pg_catalog.pg_stat_activity blocking_activity <span class="k">ON</span> blocking_activity.pid = blocking_locks.pid
 <span class="k">WHERE</span> <span class="k">NOT</span> blocked_locks.granted;</pre>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Comando 3: Derrubar transação bloqueadora específica via ID do processo (PID)</div>
-        <div class="abox-body">
-          <pre style="background:#0f172a; color:#f8fafc;"><span class="c">-- Termina a query de forma limpa</span>
+</div>
+</div>
+<div class="abox">
+<div class="abox-hdr" style="background: var(--navy)">Comando 3: Derrubar transação bloqueadora específica via ID do processo (PID)</div>
+<div class="abox-body">
+<pre style="background:#0f172a; color:#f8fafc;"><span class="c">-- Termina a query de forma limpa</span>
 <span class="k">SELECT</span> pg_cancel_backend(blocking_pid);
 
 <span class="c">-- Força o encerramento imediato da conexão física com o banco</span>
 <span class="k">SELECT</span> pg_terminate_backend(blocking_pid);</pre>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECTION 5: GUIA E COMPARAÇÃO DE BANCOS DE DADOS AWS -->
-    <section class="section" id="aws-databases-guide">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">05</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Tipos de Bancos de Dados AWS: Guia de Tomada de Decisão</h2>
-          <p>Mapeamento completo de engines de banco, tipos de dados e quando usar</p>
-        </div>
-      </div>
-
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Banco AWS</th>
-              <th>Modelo / Engine</th>
-              <th>Vantagem Crítica</th>
-              <th>trade-offs / Limites</th>
-              <th>Caso de Uso Recomendado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Amazon RDS</strong></td>
-              <td>Relacional (OLTP) - Postgres, MySQL, Oracle, SQL Server</td>
-              <td>Compatibilidade total com drivers e bibliotecas tradicionais.</td>
-              <td>Replicação Multi-AZ lenta baseada em EBS. Dificuldade de escalar escritas globalmente.</td>
-              <td>Sistemas transacionais legados, ERPs clássicos, CRMs com relações complexas de chaves estrangeiras.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon Aurora</strong></td>
-              <td>Relacional (OLTP compatível) - Postgres/MySQL</td>
-              <td>Armazenamento compartilhado atômico de log, auto-healing, failover em 3s, até 15 réplicas sem lag de leitura.</td>
-              <td>Custo superior ao RDS tradicional para instâncias muito pequenas (não analíticas).</td>
-              <td><strong>Sistemas transacionais modernos de altíssima concorrência</strong> e APIs corporativas escaláveis.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon DynamoDB</strong></td>
-              <td>NoSQL (Chave-Valor / Documento)</td>
-              <td>Serverless, escala infinita com latência estável inferior a 10ms (single-digit). Latência global via Global Tables.</td>
-              <td>Não suporta joins relacionais natively. Exige modelagem rigorosa de acesso (Single-Table Design).</td>
-              <td>Carrinhos de compras, catálogo de produtos, sessão de usuários e logs de auditoria rápida.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon DocumentDB</strong></td>
-              <td>NoSQL (Documento compatível com MongoDB)</td>
-              <td>Totalmente gerenciado, escala para milhões de leituras por segundo integrando JSON nativo.</td>
-              <td>Não suporta queries de joins analíticos complexos de forma performática.</td>
-              <td>Gerenciadores de conteúdo (CMS), catálogos com atributos altamente dinâmicos e variáveis.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon ElastiCache</strong></td>
-              <td>Em Memória (Redis / Memcached)</td>
-              <td>Latência sub-milissegundo para queries repetidas e processamento de pub/sub rápido.</td>
-              <td>Dados voláteis na RAM (mesmo com persistência ligada, o custo de RAM por GB é altíssimo).</td>
-              <td>Caching de sessões HTTP, tabelas de classificação em tempo real e buffers de mensagens de alta vazão.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon Neptune</strong></td>
-              <td>Grafo (RDF / Property Graph)</td>
-              <td>Armazena e navega em relacionamentos altamente interconectados com velocidade milissegunda.</td>
-              <td>Linguagens de query específicas (Gremlin, SPARQL).</td>
-              <td>Sistemas de detecção de fraude, motores de recomendação de amigos/produtos e redes sociais.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon Timestream</strong></td>
-              <td>Séries Temporais (Time-Series)</td>
-              <td>Auto-scaling nativo para bilhões de métricas de IoT diárias, ciclo de vida automático (in-memory para magnetic storage).</td>
-              <td>Restrito a dados ordenados por timestamp imutáveis.</td>
-              <td>Telemetria IoT de sensores industriais, métricas de aplicações de infraestrutura, logs de cliques.</td>
-            </tr>
-            <tr>
-              <td><strong>Amazon Redshift</strong></td>
-              <td>MPP Data Warehouse (OLAP)</td>
-              <td>Armazenamento colunar com processamento massivo em paralelo para petabytes de dados analíticos.</td>
-              <td>Latência de gravação linha a linha péssima. Não deve ser usado como banco de API de microsserviços.</td>
-              <td><strong>Data Warehousing corporativo centralizado</strong>, agregação histórica pesada e queries de BI corporativo.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- SECTION 6: COMPARATIVO SQL VS NOSQL VS SQS -->
-    
-    <section class="section" id="modelagem-rds">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--rds)">04</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--rds)"></div>
-          <h2>Modelagem Física e Lógica (RDBMS)</h2>
-          <p>O Modo Clássico (Power Designer) de Garantir Integridade (ACID)</p>
-        </div>
-      </div>
-      <p>Bancos Relacionais (como Amazon RDS PostgreSQL ou Aurora) baseiam-se na Normalização. O objetivo não é "pre-juntar" os dados no disco como no NoSQL, mas sim separá-los logicamente para evitar redundância, garantindo a integridade via <strong>Foreign Keys (Chaves Estrangeiras)</strong>.</p>
-      
-      <!-- Exemplo 1 -->
-      <h3 style="margin-top:40px;">Exemplo 1: E-commerce (Relações 1:1 e 1:N)</h3>
-      <p>Em um sistema transacional, um Usuário pode ter apenas um Perfil (Relação 1:1 usando constraint <code>UNIQUE</code> na FK) e pode ter vários Pedidos (Relação 1:N).</p>
-      <div class="drawio-wrap" style="margin-top: 20px; margin-bottom: 30px;">
-        <div class="drawio-label"><span class="dot"></span>RDS ERD: E-COMMERCE</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;Electron\&quot; modified=\&quot;2026-06-17T00:00:00.000Z\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;21.2.8\&quot; type=\&quot;device\&quot;&gt;\n  &lt;diagram id=\&quot;4451be_rds_ecommerce_1n\&quot; name=\&quot;RDS ECOMMERCE\&quot;&gt;\n    &lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;340\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot; background=\&quot;#080f1e\&quot;&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\&quot;4451be_0\&quot;/&gt;&lt;mxCell id=\&quot;4451be_1\&quot; parent=\&quot;4451be_0\&quot;/&gt;\n\n        &lt;!-- RDS Icon --&gt;\n        &lt;mxCell id=\&quot;4451be_rds_icon\&quot; value=\&quot;Amazon RDS\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#1d6fa5;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;120\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Cliente table --&gt;\n        &lt;mxCell id=\&quot;4451be_cli_hdr\&quot; value=\&quot;CLIENTE\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1d3a6b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;80\&quot; width=\&quot;160\&quot; height=\&quot;32\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_cli_pk\&quot;  value=\&quot;\ud83d\udd11 id_cliente (PK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#1e3a5f;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;112\&quot; width=\&quot;160\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_cli_nm\&quot;  value=\&quot;nome\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;136\&quot; width=\&quot;160\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_cli_em\&quot;  value=\&quot;email\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;158\&quot; width=\&quot;160\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_cli_ct\&quot;  value=\&quot;cidade\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;180\&quot; width=\&quot;160\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Pedido table --&gt;\n        &lt;mxCell id=\&quot;4451be_ped_hdr\&quot; value=\&quot;PEDIDO\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1d3a6b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;60\&quot; width=\&quot;170\&quot; height=\&quot;32\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_ped_pk\&quot;  value=\&quot;\ud83d\udd11 id_pedido (PK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#1e3a5f;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;92\&quot; width=\&quot;170\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_ped_fk\&quot;  value=\&quot;\ud83d\udd17 id_cliente (FK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#f59e0b;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;116\&quot; width=\&quot;170\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_ped_dt\&quot;  value=\&quot;data_pedido\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;140\&quot; width=\&quot;170\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_ped_vl\&quot;  value=\&quot;valor_total\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;162\&quot; width=\&quot;170\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_ped_st\&quot;  value=\&quot;status\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;184\&quot; width=\&quot;170\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Item table --&gt;\n        &lt;mxCell id=\&quot;4451be_itm_hdr\&quot; value=\&quot;ITEM_PEDIDO\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1d3a6b;strokeColor=#3b82f6;strokeWidth=2;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;650\&quot; y=\&quot;40\&quot; width=\&quot;185\&quot; height=\&quot;32\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_itm_pk1\&quot; value=\&quot;\ud83d\udd11 id_item (PK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#1e3a5f;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;650\&quot; y=\&quot;72\&quot; width=\&quot;185\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_itm_fk\&quot;  value=\&quot;\ud83d\udd17 id_pedido (FK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#f59e0b;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;650\&quot; y=\&quot;96\&quot; width=\&quot;185\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_itm_pr\&quot;  value=\&quot;id_produto\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;650\&quot; y=\&quot;120\&quot; width=\&quot;185\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_itm_qt\&quot;  value=\&quot;quantidade\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;650\&quot; y=\&quot;142\&quot; width=\&quot;185\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_itm_pu\&quot;  value=\&quot;preco_unitario\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;650\&quot; y=\&quot;164\&quot; width=\&quot;185\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Cardinality labels --&gt;\n        &lt;mxCell id=\&quot;4451be_lbl_1n1\&quot; value=\&quot;1\&quot; style=\&quot;labelBackgroundColor=none;text;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;282\&quot; y=\&quot;140\&quot; width=\&quot;20\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_lbl_1n2\&quot; value=\&quot;N\&quot; style=\&quot;labelBackgroundColor=none;text;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;355\&quot; y=\&quot;140\&quot; width=\&quot;20\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_lbl_1n3\&quot; value=\&quot;1\&quot; style=\&quot;labelBackgroundColor=none;text;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;552\&quot; y=\&quot;120\&quot; width=\&quot;20\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_lbl_1n4\&quot; value=\&quot;N\&quot; style=\&quot;labelBackgroundColor=none;text;fontColor=#10b981;fontFamily=DM Sans;fontSize=12;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;624\&quot; y=\&quot;120\&quot; width=\&quot;20\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Caption --&gt;\n        &lt;mxCell id=\&quot;4451be_cap\&quot; value=\&quot;Rela\u00e7\u00f5es 1:N \u2014 Um cliente tem N pedidos; um pedido tem N itens\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=9;fontStyle=2;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_1\&quot;&gt;&lt;mxGeometry x=\&quot;100\&quot; y=\&quot;260\&quot; width=\&quot;700\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Edges --&gt;\n        &lt;mxCell id=\&quot;4451be_e1\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;4451be_1\&quot; source=\&quot;4451be_cli_fk_ref\&quot; target=\&quot;4451be_ped_fk\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontFamily=DM Sans;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_cli_fk_ref\&quot; value=\&quot;\&quot; style=\&quot;point;x=0.5;y=0.5;fillColor=none;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_cli_pk\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_e2\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;4451be_1\&quot; source=\&quot;4451be_ped_pk_ref\&quot; target=\&quot;4451be_itm_fk\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontFamily=DM Sans;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;4451be_ped_pk_ref\&quot; value=\&quot;\&quot; style=\&quot;point;x=0.5;y=0.5;fillColor=none;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;4451be_ped_pk\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;&quot;}'></div>
-      </div>
-
-      <!-- Exemplo 2 -->
-      <h3 style="margin-top:40px;">Exemplo 2: ERP de Inventário (Relação N:M)</h3>
-      <p>Aqui está o coração do RDBMS: Relações <strong>Muitos-Para-Muitos</strong>. Um Produto tem vários Fornecedores, e um Fornecedor fornece vários Produtos. O banco relacional exige a criação de uma Tabela Associativa (Junction Table) para mapear essa cardinalidade.</p>
-      <div class="drawio-wrap" style="margin-top: 20px; margin-bottom: 30px;">
-        <div class="drawio-label"><span class="dot"></span>RDS ERD: ERP INVENTÁRIO (JUNCTION TABLE)</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;Electron\&quot; modified=\&quot;2026-06-17T00:00:00.000Z\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;21.2.8\&quot; type=\&quot;device\&quot;&gt;\n  &lt;diagram id=\&quot;1519a5_rds_erp_nm\&quot; name=\&quot;RDS ERP\&quot;&gt;\n    &lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot; background=\&quot;#080f1e\&quot;&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\&quot;1519a5_0\&quot;/&gt;&lt;mxCell id=\&quot;1519a5_1\&quot; parent=\&quot;1519a5_0\&quot;/&gt;\n\n        &lt;!-- Aurora Icon (ERP usually Multi-AZ) --&gt;\n        &lt;mxCell id=\&quot;1519a5_aurora_icon\&quot; value=\&quot;Aurora&amp;#xa;PostgreSQL\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;fillColor=#2d6a4f;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;110\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Funcionario --&gt;\n        &lt;mxCell id=\&quot;1519a5_func_hdr\&quot; value=\&quot;FUNCION\u00c1RIO\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#14532d;strokeColor=#16a34a;strokeWidth=2;fontColor=#86efac;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;80\&quot; width=\&quot;170\&quot; height=\&quot;32\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_func_pk\&quot;  value=\&quot;\ud83d\udd11 id_func (PK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f2a1a;strokeColor=#1a3a2a;fontColor=#86efac;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;112\&quot; width=\&quot;170\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_func_nm\&quot;  value=\&quot;nome\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#071811;strokeColor=#1a3a2a;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;136\&quot; width=\&quot;170\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_func_dp\&quot;  value=\&quot;departamento\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#071811;strokeColor=#1a3a2a;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;120\&quot; y=\&quot;158\&quot; width=\&quot;170\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Projeto_Func (associativa N:M) --&gt;\n        &lt;mxCell id=\&quot;1519a5_assoc_hdr\&quot; value=\&quot;PROJETO_FUNC\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#451a03;strokeColor=#f59e0b;strokeWidth=2;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;370\&quot; y=\&quot;60\&quot; width=\&quot;170\&quot; height=\&quot;32\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_assoc_f\&quot;  value=\&quot;\ud83d\udd17 id_func (FK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#2a1500;strokeColor=#78350f;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;370\&quot; y=\&quot;92\&quot; width=\&quot;170\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_assoc_p\&quot;  value=\&quot;\ud83d\udd17 id_proj (FK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#2a1500;strokeColor=#78350f;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;370\&quot; y=\&quot;116\&quot; width=\&quot;170\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_assoc_h\&quot;  value=\&quot;horas_alocadas\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#1a0f00;strokeColor=#78350f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;370\&quot; y=\&quot;140\&quot; width=\&quot;170\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_assoc_r\&quot;  value=\&quot;papel\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#1a0f00;strokeColor=#78350f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;370\&quot; y=\&quot;162\&quot; width=\&quot;170\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_nm_note\&quot; value=\&quot;\u2b06 Tabela Associativa (N:M)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;fontColor=#f59e0b;fontFamily=DM Sans;fontSize=9;fontStyle=2;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;360\&quot; y=\&quot;188\&quot; width=\&quot;190\&quot; height=\&quot;18\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Projeto --&gt;\n        &lt;mxCell id=\&quot;1519a5_proj_hdr\&quot; value=\&quot;PROJETO\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e1b4b;strokeColor=#818cf8;strokeWidth=2;fontColor=#c7d2fe;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;630\&quot; y=\&quot;80\&quot; width=\&quot;175\&quot; height=\&quot;32\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_proj_pk\&quot;  value=\&quot;\ud83d\udd11 id_proj (PK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#1e1b4b;strokeColor=#312e81;fontColor=#c7d2fe;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;630\&quot; y=\&quot;112\&quot; width=\&quot;175\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_proj_nm\&quot;  value=\&quot;nome_projeto\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f0e24;strokeColor=#312e81;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;630\&quot; y=\&quot;136\&quot; width=\&quot;175\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_proj_dt\&quot;  value=\&quot;data_inicio / data_fim\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f0e24;strokeColor=#312e81;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;630\&quot; y=\&quot;158\&quot; width=\&quot;175\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_proj_bd\&quot;  value=\&quot;orcamento\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f0e24;strokeColor=#312e81;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;630\&quot; y=\&quot;180\&quot; width=\&quot;175\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Caption --&gt;\n        &lt;mxCell id=\&quot;1519a5_cap\&quot; value=\&quot;Rela\u00e7\u00e3o N:M \u2014 Um funcion\u00e1rio participa de N projetos; um projeto tem N funcion\u00e1rios. Tabela associativa resolve a N:M.\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=9;fontStyle=2;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot;&gt;&lt;mxGeometry x=\&quot;100\&quot; y=\&quot;250\&quot; width=\&quot;700\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Edges --&gt;\n        &lt;mxCell id=\&quot;1519a5_e1\&quot; value=\&quot;N\&quot; edge=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot; source=\&quot;1519a5_func_pk\&quot; target=\&quot;1519a5_assoc_f\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontColor=#10b981;fontFamily=DM Sans;fontSize=11;fontStyle=1;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;1519a5_e2\&quot; value=\&quot;N\&quot; edge=\&quot;1\&quot; parent=\&quot;1519a5_1\&quot; source=\&quot;1519a5_proj_pk\&quot; target=\&quot;1519a5_assoc_p\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#818cf8;strokeWidth=1.5;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontColor=#818cf8;fontFamily=DM Sans;fontSize=11;fontStyle=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;&quot;}'></div>
-      </div>
-
-      <div class="legend-box" style="background:#0f172a; padding:15px; border-left:4px solid #ec4899; border-radius:4px; margin-top: -20px; margin-bottom: 20px;">
-        <h4 style="margin-top:0; color:#fbcfe8; font-size:14px;">Legenda do Diagrama</h4>
-        <ul style="font-size:13px; color:#94a3b8; margin-bottom:0; padding-left:20px;">
-          <li><strong>Junction Table</strong>: Tabela <code>PRODUCT_SUPPLIER</code> essencial para mapear a relação N:M. No banco, ela contém Duas Foreign Keys compondo sua Primary Key.</li>
-          <li><strong>Garantia ACID</strong>: Se tentar deletar um Fornecedor que já tem Produto associado, o RDBMS barra a exclusão (Restrict) garantindo Integridade Referencial.</li>
-        </ul>
-      </div>
-      <div class="code-block" style="margin-top:20px; margin-bottom:40px;">
-        <div class="code-header"><span class="code-lang">Terraform: Provisionando Banco RDS PostgreSQL</span><button class="copy-btn">Copiar</button></div>
-        <pre><code># Provisionamento Físico da Instância RDS onde as Tabelas viverão
-resource "aws_db_instance" "erp_db" {
-  allocated_storage    = 100
-  storage_type         = "gp3"
-  engine               = "postgres"
-  engine_version       = "15.4"
-  instance_class       = "db.t4g.micro"
-  identifier           = "erp-production-db"
-  username             = "admin"
-  password             = "Senh4SupeRSecreta" # Usar SecretsManager!
-  parameter_group_name = "default.postgres15"
-  skip_final_snapshot  = true
-  publicly_accessible  = false # Trancado na Subnet Privada
-}</code></pre>
-      </div>
-
-      <!-- Exemplo 3 -->
-      <h3 style="margin-top:40px;">Exemplo 3: RH e Organograma (Self-Referencing)</h3>
-      <p>Uma relação hierárquica (Árvore) dentro de uma mesma entidade. Um Funcionário (Employee) possui um Gerente, que também é um Funcionário na mesma tabela. A FK aponta para a própria PK da tabela.</p>
-      <div class="drawio-wrap" style="margin-top: 20px; margin-bottom: 30px;">
-        <div class="drawio-label"><span class="dot"></span>RDS ERD: RECURSOS HUMANOS (SELF-REFERENCING)</div>
-        <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;nav&quot;: true, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom layers tags lightbox&quot;, &quot;edit&quot;: &quot;_blank&quot;, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;Electron\&quot; modified=\&quot;2026-06-17T00:00:00.000Z\&quot; agent=\&quot;Mozilla/5.0\&quot; version=\&quot;21.2.8\&quot; type=\&quot;device\&quot;&gt;\n  &lt;diagram id=\&quot;21c0d4_rds_hr_self\&quot; name=\&quot;RDS HR\&quot;&gt;\n    &lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;700\&quot; pageHeight=\&quot;300\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot; background=\&quot;#080f1e\&quot;&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\&quot;21c0d4_0\&quot;/&gt;&lt;mxCell id=\&quot;21c0d4_1\&quot; parent=\&quot;21c0d4_0\&quot;/&gt;\n\n        &lt;!-- RDS Icon --&gt;\n        &lt;mxCell id=\&quot;21c0d4_rds_icon\&quot; value=\&quot;Amazon RDS\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#1d6fa5;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;21c0d4_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;100\&quot; width=\&quot;55\&quot; height=\&quot;55\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Empregado table --&gt;\n        &lt;mxCell id=\&quot;21c0d4_emp_hdr\&quot; value=\&quot;EMPREGADO\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1a2a4a;strokeColor=#3b82f6;strokeWidth=2;fontColor=#93c5fd;fontFamily=DM Sans;fontSize=11;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;21c0d4_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;70\&quot; width=\&quot;280\&quot; height=\&quot;32\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;21c0d4_emp_pk\&quot;  value=\&quot;\ud83d\udd11 id_empregado (PK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0f2040;strokeColor=#1e3a5f;fontColor=#bfdbfe;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;21c0d4_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;102\&quot; width=\&quot;280\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;21c0d4_emp_nm\&quot;  value=\&quot;nome\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;21c0d4_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;126\&quot; width=\&quot;280\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;21c0d4_emp_fk\&quot;  value=\&quot;\ud83d\udd17 id_gerente (FK \u2192 id_empregado)\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#2a1500;strokeColor=#f59e0b;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;21c0d4_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;148\&quot; width=\&quot;280\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;21c0d4_emp_dpt\&quot; value=\&quot;departamento\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#0a1628;strokeColor=#1e3a5f;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;21c0d4_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;172\&quot; width=\&quot;280\&quot; height=\&quot;22\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Self-referencing arrow --&gt;\n        &lt;mxCell id=\&quot;21c0d4_sr_edge\&quot; value=\&quot;reporta_a (0..1 gerente para N subordinados)\&quot; edge=\&quot;1\&quot; parent=\&quot;21c0d4_1\&quot; source=\&quot;21c0d4_emp_fk\&quot; target=\&quot;21c0d4_emp_pk\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=2;endArrow=ERmany;startArrow=ERone;startFill=0;endFill=0;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;&gt;&lt;Array as=\&quot;points\&quot;&gt;&lt;mxPoint x=\&quot;580\&quot; y=\&quot;160\&quot;/&gt;&lt;mxPoint x=\&quot;580\&quot; y=\&quot;114\&quot;/&gt;&lt;/Array&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;\n\n        &lt;!-- Note --&gt;\n        &lt;mxCell id=\&quot;21c0d4_note\&quot; value=\&quot;Self-Referencing FK: o campo id_gerente aponta para id_empregado&amp;#xa;na mesma tabela. Representa hierarquias (organograma, categorias).\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1a2a1a;strokeColor=#10b981;strokeWidth=1;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=9;align=left;\&quot; vertex=\&quot;1\&quot; parent=\&quot;21c0d4_1\&quot;&gt;&lt;mxGeometry x=\&quot;130\&quot; y=\&quot;230\&quot; width=\&quot;440\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;&quot;}'></div>
-      </div>
-    </section>
-
-    <section class="section" id="sql-nosql-sqs">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#f43f5e">06</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#f43f5e"></div>
-          <h2>Comparativo e Matriz de Decisão: SQL vs. NoSQL vs. SQS</h2>
-          <p> trade-offs arquiteturais entre persistência transacional, escalabilidade e desacoplamento assíncrono</p>
-        </div>
-      </div>
-
-      <p>Um erro de design comum em arquiteturas distribuídas na AWS é tentar usar a mesma tecnologia para objetivos computacionais opostos. Abaixo detalhamos a comparação física e lógica das soluções:</p>
-
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Característica</th>
-              <th>SQL (ex: Aurora Postgres)</th>
-              <th>NoSQL (ex: DynamoDB)</th>
-              <th>SQS (Simple Queue Service)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Natureza do Serviço</strong></td>
-              <td>Banco de Dados Relacional estruturado (Tabelas/Esquemas rígidos).</td>
-              <td>Banco de Dados Não-Relacional distribuído (Chave-Valor/Documento).</td>
-              <td>Mensageria / Fila de Mensagens distribuída (Fila FIFO ou Standard).</td>
-              </tr>
-            <tr>
-              <td><strong>Garantias de Consistência</strong></td>
-              <td>Transações ACID estritas (isolação serializável, chaves estrangeiras, consistência forte imediata).</td>
-              <td>Eventualmente consistente (consistência forte sob demanda pagando taxa adicional). Sem ACID nativo multi-tabelas clássico.</td>
-              <td>Exactly-Once (em filas FIFO) ou At-Least-Once (filas Standard). Desacoplamento temporal.</td>
-            </tr>
-            <tr>
-              <td><strong>Escalabilidade de Escrita</strong></td>
-              <td>Vertical (Writer único no Aurora, escala até limites da máquina). Réplicas apenas lêem.</td>
-              <td>Horizontal infinita (auto-scaling automático adicionando partições baseadas nas PKs).</td>
-              <td>Praticamente infinita (escala automaticamente sem provisionamento prévio).</td>
-            </tr>
-            <tr>
-              <td><strong>Padrão de Consulta</strong></td>
-              <td>Queries ad-hoc altamente complexas, joins multi-tabelas, agregações arbitrárias (<code>GROUP BY</code>).</td>
-              <td>Apenas por chaves primárias e índices secundários conhecidos (GSI/LSI). Sem joins.</td>
-              <td>Apenas leitura destrutiva sequencial (consumidor lê a mensagem da fila e a deleta após processar).</td>
-            </tr>
-            <tr>
-              <td><strong>Decisão de Uso (Quando Escolher?)</strong></td>
-              <td><strong>Quando a integridade relacional é lei</strong> e as queries são imprevisíveis (ex: fechamento contábil, BI flexível).</td>
-              <td><strong>Quando o padrão de acesso é conhecido</strong> e você exige escala linear infinita com latência estável milissegunda.</td>
-              <td><strong>Para desacoplar microsserviços</strong>, amortecer picos de carga de escrita (Buffer/Throttling) e garantir resiliência assíncrona.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3 style="margin-top: 30px;">Qual a Melhor Decisão de Quando Usar? (Arquitetura de Ingress Segura)</h3>
-      <p>Em sistemas produtivos resilientes, o design de ingress combina os três serviços em um fluxo cooperativo:</p>
-
-                    <div class="drawio-wrap" style="margin-top: 30px;">
-        <div class="drawio-label"><span class="dot"></span>Arquitetura Event-Driven — SNS · SQS · EventBridge</div>
-        <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;380\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;11d3ae_0\&quot;/&gt;&lt;mxCell id=\&quot;11d3ae_1\&quot; parent=\&quot;11d3ae_0\&quot;/&gt;&lt;mxCell id=\&quot;11d3ae_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;380\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_title\&quot; value=\&quot;ARQUITETURA EVENT-DRIVEN \u2014 SNS \u00b7 SQS \u00b7 EVENTBRIDGE\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_aurora\&quot; value=\&quot;Aurora DBPostgreSQL\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.aurora;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;160\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_evb\&quot; value=\&quot;EventBridgeCustom Bus\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;160\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_a_evb\&quot; value=\&quot;CDC/DMS\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_aurora\&quot; target=\&quot;11d3ae_evb\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_sns\&quot; value=\&quot;SNSTopic\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;80\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_sqs\&quot; value=\&quot;SQSQueue\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;240\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_evb_sns\&quot; value=\&quot;Broadcast\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_evb\&quot; target=\&quot;11d3ae_sns\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_evb_sqs\&quot; value=\&quot;Buffer\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_evb\&quot; target=\&quot;11d3ae_sqs\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_grp_sf\&quot; value=\&quot;AWS STEP FUNCTIONS\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#1a0526;strokeColor=#7c3aed;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#64748b;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;550\&quot; y=\&quot;50\&quot; width=\&quot;200\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_sf\&quot; value=\&quot;StepFunctions\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;570\&quot; y=\&quot;80\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_glue\&quot; value=\&quot;Glue JobSpark\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;570\&quot; y=\&quot;170\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_sns_err\&quot; value=\&quot;SNSAlert\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#dc2626;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;170\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_sqs_sf\&quot; value=\&quot;Trigger\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_sqs\&quot; target=\&quot;11d3ae_sf\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_sf_glue\&quot; value=\&quot;On Success\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_sf\&quot; target=\&quot;11d3ae_glue\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_sf_err\&quot; value=\&quot;On Error\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#dc2626;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_sf\&quot; target=\&quot;11d3ae_sns_err\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_s3\&quot; value=\&quot;S3 SilverParquet\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;800\&quot; y=\&quot;100\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_cw\&quot; value=\&quot;CloudWatchAlarms\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;800\&quot; y=\&quot;230\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_glue_s3\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_glue\&quot; target=\&quot;11d3ae_s3\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_err_cw\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_sns_err\&quot; target=\&quot;11d3ae_cw\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_lmb\&quot; value=\&quot;Lambda(Notif)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry x=\&quot;550\&quot; y=\&quot;310\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;11d3ae_e_sns_lmb\&quot; value=\&quot;Fan-out\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;11d3ae_sns\&quot; target=\&quot;11d3ae_lmb\&quot; parent=\&quot;11d3ae_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
-
 </div>
-<div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-  <strong style="color: var(--accent);">Explicação:</strong>
-  <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
-    <li style="margin-bottom: 4px;"><strong>Componentes:</strong> ARQUITETURA EVENT-DRIVEN — SNS · SQS · EVENTBRIDGE, Aurora DB PostgreSQL, EventBridge Custom Bus, CDC/DMS, SNS Topic, SQS Queue, Broadcast, Buffer, AWS STEP FUNCTIONS, Step Functions, Glue Job Spark, SNS Alert, Trigger, On Success, On Error, S3 Silver Parquet, CloudWatch Alarms, Lambda (Notif), Fan-out</li>
-    <li style="margin-bottom: 4px;"><strong>Integração:</strong> O fluxo de dados conecta os componentes citados acima. As setas no diagrama indicam a direcionalidade (Eventos, Streaming ou Polling) entre os serviços AWS.</li>
-    <li><strong>Contexto:</strong> O diagrama "Arquitetura Event-Driven — SNS · SQS · EventBridge" ilustra a arquitetura da solução para o tópico em questão.</li>
-  </ul>
 </div>
-
-      <h3 style="margin-top: 40px; margin-bottom: 20px;">SQL vs NoSQL: O Veredito de Quando Usar</h3>
-      <div class="bento-grid" style="margin-bottom: 30px;">
-        <div class="card" style="border-top: 4px solid var(--ok);">
-          <div class="card-lbl" style="color: var(--ok);">✅ Quando usar SQL (Relacional)</div>
-          <ul style="margin-top: 10px; padding-left: 20px; font-size: 0.9em; line-height: 1.6;">
-            <li><strong>Integridade Financeira/ACID:</strong> Quando o sistema transaciona dinheiro (ex: transferências bancárias, pagamentos) e não pode existir a mínima chance de o débito ocorrer sem o crédito.</li>
-            <li><strong>Padrão de Consulta Imprevisível:</strong> Quando os analistas de negócio ou usuários precisam fazer buscas flexíveis e dinâmicas, exigindo <code>JOIN</code>, <code>GROUP BY</code>, ou filtros ad-hoc complexos.</li>
-            <li><strong>Relacionamentos Complexos M:N:</strong> Quando você tem muitas entidades fortemente acopladas (ex: ERPs, sistemas de RH, Gestão de Inventário).</li>
-            <li><strong>Dados Estritamente Tabulares:</strong> Onde o <em>schema</em> (colunas) raramente muda.</li>
-          </ul>
-        </div>
-        <div class="card" style="border-top: 4px solid var(--accent);">
-          <div class="card-lbl" style="color: var(--accent);">✅ Quando usar NoSQL (Chave-Valor/Doc)</div>
-          <ul style="margin-top: 10px; padding-left: 20px; font-size: 0.9em; line-height: 1.6;">
-            <li><strong>Ultra Baixa Latência em Escala:</strong> Quando o banco precisa responder em menos de 10ms, seja para 100 usuários ou 10 milhões de usuários (ex: Leaderboards de Jogos, Catálogos de Streaming, Sessões Web).</li>
-            <li><strong>Esquema Flexível / JSON:</strong> Quando cada item pode ter atributos diferentes (ex: catálogo de E-commerce, onde uma camisa tem "Tamanho" e uma TV tem "Polegadas").</li>
-            <li><strong>Padrão de Acesso Previsível:</strong> Quando você sabe de antemão que 95% das buscas serão "Busque o Usuário pelo ID" e não precisa de relacionamentos em tempo de consulta.</li>
-            <li><strong>Carga Massiva de Escrita (High Write Throughput):</strong> Sistemas de IoT, logs e tracking de cliques que bombardeiam o banco de dados o tempo todo.</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="callout callout-info" style="margin-top:20px;">
-        <strong>Regra de Ouro da Arquitetura Decisória:</strong>
-        <br>1. Use <strong>SQS</strong> na borda (Ingress) sempre que receber dados de sensores ou eventos externos massivos de e-commerce. A fila garante que a sua API responda "202 Accepted" em milissegundos, impedindo que picos de tráfego derrubem ou gerem exaustão de conexões físicas no banco de dados.
-        <br>2. Use o <strong>NoSQL (DynamoDB)</strong> para dados operacionais desestruturados ou rastreamento rápido de estado de curta duração (ex: se o pagamento foi processado ou não).
-        <br>3. Use o <strong>SQL (Aurora)</strong> apenas quando a mensagem for validada e precisar de consistência relacional estrita (ex: alterar balanço de contas bancárias ou gerar a fatura consolidada final do cliente).
-      </div>
-    </section>
-  
-    <!-- SEÇÃO DE REFERÊNCIAS -->
-    <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--muted)">REF</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--muted)"></div>
-          <h2>Referências &amp; Notas de Curadoria</h2>
-          <p>Documentos originais e literatura técnica de referência para este módulo</p>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-lbl">Database Internals</div>
-          <h4>Alex Petrov (O'Reilly Media)</h4>
-          <p>Arquiteturas e estruturas de armazenamento internas de bancos de dados relacionais e não-relacionais (B-Trees, LSM-Trees, e motores de indexação).</p>
-        </div>
-        <div class="card">
-          <div class="card-lbl">Amazon DynamoDB Developer Guide</div>
-          <h4>AWS Official Documentation</h4>
-          <p>O guia de referência oficial para modelagem NoSQL single-table design, partições lógicas e consumo de RCU/WCU. <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 600;">Acessar Guia</a></p>
-        </div>
-      </div>
-    </section>
-  </main>
+</section><section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--muted)">07</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--muted)"></div>
+<h2>Referências &amp; Notas de Curadoria</h2>
+<p>Documentos originais e literatura técnica de referência para este módulo</p>
 </div>
-
+</div>
+<div class="grid-2">
+<div class="card">
+<div class="card-lbl">Database Internals</div>
+<h4>Alex Petrov (O'Reilly Media)</h4>
+<p>Arquiteturas e estruturas de armazenamento internas de bancos de dados relacionais e não-relacionais (B-Trees, LSM-Trees, e motores de indexação).</p>
+</div>
+<div class="card">
+<div class="card-lbl">Amazon DynamoDB Developer Guide</div>
+<h4>AWS Official Documentation</h4>
+<p>O guia de referência oficial para modelagem NoSQL single-table design, partições lógicas e consumo de RCU/WCU. <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/" style="color: var(--accent); text-decoration: none; font-weight: 600;" target="_blank">Acessar Guia</a></p>
+</div>
+</div>
+</section></main>
+</div>
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
-
 <script>
 function toggleNav() {
   var sb = document.getElementById('sidebar');
@@ -675,8 +621,7 @@ document.addEventListener('click', function(e) {
 });
 </script>
 <script src="../../js/progress.js"></script>
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
 <script src="../../js/sidebar-loader.js"></script>
 <script src="../../js/a11y.js"></script>
 </body>

@@ -410,75 +410,7 @@
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
 
     <!-- 05. PERGUNTAS E CASES DE PLATAFORMA -->
-    <section class="section" id="perguntas">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:var(--arch)">05</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:var(--arch)"></div>
-          <h2>Perguntas Técnicas &amp; Cases de Engenharia de Plataformas</h2>
-          <p>Simulação de questões avançadas de entrevistas para Staff/Principal Architect e arquiteturas de escala real</p>
-        </div>
-      </div>
-
-      <div class="concept-grid">
-        <div class="concept-card" style="border-top: 4px solid var(--accent);">
-          <div class="cc-tag">Case 1 · Ingestão Multi-Tenant</div>
-          <div class="cc-title">Plataforma de Ingestão de Dados Unificada (Uber/Netflix Style)</div>
-          <div class="cc-body">
-            <strong>Desafio:</strong> Permitir que mais de 100 times internos ingiram dados de bancos de dados locais e SaaS para o Datalake S3 sem criarem novos códigos de ingestão personalizados.<br>
-            <strong>Solução de Plataforma:</strong> Criação de uma API declarativa no AWS ECS Fargate contendo um orquestrador genérico escrito em Python. O desenvolvedor da squad apenas envia um JSON para a API (declarando a tabela origem, frequência e destino). A plataforma interpreta o JSON, valida os acessos no Lake Formation, provisiona dinamicamente a computação e entrega os dados em Apache Iceberg no S3 de forma totalmente invisível para o desenvolvedor.
-          </div>
-        </div>
-
-        <div class="concept-card" style="border-top: 4px solid var(--spark);">
-          <div class="cc-tag">Case 2 · FinOps &amp; Elasticidade</div>
-          <div class="cc-title">Plataforma Computacional Efêmera (FinOps Spark Nodes)</div>
-          <div class="cc-body">
-            <strong>Desafio:</strong> Evitar o desperdício financeiro de clusters de computação (EMR) ligados 24/7 processando tarefas de batch pontuais de squads diferentes, o que causava faturas mensais abusivas de infraestrutura.<br>
-            <strong>Solução de Plataforma:</strong> Integração de pipelines dinâmicos via Airflow que disparam chamadas de API para subir clusters Spark transientes rodando no EKS (Elastic Kubernetes Service). A computação escala de forma elástica usando Karpenter com instâncias <strong>Spot Graviton3</strong>, processando a carga e se autodesligando imediatamente após o commit das tabelas no S3. O TCO geral reduziu em 65%.
-          </div>
-        </div>
-
-        <div class="concept-card" style="border-top: 4px solid var(--ok);">
-          <div class="cc-tag">Case 3 · Data Quality &amp; Circuit Breaker</div>
-          <div class="cc-title">Plataforma de Validação e Circuit Breaker de Dados Ativo</div>
-          <div class="cc-body">
-            <strong>Desafio:</strong> Impedir que dados nulos, schemas corrompidos e registros duplicados vindos de novas APIs e tabelas mesh entrem na camada Gold e destruam os relatórios corporativos do C-Level.<br>
-            <strong>Solução de Plataforma:</strong> Implementação de um micro-serviço centralizado de qualidade que roda testes automáticos (PyDeequ/Great Expectations) na camada Silver. Caso a taxa de registros inválidos ultrapasse 1.5%, o *circuit breaker* da plataforma é ativado: o pipeline de escrita na Gold é interrompido, os dados defeituosos são enviados a um balde de quarentena no S3 e alertas automáticos PagerDuty/Slack notificam a squad responsável.
-          </div>
-        </div>
-      </div>
-
-      <h3 style="margin-top:30px;">Perguntas de Entrevista Técnica Avançadas</h3>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Pergunta 1: Como justificar financeiramente e tecnicamente o investimento em um time de Engenharia de Plataforma de Dados na empresa?</div>
-        <div class="abox-body">
-          <p><strong>Resposta Esperada:</strong> O investimento se justifica pela <strong>curva de eficiência do TCO e redução de carga cognitiva</strong>. Sem um time de plataforma, cada squad de negócio precisa alocar engenheiros de dados para configurar infraestrutura repetitiva (IaC, CI/CD, clusters EMR). Isso gera 'Policy Bloat' no IAM, ferramentas de ETL caras redundantes e silos operacionais. O time de plataforma desenvolve blocos comuns e modelos self-service, permitindo que os squads de negócios foquem exclusivamente na lógica do produto analítico. O retorno sobre investimento (ROI) é medido pelo aumento na velocidade de deploy de novas features de dados e pela redução de gastos de OPEX devido à governança ativa e desligamento de recursos ociosos.</p>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Pergunta 2: Como a governança centralizada no AWS Lake Formation conversa com a autonomia exigida em topologias Data Mesh?</div>
-        <div class="abox-body">
-          <p><strong>Resposta Esperada:</strong> O AWS Lake Formation suporta delegação de privilégios, o que casa perfeitamente com a governança descentralizada de um Data Mesh. O Arquiteto de Plataforma atua como o <strong>Enabler global</strong>: define as tags de controle (LF-Tags) e delega a administração técnica de cada banco de dados para a respectiva conta produtora (Domain Owner). A conta produtora possui autonomia total para criar tabelas, registrar novos schemas e conceder acessos locais. Porém, o Lake Formation atua na borda fazendo o enforcement das políticas globais de segurança (ex: mascaramento de PII em CPFs) de forma transversal, garantindo compliance sem bloquear a agilidade de entrega dos produtores locais.</p>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Pergunta 3: Em uma arquitetura de Data Platform baseada em Zero-Copy Data Sharing, como gerenciar a segurança fina e conformidade à LGPD quando dados sensíveis são compartilhados?</div>
-        <div class="abox-body">
-          <p><strong>Resposta Esperada:</strong> Devemos centralizar as regras de acesso no AWS Lake Formation (ou em um catálogo federado como Unity Catalog / Apache Polaris) usando controle baseado em tags (LF-Tags) e filtros de células de dados (Data Cell Filtering). Os domínios produtores publicam e etiquetam as tabelas (ex: `security=PII`). O catálogo então mascara colunas confidenciais (como CPF ou cartões) e filtra linhas de maneira dinâmica no momento em que a query é executada pelo time consumidor (no Athena ou Redshift Serverless), sem duplicar fisicamente arquivos do S3 ou criar chaves de criptografia KMS redundantes por consumidor.</p>
-        </div>
-      </div>
-
-      <div class="abox">
-        <div class="abox-hdr" style="background: var(--navy)">Pergunta 4: Com a evolução rápida de schemas nos microsserviços operacionais, como a plataforma impede que mudanças em produção quebrem os pipelines analíticos?</div>
-        <div class="abox-body">
-          <p><strong>Resposta Esperada:</strong> Implementamos um contrato de dados declarativo (Data Contract) acoplado a um Schema Registry (como o AWS Glue Schema Registry) no barramento de eventos (MSK/Kafka). As mudanças operacionais de banco de dados transacionais só podem ser propagadas se forem retrocompatíveis (Backward Compatibility). Se uma squad tentar deletar uma coluna ou alterar um tipo incompatível sem subir uma nova versão de contrato, o Schema Registry rejeita os payloads inválidos e notifica o time responsável via CI/CD, blindando as tabelas Apache Iceberg analíticas de corrupção ou quebras críticas.</p>
-        </div>
-      </div>
-    </section>
+    
   
     <!-- SEÇÃO DE REFERÊNCIAS -->
     <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">

@@ -790,9 +790,105 @@ rules = """
 </div>
 </div>
 <!-- Case Especialista 1: Glue Travando -->
+<button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+
+<!-- INJECTED SECTION FROM REFACTOR -->
+<section class="section" id="operacional">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#a78bfa">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#a78bfa"></div>
+          <h2>Cases Reais, Diagnósticos &amp; Perguntas de Entrevista</h2>
+          <p>Resolução de problemas de concorrência, recuperação de falhas em lote e simulação avançada de entrevistas</p>
+        </div>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card" style="border-top: 4px solid var(--accent)">
+          <div class="cc-tag">Case 1 · Integração Cross-Account</div>
+          <div class="cc-title">Disparos de Pipelines Baseados em Eventos Multi-Conta</div>
+          <div class="cc-body">
+            <strong>Desafio:</strong> O time de ingestão na Conta A carrega arquivos no S3. O pipeline de transformação reside na Conta B (Step Functions + EMR). Como iniciar o processamento na Conta B instantaneamente após a gravação na Conta A sem polling constante?<br>
+            <strong>Solução:</strong> Configuração de uma regra de <strong>Amazon EventBridge</strong> na Conta A que intercepta eventos do S3 (via CloudTrail/S3 Event Notifications) e despacha o JSON do evento diretamente para um Barramento de Eventos (Event Bus) customizado na Conta B. Na Conta B, uma regra do EventBridge escuta o barramento e dispara o Step Functions com o payload do arquivo recebido, garantindo orquestração 100% orientada a eventos em milissegundos de latência.
+          </div>
+        </div>
+
+        <div class="concept-card" style="border-top: 4px solid var(--ok)">
+          <div class="cc-tag">Case 2 · Reprocessamento em Massa</div>
+          <div class="cc-title">Recuperação de Falhas de Partição em Lote (Backfill)</div>
+          <div class="cc-body">
+            <strong>Desafio:</strong> Uma regra incorreta corrompeu as partições analíticas da camada Silver dos últimos 30 dias. O reprocessamento sequencial manual demoraria 24 horas e correria risco de race conditions (múltiplas execuções gravando ao mesmo tempo no mesmo diretório S3).<br>
+            <strong>Solução:</strong> Utilização da Step Functions configurando o estado <strong>Map State em modo Distribuído (Distributed Map)</strong>. A State Machine lê a lista dos 30 diretórios corrompidos a partir de um JSON no S3 e lança sub-execuções paralelas isoladas com limite de concorrência fixado em 5 runs simultâneos (para não estourar o limite de CPU do cluster EMR). O backfill é executado de forma segura e paralela, reduzindo o tempo de recuperação de 24 horas para 1.5 horas.
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Perguntas de Entrevista Técnica Avançadas</h3>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Pergunta 1: Como mitigar gargalos de latência de agendamento (Scheduling Overhead) ao rodar milhares de micro-tarefas rápidas no Airflow?</div>
+        <div class="abox-body">
+          <p><strong>Resposta Esperada:</strong> O Apache Airflow não foi projetado para tarefas com latência de milissegundos devido à frequência de varredura do Scheduler (loop de parse das DAGs). Rodar milhares de micro-tarefas rápidas satura a CPU do banco de dados metastore e gera latência acumulada insustentável. A melhor prática de design é delegar as micro-tarefas rápidas e sequenciais para uma <strong>State Machine no AWS Step Functions (Express Mode)</strong> e usar o Airflow apenas para disparar e monitorar a State Machine como um único bloco lógico. Isso reduz a carga no scheduler do Airflow e diminui os custos de infraestrutura.</p>
+        </div>
+      </div>
+
+      <div class="abox">
+        <div class="abox-hdr" style="background: var(--navy)">Pergunta 2: O que acontece com a execução de uma State Machine do Step Functions se o payload de dados lidos exceder o limite físico de 256 KB?</div>
+        <div class="abox-body">
+          <p><strong>Resposta Esperada:</strong> A execução falhará imediatamente com um erro do tipo <code>States.DataLimitExceeded</code>. Para contornar essa limitação física de payload em pipelines que processam grandes listas de dados, a arquitetura deve utilizar o padrão <strong>Claim Check</strong>: a tarefa grava o payload volumoso temporariamente em um arquivo JSON no Amazon S3 e passa apenas a URI do S3 (o ponteiro) como string no payload da State Machine. As tarefas downstream leem a URI, buscam o arquivo do S3, realizam o processamento e salvam as saídas atualizadas no S3, preservando a State Machine limpa e abaixo do limite de 256KB.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 30px;">Guia CLI: Diagnóstico e Operação via Linha de Comando</h3>
+      <pre style="background:#0b0f19; color:#f8fafc;"><span class="c"># 1. Iniciar execução de uma State Machine passando payload JSON de input</span>
+aws stepfunctions start-execution \
+  --state-machine-arn arn:aws:states:us-east-1:123456789012:stateMachine:pipeline-data-orchestrator \
+  --input <span class="s">'{"execution_date": "2026-06-07"}'</span>
+
+<span class="c"># 2. Descrever o status de uma execução específica do Step Functions</span>
+aws stepfunctions describe-execution \
+  --execution-arn arn:aws:states:us-east-1:123456789012:execution:pipeline-data-orchestrator:99b66a-12a
+
+<span class="c"># 3. Listar execuções falhas de um workflow para diagnóstico</span>
+aws stepfunctions list-executions \
+  --state-machine-arn arn:aws:states:us-east-1:123456789012:stateMachine:pipeline-data-orchestrator \
+  --status-filter FAILED
+
+<span class="c"># 4. Trigger manual de uma DAG no Airflow (MWAA) via CLI do AWS SSM (Executar comando no container do Airflow)</span>
+aws mwaa create-cli-token --name prod-airflow-environment \
+  | jq -r .CliToken \
+  | xargs -I {} curl -s -X POST https://prod-airflow-env.c2.us-east-1.amazonaws.com/aws.local/action \
+      -H <span class="s">"Authorization: Bearer {}"</span> \
+      -d <span class="s">'{"action": "dags trigger mwaa_etl_orchestration_flow"}'</span></pre>
+    </section>
+
+
+
+<!-- INJECTED SECTION FROM REFACTOR -->
+<section class="section" id="cases">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:var(--warn)">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:var(--warn)"></div>
+          <h2>Perguntas de Arquitetura &amp; Cases</h2>
+          <p>Testes de proficiência para o nível de Especialista/Staff</p>
+        </div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">Q1. A empresa precisa executar centenas de rotinas de extração em Python concorrentemente, com tempos de execução entre 1 e 5 minutos. Atualmente, usam clusters EMR, mas os clusters demoram 5 minutos para inicializar (Cold Start), e o desperdício é alto. Qual o serviço de containers recomendado?</div>
+        <div class="qa-a"><strong>ECS Fargate</strong> orquestrado via Step Functions. O Fargate não requer provisionamento ou tempo de subida de clusters EMR e é tarifado em granularidade de segundo por container executado (Serverless). Alternativamente, o Lambda com Container Images também resolveria se os processos não passassem dos 15 minutos (limite de timeout do Lambda).</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">Q2. Você foi chamado para ajudar na migração de um parque legado Hadoop para AWS EMR. O time de infraestrutura exige isolamento perfeito multitenancy (múltiplos times no mesmo cluster para reduzir custos, mas sem conflito de bibliotecas PySpark). Como arquitetar?</div>
+        <div class="qa-a">Utilizar <strong>EMR on EKS</strong>. O Kubernetes permite rodar múltiplos jobs Spark no mesmo cluster base de hardware (EKS Worker Nodes), isolando totalmente as versões de Spark, Java e bibliotecas Python por meio de Imagens Docker customizadas, encapsulando cada job Spark num Namespace distinto do Kubernetes.</div>
+      </div>
+    </section>
+
 </main>
 </div>
-<button id="scrollTop" onclick="scrollToTop()">↑</button>
 <script>
 function toggleNav() {
   var sb = document.getElementById('sidebar');
