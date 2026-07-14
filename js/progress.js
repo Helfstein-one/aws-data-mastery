@@ -21,6 +21,7 @@
     "infra_operacional": { name: "Computação AWS", badge: "Cloud", color: "#8b5cf6", items: ["computacao-bancos.html"] },
     "containers_docker": { name: "Containers & Docker", badge: "DevOps", color: "#8b5cf6", items: ["containers-docker.html"] },
     "networking": { name: "Networking & VPC", badge: "Cloud", color: "#8b5cf6", items: ["networking-ingress.html"] },
+    "protocolos-rede": { name: "Protocolos & TLS", badge: "Cloud", color: "#06b6d4", items: ["protocolos-rede.html"] },
     "dynamodb": { name: "NoSQL & DynamoDB", badge: "NoSQL", color: "#8b5cf6", items: ["nosql-dynamodb.html"] },
     "mensageria": { name: "Mensageria e Filas", badge: "Streaming", color: "#8b5cf6", items: ["event-driven-mensageria.html"] },
     "mensageria-eventos": { name: "Padrões de Eventos", badge: "Event-Driven", color: "#8b5cf6", items: ["mensageria-eventos.html"] },
