@@ -63,6 +63,8 @@
     "genai-security-finetuning": { name: "Fine-Tuning", badge: "AI Engineer", color: "#10b981", items: ["genai-security-finetuning.html"] },
     "genai-llmops-evaluation": { name: "LLMOps & Avaliação", badge: "AI Engineer", color: "#10b981", items: ["genai-llmops-evaluation.html"] },
     "genai-multimodal-cognitivo": { name: "Multimodal & Agentes", badge: "AI Engineer", color: "#10b981", items: ["genai-multimodal-cognitivo.html"] },
+    "genai-mcp-protocol": { name: "Model Context Protocol", badge: "AI Engineer", color: "#10b981", items: ["genai-mcp-protocol.html"] },
+    "genai-llm-hardening": { name: "LLM Hardening & Guardrails", badge: "AI Engineer", color: "#10b981", items: ["genai-llm-hardening.html"] },
 
     // Fase 6
     "business-value": { name: "Valor de Negócio", badge: "Especialista", color: "#db2777", items: ["business-value.html"] },
