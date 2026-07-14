@@ -97,6 +97,68 @@
       <p>A melhor prática de arquitetura (ilustrada acima) é a <strong>Terminação TLS na Borda (TLS Offloading)</strong>. O AWS CloudFront ou o Application Load Balancer (ALB) recebe o tráfego pesado e o pesado custo computacional de realizar o TLS Handshake com o cliente da internet. Uma vez que o tráfego está dentro da VPC (onde a AWS garante a segurança da rede subjacente), o ALB encaminha as requisições como HTTP em texto puro para os containers ECS, economizando CPU das suas aplicações.</p>
 
     </section>
+  
+    <!-- SEÇÃO 4: TCP INTERNALS -->
+    <section id="tcp-internals" class="section">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#06b6d4">04</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#06b6d4"></div>
+          <h2>TCP Internals: Flow & Congestion Control</h2>
+        </div>
+      </div>
+      
+      <p>Para engenheiros de infraestrutura, entender que o TCP "garante entrega" não é suficiente. É preciso entender <em>como</em> ele faz isso sem sobrecarregar a rede mundial.</p>
+
+      <ul style="list-style-type: none; margin-left: 0; padding-left: 0; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;">
+        <li style="margin-bottom: 12px;"><strong style="color:var(--spark)">Sliding Window (Controle de Fluxo):</strong> É o mecanismo onde o receptor avisa ao transmissor quanto espaço de buffer ele ainda tem disponível (o tamanho da "janela"). Se o receptor estiver sobrecarregado processando dados (ex: gargalo de CPU num banco de dados recebendo ingestão massiva), ele diminui o tamanho da janela até chegar a zero, forçando o remetente (cliente) a pausar o envio. Isso evita que pacotes sejam descartados na porta do receptor.</li>
+        <li style="margin-bottom: 12px;"><strong style="color:var(--emr)">Congestion Control (Slow Start & Congestion Avoidance):</strong> O TCP assume que qualquer pacote perdido é culpa de "congestionamento" nos roteadores intermediários. Quando uma conexão começa, ele inicia o algoritmo <strong>Slow Start</strong>, mandando poucos pacotes e dobrando a quantidade a cada <em>Round Trip Time (RTT)</em>. Se houver perda, ele entra em <em>Congestion Avoidance</em>, cortando drasticamente a velocidade pela metade. É por isso que você nunca atinge a banda máxima da sua internet no exato milissegundo inicial de um download.</li>
+      </ul>
+    </section>
+
+    <!-- SEÇÃO 5: A REVOLUÇÃO DO UDP -->
+    <section id="quic-http3" class="section">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#06b6d4">05</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#06b6d4"></div>
+          <h2>A Revolução do UDP: QUIC e HTTP/3</h2>
+        </div>
+      </div>
+      
+      <p>O TCP reinou absoluto na web por 40 anos, mas seu maior defeito arquitetural é o <strong>Head-of-Line Blocking</strong> (Bloqueio de Cabeceira). Como o TCP garante ordem estrita, se você estiver baixando 10 imagens simultaneamente e o pacote da Imagem 1 se perder na rede, o protocolo paralisa o fluxo inteiro (mesmo que os pacotes da Imagem 2 e 3 já tenham chegado) até retransmitir a Imagem 1.</p>
+
+      <div class="alert alert-warning" style="margin-top:24px; display:flex; gap:16px; background-color:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.2); padding:16px; border-radius:8px; margin-bottom: 24px;">
+        <span style="font-size:24px;">⚡</span>
+        <div>
+          <strong style="color:#f59e0b; display:block; margin-bottom:4px;">O Protocolo QUIC (Criado pelo Google)</strong>
+          <span style="color:var(--text-2); font-size:0.95rem;">
+            Para resolver isso, a indústria decidiu criar o <strong>HTTP/3</strong>, mas abandonou o TCP! O HTTP/3 roda em cima do <strong>QUIC</strong>, que por sua vez roda em cima do <strong>UDP</strong>. A genialidade é recriar o controle de pacotes perdidos na camada de aplicação (dentro do QUIC), mas permitindo <em>streams multiplexados independentes</em>. Assim, se a Imagem 1 atrasar, a Imagem 2 e 3 continuam rendenrizando livremente. Além disso, o QUIC funde o TLS Handshake com a conexão inicial, cravando a latência de handshake de 3 viagens para apenas 1 (0-RTT em reconexões)!
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 6: WEBSOCKETS -->
+    <section id="websockets-http" class="section">
+      <div class="sec-hdr">
+        <div class="sec-num" style="color:#06b6d4">06</div>
+        <div class="sec-meta">
+          <div class="sec-acc" style="background:#06b6d4"></div>
+          <h2>WebSocket vs HTTP (Stateful vs Stateless)</h2>
+        </div>
+      </div>
+      
+      <p>Na camada L7, temos dois paradigmas brutais de como gerenciar as sessões sobre conexões TCP:</p>
+
+      <ul style="list-style-type: none; margin-left: 0; padding-left: 0; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;">
+        <li style="margin-bottom: 12px;"><strong style="color:var(--emr)">O Modelo Stateless (HTTP/REST):</strong> Toda requisição do cliente é isolada e tem um fim claro. O servidor processa a requisição, envia a resposta (Response) e a "transação lógica" morre. Se o servidor quiser avisar o cliente de algo no futuro, não consegue, pois o cliente é quem dita quando abrir conexões (Polling).</li>
+        <li style="margin-bottom: 12px;"><strong style="color:var(--arch)">O Modelo Stateful (WebSockets):</strong> Iniciado através de um HTTP Upgrade Request (<em>Protocol Switching</em>), a conexão TCP subjacente é mantida aberta persistentemente no servidor. A partir desse momento, estabelece-se um duto Bidirecional Full-Duplex. É crucial em mercados financeiros (Tickers de Bolsa), chats em tempo real e jogos, pois o Servidor pode "empurrar" (Push) mensagens ativamente para milhares de clientes sem que eles tenham que perguntar.</li>
+      </ul>
+      
+      <p style="color:var(--text-3); font-style: italic;">Nota de Arquitetura AWS: Manter milhões de WebSockets abertos (Idle TCP Connections) derruba firewalls tradicionais e load balancers devido ao esgotamento de portas efêmeras e File Descriptors. O <strong>API Gateway WebSocket API</strong> resolve esse pesadelo abstraindo a manutenção de conexões abertas por trás da cortina da AWS, disparando apenas invocações pontuais do AWS Lambda (Stateless) para você através de <code>ConnectionIds</code>.</p>
+    </section>
+
   </main>
 </div>
 <script>
