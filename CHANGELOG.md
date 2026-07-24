@@ -22,12 +22,17 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/).
 - Sincronização global da navegação lateral (Sidebar) em **todas as páginas HTML** para incluir a Masterclass sobre Apache Iceberg de maneira unificada.
 - Layout flexbox aprimorado nas seções do Apache Iceberg para acomodar dicas dinâmicas.
 - **Padronização de Layout na Home**: Atualização de cards minimalistas (bento-small) para cards completos (bento-large) com descrições consistentes para Lakehouse, Iceberg, Segurança e FinOps.
+- **PMO & SME**: Refatoração visual massiva na página `pmo-sme-dados.html`, incluindo a reconstrução 100% fiel do "Data Product Canvas" (grade estruturada rica, com ícones e perguntas traduzidas em português) e a reformulação textual focada da Matriz de Engajamento de Stakeholders.
+- **SLAs PMO**: Inclusão de um novo quadro de Boas Práticas e Legendas de SLA para Triage (N1, N2, N3) no fluxo de Sustentação.
 
 ### Fixed
 - Correção crítica no parser do Draw.io (`DOMParser`) nas páginas do portal, especialmente `financas-dados.html`, convertendo tags literais HTML (`<mxCell`) para as respectivas entidades XML compatíveis (`&lt;mxCell`) dentro dos payloads JSON do Draw.io, evitando erros fatais de renderização.
 - Correção definitiva da arquitetura Draw.io corporativa (`financas-dados.html`) implementando *triple-layer escaping* correto e referenciando os ícones da AWS com caminhos absolutos do repositório para evitar quebras relativas.
 - Correção de quebra do Grid HTML (Bento Cards) no `index.html`, onde fechamentos prematuros e falta de `</div>` causavam aninhamento de cards e evasão do grid principal.
 - Correção no card de DataOps & MLOps removendo ícone inexistente do SageMaker que quebrava o visual, isolando o logo do AWS Bedrock.
+- **Correção de Escapamento no Draw.io**: Solução do bug de caracteres em duplo-escapamento (`&amp;lt;`) nos payloads de XML nativos do Canvas de Produto, resolvendo artefatos de renderização visual no Draw.io Embedded.
+- **Funcionalidade da Sidebar (PMO)**: Inserção do bloco de scripts essenciais (`toggleNav()`, `scrollToTop()`) que estava ausente em `pmo-sme-dados.html`, recuperando 100% a navegabilidade das categorias, do botão hambúrguer mobile e do botão de *Voltar ao Topo*.
+- Remoção do copyright antigo no footer de páginas isoladas, para manter a uniformidade visual do portal.
 
 ## [1.1.0] - 2026-06-30
 ### Added
