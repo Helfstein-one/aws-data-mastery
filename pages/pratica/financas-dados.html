@@ -621,53 +621,50 @@ def vetorizar_price(capital: pd.Series, taxa: pd.Series, meses: pd.Series) -&gt;
   <div class="sec-hdr">
     <div class="sec-num" style="color:var(--aws)">05</div>
     <div class="sec-title">
-      <div class="sec-subtitle">Marco Regulatório</div>
-      <h2>Marco Regulatório e Governança de Dados</h2>
+      <div class="sec-subtitle">Deep Dive Regulatório e Data Mesh</div>
+      <h2>O Peso da Regulação na Engenharia de Dados</h2>
     </div>
   </div>
 
-  <p>A arquitetura de dados financeiros é profundamente moldada pela regulação. A evolução contínua das normativas gera demandas específicas por retenção, isolamento e velocidade de processamento na nuvem.</p>
+  <p>A arquitetura de dados financeiros não é desenhada apenas para escalabilidade ou performance, mas fundamentalmente para o <strong>Compliance Regulatório</strong>. A evolução das normativas brasileiras e internacionais obriga a engenharia a adotar paradigmas avançados de isolamento e governança, sendo o <strong>Data Mesh</strong> o modelo arquitetural definitivo para suportar essa complexidade.</p>
 
-  <div class="concept-grid" style="margin-top:30px; margin-bottom:40px;">
-    <div class="card" style="border-left: 4px solid var(--spark); padding: 20px; background: var(--card-bg); border-radius: 8px;">
-      <h4 style="color:var(--spark); margin-top:0;">1. Acordos de Basileia</h4>
-      <p style="font-size: 14px; margin-bottom:0;"><strong>Evolução:</strong> Basel I &rarr; Basel II/III (IRB)<br>Obriga a retenção de dados históricos em larga escala para backtesting de modelos estatísticos.</p>
-    </div>
-    <div class="card" style="border-left: 4px solid var(--aws); padding: 20px; background: var(--card-bg); border-radius: 8px;">
-      <h4 style="color:var(--aws); margin-top:0;">2. Dupla Contabilidade</h4>
-      <p style="font-size: 14px; margin-bottom:0;"><strong>Evolução:</strong> BRGAAP &rarr; IFRS 9<br>Força a implementação arquitetural do <strong>Multi-Ledger</strong> para suportar visões financeiras paralelas.</p>
-    </div>
-    <div class="card" style="border-left: 4px solid var(--arch); padding: 20px; background: var(--card-bg); border-radius: 8px;">
-      <h4 style="color:var(--arch); margin-top:0;">3. Reporte BACEN</h4>
-      <p style="font-size: 14px; margin-bottom:0;"><strong>Evolução:</strong> DOC 3040 &rarr; DOC 3044<br>Demanda pipelines de <strong>Batch Massivo</strong> com extrema qualidade de dados (Data Quality) pré-submissão.</p>
-    </div>
+  <h3 style="margin-top: 40px;">1. PLD/AML (Circular BACEN 3.978)</h3>
+  <div class="callout callout-warning" style="border-left-color: var(--alert); margin-bottom: 24px;">
+    <strong>Prevenção à Lavagem de Dinheiro (PLD) e Financiamento ao Terrorismo (CFT)</strong>
+    <p>A Circular 3.978 obriga as instituições a monitorarem continuamente as transações e o perfil de risco dos clientes, reportando operações suspeitas ao COAF. Atrasos ou falhas de detecção resultam em perda da licença bancária.</p>
+    <p style="margin-top: 10px;"><strong>Tradução para Data Mesh:</strong> O domínio transacional emite eventos crus (ex: transferências PIX) via mensageria (Kafka/Kinesis). O domínio de <em>Compliance</em> consome esses eventos quase em tempo real (Spark Streaming/Flink) cruzando-os com listas restritivas (OFAC, PEPs). Para proteger dados PII, o <strong>AWS Lake Formation</strong> aplica <em>Column-Level Security</em> (anonimizando nomes) e <em>Row-Level Security</em> (filtrando apenas transações suspeitas), garantindo que nem mesmo os engenheiros do Data Lake tenham acesso indevido à privacidade dos clientes.</p>
   </div>
 
-  <h3 style="margin-top: 40px;">Perspectivas da Arquitetura de Dados</h3>
-  
-  <div class="abox info" style="margin-bottom: 24px;">
-    <div class="abox-hdr" style="background:var(--spark)">Retenção de Safra: Amazon S3 Glacier / Cold Storage</div>
-    <div class="abox-body">
-      Sob a abordagem <strong>Internal Ratings-Based (IRB)</strong> de Basileia II/III, os bancos usam modelos próprios para estimar riscos de crédito (PD, LGD, EAD). Isso exige que Data Lakes mantenham histórico de safras por no mínimo 5 a 7 anos. Estratégias de Cold Storage (como <strong>Amazon S3 Glacier</strong>) e a imutabilidade dos dados via Iceberg/Hudi tornam-se essenciais para viabilizar auditorias retroativas do regulador e backtesting contínuo dos modelos estatísticos.
+  <h3 style="margin-top: 40px;">2. Basileia III e a Retenção Histórica (IRB)</h3>
+  <div class="callout callout-info" style="border-left-color: var(--spark); margin-bottom: 24px;">
+    <strong>Acordos de Basileia e Internal Ratings-Based Approach (IRB)</strong>
+    <p>Para determinar o Capital Regulatório que o banco deve reter, o BACEN permite modelos internos de risco de crédito (IRB), desde que o banco consiga provar a robustez dos modelos com séries históricas extensas.</p>
+    <p style="margin-top: 10px;"><strong>Tradução para Data Mesh:</strong> O domínio de <em>Risco (Credit Scoring)</em> atua como Produtor de Dados de Modelagem. Ele obriga o Data Lake a armazenar "Safras" (Vintages) de crédito por até 10 anos. Para viabilizar esse volume (Petabytes) sem explodir custos (FinOps), a engenharia aplica ciclos de vida rigorosos: os modelos processam no Amazon EMR sobre tabelas Iceberg e, mensalmente, os logs de inferência antigos são transicionados para <strong>Amazon S3 Glacier Deep Archive</strong>. Quando o BACEN exige auditoria (Backtesting retroativo), a arquitetura restaura o gelo sob demanda via Athena.</p>
+  </div>
+
+  <h3 style="margin-top: 40px;">3. Dupla Contabilidade (Resolução CMN 4.966 / IFRS 9)</h3>
+  <div class="callout callout-tip" style="border-left-color: var(--aws); margin-bottom: 24px;">
+    <strong>Expected Credit Loss (ECL) e o Desafio Multi-Ledger</strong>
+    <p>As normas mudaram de "Perda Incorrida" (provisionar quando o cliente não paga) para "Perda Esperada" (provisionar no dia do empréstimo baseado no rating). Além disso, reportar BRGAAP (local) e IFRS 9 (matriz internacional) simultaneamente tornou-se o padrão.</p>
+    <p style="margin-top: 10px;"><strong>Tradução para Data Mesh:</strong> Cria-se uma fronteira estrita. O domínio de <em>Originação</em> gera um evento agnóstico ("CONTRATO_ASSINADO"). Esse evento viaja pelo Data Contract até o domínio de <em>Accounting</em>, onde motores de tradução em Flink bifurcam a transação em dois Livros-Razão (Multi-Ledger) armazenados no Redshift ou Iceberg. Um pipeline calcula o Accrual e Stop Accrual na ótica IFRS, enquanto outro processa as diretrizes do COSIF (Plano de Contas do Bacen).</p>
+  </div>
+
+  <h3 style="margin-top: 40px;">4. Reportes Massivos e CVM (Securitização)</h3>
+  <div class="concept-grid">
+    <div class="concept-card" style="border-top: 4px solid var(--arch);">
+      <div class="cc-tag">DOC 3040/3044 (SCR)</div>
+      <div class="cc-body">
+        <strong>Normativa:</strong> Obrigatoriedade do envio mensal de todos os saldos e garantias da carteira de crédito.<br>
+        <strong>Engenharia:</strong> Tratado como um <em>Consumer Data Product</em> regulatório. Jobs noturnos no AWS Glue consolidam trilhões de linhas. O maior desafio é o <em>Data Quality</em>: garantir que a soma dos XMLs gerados para o BACEN (Data Mart regulatório) bata centavo por centavo com a tabela de saldos contábeis do Iceberg (Single Source of Truth).
+      </div>
     </div>
-  </div>
-
-  <div class="callout callout-warning" style="border-left-color: var(--aws); margin-bottom: 24px;">
-    <strong>O Desafio do Multi-Ledger: BRGAAP vs IFRS</strong>
-    <p>Os motores de ingestão não podem simplesmente gravar uma única visão financeira. Pipelines em Spark ou Flink devem aplicar regras de negócio bifurcadas para cada evento financeiro. O Data Warehouse (como o Redshift) deve expor Visões Consolidáveis separadas — uma aderente ao Banco Central (BRGAAP) e outra focada na transparência para investidores e bolsas globais (IFRS 9) — exigindo conciliações contínuas (Bridging) entre as bases.</p>
-  </div>
-
-  <div class="abox info" style="margin-bottom: 24px;">
-    <div class="abox-hdr" style="background:var(--arch)">Batch Massivo para o BACEN (DOC 3040/3044)</div>
-    <div class="abox-body">
-      A geração do DOC 3040 e DOC 3044 exige pipelines de processamento batch massivo (geralmente executados no EMR ou Glue) que consolidam bilhões de registros diários em arquivos estruturados XML/JSON. A engenharia atua em particionamento rigoroso e validação de schema (Data Quality) antes da submissão, pois rejeições pela mensageria do BACEN (STR/SPI) resultam em multas pesadas.
+    <div class="concept-card" style="border-top: 4px solid var(--ok);">
+      <div class="cc-tag">CVM (FIDCs) e AWS RAM</div>
+      <div class="cc-body">
+        <strong>Normativa:</strong> Securitização de recebíveis exige segregação total entre a Originadora e a Custodiante do Fundo.<br>
+        <strong>Engenharia:</strong> É a aplicação máxima do Data Mesh. Criam-se Contas AWS separadas (Multi-Account). A Originadora não envia mais arquivos `.csv`; ela expõe tabelas do Iceberg ou Redshift via <strong>AWS Resource Access Manager (RAM)</strong> e <strong>Lake Formation</strong> (Cross-Account Sharing). A Custodiante consulta os dados na sua própria conta, garantindo independência jurídica e imutabilidade dos direitos creditórios auditados pela CVM.
+      </div>
     </div>
-  </div>
-
-  <h3 style="margin-top: 40px;">CVM (Securitização e FIDCs)</h3>
-  <div class="callout callout-tip" style="border-left-color: var(--ok); margin-top: 20px;">
-    <strong>Segregação de Dados via Data Mesh &amp; AWS Lake Formation</strong>
-    <p>Fundos de Investimento em Direitos Creditórios (FIDCs) exigem segregação estrita entre Custodiantes (que retêm o ativo) e Servicers (que originam e cobram). Através dos princípios de Data Mesh, domínios independentes são estabelecidos. O <strong>AWS Lake Formation</strong> desempenha o papel vital de controle de acesso refinado (Cell-Level e Row-Level Security), garantindo que Servicers não acessem os livros-razão do Custodiante indevidamente, e auditando toda a linhagem dos dados (Data Lineage) para inspeções da CVM.</p>
   </div>
 
 </section>
