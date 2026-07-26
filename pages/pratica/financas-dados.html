@@ -171,7 +171,7 @@ import pandas as pd
 from pyspark.sql.functions import pandas_udf
 
 @pandas_udf('array&lt;struct&lt;mes:int, parcela:double, saldo:double&gt;&gt;')
-def vetorizar_sac(capital: pd.Series, taxa: pd.Series, meses: pd.Series) -> pd.Series:
+def vetorizar_sac(capital: pd.Series, taxa: pd.Series, meses: pd.Series) -&gt; pd.Series:
     res = []
     for c, t, m in zip(capital, taxa, meses):
         amort = c / m
@@ -190,7 +190,7 @@ df_contratos = df.withColumn("curva_projetada", vetorizar_sac("valor_financiado"
         <div class="code-block" style="margin-bottom: 24px;">
           <pre><code class="language-python"># PySpark + Pandas UDF: Tabela Price Massiva
 @pandas_udf('array&lt;struct&lt;mes:int, parcela:double, saldo:double&gt;&gt;')
-def vetorizar_price(capital: pd.Series, taxa: pd.Series, meses: pd.Series) -> pd.Series:
+def vetorizar_price(capital: pd.Series, taxa: pd.Series, meses: pd.Series) -&gt; pd.Series:
     res = []
     for c, t, m in zip(capital, taxa, meses):
         parcela = c * (t * (1+t)**m) / ((1+t)**m - 1)
@@ -617,9 +617,66 @@ def vetorizar_price(capital: pd.Series, taxa: pd.Series, meses: pd.Series) -> pd
     <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
 
     
-<section class="section" id="enterprise-arch">
+<section class="section" id="marco-regulatorio">
   <div class="sec-hdr">
     <div class="sec-num" style="color:var(--aws)">05</div>
+    <div class="sec-title">
+      <div class="sec-subtitle">Marco Regulatório</div>
+      <h2>Marco Regulatório e Governança de Dados</h2>
+    </div>
+  </div>
+
+  <p>A arquitetura de dados financeiros é profundamente moldada pela regulação. A evolução contínua das normativas gera demandas específicas por retenção, isolamento e velocidade de processamento na nuvem.</p>
+
+  <div class="concept-grid" style="margin-top:30px; margin-bottom:40px;">
+    <div class="card" style="border-left: 4px solid var(--spark); padding: 20px; background: var(--card-bg); border-radius: 8px;">
+      <h4 style="color:var(--spark); margin-top:0;">1. Acordos de Basileia</h4>
+      <p style="font-size: 14px; margin-bottom:0;"><strong>Evolução:</strong> Basel I &rarr; Basel II/III (IRB)<br>Obriga a retenção de dados históricos em larga escala para backtesting de modelos estatísticos.</p>
+    </div>
+    <div class="card" style="border-left: 4px solid var(--aws); padding: 20px; background: var(--card-bg); border-radius: 8px;">
+      <h4 style="color:var(--aws); margin-top:0;">2. Dupla Contabilidade</h4>
+      <p style="font-size: 14px; margin-bottom:0;"><strong>Evolução:</strong> BRGAAP &rarr; IFRS 9<br>Força a implementação arquitetural do <strong>Multi-Ledger</strong> para suportar visões financeiras paralelas.</p>
+    </div>
+    <div class="card" style="border-left: 4px solid var(--arch); padding: 20px; background: var(--card-bg); border-radius: 8px;">
+      <h4 style="color:var(--arch); margin-top:0;">3. Reporte BACEN</h4>
+      <p style="font-size: 14px; margin-bottom:0;"><strong>Evolução:</strong> DOC 3040 &rarr; DOC 3044<br>Demanda pipelines de <strong>Batch Massivo</strong> com extrema qualidade de dados (Data Quality) pré-submissão.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 40px;">Perspectivas da Arquitetura de Dados</h3>
+  
+  <div class="abox info" style="margin-bottom: 24px;">
+    <div class="abox-hdr" style="background:var(--spark)">Retenção de Safra: Amazon S3 Glacier / Cold Storage</div>
+    <div class="abox-body">
+      Sob a abordagem <strong>Internal Ratings-Based (IRB)</strong> de Basileia II/III, os bancos usam modelos próprios para estimar riscos de crédito (PD, LGD, EAD). Isso exige que Data Lakes mantenham histórico de safras por no mínimo 5 a 7 anos. Estratégias de Cold Storage (como <strong>Amazon S3 Glacier</strong>) e a imutabilidade dos dados via Iceberg/Hudi tornam-se essenciais para viabilizar auditorias retroativas do regulador e backtesting contínuo dos modelos estatísticos.
+    </div>
+  </div>
+
+  <div class="callout callout-warning" style="border-left-color: var(--aws); margin-bottom: 24px;">
+    <strong>O Desafio do Multi-Ledger: BRGAAP vs IFRS</strong>
+    <p>Os motores de ingestão não podem simplesmente gravar uma única visão financeira. Pipelines em Spark ou Flink devem aplicar regras de negócio bifurcadas para cada evento financeiro. O Data Warehouse (como o Redshift) deve expor Visões Consolidáveis separadas — uma aderente ao Banco Central (BRGAAP) e outra focada na transparência para investidores e bolsas globais (IFRS 9) — exigindo conciliações contínuas (Bridging) entre as bases.</p>
+  </div>
+
+  <div class="abox info" style="margin-bottom: 24px;">
+    <div class="abox-hdr" style="background:var(--arch)">Batch Massivo para o BACEN (DOC 3040/3044)</div>
+    <div class="abox-body">
+      A geração do DOC 3040 e DOC 3044 exige pipelines de processamento batch massivo (geralmente executados no EMR ou Glue) que consolidam bilhões de registros diários em arquivos estruturados XML/JSON. A engenharia atua em particionamento rigoroso e validação de schema (Data Quality) antes da submissão, pois rejeições pela mensageria do BACEN (STR/SPI) resultam em multas pesadas.
+    </div>
+  </div>
+
+  <h3 style="margin-top: 40px;">CVM (Securitização e FIDCs)</h3>
+  <div class="callout callout-tip" style="border-left-color: var(--ok); margin-top: 20px;">
+    <strong>Segregação de Dados via Data Mesh &amp; AWS Lake Formation</strong>
+    <p>Fundos de Investimento em Direitos Creditórios (FIDCs) exigem segregação estrita entre Custodiantes (que retêm o ativo) e Servicers (que originam e cobram). Através dos princípios de Data Mesh, domínios independentes são estabelecidos. O <strong>AWS Lake Formation</strong> desempenha o papel vital de controle de acesso refinado (Cell-Level e Row-Level Security), garantindo que Servicers não acessem os livros-razão do Custodiante indevidamente, e auditando toda a linhagem dos dados (Data Lineage) para inspeções da CVM.</p>
+  </div>
+
+</section>
+
+<hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;">
+
+<section class="section" id="enterprise-arch">
+  <div class="sec-hdr">
+    <div class="sec-num" style="color:var(--aws)">06</div>
     <div class="sec-title">
       <div class="sec-subtitle">Enterprise Data Platform</div>
       <h2>Arquitetura AWS Corporativa e Lakehouse Medallion</h2>
@@ -761,8 +818,8 @@ reconciled_df = billing_df.withWatermark("timestamp", "2 hours").alias("bill") \
         gateway_df.withWatermark("timestamp", "2 hours").alias("pay"),
         expr("""
             bill.invoice_id = pay.invoice_id AND
-            pay.timestamp >= bill.timestamp AND
-            pay.timestamp <= bill.timestamp + interval 2 hours
+            pay.timestamp &gt;= bill.timestamp AND
+            pay.timestamp &lt;= bill.timestamp + interval 2 hours
         """)
     )
 
