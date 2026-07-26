@@ -9,7 +9,9 @@
   const MODULES = {
     // Fase 1
     "plataforma-dados": { name: "Plataforma de Dados", badge: "Arquiteto", color: "#3b82f6", items: ["plataforma-dados.html"] },
-    "pmo-sme-dados": { name: "PMO & SME de Dados", badge: "Líder Técnico", color: "#3b82f6", items: ["pmo-sme-dados.html"] },
+    "pmo-dados": { name: "PMO & Produto", badge: "Líder Técnico", color: "#3b82f6", items: ["pmo-dados.html"] },
+    "sme-dados": { name: "SME & Delivery", badge: "Líder Técnico", color: "#3b82f6", items: ["sme-dados.html"] },
+    "sustentacao-dados": { name: "Sustentação & FinOps", badge: "Líder Técnico", color: "#3b82f6", items: ["sustentacao-dados.html"] },
     "soft-skills": { name: "Soft Skills & Liderança", badge: "Gestor", color: "#3b82f6", items: ["soft-skills.html"] },
     "sql": { name: "SQL Analytics", badge: "Analista", color: "#3b82f6", items: ["sql-mastery.html"] },
     "python": { name: "Python Legend", badge: "Desenvolvedor", color: "#3b82f6", items: ["python-legend.html"] },
