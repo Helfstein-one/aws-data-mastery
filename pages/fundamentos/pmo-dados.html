@@ -90,7 +90,7 @@
 </blockquote>
 
     <h3 style="margin-top: 40px; color:var(--spark);">Domain-Driven Design (DDD) Aplicado a Dados</h3>
-    <p>O conceito de <strong>Bounded Contexts</strong> do Domain-Driven Design (DDD) é fundamental para o Data Mesh. Cada domínio (ex: Domínio Financeiro vs. Domínio de Marketing) é dono de seus próprios dados, eliminando o gargalo de uma arquitetura central e monolítica. Eles interagem entre si por meio de Contratos de Dados claros.</p>
+    <p>O conceito de <strong>Bounded Contexts</strong> do Domain-Driven Design (DDD) é o principal alicerce para a descentralização proposta pelo Data Mesh. Cada domínio (ex: Domínio Financeiro vs. Domínio de Marketing) atua como dono definitivo de seus próprios dados analíticos, eliminando o gargalo de uma arquitetura central e monolítica. Eles interagem entre si por meio de Contratos de Dados perfeitamente delineados.</p>
 
 <div class="mermaid" style="background:var(--card-bg); padding:15px; border-radius:8px; border:1px solid #1e293b; margin-top:20px; margin-bottom:20px;">
 graph LR
@@ -109,10 +109,42 @@ graph LR
 
 <p style="font-size:0.9rem; color:var(--muted); margin-top:-10px; margin-bottom:20px;"><strong>Legenda:</strong> Diagrama simplificado de Bounded Contexts. Cada domínio possui seu próprio banco de dados operacional e gera seu próprio produto de dados. A comunicação entre eles é feita através de um Contrato de Dados bem definido, garantindo autonomia.</p>
 
+    <h4 style="color:var(--spark); margin-top:30px;">Ubiquitous Language: A Linguagem Onipresente</h4>
+    <p>No centro do DDD encontra-se a <strong>Ubiquitous Language (Linguagem Onipresente)</strong>. Em engenharia de dados, isso resolve o clássico problema de "o que significa um 'Cliente Ativo'?". A linguagem ubíqua garante que engenheiros de dados, cientistas de dados, PMs e especialistas de negócios utilizem exatamente os mesmos termos no código, nas pipelines, nas tabelas do data warehouse e nas reuniões.</p>
+    <ul style="line-height:1.6; margin-top:15px; padding-left:20px;">
+      <li><strong>No Código (PySpark/dbt):</strong> Tabelas, colunas e métricas devem usar nomes idênticos aos termos de negócio aprovados (ex: <code>tb_active_subscribers</code> ao invés de <code>tb_user_status_02</code>).</li>
+      <li><strong>Na Governança:</strong> O Catálogo de Dados documenta explicitamente esta linguagem para que outros Bounded Contexts entendam perfeitamente a semântica.</li>
+    </ul>
+
 <blockquote style="margin-top:15px; margin-bottom:20px; padding:16px 20px; border-left:4px solid #8b5cf6; background:rgba(139,92,246,0.15); border-radius:0 6px 6px 0; font-style:italic; color:#0f172a;">
-  "Os modelos não são apenas esquemas de banco de dados; eles são a linguagem ubíqua e os contextos delimitados que conectam a equipe e a tecnologia ao próprio negócio."
+  "Os modelos não são apenas esquemas de banco de dados; eles são a linguagem ubíqua e os contextos delimitados que conectam a equipe e a tecnologia ao próprio negócio. Se a linguagem for fraturada, o modelo de negócios falhará na implementação."
   <footer style="margin-top:8px; font-style:normal; font-size:0.85rem; color:#a78bfa;">— Eric Evans, <em>Domain-Driven Design</em> (Addison-Wesley, 2003)</footer>
 </blockquote>
+
+    <h4 style="color:var(--spark); margin-top:30px;">Context Mapping e Anti-Corruption Layers (ACL) em Ingestão</h4>
+    <p>Ao ingerir dados de sistemas legados ou "poluídos" (ex: um ERP antigo com péssima modelagem), o Domínio Produtor precisa proteger seu Produto de Dados interno. O DDD resolve isso através da <strong>Anti-Corruption Layer (ACL)</strong>.</p>
+    <p>Na prática, a ACL é implementada como uma camada de tradução e validação na ingestão (ex: uma pipeline de <em>bronze-to-silver</em> estrita) que mapeia o modelo corrompido do sistema legado para a Linguagem Ubíqua pura do Domínio Analítico. Isso impede que os débitos técnicos do passado poluam a camada Gold.</p>
+
+    <div class="abox" style="background:#0f172a; border:1px solid #1e293b; padding:15px; border-radius:8px; margin-top:20px;">
+      <h5 style="color:#f59e0b; margin:0 0 10px 0;">Padrões de Context Mapping para Dados:</h5>
+      <ul style="margin:0; padding-left:20px; color:#cbd5e1; font-size:0.95rem; line-height:1.6;">
+        <li><strong>Conformist:</strong> O domínio consumidor apenas aceita o modelo de dados do produtor como ele é, sem tradução. Comum ao consumir APIs SaaS fechadas.</li>
+        <li><strong>Customer/Supplier (Contrato de Dados):</strong> Existe uma negociação clara. O Produtor altera o contrato se houver necessidade do Consumidor, mas sob versionamento estrito (ex: Schema Registry).</li>
+        <li><strong>Anti-Corruption Layer:</strong> A tradução pesada, protegendo o domínio de dados ruins. Essencial ao processar origens de baixa qualidade.</li>
+      </ul>
+    </div>
+
+<blockquote style="margin-top:25px; margin-bottom:20px; padding:16px 20px; border-left:4px solid #3b82f6; background:rgba(59,130,246,0.1); border-radius:0 6px 6px 0; font-style:italic; color:#0f172a;">
+  "Uma Anti-Corruption Layer permite isolar clientes de subsistemas externos mutáveis ou legados, traduzindo o modelo conceitual do sistema externo no modelo conceitual do seu próprio domínio."
+  <footer style="margin-top:8px; font-style:normal; font-size:0.85rem; color:#60a5fa;">— Vaughn Vernon, <em>Implementing Domain-Driven Design</em> (Addison-Wesley, 2013)</footer>
+</blockquote>
+
+    <h4 style="color:var(--spark); margin-top:30px;">Prática: Domínio Financeiro vs. Domínio de Marketing</h4>
+    <div class="callout callout-info" style="margin-top: 15px; margin-bottom: 20px;">
+      <strong>Isolamento e APIs de Dados (Data Contracts):</strong>
+      <p>Imagine que o <em>Domínio de Marketing</em> precisa enviar uma campanha de descontos, baseada no limite de crédito dos clientes gerenciado pelo <em>Domínio Financeiro</em>.</p>
+      <p>O Marketing <strong>não</strong> deve conectar diretamente no banco operacional ou nas tabelas Raw do Financeiro. Em vez disso, o Financeiro expõe um <strong>Produto de Dados (via Data API ou Tabela Compartilhada no Lake Formation)</strong> sob um <em>Data Contract</em> formal. Esse contrato define um schema (ex: <code>customer_id, credit_segment</code>) que não será quebrado, omitindo intencionalmente os dados transacionais sensíveis intra-domínio, protegendo o Bounded Context do Financeiro e fornecendo o que o Marketing precisa com alta confiabilidade.</p>
+    </div>
 
 </section>
 
