@@ -36,63 +36,48 @@
 </div>
 </div>
 <main class="main-content"><section class="section" id="jornada">
-<div class="sec-hdr">
-<div class="sec-num" style="color:var(--emr)">01</div>
-<div class="sec-meta">
-<div class="sec-acc" style="background:var(--emr)"></div>
-<h2>O que é uma Operação de Crédito</h2>
-<p>Intermediação financeira, concessão de crédito, contrato, Onboarding, KYC e análise inicial do tomador.</p>
-</div>
-</div>
-<div class="callout callout-tip">
-<strong>Conceito de Negócio: KYC (Know Your Customer) e Onboarding</strong>
-<p>A primeira etapa de um relacionamento bancário é a captura de dados demográficos, biométricos e financeiros (renda presumida). O KYC é um imperativo regulatório estruturado sob as normativas de <strong>PLD/AML (Prevenção à Lavagem de Dinheiro / Anti-Money Laundering)</strong> do Banco Central. Além de validar a identidade e a origem dos recursos para evitar atividades ilícitas, a instituição precisa responder a uma pergunta de $1 milhão na perspectiva de crédito: <em>"Qual a probabilidade deste cliente não me pagar?"</em> Essa métrica é conhecida como <strong>PD (Probability of Default)</strong>.</p>
-</div>
-<h3>A Engenharia por trás do Risco de Crédito (Scoring)</h3>
-<p>O <strong>Credit Scoring</strong> é o coração da operação de crédito. Ele classifica o cliente em <strong>Ratings</strong> (ex: AA, A, B, C... H) que determinam o limite pré-aprovado, a taxa de juros e o nível de provisionamento exigido pelo regulador.</p>
-<div class="concept-grid">
-<div class="concept-card" style="border-top: 4px solid var(--arch);">
-<div class="cc-tag">Consultas Regulatórias: SCR e Bureaus</div>
-<div class="cc-body">
-            No onboarding, o sistema consulta o <strong>SCR (Sistema de Informações de Crédito do Banco Central)</strong>, uma base de dados mandatória que registra todas as operações de crédito (exposição total) e eventuais atrasos, além do Serasa/Boa Vista. A engenharia orquestra essas APIs (via Lambda/Step Functions) e cria um <em>Cache Analítico</em> (ex: TTL no DynamoDB/Redis) para evitar pagar múltiplas vezes pela mesma consulta.
-          </div>
-</div>
-<div class="concept-card" style="border-top: 4px solid var(--spark);">
-<div class="cc-tag">Modelagem de Scoring e Open Finance</div>
-<div class="cc-body">
-            Para aprovar um empréstimo em milissegundos via MLOps, a Engenharia constrói uma <strong>Feature Store</strong>. Com o <strong>Open Finance</strong>, enriquece-se o modelo com o fluxo de dados interbancários:
-            <ul>
-<li>Comportamento transacional e atrasos consistentes em outras instituições.</li>
-<li>Renda real aferida via histórico bancário e fluxo de caixa (PIX).</li>
-<li>Comprometimento de Renda consolidado (DTI ampliado).</li>
-</ul>
-</div>
-</div>
-</div>
-<h3 style="margin-top:40px;">Deep Dive Arquitetural: Event Sourcing &amp; Padrão Outbox</h3>
-<p>Bancos escaláveis não operam apenas lendo o estado atual do banco de dados (CRUD tradicional). Eles utilizam <strong>Event Sourcing</strong>, onde toda mudança de estado é um evento imutável. Para garantir que um evento de negócio seja gravado no banco relacional (Aurora) e transmitido para o Data Lake (S3) <strong>com garantia transacional</strong>, utilizamos o Padrão Outbox.</p>
-<div class="grid-2">
-<div class="code-block" style="margin-bottom: 24px;">
-<pre><code class="language-sql">-- Transação ACID no Banco Core (PostgreSQL)
-BEGIN;
-  -- 1. Insere o contrato na tabela de negócio
-  INSERT INTO contratos (id, cliente, valor) 
-  VALUES ('c-123', 'cpf-99', 5000);
-  
-  -- 2. Insere na tabela Outbox na mesma transação
-  INSERT INTO outbox (id, aggregate_type, payload) 
-  VALUES (gen_random_uuid(), 'CONTRATO_CRIADO', '{"id":"c-123"}');
-COMMIT;</code></pre>
-</div>
 <div class="abox info">
-<div class="abox-hdr" style="background:var(--spark)">Debezium &amp; Kafka (CDC)</div>
-<div class="abox-body">
-            O <strong>Debezium</strong> (conector Kafka Connect) lê o WAL (Write-Ahead Log) do banco de dados interceptando as linhas da tabela <code>outbox</code> em tempo real. Ele publica esse evento em um tópico do <strong>Amazon MSK (Kafka)</strong> com a garantia de <em>At-Least-Once</em> (Pelo menos uma vez). Isso isola o banco de produção da carga de leitura analítica.
-          </div>
+<h3>01. Operações de Crédito: O Motor do Sistema Financeiro</h3>
+<p>A intermediação financeira é a essência da operação bancária: captar recursos de agentes superavitários a uma taxa (taxa de captação) e emprestá-los a agentes deficitários a uma taxa maior (taxa de aplicação). A diferença entre essas taxas forma o <strong>Spread Bancário</strong>, que deve cobrir custos administrativos, inadimplência (Risco de Crédito) e margem de lucro.</p>
+</div>
+<div class="concept-grid">
+<div class="concept-card">
+<h4>Onboarding e KYC (Know Your Customer)</h4>
+<p>O processo de onboarding digital inicia com a captura de dados biométricos (liveness, face match), validação de documentos (OCR) e cruzamento de dados demográficos. É a primeira linha de defesa contra fraudes de identidade, retroalimentando as malhas de prevenção a lavagem de dinheiro (PLD/AML).</p>
+</div>
+<div class="concept-card">
+<h4>Sistema de Informações de Crédito (SCR)</h4>
+<p>Um repositório gerido pelo Banco Central que consolida o histórico de crédito dos clientes em todo o Sistema Financeiro Nacional. É consultado na originação (para compor a visão de endividamento externo) e reportado mensalmente (Doc 3040) detalhando o saldo, vencimentos e atrasos de cada operação.</p>
+</div>
+<div class="concept-card">
+<h4>Motor de Crédito (Scoring) e Open Finance</h4>
+<p>Modelos de Machine Learning recebem o "bureau de crédito", dados internos, comportamentais e consentimentos de Open Finance para calcular a <strong>Probabilidade de Default (PD)</strong>. Esse score define a Política de Crédito: <em>Rating</em>, Limite Pré-Aprovado e Precificação (Interest Rate) ajustada ao risco (Risk-Based Pricing).</p>
 </div>
 </div>
-<hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;"/>
-<!-- SEÇÃO 2: MATEMÁTICA -->
+<div class="callout">
+<strong>Fluxo de Dados:</strong> O onboarding dispara eventos de negócio em tempo real para os barramentos (Kafka) que orquestram validações assíncronas de antifraude e chamadas a APIs de Bureau e SCR, consolidando uma Feature Store que alimenta o motor de decisão.
+    </div>
+<h4>Exemplo de Payload de Evento: <code>credit_onboarding_event.json</code></h4>
+<div class="code-block">
+<pre><code class="language-json">{
+  "eventId": "evt-7738-a99b",
+  "eventType": "ONBOARDING_CREDIT_EVALUATION",
+  "timestamp": "2026-07-27T10:15:30Z",
+  "customer": {
+    "customerId": "usr-889900",
+    "kycStatus": "APPROVED",
+    "biometricsScore": 0.98,
+    "openFinanceConsent": true
+  },
+  "creditDecision": {
+    "probabilityOfDefault": 0.015,
+    "rating": "AA",
+    "approvedLimitBRL": 25000.00,
+    "suggestedInterestRate": 1.45,
+    "modelId": "ml-credit-xgb-v4.2"
+  }
+}</code></pre>
+</div>
 </section><section class="section" id="matematica">
 <div class="sec-hdr">
 <div class="sec-num" style="color:var(--ok)">02</div>
@@ -531,146 +516,156 @@ df_contratos = df.withColumn("curva_projetada", vetorizar_price("valor_financiad
 </div>
 <!-- SEÇÃO 5: O CICLO COMPLETO DE CRÉDITO -->
 </section><section class="section" id="deep-dive-riscos">
-<div class="sec-hdr">
-<div class="sec-num" style="color:var(--spark)">06</div>
-<div class="sec-meta">
-<div class="sec-acc" style="background:var(--spark)"></div>
-<h2>Risco de Crédito, IRB e Monte Carlo</h2>
-<p>Modelagem estatística avançada: PD, LGD, EAD, normas IRB do BACEN, Value at Risk (VaR) por Monte Carlo no EMR, Liquidez (ALM) e Hardening.</p>
+<h3>1. Abordagem de Risco de Crédito (Credit Risk IRB) &amp; Estágios de Perda Esperada (ECL)</h3>
+<p>A gestão de risco de crédito evoluiu de regras empíricas para a abordagem avançada baseada em modelos internos (<strong>Credit Risk IRB - Internal Ratings-Based Approach</strong>). Bancos calculam o Capital Regulatório otimizado modelando internamente a PD (Probabilidade de Default), LGD (Loss Given Default) e EAD (Exposure at Default).</p>
+<div class="abox info">
+<h3>06. Risco de Crédito, Mercado e Liquidez (Advanced Analytics)</h3>
+<p>A gestão de risco evoluiu de regras empíricas para a abordagem baseada em modelos internos (<strong>IRB - Internal Ratings-Based Approach</strong>). Bancos calculam o Capital Regulatório otimizado modelando internamente a PD (Probabilidade de Default), LGD (Loss Given Default) e EAD (Exposure at Default).</p>
 </div>
+<h4>ECL (Expected Credit Loss) &amp; PDD</h4>
+<p>A Perda Esperada de Crédito (ECL) dita a Provisão para Devedores Duvidosos (PDD), exigindo visão prospectiva de risco macroeconômico, segmentada em "Estágios":</p>
+<table>
+<thead>
+<tr>
+<th>ECL Stage</th>
+<th>Situação do Contrato</th>
+<th>Cálculo da Provisão (PDD)</th>
+<th>Reconhecimento de Juros</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Stage 1</strong> (Performing)</td>
+<td>Risco não aumentou significativamente. Em dia.</td>
+<td>ECL para os próximos 12 meses.</td>
+<td>Sobre o valor contábil bruto.</td>
+</tr>
+<tr>
+<td><strong>Stage 2</strong> (Underperforming)</td>
+<td>Aumento significativo de risco (ex: atraso &gt; 30 dias).</td>
+<td>ECL Lifetime (perda esperada para toda a vida do contrato).</td>
+<td>Sobre o valor contábil bruto.</td>
+</tr>
+<tr>
+<td><strong>Stage 3</strong> (Non-performing)</td>
+<td>Em Default (ex: atraso &gt; 90 dias / Inadimplência material).</td>
+<td>ECL Lifetime.</td>
+<td>Sobre o valor contábil líquido de PDD.</td>
+</tr>
+</tbody>
+</table>
+<h4>Exemplo de Payload Feature Store: <code>credit_risk_feature_store_payload.json</code></h4>
+<div class="code-block">
+<pre><code class="language-json">{
+  "contractId": "ctr-9988-xp",
+  "referenceDate": "2026-06-30",
+  "exposureAtDefault": 12500.50,
+  "lossGivenDefault": 0.45,
+  "probabilityOfDefault12M": 0.02,
+  "probabilityOfDefaultLifetime": 0.08,
+  "macroeconomicStressFactor": 1.15,
+  "currentECLStage": 2,
+  "calculatedPDDBRL": 1150.04
+}</code></pre>
 </div>
-<h3>1. Risco de Crédito: A Era do IRB (Internal Ratings-Based)</h3>
-<p>O <strong>Risco de Crédito</strong> evoluiu de planilhas de Excel para modelos massivos de Machine Learning. Sob o Acordo de Basileia, os bancos podem utilizar a abordagem padrão do BACEN ou adotar o <strong>IRB (Internal Ratings-Based)</strong>. No IRB, o banco desenvolve seus próprios modelos internos para calcular a <em>Perda Esperada (ECL - Expected Credit Loss)</em>.</p>
-<ul>
-<li><strong>PD (Probability of Default):</strong> A probabilidade de um cliente entrar em calote (default) em 12 meses. O BACEN exige que esses modelos sejam rigorosamente validados, sem viés (bias) sociodemográfico (fairness).</li>
-<li><strong>LGD (Loss Given Default):</strong> Qual a recuperação financeira real em caso de calote (após leilões judiciais, venda de dívidas em FIDC).</li>
-<li><strong>EAD (Exposure at Default):</strong> O saldo devedor projetado para o momento da quebra. Para derivativos de balcão (OTC), o EAD é volátil e exige simulações sofisticadas (CVA - Credit Valuation Adjustment).</li>
-</ul>
-<div class="concept-grid" style="margin-top:24px;">
-<div class="concept-card" style="border-top: 4px solid var(--arch);">
-<div class="cc-tag">Data Lineage e Resolução CMN 4.557 / 4.966</div>
-<div class="cc-body">
-        Bancos sofrem auditorias rigorosas do Banco Central (BACEN). Quando o modelo nega crédito ou aumenta a provisão, o regulador exige a rastreabilidade completa (Data Lineage). Na AWS, isso é implementado forçando todas as queries passarem pelo <strong>AWS Lake Formation</strong>, mapeando qual versão do modelo no SageMaker consumiu qual snapshot do Iceberg no S3.
-      </div>
-</div>
-</div>
-<h3 style="margin-top:40px;">2. Risco de Mercado: Value at Risk (VaR) e Monte Carlo Estocástico</h3>
-<p>Enquanto o risco de crédito foca na falência do tomador, o <strong>Risco de Mercado</strong> mede o quanto o banco pode perder devido à volatilidade diária de preços, câmbio e taxas de juros. A métrica absoluta global é o <strong>VaR (Value at Risk)</strong> com 99% de confiança estatística.</p>
-<p>Bancos Tier-1 abandonaram o VaR Histórico/Paramétrico em favor do <strong>VaR por Simulação de Monte Carlo</strong>. Isso exige projetar 10.000 caminhos aleatórios (Movimento Browniano Geométrico - GBM) para todas as curvas de juros e reprecificar milhões de derivativos da tesouraria para cada cenário.</p>
-<h4 style="margin-top:24px;">Arquitetura do Motor de Stress Testing AWS</h4>
-<div class="drawio-label">MONTE CARLO PIPELINE (VAR)</div>
-<div class="mxgraph" data-mxgraph='{"highlight": "#000000", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxGraphModel dx=\"1400\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1000\" pageHeight=\"360\" background=\"#0B1121\"&gt;&lt;root&gt;&lt;mxCell id=\"0\"/&gt;&lt;mxCell id=\"1\" parent=\"0\"/&gt;\n&lt;mxCell id=\"box1\" value=\"MARKET DATA INGESTION\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"40\" y=\"40\" width=\"220\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"box2\" value=\"QUANTITATIVE COMPUTE ENGINE\" style=\"rounded=1;fillColor=#3b0764;strokeColor=#a855f7;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"300\" y=\"40\" width=\"360\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"box3\" value=\"REGULATORY REPORTING\" style=\"rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"700\" y=\"40\" width=\"260\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"b3\" value=\"B3 / Bloomberg&amp;#10;(Curvas de Juros)\" style=\"shape=mxgraph.aws4.document;fillColor=#3b82f6;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"110\" y=\"90\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"s3_raw\" value=\"S3 Lake (Raw)&amp;#10;Volatilities\" style=\"shape=mxgraph.aws4.s3;fillColor=#10b981;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"110\" y=\"220\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"emr_master\" value=\"EMR Master Node&amp;#10;(Driver)\" style=\"shape=mxgraph.aws4.emr;fillColor=#a855f7;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"350\" y=\"150\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"emr_task1\" value=\"Spot Task Node&amp;#10;Cen\u00e1rios 1 - 5000\" style=\"shape=mxgraph.aws4.ec2;fillColor=#f59e0b;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"530\" y=\"80\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"emr_task2\" value=\"Spot Task Node&amp;#10;Cen\u00e1rios 5001-10000\" style=\"shape=mxgraph.aws4.ec2;fillColor=#f59e0b;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"530\" y=\"210\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"s3_var\" value=\"S3 (Gold)&amp;#10;VaR Results (Parquet)\" style=\"shape=mxgraph.aws4.s3;fillColor=#10b981;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"780\" y=\"80\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"athena\" value=\"Athena / QuickSight&amp;#10;BACEN Dashboard\" style=\"shape=mxgraph.aws4.athena;fillColor=#3b82f6;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"780\" y=\"210\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"e1\" edge=\"1\" source=\"b3\" target=\"s3_raw\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#3b82f6;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e2\" edge=\"1\" source=\"s3_raw\" target=\"emr_master\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;strokeWidth=3;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e3\" edge=\"1\" source=\"emr_master\" target=\"emr_task1\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#a855f7;strokeWidth=2;dashed=1;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e4\" edge=\"1\" source=\"emr_master\" target=\"emr_task2\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#a855f7;strokeWidth=2;dashed=1;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e5\" edge=\"1\" source=\"emr_task1\" target=\"s3_var\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#f59e0b;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e6\" edge=\"1\" source=\"emr_task2\" target=\"s3_var\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#f59e0b;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e7\" edge=\"1\" source=\"s3_var\" target=\"athena\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;strokeWidth=3;\"/&gt;&lt;/mxCell&gt;\n&lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;border:1px solid transparent;"></div>
-<h4 style="margin-top: 32px;">O Código: Engine de Simulação (Movimento Browniano Geométrico)</h4>
-<p>Na tesouraria moderna, o Quant modela as curvas e a Engenharia escala. Usamos <strong>Apache Spark (Amazon EMR)</strong>. Através do <code>pandas_udf</code>, distribuímos o cálculo matricial (NumPy) para milhares de vCPUs rodando instâncias Spot no AWS. Cada nó calcula o "choque estocástico" em milissegundos.</p>
-<div class="code-block" style="margin-bottom: 24px;">
-<pre><code class="language-python"># PySpark + NumPy: Simulação de Monte Carlo (Value at Risk)
-import numpy as np
-import pandas as pd
-from pyspark.sql.functions import pandas_udf
-from pyspark.sql.types import ArrayType, DoubleType
-
-# Configuração Matemática (Movimento Browniano Geométrico)
-# dS = S * (mu * dt + sigma * dW)
-CENARIOS = 10000
-HORIZONTE_DIAS = 10
-
-@pandas_udf(ArrayType(DoubleType()))
-def monte_carlo_var(preco_atual: pd.Series, volatilidade: pd.Series, drift: pd.Series) -&gt; pd.Series:
-    res = []
-    # Vetorização por Ativo (Ex: PETR4, WINZ, DI1)
-    for S0, sigma, mu in zip(preco_atual, volatilidade, drift):
-        dt = 1 / 252.0  # Dias úteis no ano
-        
-        # Gera a matriz de choques aleatórios normais Z ~ N(0,1)
-        # Shape: (Cenários, Dias) = (10.000, 10)
-        Z = np.random.standard_normal((CENARIOS, HORIZONTE_DIAS))
-        
-        # Calcula a variação estocástica acumulada
-        # Matriz de Retornos Diários
-        retornos = (mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z
-        
-        # Produto cumulativo para encontrar o preço final projetado
-        preco_futuro = S0 * np.exp(np.sum(retornos, axis=1))
-        
-        # Encontra a perda (P&amp;L) em cada cenário
-        pnl = preco_futuro - S0
-        
-        # Calcula o VaR (Percentil 1% pior caso das 10.000 simulações)
-        var_99 = np.percentile(pnl, 1)
-        res.append([float(var_99), float(np.mean(pnl))])
-        
-    return pd.Series(res)
-
-# Aplicação distribuída no Data Lake (Centenas de nós Spark)
-df_risco = df_carteira.withColumn(
-    "var_stats", 
-    monte_carlo_var("mtm_usd", "volatilidade_implícita", "taxa_livre_risco")
-)</code></pre>
-</div>
-<!-- AQUI ENTRA O HARDENING DO SUBAGENTE -->
-<div class="abox warning">
-<h4>Architecture Hardening &amp; Resilience</h4>
-<p><strong>1. Fault Tolerance on Amazon EMR (Spot Interruption Mitigation):</strong> Utilizing a heterogeneous cluster fleet with task nodes on Spot instances, we enforce YARN Node Decommissioning coupled with Amazon EC2 Spot Interruption Notices. Upon receiving the two-minute warning via EventBridge, EMR gracefully drains active containers, preventing localized data loss and re-scheduling Spark tasks to remaining nodes without job failure.</p>
-<p><strong>2. Security &amp; Compliance (BACEN Guidelines):</strong> All market data payloads (yield curves, volatility surfaces) at rest in Amazon S3 are encrypted utilizing SSE-KMS with Customer Managed Keys (CMKs), ensuring granular key rotation and CloudTrail audit logging for `GenerateDataKey` operations. Access control is governed by AWS Lake Formation, enforcing cell-level filtering (row/column-level security) to restrict access to sensitive financial instruments based on the principal's IAM role.</p>
-<p><strong>3. Data Lineage &amp; Audit Reproducibility:</strong> To ensure deterministic Monte Carlo re-runs for regulatory backtesting, input datasets are versioned. The exact S3 object version IDs (or Delta Lake/Iceberg snapshot IDs) of the yield curves and RNG seed states used during execution are persisted into an immutable Amazon DynamoDB audit ledger, enabling exact bit-for-bit replayability.</p>
-</div>
-<h3 style="margin-top:40px;">3. Risco de Liquidez (ALM): LCR e NSFR</h3>
-<p>Após cobrir crédito (calote) e mercado (preço), resta o <strong>Risco de Liquidez (Cash Flow)</strong>. O banco não quebra pela perda em si, mas pela falta de dinheiro em caixa na compensação noturna (SPB). O setor de <strong>ALM (Asset Liability Management)</strong> gerencia esse "descasamento".</p>
 <div class="concept-grid">
-<div class="concept-card" style="border-top: 4px solid var(--arch);">
-<div class="cc-tag">LCR (Liquidity Coverage Ratio)</div>
-<div class="cc-body">Resiliência de Curto Prazo. O banco precisa provar ao BACEN, gerando relatórios D-0, que possui ativos superlíquidos (Títulos Públicos) suficientes para sobreviver a uma corrida bancária de 30 dias sob severo estresse.</div>
+<div class="concept-card">
+<h4>Risco de Mercado: Value at Risk (VaR) via Monte Carlo</h4>
+<p>O VaR mede a perda potencial máxima de uma carteira sob condições normais de mercado. A simulação de <strong>Monte Carlo</strong> gera milhares de cenários futuros estocásticos (caminhos aleatórios) para taxas de juros (curva de juros), câmbio e ações, avaliando o PnL da carteira em cada cenário. O VaR (ex: 99%) representa o percentil das piores perdas simuladas.</p>
 </div>
-<div class="concept-card" style="border-top: 4px solid var(--ok);">
-<div class="cc-tag">NSFR (Net Stable Funding Ratio)</div>
-<div class="cc-body">Métrica de Longo Prazo. Garante que se o banco conceder um financiamento imobiliário de 30 anos (Ativo Iliquido), ele está financiando isso com captações estáveis (LCI/Poupança), e não com CDI de curtíssimo prazo, evitando alavancagem suicida.</div>
+</div>
+<h4>Resultado Monte Carlo VaR: <code>var_monte_carlo_result.json</code></h4>
+<div class="code-block">
+<pre><code class="language-json">{
+  "portfolioId": "ptf-treasury-01",
+  "calculationDate": "2026-07-27",
+  "simulationType": "MONTE_CARLO",
+  "iterations": 10000,
+  "timeHorizonDays": 10,
+  "confidenceLevel": 0.99,
+  "varAmountBRL": 4500000.00,
+  "cVarAmountBRL": 5200000.00,
+  "dominantRiskFactor": "BRL/USD_FX_VOLATILITY"
+}</code></pre>
+</div>
+<div class="concept-grid">
+<div class="concept-card">
+<h4>Risco de Liquidez &amp; ALM (Asset and Liability Management)</h4>
+<p>O ALM gerencia o descasamento temporal entre os Ativos (empréstimos concedidos, recebimentos longos) e Passivos (depósitos, exigibilidades curtas) — o chamado <em>Cash Flow Gap Analysis</em>. Para garantir que o banco sobreviva a crises de liquidez, monitoram-se dois grandes indicadores regulatórios (Basileia III):</p>
+<br/>
+<table>
+<thead>
+<tr>
+<th>Indicador</th>
+<th>Significado</th>
+<th>Foco Temporal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>LCR</strong> (Liquidity Coverage Ratio)</td>
+<td>Ativos de Alta Liquidez (HQLA) / Saídas líquidas estressadas</td>
+<td>Curto Prazo (30 dias)</td>
+</tr>
+<tr>
+<td><strong>NSFR</strong> (Net Stable Funding Ratio)</td>
+<td>Recursos Estáveis Disponíveis / Recursos Estáveis Exigidos</td>
+<td>Longo Prazo (1 ano)</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 </section><section class="section" id="marco-regulatorio">
-<div class="sec-hdr">
-<div class="sec-num" style="color:var(--aws)">07</div>
-<div class="sec-title">
-<div class="sec-subtitle">Deep Dive Regulatório e Data Mesh</div>
-<h2>Normas e Marco Regulatório (BACEN / CMN)</h2>
+<div class="abox info">
+<h3>07. Arcabouço Regulatório (CMN, BACEN e IFRS 9)</h3>
+<p>A arquitetura de dados deve traduzir marcos legais em pipelines robustos, rastreáveis e auditáveis, conectando os dados granulares aos reports macro-regulatórios exigidos pelo Banco Central do Brasil e padrões internacionais contábeis.</p>
 </div>
-</div>
-<p>A arquitetura de dados financeiros não é desenhada apenas para escalabilidade ou performance, mas fundamentalmente para o <strong>Compliance Regulatório</strong>. A evolução das normativas brasileiras e internacionais obriga a engenharia a adotar paradigmas avançados de isolamento e governança, sendo o <strong>Data Mesh</strong> o modelo arquitetural definitivo para suportar essa complexidade.</p>
-<h3 style="margin-top: 40px;">1. PLD/AML (Circular BACEN 3.978)</h3>
-<div class="callout callout-warning" style="border-left-color: var(--alert); margin-bottom: 24px;">
-<strong>Prevenção à Lavagem de Dinheiro (PLD) e Financiamento ao Terrorismo (CFT)</strong>
-<p>A Circular 3.978 obriga as instituições a monitorarem continuamente as transações e o perfil de risco dos clientes, reportando operações suspeitas ao COAF. Atrasos ou falhas de detecção resultam em perda da licença bancária.</p>
-<p style="margin-top: 10px;"><strong>Tradução para Data Mesh:</strong> O domínio transacional emite eventos crus (ex: transferências PIX) via mensageria (Kafka/Kinesis). O domínio de <em>Compliance</em> consome esses eventos quase em tempo real (Spark Streaming/Flink) cruzando-os com listas restritivas (OFAC, PEPs). Para proteger dados PII, o <strong>AWS Lake Formation</strong> aplica <em>Column-Level Security</em> (anonimizando nomes) e <em>Row-Level Security</em> (filtrando apenas transações suspeitas), garantindo que nem mesmo os engenheiros do Data Lake tenham acesso indevido à privacidade dos clientes.</p>
-</div>
-<h3 style="margin-top: 40px;">2. Basileia III e a Retenção Histórica (IRB)</h3>
-<div class="callout callout-info" style="border-left-color: var(--spark); margin-bottom: 24px;">
-<strong>Acordos de Basileia e Internal Ratings-Based Approach (IRB)</strong>
-<p>Para determinar o Capital Regulatório que o banco deve reter, o BACEN permite modelos internos de risco de crédito (IRB), desde que o banco consiga provar a robustez dos modelos com séries históricas extensas.</p>
-<p style="margin-top: 10px;"><strong>Tradução para Data Mesh:</strong> O domínio de <em>Risco (Credit Scoring)</em> atua como Produtor de Dados de Modelagem. Ele obriga o Data Lake a armazenar "Safras" (Vintages) de crédito por até 10 anos. Para viabilizar esse volume (Petabytes) sem explodir custos (FinOps), a engenharia aplica ciclos de vida rigorosos: os modelos processam no Amazon EMR sobre tabelas Iceberg e, mensalmente, os logs de inferência antigos são transicionados para <strong>Amazon S3 Glacier Deep Archive</strong>. Quando o BACEN exige auditoria (Backtesting retroativo), a arquitetura restaura o gelo sob demanda via Athena.</p>
-</div>
-<h3 style="margin-top: 40px;">3. Dupla Contabilidade (Resolução CMN 4.966 / IFRS 9)</h3>
-<div class="callout callout-tip" style="border-left-color: var(--aws); margin-bottom: 24px;">
-<strong>Expected Credit Loss (ECL) e o Desafio Multi-Ledger</strong>
-<p>As normas mudaram de "Perda Incorrida" (provisionar quando o cliente não paga) para "Perda Esperada" (provisionar no dia do empréstimo baseado no rating). Além disso, reportar BRGAAP (local) e IFRS 9 (matriz internacional) simultaneamente tornou-se o padrão.</p>
-<p style="margin-top: 10px;"><strong>Tradução para Data Mesh:</strong> Cria-se uma fronteira estrita. O domínio de <em>Originação</em> gera um evento agnóstico ("CONTRATO_ASSINADO"). Esse evento viaja pelo Data Contract até o domínio de <em>Accounting</em>, onde motores de tradução em Flink bifurcam a transação em dois Livros-Razão (Multi-Ledger) armazenados no Redshift ou Iceberg. Um pipeline calcula o Accrual e Stop Accrual na ótica IFRS, enquanto outro processa as diretrizes do COSIF (Plano de Contas do Bacen).</p>
-</div>
-<h3 style="margin-top: 40px;">4. Reportes Massivos e CVM (Securitização)</h3>
 <div class="concept-grid">
-<div class="concept-card" style="border-top: 4px solid var(--arch);">
-<div class="cc-tag">DOC 3040/3044 (SCR)</div>
-<div class="cc-body">
-<strong>Normativa:</strong> Obrigatoriedade do envio mensal de todos os saldos e garantias da carteira de crédito.<br/>
-<strong>Engenharia:</strong> Tratado como um <em>Consumer Data Product</em> regulatório. Jobs noturnos no AWS Glue consolidam trilhões de linhas. O maior desafio é o <em>Data Quality</em>: garantir que a soma dos XMLs gerados para o BACEN (Data Mart regulatório) bata centavo por centavo com a tabela de saldos contábeis do Iceberg (Single Source of Truth).
-      </div>
+<div class="concept-card">
+<h4>Resolução CMN 4.557 (GIR - Gestão Integrada de Riscos)</h4>
+<p>Exige que as instituições tenham uma infraestrutura tecnológica que suporte testes de estresse integrados (Risco de Crédito + Mercado + Liquidez). Introduz o <strong>RAS (Risk Appetite Statement)</strong>, formalizando os limites de risco (ex: concentração máxima por setor) que a alta administração tolera.</p>
 </div>
-<div class="concept-card" style="border-top: 4px solid var(--ok);">
-<div class="cc-tag">CVM (FIDCs) e AWS RAM</div>
-<div class="cc-body">
-<strong>Normativa:</strong> Securitização de recebíveis exige segregação total entre a Originadora e a Custodiante do Fundo.<br/>
-<strong>Engenharia:</strong> É a aplicação máxima do Data Mesh. Criam-se Contas AWS separadas (Multi-Account). A Originadora não envia mais arquivos `.csv`; ela expõe tabelas do Iceberg ou Redshift via <strong>AWS Resource Access Manager (RAM)</strong> e <strong>Lake Formation</strong> (Cross-Account Sharing). A Custodiante consulta os dados na sua própria conta, garantindo independência jurídica e imutabilidade dos direitos creditórios auditados pela CVM.
-      </div>
+<div class="concept-card">
+<h4>Resolução CMN 4.966 (Alinhamento ao IFRS 9)</h4>
+<p>Revoluciona a contabilidade de instrumentos financeiros. Substitui as antigas regras estáticas de provisão por perdas incorridas (Res. 2682) pela lógica de <strong>Expected Credit Loss (ECL)</strong> e migração de Stages. Exige que a modelagem preditiva dite o capital contábil em tempo real (Forward-looking).</p>
+</div>
+<div class="concept-card">
+<h4>BACEN Doc 3040 (Central de Risco - SCR)</h4>
+<p>Report mensal crítico. A engenharia de dados precisa agregar saldos diários, apropriação de juros, garantias e dias de atraso de 100% das operações de crédito da instituição. A consistência entre a contabilidade geral (COSIF) e as chaves granulares do Doc 3040 é a prova de fogo de qualquer Data Lake bancário.</p>
 </div>
 </div>
-<hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;"/>
+<div class="callout">
+<strong>Desafio de Dados:</strong> O report Doc 3040 exige agregações por Faixa de Atraso, Modalidade BACEN, Tipo de Garantia (Mitigador) e CEP do tomador. Inconsistências geram multas severas e impacto de imagem junto ao regulador.
+    </div>
+<h4>Exemplo de Record do Doc 3040: <code>bacen_doc3040_payload.json</code></h4>
+<div class="code-block">
+<pre><code class="language-json">{
+  "documentDate": "2026-06-30",
+  "cnpjInstitution": "12345678000199",
+  "customerTaxId": "***456789**",
+  "customerType": "PF",
+  "creditOperations": [
+    {
+      "contractNumber": "202601ABC",
+      "bacenModality": "0213",
+      "originationDate": "2026-01-10",
+      "maturityDate": "2028-01-10",
+      "currency": "790",
+      "outstandingBalanceBRL": 15000.00,
+      "daysPastDue": 45,
+      "provisionBand": "D",
+      "guarantees": [
+        {
+          "type": "0901",
+          "originalValueBRL": 25000.00,
+          "revaluationDate": "2026-01-05"
+        }
+      ]
+    }
+  ]
+}</code></pre>
+</div>
 </section><section class="section" id="enterprise-arch">
 <div class="sec-hdr">
 <div class="sec-num" style="color:var(--aws)">08</div>
