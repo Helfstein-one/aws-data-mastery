@@ -523,172 +523,278 @@ df_contratos = df.withColumn("curva_projetada", vetorizar_price("valor_financiad
 <p>Além disso, o motor de Accounting e o Iceberg precisam garantir a <strong>Idempotência</strong> (processar uma mensagem duas vezes não deve gerar dois débitos). A tabela Iceberg processa deduplicação analítica via chave de <code>event_uuid</code> cruzado com <code>MERGE INTO</code>.</p>
 </div>
 <!-- SEÇÃO 5: O CICLO COMPLETO DE CRÉDITO -->
-</section><section class="section" id="deep-dive-riscos">
-<div class="sec-hdr">
-<div class="sec-num" style="color:var(--spark)">06</div>
-<div class="sec-meta">
-<div class="sec-acc" style="background:var(--spark)"></div>
-<h2>Risco de Crédito, IRB e Monte Carlo</h2>
-<p>Modelagem estatística avançada: PD, LGD, EAD, normas IRB do BACEN, Value at Risk (VaR) por Monte Carlo no EMR, Liquidez (ALM) e Hardening.</p>
+</section><div class="sec-hdr"><div class="sec-num" style="color:var(--spark)">06</div><div class="sec-meta"><div class="sec-acc" style="background:var(--spark)"></div><h2>Risco de Crédito, IRB e Monte Carlo</h2><p>Modelagem estatística avançada: PD, LGD, EAD, normas IRB do BACEN, Value at Risk (VaR) por Monte Carlo no EMR, Liquidez (ALM) e Hardening.</p></div></div>
+<div class="content-section">
+<h3>1. Modelagem de Risco de Crédito e Abordagem IRB</h3>
+<p>Na abordagem de Modelos Internos (IRB - Internal Ratings-Based), o cálculo da Perda Esperada (ECL - Expected Credit Loss) segue a seguinte formulação matemática:</p>
+<div class="math-block" style="padding: 15px; background: #f4f4f4; text-align: center; font-size: 1.2em; border-radius: 8px; margin: 15px 0;">
+<strong>ECL = PD × LGD × EAD × DF</strong>
 </div>
-</div>
-<div class="abox info">
-<h3>Abordagem de Risco de Crédito (Credit Risk IRB) &amp; Estágios de Perda Esperada (ECL)</h3>
-<p>A gestão de risco de crédito evoluiu de regras empíricas para a abordagem avançada baseada em modelos internos (<strong>Credit Risk IRB - Internal Ratings-Based Approach</strong>). Bancos calculam o Capital Regulatório otimizado modelando internamente a PD (Probabilidade de Default), LGD (Loss Given Default) e EAD (Exposure at Default).</p>
-</div>
-<h4>ECL (Expected Credit Loss) &amp; PDD</h4>
-<p>A Perda Esperada de Crédito (ECL) dita a Provisão para Devedores Duvidosos (PDD), exigindo visão prospectiva de risco macroeconômico, segmentada em "Estágios":</p>
-<table>
-<thead>
+<ul>
+<li><strong>PD (Probability of Default):</strong> Probabilidade de inadimplência em um horizonte de tempo (geralmente 12 meses).</li>
+<li><strong>LGD (Loss Given Default):</strong> Perda dado o default (percentual da exposição não recuperável).</li>
+<li><strong>EAD (Exposure at Default):</strong> Exposição no momento do default.</li>
+<li><strong>DF (Discount Factor):</strong> Fator de desconto para trazer a perda ao valor presente.</li>
+</ul>
+<h4>Matriz de Transição de Rating de Crédito (12 Meses)</h4>
+<p>A tabela abaixo ilustra as probabilidades de migração de rating em um período de 12 meses, essencial para alocação de estágios conforme normas como a CMN 4.966 (IFRS 9) e provisões correspondentes.</p>
+<table border="1" class="data-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+<thead style="background-color: #eaeaea;">
 <tr>
-<th>ECL Stage</th>
-<th>Situação do Contrato</th>
-<th>Cálculo da Provisão (PDD)</th>
-<th>Reconhecimento de Juros</th>
+<th style="padding: 8px;">Rating Inicial</th>
+<th style="padding: 8px;">AA</th>
+<th style="padding: 8px;">A</th>
+<th style="padding: 8px;">BBB</th>
+<th style="padding: 8px;">BB</th>
+<th style="padding: 8px;">B</th>
+<th style="padding: 8px;">CCC</th>
+<th style="padding: 8px;">Default</th>
 </tr>
 </thead>
-<tbody>
-<tr>
-<td><strong>Stage 1</strong> (Performing)</td>
-<td>Risco não aumentou significativamente. Em dia.</td>
-<td>ECL para os próximos 12 meses.</td>
-<td>Sobre o valor contábil bruto.</td>
-</tr>
-<tr>
-<td><strong>Stage 2</strong> (Underperforming)</td>
-<td>Aumento significativo de risco (ex: atraso &gt; 30 dias).</td>
-<td>ECL Lifetime (perda esperada para toda a vida do contrato).</td>
-<td>Sobre o valor contábil bruto.</td>
-</tr>
-<tr>
-<td><strong>Stage 3</strong> (Non-performing)</td>
-<td>Em Default (ex: atraso &gt; 90 dias / Inadimplência material).</td>
-<td>ECL Lifetime.</td>
-<td>Sobre o valor contábil líquido de PDD.</td>
-</tr>
+<tbody style="text-align: right;">
+<tr><td style="text-align: left; padding: 8px;">AA</td><td style="padding: 8px;">88.0%</td><td style="padding: 8px;">10.0%</td><td style="padding: 8px;">1.5%</td><td style="padding: 8px;">0.3%</td><td style="padding: 8px;">0.1%</td><td style="padding: 8px;">0.1%</td><td style="padding: 8px;">0.0%</td></tr>
+<tr><td style="text-align: left; padding: 8px;">A</td><td style="padding: 8px;">3.0%</td><td style="padding: 8px;">85.0%</td><td style="padding: 8px;">10.0%</td><td style="padding: 8px;">1.2%</td><td style="padding: 8px;">0.5%</td><td style="padding: 8px;">0.2%</td><td style="padding: 8px;">0.1%</td></tr>
+<tr><td style="text-align: left; padding: 8px;">BBB</td><td style="padding: 8px;">0.5%</td><td style="padding: 8px;">4.0%</td><td style="padding: 8px;">82.0%</td><td style="padding: 8px;">10.5%</td><td style="padding: 8px;">2.0%</td><td style="padding: 8px;">0.5%</td><td style="padding: 8px;">0.5%</td></tr>
+<tr><td style="text-align: left; padding: 8px;">BB</td><td style="padding: 8px;">0.1%</td><td style="padding: 8px;">0.5%</td><td style="padding: 8px;">5.0%</td><td style="padding: 8px;">80.0%</td><td style="padding: 8px;">10.0%</td><td style="padding: 8px;">3.0%</td><td style="padding: 8px;">1.4%</td></tr>
+<tr><td style="text-align: left; padding: 8px;">B</td><td style="padding: 8px;">0.0%</td><td style="padding: 8px;">0.1%</td><td style="padding: 8px;">1.0%</td><td style="padding: 8px;">8.0%</td><td style="padding: 8px;">75.0%</td><td style="padding: 8px;">10.0%</td><td style="padding: 8px;">5.9%</td></tr>
+<tr><td style="text-align: left; padding: 8px;">CCC</td><td style="padding: 8px;">0.0%</td><td style="padding: 8px;">0.0%</td><td style="padding: 8px;">0.2%</td><td style="padding: 8px;">1.0%</td><td style="padding: 8px;">10.0%</td><td style="padding: 8px;">65.0%</td><td style="padding: 8px;">23.8%</td></tr>
 </tbody>
 </table>
-<h4>Exemplo de Payload Feature Store: <code>credit_risk_feature_store_payload.json</code></h4>
-<div class="code-block">
-<pre><code class="language-json">{
-  "contractId": "ctr-9988-xp",
-  "referenceDate": "2026-06-30",
-  "exposureAtDefault": 12500.50,
-  "lossGivenDefault": 0.45,
-  "probabilityOfDefault12M": 0.02,
-  "probabilityOfDefaultLifetime": 0.08,
-  "macroeconomicStressFactor": 1.15,
-  "currentECLStage": 2,
-  "calculatedPDDBRL": 1150.04
-}</code></pre>
+<h4>PySpark: Rating Migration &amp; CMN 4.966 Stage Assignment</h4>
+<pre><code class="language-python"># pyspark_rating_migration.py
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, when
+
+spark = SparkSession.builder.appName("CreditRiskStages").getOrCreate()
+
+# Regras simplificadas de Estágio (Stage) CMN 4.966 / IFRS 9
+# Stage 1: Sem aumento significativo de risco (ECL 12 meses)
+# Stage 2: Aumento significativo de risco (ECL Vida Toda)
+# Stage 3: Default / Ativo Problemático (ECL Vida Toda)
+
+def assign_stage(df):
+    return df.withColumn(
+        "stage",
+        when(col("days_past_due") &gt; 90, 3)
+        .when((col("current_rating") &lt; col("origination_rating")) | (col("days_past_due") &gt; 30), 2)
+        .otherwise(1)
+    )
+
+df_portfolio = spark.read.parquet("s3://data-lake/portfolio_status/")
+df_staged = assign_stage(df_portfolio)
+df_staged.write.mode("overwrite").parquet("s3://data-lake/risk_stages/")
+</code></pre>
 </div>
-<div class="concept-grid">
-<div class="concept-card">
-<h4>Risco de Mercado: Value at Risk (VaR) via Monte Carlo</h4>
-<p>O VaR mede a perda potencial máxima de uma carteira sob condições normais de mercado. A simulação de <strong>Monte Carlo</strong> gera milhares de cenários futuros estocásticos (caminhos aleatórios) para taxas de juros (curva de juros), câmbio e ações, avaliando o PnL da carteira em cada cenário. O VaR (ex: 99%) representa o percentil das piores perdas simuladas.</p>
+<div class="content-section">
+<h3>2. Distribuição de Perdas e Monte Carlo VaR</h3>
+<h4>Loss Distribution Curve</h4>
+<div class="svg-container" style="text-align: center; margin: 20px 0;">
+<svg height="300" viewbox="0 0 600 300" width="600" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<lineargradient id="grad1" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" style="stop-color:rgba(0,128,255,0.2);stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:rgba(0,128,255,0.8);stop-opacity:1"></stop>
+</lineargradient>
+</defs>
+<!-- Axes -->
+<line stroke="#333" stroke-width="2" x1="50" x2="550" y1="250" y2="250"></line>
+<line stroke="#333" stroke-width="2" x1="50" x2="50" y1="250" y2="50"></line>
+<!-- Distribution Curve -->
+<path d="M 50 250 Q 150 50, 200 50 T 400 240 T 550 248" fill="url(#grad1)" stroke="#0080ff" stroke-width="3"></path>
+<!-- EL Line -->
+<line stroke="#4CAF50" stroke-dasharray="5,5" stroke-width="2" x1="150" x2="150" y1="250" y2="75"></line>
+<text fill="#4CAF50" font-weight="bold" text-anchor="middle" x="150" y="70">EL</text>
+<text fill="#333" font-size="12" text-anchor="middle" x="150" y="270">Expected Loss</text>
+<!-- VaR Line -->
+<line stroke="#F44336" stroke-dasharray="5,5" stroke-width="2" x1="450" x2="450" y1="250" y2="220"></line>
+<text fill="#F44336" font-weight="bold" text-anchor="middle" x="450" y="215">VaR (99%)</text>
+<!-- UL Range -->
+<path d="M 150 220 L 450 220" stroke="#FF9800" stroke-width="2"></path>
+<text fill="#FF9800" font-size="12" font-weight="bold" text-anchor="middle" x="300" y="215">Unexpected Loss (UL)</text>
+</svg>
 </div>
-</div>
-<h4>Resultado Monte Carlo VaR: <code>var_monte_carlo_result.json</code></h4>
-<div class="code-block">
-<pre><code class="language-json">{
-  "portfolioId": "ptf-treasury-01",
-  "calculationDate": "2026-07-27",
-  "simulationType": "MONTE_CARLO",
-  "iterations": 10000,
-  "timeHorizonDays": 10,
-  "confidenceLevel": 0.99,
-  "varAmountBRL": 4500000.00,
-  "cVarAmountBRL": 5200000.00,
-  "dominantRiskFactor": "BRL/USD_FX_VOLATILITY"
-}</code></pre>
-</div>
-<div class="concept-grid">
-<div class="concept-card">
-<h4>Risco de Liquidez &amp; ALM (Asset and Liability Management)</h4>
-<p>O ALM gerencia o descasamento temporal entre os Ativos (empréstimos concedidos, recebimentos longos) e Passivos (depósitos, exigibilidades curtas) — o chamado <em>Cash Flow Gap Analysis</em>. Para garantir que o banco sobreviva a crises de liquidez, monitoram-se dois grandes indicadores regulatórios (Basileia III):</p>
-<br/>
-<table>
-<thead>
-<tr>
-<th>Indicador</th>
-<th>Significado</th>
-<th>Foco Temporal</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>LCR</strong> (Liquidity Coverage Ratio)</td>
-<td>Ativos de Alta Liquidez (HQLA) / Saídas líquidas estressadas</td>
-<td>Curto Prazo (30 dias)</td>
-</tr>
-<tr>
-<td><strong>NSFR</strong> (Net Stable Funding Ratio)</td>
-<td>Recursos Estáveis Disponíveis / Recursos Estáveis Exigidos</td>
-<td>Longo Prazo (1 ano)</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-</section><section class="section" id="marco-regulatorio">
-<div class="sec-hdr">
-<div class="sec-num" style="color:var(--aws)">07</div>
-<div class="sec-meta">
-<div class="sec-acc" style="background:var(--aws)"></div>
-<h2>Normas e Marco Regulatório (BACEN / CMN)</h2>
-<p>O peso do regulador: Resolução CMN 4.557 (Gerenciamento Integrado de Riscos), CMN 4.966 (Perda Esperada / ECL) e auditoria no Lake Formation.</p>
-</div>
-</div>
-<div class="abox info">
-<h3>Arcabouço Regulatório (CMN, BACEN e IFRS 9)</h3>
-<p>A arquitetura de dados deve traduzir marcos legais em pipelines robustos, rastreáveis e auditáveis, conectando os dados granulares aos reports macro-regulatórios exigidos pelo Banco Central do Brasil e padrões internacionais contábeis.</p>
-</div>
-<div class="concept-grid">
-<div class="concept-card">
-<h4>Resolução CMN 4.557 (GIR - Gestão Integrada de Riscos)</h4>
-<p>Exige que as instituições tenham uma infraestrutura tecnológica que suporte testes de estresse integrados (Risco de Crédito + Mercado + Liquidez). Introduz o <strong>RAS (Risk Appetite Statement)</strong>, formalizando os limites de risco (ex: concentração máxima por setor) que a alta administração tolera.</p>
-</div>
-<div class="concept-card">
-<h4>Resolução CMN 4.966 (Alinhamento ao IFRS 9)</h4>
-<p>Revoluciona a contabilidade de instrumentos financeiros. Substitui as antigas regras estáticas de provisão por perdas incorridas (Res. 2682) pela lógica de <strong>Expected Credit Loss (ECL)</strong> e migração de Stages. Exige que a modelagem preditiva dite o capital contábil em tempo real (Forward-looking).</p>
-</div>
-<div class="concept-card">
-<h4>BACEN Doc 3040 (Central de Risco - SCR)</h4>
-<p>Report mensal crítico. A engenharia de dados precisa agregar saldos diários, apropriação de juros, garantias e dias de atraso de 100% das operações de crédito da instituição. A consistência entre a contabilidade geral (COSIF) e as chaves granulares do Doc 3040 é a prova de fogo de qualquer Data Lake bancário.</p>
-</div>
-</div>
-<div class="callout">
-<strong>Desafio de Dados:</strong> O report Doc 3040 exige agregações por Faixa de Atraso, Modalidade BACEN, Tipo de Garantia (Mitigador) e CEP do tomador. Inconsistências geram multas severas e impacto de imagem junto ao regulador.
+<h4>Value at Risk (VaR) via Monte Carlo</h4>
+<p>A simulação de Monte Carlo emprega o Movimento Browniano Geométrico (GBM) para prever a evolução do valor dos ativos e derivar a distribuição de perdas em múltiplos cenários. Útil para capturar não linearidades.</p>
+<pre><code class="language-python"># pyspark_monte_carlo_var.py
+import numpy as np
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("MonteCarloVaR").getOrCreate()
+sc = spark.sparkContext
+
+# 10.000 caminhos de simulação (paths)
+num_paths = 10000
+S0, mu, sigma, T = 100.0, 0.05, 0.2, 1.0
+
+def simulate_path(seed):
+    np.random.seed(seed)
+    Z = np.random.standard_normal()
+    ST = S0 * np.exp((mu - 0.5 * sigma**2) * T + sigma * np.sqrt(T) * Z)
+    loss = S0 - ST
+    return float(loss)
+
+# Distribuindo a computação no EMR
+paths_rdd = sc.parallelize(range(num_paths))
+losses_rdd = paths_rdd.map(simulate_path)
+
+# Ordenando para encontrar o VaR 99% (Tail Cutoff)
+sorted_losses = losses_rdd.sortBy(lambda x: x).collect()
+var_99_index = int(0.99 * num_paths)
+var_99 = sorted_losses[var_99_index]
+
+print(f"VaR 99% (Monte Carlo): {var_99:.2f}")
+</code></pre>
+<div class="drawio-placeholder">
+<!-- MONTE CARLO STRESS TEST PIPELINE -->
+<div style="border:2px dashed #999; padding: 30px; text-align:center; color:#666; font-weight:bold; background:#f9f9f9; margin: 20px 0;">
+      [DRAWIO PLACEHOLDER: MONTE CARLO STRESS TEST PIPELINE]
     </div>
-<h4>Exemplo de Record do Doc 3040: <code>bacen_doc3040_payload.json</code></h4>
-<div class="code-block">
-<pre><code class="language-json">{
-  "documentDate": "2026-06-30",
-  "cnpjInstitution": "12345678000199",
-  "customerTaxId": "***456789**",
-  "customerType": "PF",
-  "creditOperations": [
-    {
-      "contractNumber": "202601ABC",
-      "bacenModality": "0213",
-      "originationDate": "2026-01-10",
-      "maturityDate": "2028-01-10",
-      "currency": "790",
-      "outstandingBalanceBRL": 15000.00,
-      "daysPastDue": 45,
-      "provisionBand": "D",
-      "guarantees": [
-        {
-          "type": "0901",
-          "originalValueBRL": 25000.00,
-          "revaluationDate": "2026-01-05"
-        }
-      ]
-    }
-  ]
-}</code></pre>
 </div>
-</section><section class="section" id="enterprise-arch">
+</div>
+<div class="content-section">
+<h3>3. Risco de Liquidez (ALM) e Cash Flow Gap</h3>
+<p>O gerenciamento de Ativos e Passivos (ALM) assegura a capacidade da instituição de honrar compromissos. As principais métricas de liquidez sob Basileia III são:</p>
+<ul>
+<li><strong>LCR (Liquidity Coverage Ratio):</strong> Garante que o banco possui Ativos Líquidos de Alta Qualidade (HQLA) suficientes para sobreviver a um cenário de estresse de 30 dias. <em>Meta: LCR ≥ 100%</em>.</li>
+<li><strong>NSFR (Net Stable Funding Ratio):</strong> Exige um perfil de financiamento estável em relação à composição dos ativos ao longo de um horizonte de 1 ano. <em>Meta: NSFR ≥ 100%</em>.</li>
+</ul>
+<h4>Projeção de Fluxo de Caixa Estressado (Cash Flow Gap)</h4>
+<p>A tabela ilustra descasamentos de liquidez em diferentes vértices (buckets) sob um cenário de corrida bancária moderada.</p>
+<table border="1" class="data-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+<thead style="background-color: #eaeaea;">
+<tr>
+<th style="padding: 8px;">Vértice Temporal</th>
+<th style="padding: 8px;">Entradas Esperadas (Inflows)</th>
+<th style="padding: 8px;">Saídas Estressadas (Outflows)</th>
+<th style="padding: 8px;">Gap Marginal</th>
+<th style="padding: 8px;">Gap Acumulado</th>
+<th style="padding: 8px;">Buffer de Liquidez</th>
+</tr>
+</thead>
+<tbody style="text-align: center;">
+<tr><td style="padding: 8px;">1 a 7 dias</td><td style="padding: 8px;">15.000</td><td style="padding: 8px;">25.000</td><td style="padding: 8px; color:red; font-weight:bold;">-10.000</td><td style="padding: 8px; color:red; font-weight:bold;">-10.000</td><td style="padding: 8px;">30.000</td></tr>
+<tr><td style="padding: 8px;">8 a 15 dias</td><td style="padding: 8px;">12.000</td><td style="padding: 8px;">15.000</td><td style="padding: 8px; color:red; font-weight:bold;">-3.000</td><td style="padding: 8px; color:red; font-weight:bold;">-13.000</td><td style="padding: 8px;">17.000</td></tr>
+<tr><td style="padding: 8px;">16 a 30 dias</td><td style="padding: 8px;">20.000</td><td style="padding: 8px;">18.000</td><td style="padding: 8px; color:green; font-weight:bold;">+2.000</td><td style="padding: 8px; color:red; font-weight:bold;">-11.000</td><td style="padding: 8px;">19.000</td></tr>
+<tr><td style="padding: 8px;">31 a 90 dias</td><td style="padding: 8px;">35.000</td><td style="padding: 8px;">20.000</td><td style="padding: 8px; color:green; font-weight:bold;">+15.000</td><td style="padding: 8px; color:green; font-weight:bold;">+4.000</td><td style="padding: 8px;">34.000</td></tr>
+</tbody>
+</table>
+</div>
+<div class="sec-hdr"><div class="sec-num" style="color:var(--aws)">07</div><div class="sec-meta"><div class="sec-acc" style="background:var(--aws)"></div><h2>Normas e Marco Regulatório (BACEN / CMN)</h2><p>O peso do regulador: Resolução CMN 4.557 (Gerenciamento Integrado de Riscos), CMN 4.966 (Perda Esperada / ECL) e auditoria no Lake Formation.</p></div></div>
+<div class="sec-body">
+<h3>Resolução CMN 4.557 &amp; CMN 4.966 Deep Dive</h3>
+<p><strong>CMN 4.557:</strong> Exige uma estrutura abrangente de gerenciamento de riscos, destacando a Declaração de Apetite por Riscos (RAS - Risk Appetite Statement), testes de estresse rigorosos (Stress Testing) e Governança Integrada de Riscos.</p>
+<p><strong>CMN 4.966 (IFRS 9):</strong> Define regras para contabilização de instrumentos financeiros. Um ponto crítico é o Significant Increase in Credit Risk (SICR), com gatilhos como mais de 30 dias de atraso (&gt; 30 days overdue) ou rebaixamento de rating (rating downgrade), determinando a transição de estágios.</p>
+<div class="svg-container" style="margin: 20px 0;">
+<h4>Provision Growth Curve (ECL Stages)</h4>
+<svg height="auto" style="border:1px solid #ccc; background:#fafafa; border-radius:8px;" viewbox="0 0 800 300" width="100%">
+<defs>
+<marker id="arrow" markerheight="10" markerunits="strokeWidth" markerwidth="10" orient="auto" refx="0" refy="3">
+<path d="M0,0 L0,6 L9,3 z" fill="#333"></path>
+</marker>
+</defs>
+<!-- Axes -->
+<line marker-end="url(#arrow)" stroke="#333" stroke-width="2" x1="50" x2="750" y1="250" y2="250"></line>
+<line marker-end="url(#arrow)" stroke="#333" stroke-width="2" x1="50" x2="50" y1="250" y2="50"></line>
+<text font-family="sans-serif" font-size="12" x="760" y="255">Tempo / Piora no Risco</text>
+<text font-family="sans-serif" font-size="12" transform="rotate(-90 20,40)" x="20" y="40">Provisão ECL</text>
+<!-- Stage Areas -->
+<rect fill="rgba(44, 160, 44, 0.1)" height="190" width="220" x="50" y="60"></rect>
+<rect fill="rgba(255, 127, 14, 0.1)" height="190" width="220" x="270" y="60"></rect>
+<rect fill="rgba(214, 39, 40, 0.1)" height="190" width="250" x="490" y="60"></rect>
+<text font-size="14" font-weight="bold" text-anchor="middle" x="160" y="280">Stage 1</text>
+<text font-size="11" text-anchor="middle" x="160" y="295">12-month ECL</text>
+<text font-size="14" font-weight="bold" text-anchor="middle" x="380" y="280">Stage 2</text>
+<text font-size="11" text-anchor="middle" x="380" y="295">Lifetime ECL (SICR)</text>
+<text font-size="14" font-weight="bold" text-anchor="middle" x="615" y="280">Stage 3</text>
+<text font-size="11" text-anchor="middle" x="615" y="295">Defaulted / Impaired</text>
+<!-- Curve -->
+<path d="M 50 240 Q 250 230, 270 180 T 490 120 T 700 80" fill="none" stroke="#1f77b4" stroke-width="4"></path>
+<!-- Points & Labels -->
+<circle cx="270" cy="180" fill="#ff7f0e" r="5"></circle>
+<text font-size="12" font-weight="bold" x="280" y="170">Gatilho SICR</text>
+<circle cx="490" cy="120" fill="#d62728" r="5"></circle>
+<text font-size="12" font-weight="bold" x="500" y="110">Default</text>
+</svg>
+</div>
+<h3>BACEN DOC 3040 / SCR Central de Risco Data Model</h3>
+<table border="1" class="data-dictionary" style="width:100%; border-collapse: collapse; text-align: left; margin: 20px 0; font-family: sans-serif;">
+<thead>
+<tr style="background-color: #f2f2f2;">
+<th style="padding: 8px; border: 1px solid #ddd;">Campo</th>
+<th style="padding: 8px; border: 1px solid #ddd;">Descrição</th>
+<th style="padding: 8px; border: 1px solid #ddd;">Tipo</th>
+<th style="padding: 8px; border: 1px solid #ddd;">Obrigatoriedade</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="padding: 8px; border: 1px solid #ddd;">Código da Operação</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Identificador único da operação de crédito na IF.</td>
+<td style="padding: 8px; border: 1px solid #ddd;">VARCHAR</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Obrigatório</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #ddd;">Modalidade de Crédito</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Classificação da operação (ex: CDC, Cartão, Imobiliário).</td>
+<td style="padding: 8px; border: 1px solid #ddd;">NUMERIC</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Obrigatório</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #ddd;">Taxa Efetiva a.a.</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Custo Efetivo Total ou taxa anualizada da operação.</td>
+<td style="padding: 8px; border: 1px solid #ddd;">DECIMAL(10,4)</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Obrigatório</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #ddd;">Valor Vencido</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Montante da operação em atraso.</td>
+<td style="padding: 8px; border: 1px solid #ddd;">DECIMAL(15,2)</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Obrigatório</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #ddd;">Valor A Vencer</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Montante vincendo da operação.</td>
+<td style="padding: 8px; border: 1px solid #ddd;">DECIMAL(15,2)</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Obrigatório</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #ddd;">Tipo de Garantia</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Código do mitigador de risco de crédito associado.</td>
+<td style="padding: 8px; border: 1px solid #ddd;">VARCHAR</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Obrigatório</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #ddd;">Estágio ECL</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Classificação conforme CMN 4.966 (Stage 1, 2 ou 3).</td>
+<td style="padding: 8px; border: 1px solid #ddd;">INTEGER</td>
+<td style="padding: 8px; border: 1px solid #ddd;">Obrigatório</td>
+</tr>
+</tbody>
+</table>
+<h4>JSON Payload Example (bacen_doc3040_full_schema.json)</h4>
+<pre style="background: #2b2b2b; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto;"><code>{
+  "doc3040": {
+    "dataBase": "2026-07-31",
+    "cnpjIf": "12345678000199",
+    "operacoes": [
+      {
+        "codOperacao": "OP987654321",
+        "modalidade": 204,
+        "taxaEfetiva": 12.5000,
+        "valorVencido": 5000.00,
+        "valorAVencer": 45000.00,
+        "tipoGarantia": "G01",
+        "estagioEcl": 2,
+        "diasAtraso": 45
+      }
+    ]
+  }
+}</code></pre>
+<div style="margin-top: 20px; padding: 15px; border: 2px dashed #007bff; text-align: center; color: #007bff; font-weight: bold; background-color: #f8f9fa;">
+        [Drawio Placeholder: DOC 3040 DATA QUALITY &amp; GOVERNANCE PIPELINE]
+    </div>
+</div>
+<section class="section" id="enterprise-arch">
 <div class="sec-hdr">
 <div class="sec-num" style="color:var(--aws)">08</div>
 <div class="sec-title">
