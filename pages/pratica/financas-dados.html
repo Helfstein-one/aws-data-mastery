@@ -93,107 +93,9 @@ COMMIT;</code></pre>
 </div>
 <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;"/>
 <!-- SEÇÃO 2: MATEMÁTICA -->
-</section>
-<section class="section" id="deep-dive-riscos">
+</section><section class="section" id="matematica">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--spark)">02</div>
-<div class="sec-meta">
-<div class="sec-acc" style="background:var(--spark)"></div>
-<h2>Deep Dive em Riscos e Validação Regulatória</h2>
-<p>A física pesada por trás do provisionamento de capital, Basileia III e modelagem estocástica massiva com Big Data.</p>
-</div>
-</div>
-<h3>1. Risco de Crédito: A Era do IRB (Internal Ratings-Based)</h3>
-<p>O <strong>Risco de Crédito</strong> evoluiu de planilhas de Excel para modelos massivos de Machine Learning. Sob o Acordo de Basileia, os bancos podem utilizar a abordagem padrão do BACEN ou adotar o <strong>IRB (Internal Ratings-Based)</strong>. No IRB, o banco desenvolve seus próprios modelos internos para calcular a <em>Perda Esperada (ECL - Expected Credit Loss)</em>.</p>
-<ul>
-<li><strong>PD (Probability of Default):</strong> A probabilidade de um cliente entrar em calote (default) em 12 meses. O BACEN exige que esses modelos sejam rigorosamente validados, sem viés (bias) sociodemográfico (fairness).</li>
-<li><strong>LGD (Loss Given Default):</strong> Qual a recuperação financeira real em caso de calote (após leilões judiciais, venda de dívidas em FIDC).</li>
-<li><strong>EAD (Exposure at Default):</strong> O saldo devedor projetado para o momento da quebra. Para derivativos de balcão (OTC), o EAD é volátil e exige simulações sofisticadas (CVA - Credit Valuation Adjustment).</li>
-</ul>
-<div class="concept-grid" style="margin-top:24px;">
-<div class="concept-card" style="border-top: 4px solid var(--arch);">
-<div class="cc-tag">Data Lineage e Resolução CMN 4.557 / 4.966</div>
-<div class="cc-body">
-        Bancos sofrem auditorias rigorosas do Banco Central (BACEN). Quando o modelo nega crédito ou aumenta a provisão, o regulador exige a rastreabilidade completa (Data Lineage). Na AWS, isso é implementado forçando todas as queries passarem pelo <strong>AWS Lake Formation</strong>, mapeando qual versão do modelo no SageMaker consumiu qual snapshot do Iceberg no S3.
-      </div>
-</div>
-</div>
-<h3 style="margin-top:40px;">2. Risco de Mercado: Value at Risk (VaR) e Monte Carlo Estocástico</h3>
-<p>Enquanto o risco de crédito foca na falência do tomador, o <strong>Risco de Mercado</strong> mede o quanto o banco pode perder devido à volatilidade diária de preços, câmbio e taxas de juros. A métrica absoluta global é o <strong>VaR (Value at Risk)</strong> com 99% de confiança estatística.</p>
-<p>Bancos Tier-1 abandonaram o VaR Histórico/Paramétrico em favor do <strong>VaR por Simulação de Monte Carlo</strong>. Isso exige projetar 10.000 caminhos aleatórios (Movimento Browniano Geométrico - GBM) para todas as curvas de juros e reprecificar milhões de derivativos da tesouraria para cada cenário.</p>
-<h4 style="margin-top:24px;">Arquitetura do Motor de Stress Testing AWS</h4>
-<div class="drawio-label">MONTE CARLO PIPELINE (VAR)</div>
-<div class="mxgraph" data-mxgraph='{"highlight": "#000000", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxGraphModel dx=\"1400\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1000\" pageHeight=\"360\" background=\"#0B1121\"&gt;&lt;root&gt;&lt;mxCell id=\"0\"/&gt;&lt;mxCell id=\"1\" parent=\"0\"/&gt;\n&lt;mxCell id=\"box1\" value=\"MARKET DATA INGESTION\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"40\" y=\"40\" width=\"220\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"box2\" value=\"QUANTITATIVE COMPUTE ENGINE\" style=\"rounded=1;fillColor=#3b0764;strokeColor=#a855f7;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"300\" y=\"40\" width=\"360\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"box3\" value=\"REGULATORY REPORTING\" style=\"rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"700\" y=\"40\" width=\"260\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"b3\" value=\"B3 / Bloomberg&amp;#10;(Curvas de Juros)\" style=\"shape=mxgraph.aws4.document;fillColor=#3b82f6;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"110\" y=\"90\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"s3_raw\" value=\"S3 Lake (Raw)&amp;#10;Volatilities\" style=\"shape=mxgraph.aws4.s3;fillColor=#10b981;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"110\" y=\"220\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"emr_master\" value=\"EMR Master Node&amp;#10;(Driver)\" style=\"shape=mxgraph.aws4.emr;fillColor=#a855f7;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"350\" y=\"150\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"emr_task1\" value=\"Spot Task Node&amp;#10;Cen\u00e1rios 1 - 5000\" style=\"shape=mxgraph.aws4.ec2;fillColor=#f59e0b;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"530\" y=\"80\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"emr_task2\" value=\"Spot Task Node&amp;#10;Cen\u00e1rios 5001-10000\" style=\"shape=mxgraph.aws4.ec2;fillColor=#f59e0b;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"530\" y=\"210\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"s3_var\" value=\"S3 (Gold)&amp;#10;VaR Results (Parquet)\" style=\"shape=mxgraph.aws4.s3;fillColor=#10b981;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"780\" y=\"80\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"athena\" value=\"Athena / QuickSight&amp;#10;BACEN Dashboard\" style=\"shape=mxgraph.aws4.athena;fillColor=#3b82f6;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"780\" y=\"210\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"e1\" edge=\"1\" source=\"b3\" target=\"s3_raw\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#3b82f6;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e2\" edge=\"1\" source=\"s3_raw\" target=\"emr_master\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;strokeWidth=3;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e3\" edge=\"1\" source=\"emr_master\" target=\"emr_task1\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#a855f7;strokeWidth=2;dashed=1;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e4\" edge=\"1\" source=\"emr_master\" target=\"emr_task2\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#a855f7;strokeWidth=2;dashed=1;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e5\" edge=\"1\" source=\"emr_task1\" target=\"s3_var\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#f59e0b;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e6\" edge=\"1\" source=\"emr_task2\" target=\"s3_var\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#f59e0b;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e7\" edge=\"1\" source=\"s3_var\" target=\"athena\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;strokeWidth=3;\"/&gt;&lt;/mxCell&gt;\n&lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;border:1px solid transparent;"></div>
-<h4 style="margin-top: 32px;">O Código: Engine de Simulação (Movimento Browniano Geométrico)</h4>
-<p>Na tesouraria moderna, o Quant modela as curvas e a Engenharia escala. Usamos <strong>Apache Spark (Amazon EMR)</strong>. Através do <code>pandas_udf</code>, distribuímos o cálculo matricial (NumPy) para milhares de vCPUs rodando instâncias Spot no AWS. Cada nó calcula o "choque estocástico" em milissegundos.</p>
-<div class="code-block" style="margin-bottom: 24px;">
-<pre><code class="language-python"># PySpark + NumPy: Simulação de Monte Carlo (Value at Risk)
-import numpy as np
-import pandas as pd
-from pyspark.sql.functions import pandas_udf
-from pyspark.sql.types import ArrayType, DoubleType
-
-# Configuração Matemática (Movimento Browniano Geométrico)
-# dS = S * (mu * dt + sigma * dW)
-CENARIOS = 10000
-HORIZONTE_DIAS = 10
-
-@pandas_udf(ArrayType(DoubleType()))
-def monte_carlo_var(preco_atual: pd.Series, volatilidade: pd.Series, drift: pd.Series) -&gt; pd.Series:
-    res = []
-    # Vetorização por Ativo (Ex: PETR4, WINZ, DI1)
-    for S0, sigma, mu in zip(preco_atual, volatilidade, drift):
-        dt = 1 / 252.0  # Dias úteis no ano
-        
-        # Gera a matriz de choques aleatórios normais Z ~ N(0,1)
-        # Shape: (Cenários, Dias) = (10.000, 10)
-        Z = np.random.standard_normal((CENARIOS, HORIZONTE_DIAS))
-        
-        # Calcula a variação estocástica acumulada
-        # Matriz de Retornos Diários
-        retornos = (mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z
-        
-        # Produto cumulativo para encontrar o preço final projetado
-        preco_futuro = S0 * np.exp(np.sum(retornos, axis=1))
-        
-        # Encontra a perda (P&amp;L) em cada cenário
-        pnl = preco_futuro - S0
-        
-        # Calcula o VaR (Percentil 1% pior caso das 10.000 simulações)
-        var_99 = np.percentile(pnl, 1)
-        res.append([float(var_99), float(np.mean(pnl))])
-        
-    return pd.Series(res)
-
-# Aplicação distribuída no Data Lake (Centenas de nós Spark)
-df_risco = df_carteira.withColumn(
-    "var_stats", 
-    monte_carlo_var("mtm_usd", "volatilidade_implícita", "taxa_livre_risco")
-)</code></pre>
-</div>
-<!-- AQUI ENTRA O HARDENING DO SUBAGENTE -->
-<div class="abox warning">
-<h4>Architecture Hardening &amp; Resilience</h4>
-<p><strong>1. Fault Tolerance on Amazon EMR (Spot Interruption Mitigation):</strong> Utilizing a heterogeneous cluster fleet with task nodes on Spot instances, we enforce YARN Node Decommissioning coupled with Amazon EC2 Spot Interruption Notices. Upon receiving the two-minute warning via EventBridge, EMR gracefully drains active containers, preventing localized data loss and re-scheduling Spark tasks to remaining nodes without job failure.</p>
-<p><strong>2. Security &amp; Compliance (BACEN Guidelines):</strong> All market data payloads (yield curves, volatility surfaces) at rest in Amazon S3 are encrypted utilizing SSE-KMS with Customer Managed Keys (CMKs), ensuring granular key rotation and CloudTrail audit logging for `GenerateDataKey` operations. Access control is governed by AWS Lake Formation, enforcing cell-level filtering (row/column-level security) to restrict access to sensitive financial instruments based on the principal's IAM role.</p>
-<p><strong>3. Data Lineage &amp; Audit Reproducibility:</strong> To ensure deterministic Monte Carlo re-runs for regulatory backtesting, input datasets are versioned. The exact S3 object version IDs (or Delta Lake/Iceberg snapshot IDs) of the yield curves and RNG seed states used during execution are persisted into an immutable Amazon DynamoDB audit ledger, enabling exact bit-for-bit replayability.</p>
-</div>
-<h3 style="margin-top:40px;">3. Risco de Liquidez (ALM): LCR e NSFR</h3>
-<p>Após cobrir crédito (calote) e mercado (preço), resta o <strong>Risco de Liquidez (Cash Flow)</strong>. O banco não quebra pela perda em si, mas pela falta de dinheiro em caixa na compensação noturna (SPB). O setor de <strong>ALM (Asset Liability Management)</strong> gerencia esse "descasamento".</p>
-<div class="concept-grid">
-<div class="concept-card" style="border-top: 4px solid var(--arch);">
-<div class="cc-tag">LCR (Liquidity Coverage Ratio)</div>
-<div class="cc-body">Resiliência de Curto Prazo. O banco precisa provar ao BACEN, gerando relatórios D-0, que possui ativos superlíquidos (Títulos Públicos) suficientes para sobreviver a uma corrida bancária de 30 dias sob severo estresse.</div>
-</div>
-<div class="concept-card" style="border-top: 4px solid var(--ok);">
-<div class="cc-tag">NSFR (Net Stable Funding Ratio)</div>
-<div class="cc-body">Métrica de Longo Prazo. Garante que se o banco conceder um financiamento imobiliário de 30 anos (Ativo Iliquido), ele está financiando isso com captações estáveis (LCI/Poupança), e não com CDI de curtíssimo prazo, evitando alavancagem suicida.</div>
-</div>
-</div>
-</section>
-<section class="section" id="matematica">
-<div class="sec-hdr">
-<div class="sec-num" style="color:var(--ok)">03</div>
+<div class="sec-num" style="color:var(--ok)">02</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--ok)"></div>
 <h2>Matemática do Contrato: Juros, IOF e Amortização</h2>
@@ -306,7 +208,7 @@ df_contratos = df.withColumn("curva_projetada", vetorizar_price("valor_financiad
 <!-- SEÇÃO 3: PÓS VENDA E RECONCILIAÇÃO -->
 </section><section class="section" id="razo-timeline">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--emr)">04</div>
+<div class="sec-num" style="color:var(--emr)">03</div>
 <div class="sec-title">
 <div class="sec-subtitle">Fundamentos Contábeis</div>
 <h2>Mecânica de Razonetes e o Ciclo de Vida do Crédito</h2>
@@ -497,7 +399,7 @@ df_contratos = df.withColumn("curva_projetada", vetorizar_price("valor_financiad
 <hr style="border: 0; height: 1px; background: var(--border); margin: 40px 0;"/>
 </section><section class="section" id="pos-venda">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--warn)">05</div>
+<div class="sec-num" style="color:var(--warn)">04</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--warn)"></div>
 <h2>Pós-venda, Inadimplência e Reconciliação</h2>
@@ -555,7 +457,7 @@ df_contratos = df.withColumn("curva_projetada", vetorizar_price("valor_financiad
 <!-- SEÇÃO 4: CONTABILIDADE -->
 </section><section class="section" id="contabilidade">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--ext)">06</div>
+<div class="sec-num" style="color:var(--ext)">05</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--ext)"></div>
 <h2>Contabilidade Bancária &amp; Engenharia Avançada</h2>
@@ -628,6 +530,102 @@ df_contratos = df.withColumn("curva_projetada", vetorizar_price("valor_financiad
 <p>Além disso, o motor de Accounting e o Iceberg precisam garantir a <strong>Idempotência</strong> (processar uma mensagem duas vezes não deve gerar dois débitos). A tabela Iceberg processa deduplicação analítica via chave de <code>event_uuid</code> cruzado com <code>MERGE INTO</code>.</p>
 </div>
 <!-- SEÇÃO 5: O CICLO COMPLETO DE CRÉDITO -->
+</section><section class="section" id="deep-dive-riscos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Deep Dive em Riscos e Validação Regulatória</h2>
+<p>A física pesada por trás do provisionamento de capital, Basileia III e modelagem estocástica massiva com Big Data.</p>
+</div>
+</div>
+<h3>1. Risco de Crédito: A Era do IRB (Internal Ratings-Based)</h3>
+<p>O <strong>Risco de Crédito</strong> evoluiu de planilhas de Excel para modelos massivos de Machine Learning. Sob o Acordo de Basileia, os bancos podem utilizar a abordagem padrão do BACEN ou adotar o <strong>IRB (Internal Ratings-Based)</strong>. No IRB, o banco desenvolve seus próprios modelos internos para calcular a <em>Perda Esperada (ECL - Expected Credit Loss)</em>.</p>
+<ul>
+<li><strong>PD (Probability of Default):</strong> A probabilidade de um cliente entrar em calote (default) em 12 meses. O BACEN exige que esses modelos sejam rigorosamente validados, sem viés (bias) sociodemográfico (fairness).</li>
+<li><strong>LGD (Loss Given Default):</strong> Qual a recuperação financeira real em caso de calote (após leilões judiciais, venda de dívidas em FIDC).</li>
+<li><strong>EAD (Exposure at Default):</strong> O saldo devedor projetado para o momento da quebra. Para derivativos de balcão (OTC), o EAD é volátil e exige simulações sofisticadas (CVA - Credit Valuation Adjustment).</li>
+</ul>
+<div class="concept-grid" style="margin-top:24px;">
+<div class="concept-card" style="border-top: 4px solid var(--arch);">
+<div class="cc-tag">Data Lineage e Resolução CMN 4.557 / 4.966</div>
+<div class="cc-body">
+        Bancos sofrem auditorias rigorosas do Banco Central (BACEN). Quando o modelo nega crédito ou aumenta a provisão, o regulador exige a rastreabilidade completa (Data Lineage). Na AWS, isso é implementado forçando todas as queries passarem pelo <strong>AWS Lake Formation</strong>, mapeando qual versão do modelo no SageMaker consumiu qual snapshot do Iceberg no S3.
+      </div>
+</div>
+</div>
+<h3 style="margin-top:40px;">2. Risco de Mercado: Value at Risk (VaR) e Monte Carlo Estocástico</h3>
+<p>Enquanto o risco de crédito foca na falência do tomador, o <strong>Risco de Mercado</strong> mede o quanto o banco pode perder devido à volatilidade diária de preços, câmbio e taxas de juros. A métrica absoluta global é o <strong>VaR (Value at Risk)</strong> com 99% de confiança estatística.</p>
+<p>Bancos Tier-1 abandonaram o VaR Histórico/Paramétrico em favor do <strong>VaR por Simulação de Monte Carlo</strong>. Isso exige projetar 10.000 caminhos aleatórios (Movimento Browniano Geométrico - GBM) para todas as curvas de juros e reprecificar milhões de derivativos da tesouraria para cada cenário.</p>
+<h4 style="margin-top:24px;">Arquitetura do Motor de Stress Testing AWS</h4>
+<div class="drawio-label">MONTE CARLO PIPELINE (VAR)</div>
+<div class="mxgraph" data-mxgraph='{"highlight": "#000000", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "&lt;mxGraphModel dx=\"1400\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1000\" pageHeight=\"360\" background=\"#0B1121\"&gt;&lt;root&gt;&lt;mxCell id=\"0\"/&gt;&lt;mxCell id=\"1\" parent=\"0\"/&gt;\n&lt;mxCell id=\"box1\" value=\"MARKET DATA INGESTION\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"40\" y=\"40\" width=\"220\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"box2\" value=\"QUANTITATIVE COMPUTE ENGINE\" style=\"rounded=1;fillColor=#3b0764;strokeColor=#a855f7;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"300\" y=\"40\" width=\"360\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"box3\" value=\"REGULATORY REPORTING\" style=\"rounded=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;align=left;verticalAlign=top;spacingTop=10;spacingLeft=10;dashed=1;dashPattern=4 4;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"700\" y=\"40\" width=\"260\" height=\"280\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"b3\" value=\"B3 / Bloomberg&amp;#10;(Curvas de Juros)\" style=\"shape=mxgraph.aws4.document;fillColor=#3b82f6;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"110\" y=\"90\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"s3_raw\" value=\"S3 Lake (Raw)&amp;#10;Volatilities\" style=\"shape=mxgraph.aws4.s3;fillColor=#10b981;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"110\" y=\"220\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"emr_master\" value=\"EMR Master Node&amp;#10;(Driver)\" style=\"shape=mxgraph.aws4.emr;fillColor=#a855f7;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"350\" y=\"150\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"emr_task1\" value=\"Spot Task Node&amp;#10;Cen\u00e1rios 1 - 5000\" style=\"shape=mxgraph.aws4.ec2;fillColor=#f59e0b;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"530\" y=\"80\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"emr_task2\" value=\"Spot Task Node&amp;#10;Cen\u00e1rios 5001-10000\" style=\"shape=mxgraph.aws4.ec2;fillColor=#f59e0b;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"530\" y=\"210\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"s3_var\" value=\"S3 (Gold)&amp;#10;VaR Results (Parquet)\" style=\"shape=mxgraph.aws4.s3;fillColor=#10b981;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"780\" y=\"80\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"athena\" value=\"Athena / QuickSight&amp;#10;BACEN Dashboard\" style=\"shape=mxgraph.aws4.athena;fillColor=#3b82f6;fontColor=#ffffff;verticalAlign=bottom;spacingBottom=-30;\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry x=\"780\" y=\"210\" width=\"78\" height=\"78\" as=\"geometry\"/&gt;&lt;/mxCell&gt;\n\n&lt;mxCell id=\"e1\" edge=\"1\" source=\"b3\" target=\"s3_raw\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#3b82f6;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e2\" edge=\"1\" source=\"s3_raw\" target=\"emr_master\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;strokeWidth=3;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e3\" edge=\"1\" source=\"emr_master\" target=\"emr_task1\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#a855f7;strokeWidth=2;dashed=1;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e4\" edge=\"1\" source=\"emr_master\" target=\"emr_task2\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#a855f7;strokeWidth=2;dashed=1;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e5\" edge=\"1\" source=\"emr_task1\" target=\"s3_var\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#f59e0b;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e6\" edge=\"1\" source=\"emr_task2\" target=\"s3_var\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#f59e0b;strokeWidth=2;\"/&gt;&lt;/mxCell&gt;\n&lt;mxCell id=\"e7\" edge=\"1\" source=\"s3_var\" target=\"athena\" parent=\"1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;mxCell style=\"edgeStyle=orthogonalEdgeStyle;strokeColor=#10b981;strokeWidth=3;\"/&gt;&lt;/mxCell&gt;\n&lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;border:1px solid transparent;"></div>
+<h4 style="margin-top: 32px;">O Código: Engine de Simulação (Movimento Browniano Geométrico)</h4>
+<p>Na tesouraria moderna, o Quant modela as curvas e a Engenharia escala. Usamos <strong>Apache Spark (Amazon EMR)</strong>. Através do <code>pandas_udf</code>, distribuímos o cálculo matricial (NumPy) para milhares de vCPUs rodando instâncias Spot no AWS. Cada nó calcula o "choque estocástico" em milissegundos.</p>
+<div class="code-block" style="margin-bottom: 24px;">
+<pre><code class="language-python"># PySpark + NumPy: Simulação de Monte Carlo (Value at Risk)
+import numpy as np
+import pandas as pd
+from pyspark.sql.functions import pandas_udf
+from pyspark.sql.types import ArrayType, DoubleType
+
+# Configuração Matemática (Movimento Browniano Geométrico)
+# dS = S * (mu * dt + sigma * dW)
+CENARIOS = 10000
+HORIZONTE_DIAS = 10
+
+@pandas_udf(ArrayType(DoubleType()))
+def monte_carlo_var(preco_atual: pd.Series, volatilidade: pd.Series, drift: pd.Series) -&gt; pd.Series:
+    res = []
+    # Vetorização por Ativo (Ex: PETR4, WINZ, DI1)
+    for S0, sigma, mu in zip(preco_atual, volatilidade, drift):
+        dt = 1 / 252.0  # Dias úteis no ano
+        
+        # Gera a matriz de choques aleatórios normais Z ~ N(0,1)
+        # Shape: (Cenários, Dias) = (10.000, 10)
+        Z = np.random.standard_normal((CENARIOS, HORIZONTE_DIAS))
+        
+        # Calcula a variação estocástica acumulada
+        # Matriz de Retornos Diários
+        retornos = (mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z
+        
+        # Produto cumulativo para encontrar o preço final projetado
+        preco_futuro = S0 * np.exp(np.sum(retornos, axis=1))
+        
+        # Encontra a perda (P&amp;L) em cada cenário
+        pnl = preco_futuro - S0
+        
+        # Calcula o VaR (Percentil 1% pior caso das 10.000 simulações)
+        var_99 = np.percentile(pnl, 1)
+        res.append([float(var_99), float(np.mean(pnl))])
+        
+    return pd.Series(res)
+
+# Aplicação distribuída no Data Lake (Centenas de nós Spark)
+df_risco = df_carteira.withColumn(
+    "var_stats", 
+    monte_carlo_var("mtm_usd", "volatilidade_implícita", "taxa_livre_risco")
+)</code></pre>
+</div>
+<!-- AQUI ENTRA O HARDENING DO SUBAGENTE -->
+<div class="abox warning">
+<h4>Architecture Hardening &amp; Resilience</h4>
+<p><strong>1. Fault Tolerance on Amazon EMR (Spot Interruption Mitigation):</strong> Utilizing a heterogeneous cluster fleet with task nodes on Spot instances, we enforce YARN Node Decommissioning coupled with Amazon EC2 Spot Interruption Notices. Upon receiving the two-minute warning via EventBridge, EMR gracefully drains active containers, preventing localized data loss and re-scheduling Spark tasks to remaining nodes without job failure.</p>
+<p><strong>2. Security &amp; Compliance (BACEN Guidelines):</strong> All market data payloads (yield curves, volatility surfaces) at rest in Amazon S3 are encrypted utilizing SSE-KMS with Customer Managed Keys (CMKs), ensuring granular key rotation and CloudTrail audit logging for `GenerateDataKey` operations. Access control is governed by AWS Lake Formation, enforcing cell-level filtering (row/column-level security) to restrict access to sensitive financial instruments based on the principal's IAM role.</p>
+<p><strong>3. Data Lineage &amp; Audit Reproducibility:</strong> To ensure deterministic Monte Carlo re-runs for regulatory backtesting, input datasets are versioned. The exact S3 object version IDs (or Delta Lake/Iceberg snapshot IDs) of the yield curves and RNG seed states used during execution are persisted into an immutable Amazon DynamoDB audit ledger, enabling exact bit-for-bit replayability.</p>
+</div>
+<h3 style="margin-top:40px;">3. Risco de Liquidez (ALM): LCR e NSFR</h3>
+<p>Após cobrir crédito (calote) e mercado (preço), resta o <strong>Risco de Liquidez (Cash Flow)</strong>. O banco não quebra pela perda em si, mas pela falta de dinheiro em caixa na compensação noturna (SPB). O setor de <strong>ALM (Asset Liability Management)</strong> gerencia esse "descasamento".</p>
+<div class="concept-grid">
+<div class="concept-card" style="border-top: 4px solid var(--arch);">
+<div class="cc-tag">LCR (Liquidity Coverage Ratio)</div>
+<div class="cc-body">Resiliência de Curto Prazo. O banco precisa provar ao BACEN, gerando relatórios D-0, que possui ativos superlíquidos (Títulos Públicos) suficientes para sobreviver a uma corrida bancária de 30 dias sob severo estresse.</div>
+</div>
+<div class="concept-card" style="border-top: 4px solid var(--ok);">
+<div class="cc-tag">NSFR (Net Stable Funding Ratio)</div>
+<div class="cc-body">Métrica de Longo Prazo. Garante que se o banco conceder um financiamento imobiliário de 30 anos (Ativo Iliquido), ele está financiando isso com captações estáveis (LCI/Poupança), e não com CDI de curtíssimo prazo, evitando alavancagem suicida.</div>
+</div>
+</div>
 </section><section class="section" id="marco-regulatorio">
 <div class="sec-hdr">
 <div class="sec-num" style="color:var(--aws)">07</div>
