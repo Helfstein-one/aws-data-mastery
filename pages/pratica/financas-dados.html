@@ -65,7 +65,6 @@
 <div class="callout">
 <strong>Fluxo de Dados:</strong> O onboarding dispara eventos de negócio em tempo real para os barramentos (Kafka) que orquestram validações assíncronas de antifraude e chamadas a APIs de Bureau e SCR, consolidando uma Feature Store que alimenta o motor de decisão.
     </div>
-
 </section><section class="section" id="matematica">
 <div class="sec-hdr">
 <div class="sec-num" style="color:var(--ok)">02</div>
@@ -782,7 +781,120 @@ print(f"VaR 99% (Monte Carlo): {var_99:.2f}")
 </svg>
 </div><div class="callout callout-tip">
 <strong>💡 Interpretação da Curva de Provisionamento:</strong> A alíquota de PDD é mínima no <em>Stage 1</em> (carteira performante) e começa a subir no <em>Stage 2</em> (aumento significativo de risco). Ao ultrapassar a marca de 90 dias (<em>Stage 3 - Default</em>), a probabilidade de perda se consolida e a necessidade de provisionamento sofre uma escalada acelerada, podendo chegar a 100% da exposição para atrasos superiores a 180 dias, consumindo diretamente o lucro e o patrimônio de referência (PR) da instituição.
-    </div></section><section class="section" id="marco-regulatorio">
+    </div><div class="topic-section" style="border-top:1px dashed var(--border); padding-top:30px; margin-top:30px;">
+<h3>Aprofundamento em Engenharia de Risco: IRB (Basileia III), Vasicek Model &amp; Credit VaR</h3>
+<p>Na prática bancária corporativa, o gerenciamento de risco de crédito não se limita ao cálculo retrospectivo de PDD. A governança sob o acordo de <strong>Basileia III</strong> exige que as instituições utilizem a abordagem <strong>A-IRB (Advanced Internal Ratings-Based)</strong> para quantificar os Ativos Ponderados pelo Risco (RWA). Sob essa metodologia, a instituição estima internamente quatro fatores quantitativos críticos: Probability of Default (PD), Loss Given Default (LGD), Exposure at Default (EAD) e Effective Maturity (M).</p>
+<div class="concept-grid">
+<div class="concept-card">
+<h4>RORAC (Return on Risk-Adjusted Capital)</h4>
+<p>O retorno ponderado pelo risco é a métrica definitiva para precificação de contratos de crédito. Ele garante que operações mais arriscadas consumam mais capital regulatório e, portanto, exijam spreads de taxas maiores para manter o retorno exigido pelos acionistas.</p>
+<p style="font-family: monospace; font-size: 0.9rem; color: var(--aws);">RORAC = (Receita - Custos - Perda Esperada) / Capital Econômico Alocado</p>
+</div>
+<div class="concept-card">
+<h4>Abordagem A-IRB de Basileia III</h4>
+<p>Os parâmetros estimados internamente (PD, LGD, EAD, M) são convertidos em exigência de capital regulatório através da curva regulatória da Basileia. Essa função assume uma distribuição assintótica de carteira única (ASRF) para isolar o risco sistêmico da carteira de crédito.</p>
+</div>
+<div class="concept-card">
+<h4>Modelo de Vasicek (Correlação de Ativos)</h4>
+<p>Representa a base matemática do RWA regulatório. Assume que o valor dos ativos de cada contraparte está correlacionado a um fator sistêmico da economia (Z) através de um coeficiente de correlação de ativos (R). O default ocorre se a saúde financeira cair abaixo de um limiar crítico.</p>
+<p style="font-family: monospace; font-size: 0.9rem; color: var(--aws);">A_i = sqrt(R) * Z + sqrt(1 - R) * epsilon_i</p>
+</div>
+</div>
+<div class="abox info">
+<h4>Fórmula Regulatória de RWA para Exposições Corporativas (Basileia III)</h4>
+<p>A exigência de capital regulatório (K) é expressa pela fórmula regulatória baseada no modelo de Vasicek:</p>
+<p style="font-size: 1.1rem; text-align: center; margin: 15px 0;">
+            \( K = LGD \times \left[ \Phi\left( \frac{\Phi^{-1}(PD) + \sqrt{R} \times \Phi^{-1}(0.999)}{\sqrt{1 - R}} \right) - PD \right] \times \frac{1 + (M - 2.5) \times b(PD)}{1 - 1.5 \times b(PD)} \)
+        </p>
+<p>Onde \( \Phi \) representa a distribuição normal acumulada, \( R \) é o fator de correlação de ativos corporativos, e \( b(PD) = (0.11852 - 0.05478 \times \ln(PD))^2 \) é o ajuste de maturidade.</p>
+<p><strong>RWA correspondente:</strong> \( RWA = 12.5 \times K \times EAD \)</p>
+</div>
+<h4>Implementação: Simulação Estocástica de Credit VaR via Cópulas no PySpark</h4>
+<p>Abaixo está um script de simulação estocástica de Monte Carlo rodando sobre Spark. Ele gera 10.000 cenários de risco sistêmico e calcula a perda da carteira de crédito correlacionada para 10.000 tomadores usando a aproximação de Box-Muller para evitar UDFs de geração normal nas execuções de Spark Executor.</p>
+<div class="code-block">
+<pre><code class="language-python"># pyspark_credit_var_copula.py
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, rand, lit, sqrt, log, cos, pi, when, sum as spark_sum
+import numpy as np
+
+spark = SparkSession.builder \
+    .appName("PySpark_Credit_VaR_Copulas") \
+    .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
+    .getOrCreate()
+
+# Definindo escala da simulação
+num_tomadores = 10000
+num_scenarios = 10000
+
+# 1. Gerando Tomadores de Crédito com PD, LGD, EAD e correlação de ativos R
+tomadores_df = spark.range(num_tomadores).select(
+    col("id").alias("tomador_id"),
+    (rand(42) * 0.08 + 0.01).alias("PD"),      # PD distribuída uniformemente entre 1% e 9%
+    (rand(101) * 0.3 + 0.25).alias("LGD"),     # LGD entre 25% e 55%
+    (rand(202) * 950000 + 50000).alias("EAD"),  # Exposições entre R$ 50k e R$ 1M
+    lit(0.15).alias("R")                       # Correlação de ativos regulatória fixada em 15%
+)
+
+# Pré-cálculo do limite de default no tomador usando aproximação polinomial inversa da normal
+# para otimizar a velocidade de processamento distribuído (sem UDFs)
+# Aproximação de Hastings para a função quantil normal
+def approx_norm_ppf(p_col):
+    t = sqrt(log(lit(1.0) / (p_col * p_col)))
+    # Coeficientes polinomiais de Hastings
+    c0, c1, c2 = 2.515517, 0.802853, 0.010328
+    d1, d2, d3 = 1.432788, 0.189269, 0.001308
+    numerator = c0 + (c1 * t) + (c2 * t * t)
+    denominator = 1.0 + (d1 * t) + (d2 * t * t) + (d3 * t * t * t)
+    return -(t - (numerator / denominator))
+
+tomadores_df = tomadores_df.withColumn("default_threshold", approx_norm_ppf(col("PD")))
+
+# 2. Gerando os 10.000 cenários de risco de mercado sistêmico (Z)
+# Usando Box-Muller em Spark SQL para gerar Z ~ N(0,1)
+scenarios_df = spark.range(num_scenarios).select(
+    col("id").alias("scenario_id"),
+    (sqrt(lit(-2.0) * log(rand(1234))) * cos(lit(2.0 * np.pi) * rand(5678))).alias("Z")
+)
+
+# 3. Cruzamento de Tomadores x Cenários
+sim_df = tomadores_df.crossJoin(scenarios_df)
+
+# 4. Geração do ruído idiossincrático (epsilon_i) do tomador em cada cenário
+# Usando Box-Muller novamente
+sim_df = sim_df.withColumn(
+    "epsilon",
+    sqrt(lit(-2.0) * log(rand(9999))) * cos(lit(2.0 * np.pi) * rand(8888))
+)
+
+# 5. Cálculo do Valor do Ativo (Asset Value) do tomador no cenário
+sim_df = sim_df.withColumn(
+    "asset_value",
+    (sqrt(col("R")) * col("Z")) + (sqrt(lit(1.0) - col("R")) * col("epsilon"))
+)
+
+# 6. Avaliação de Default no Cenário e Cálculo da Perda (Loss)
+sim_df = sim_df.withColumn(
+    "loss",
+    when(col("asset_value") &lt; col("default_threshold"), col("EAD") * col("LGD")).otherwise(lit(0.0))
+)
+
+# 7. Agrupando as perdas totais por cenário
+portfolio_losses_df = sim_df.groupBy("scenario_id").agg(spark_sum("loss").alias("total_loss"))
+
+# 8. Cálculo de Percentil do Credit VaR 99.9%
+losses = [row['total_loss'] for row in portfolio_losses_df.select("total_loss").collect()]
+credit_var_99_9 = np.percentile(losses, 99.9)
+
+print(f"Credit VaR calculado com sucesso para a carteira de crédito: R$ {credit_var_99_9:,.2f}")
+</code></pre>
+</div>
+<h4>Arquitetura: Motor de Simulação Estocástica de Crédito (Apache EMR)</h4>
+<div class="mxgraph" data-mxgraph='{"highlight": "#3b82f6", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "%3CmxGraphModel%20dx%3D%221200%22%20dy%3D%22800%22%20grid%3D%221%22%20gridSize%3D%2210%22%20guides%3D%221%22%20tooltips%3D%221%22%20connect%3D%221%22%20arrows%3D%221%22%20fold%3D%221%22%20page%3D%221%22%20pageScale%3D%221%22%20pageWidth%3D%22900%22%20pageHeight%3D%22300%22%20background%3D%22%230B1121%22%20math%3D%220%22%20shadow%3D%220%22%3E%0A%20%20%3Croot%3E%0A%20%20%20%20%3CmxCell%20id%3D%220%22%20/%3E%0A%20%20%20%20%3CmxCell%20id%3D%221%22%20parent%3D%220%22%20/%3E%0A%20%20%20%20%0A%20%20%20%20%3C%21--%20Title%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22title%22%20value%3D%22MOTOR%20DE%20SIMULA%C3%87%C3%83O%20DE%20RISCO%20DE%20CR%C3%89DITO%20%26amp%3B%20MONTE%20CARLO%20%28EMR%20SPOT%29%22%20style%3D%22text%3Bhtml%3D1%3BstrokeColor%3Dnone%3BfillColor%3Dnone%3Balign%3Dcenter%3BverticalAlign%3Dmiddle%3BwhiteSpace%3Dwrap%3Brounded%3D0%3BfontSize%3D16%3BfontStyle%3D1%3BfontColor%3D%23ffffff%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22200%22%20y%3D%2210%22%20width%3D%22500%22%20height%3D%2230%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3C%21--%20Nodes%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22n1%22%20value%3D%22S3%20Volatilities%20%26amp%3B%20Curves%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.s3%3BfillColor%3D%232ec4b6%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%2250%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n2%22%20value%3D%22EMR%20Master%20Node%26lt%3Bbr%26gt%3B%28Driver%20/%20Orchestrator%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.emr%3BfillColor%3D%23ff9f1c%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22220%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n3%22%20value%3D%22EMR%20Task%20Nodes%26lt%3Bbr%26gt%3B%28Spark%20Spot%20Workers%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.emr%3BfillColor%3D%23e71d36%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22400%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22n4%22%20value%3D%22Amazon%20S3%26lt%3Bbr%26gt%3B%28Credit%20VaR%20Gold%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.s3%3BfillColor%3D%232ec4b6%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22580%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n5%22%20value%3D%22Amazon%20Athena%20%26amp%3Bamp%3B%26lt%3Bbr%26gt%3BQuickSight%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.athena%3BfillColor%3D%23011627%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22750%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3C%21--%20Edges%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22e1%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n1%22%20target%3D%22n2%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22e2%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n2%22%20target%3D%22n3%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22e3%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n3%22%20target%3D%22n4%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22e4%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n4%22%20target%3D%22n5%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%3C/root%3E%0A%3C/mxGraphModel%3E"}' style="max-width:100%;border:1px dashed var(--border);border-radius:6px;overflow:auto; margin: 20px 0;"></div>
+<div class="callout callout-tip" style="margin-top:12px; border-left:4px solid var(--spark); background:rgba(59,130,246,0.08); padding:14px 18px;">
+<strong>📌 Legenda &amp; Arquitetura — MONTE_CARLO_RISK_PIPELINE:</strong>
+<span>O pipeline ilustra o processamento distribuído da simulação estocástica de risco. As curvas e parâmetros do portfólio de crédito são puxados do Amazon S3 (Data Lake) para os nós do Amazon EMR. O master node gerencia o plano físico de execução distribuída via YARN. Os nós de processamento executam a simulação em paralelo (10k tomadores por 10k cenários), gerando mais de 100 milhões de avaliações individuais. Os resultados sumarizados de Credit VaR e perdas consolidadas são salvos de volta no S3 Gold e disponibilizados no Athena e QuickSight para o time de análise quantitativa de risco.</span>
+</div>
+</div></section><section class="section" id="marco-regulatorio">
 <div class="sec-hdr"><div class="sec-num" style="color:var(--aws)">07</div><div class="sec-meta"><div class="sec-acc" style="background:var(--aws)"></div><h2>Normas e Marco Regulatório (BACEN / CMN)</h2><p>O peso do regulador: Resolução CMN 4.557 (Gerenciamento Integrado de Riscos), CMN 4.966 (Perda Esperada / ECL) e auditoria no Lake Formation.</p></div></div><p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">O setor financeiro é um dos ambientes mais fortemente regulados do mundo. Esta seção desmistifica as normativas mandatórias do Banco Central e do CMN (como a CMN 4.557 e CMN 4.966), demonstrando como traduzir regras regulatórias e relatórios como o DOC 3040 em pipelines auditáveis.</p>
 <div class="sec-body">
 <h3>Resolução CMN 4.557 &amp; CMN 4.966 Deep Dive</h3>
@@ -1168,7 +1280,94 @@ ORDER BY
 <p>Estudo dos conceitos matemáticos de crédito, análise de risco corporativo, juros e amortizações.</p>
 </div>
 </div>
-</section></main>
+</section><div class="topic-section" style="border-top:1px dashed var(--border); padding-top:30px; margin-top:30px;">
+<h3>Curadoria de Auditoria e Linhagem de Dados (Visão Analista do Banco Central)</h3>
+<p>Sob a supervisão do <strong>Banco Central do Brasil (BACEN)</strong>, a governança de dados deve demonstrar conformidade irrefutável com normativas que exigem controle estrito sobre o ciclo de vida da informação e relatórios de risco regulatório. Durante inspeções de conformidade ou envio de informações cruciais (como a central de risco <strong>SCR</strong> via <strong>DOC 3040</strong>), os auditores examinam a linhagem física dos dados (data lineage) e as checagens automatizadas de qualidade antes do envio.</p>
+<div class="concept-grid">
+<div class="concept-card">
+<h4>SCR (Sistema de Informações de Crédito)</h4>
+<p>O SCR armazena todas as exposições de crédito das instituições financeiras brasileiras. O reporte mensal (DOC 3040) deve casar perfeitamente com os balancetes contábeis e fiscais. Divergências entre o saldo contábil da rubrica de PDD e a soma das perdas calculadas no DOC 3040 disparam auditorias automáticas do BACEN.</p>
+</div>
+<div class="concept-card">
+<h4>Segurança e Governança no Lakehouse</h4>
+<p>Ao disponibilizar dados para auditorias externas (ou do BACEN), as instituições utilizam o <strong>AWS Lake Formation</strong>. Ele permite aplicar filtros no nível de célula (cell-level security), ocultando dados pessoais sensíveis (PII) sob regras da LGPD, enquanto expõe a linhagem, o rating, a taxa efetiva e o saldo devedor.</p>
+</div>
+<div class="concept-card">
+<h4>Validações Cruzadas Mandatórias</h4>
+<p>Uma validação essencial exigida pelos analistas do BACEN é a validação cruzada (Cross-Field checks) no DOC 3040. Os campos determinantes do limite de risco, da modalidade de crédito e da taxa efetiva cobrada devem obedecer regras restritivas para garantir que não haja manipulação ou sub-provisionamento de capital.</p>
+</div>
+</div>
+<div class="abox warning">
+<strong>Trilha de Auditoria no AWS Lake Formation:</strong> A linhagem de dados estruturada no Lake Formation registra todas as transformações sofridas pela tabela de contratações de crédito desde a originação até o arquivo XML final gerado para o reporte regulatório, garantindo transparência total para o regulador.
+    </div>
+<h4>Validação Regulatória do DOC 3040 via PySpark</h4>
+<p>O código abaixo implementa as regras formais de validação do Banco Central aplicadas à carteira consolidada de crédito no ambiente do Data Lake antes do empacotamento e transmissão segura via Direct API do regulador.</p>
+<div class="code-block">
+<pre><code class="language-python"># pyspark_doc3040_rules.py
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, when, sum as spark_sum, count
+
+spark = SparkSession.builder \
+    .appName("BACEN_DOC3040_Compliance_Checks") \
+    .getOrCreate()
+
+# 1. Carregando dados agregados da base regulatória D-0
+doc3040_df = spark.read.parquet("s3://data-lake-gold/regulatory/doc3040_raw/")
+
+# Regra 1: Validação de Estágios da CMN 4.966 (IFRS 9)
+# Atraso acima de 90 dias DEVE estar classificado como Stage 3 (Default).
+# Atraso acima de 30 dias (SICR) não pode estar no Stage 1.
+doc3040_validated = doc3040_df.withColumn(
+    "cmn_4966_stage_invalid",
+    when((col("diasAtraso") &gt; 90) &amp; (col("estagioEcl") != 3), 1)
+    .when((col("diasAtraso") &gt; 30) &amp; (col("estagioEcl") == 1), 1)
+    .otherwise(0)
+)
+
+# Regra 2: Consistência de Exposição (EAD)
+# EAD deve corresponder exatamente à soma do valor vencido e valor a vencer.
+doc3040_validated = doc3040_validated.withColumn(
+    "ead_inconsistency",
+    when(col("valorVencido") + col("valorAVencer") != col("EAD"), 1).otherwise(0)
+)
+
+# Regra 3: Limites de Taxa Efetiva por Modalidade (Resolução CMN 4.958)
+# Taxas de juros cobradas que sejam abusivas ou inconsistentes com a modalidade
+# regulatória são reportadas como alertas graves.
+doc3040_validated = doc3040_validated.withColumn(
+    "interest_rate_anomaly",
+    # Exemplo: Crédito Consignado (modalidade 204) com taxa efetiva &gt; 80% a.a.
+    when((col("modalidade") == 204) &amp; (col("taxaEfetiva") &gt; 80.0), 1).otherwise(0)
+)
+
+# 2. Consolidando relatório de conformidade do lote
+compliance_report = doc3040_validated.agg(
+    count("tomador_id").alias("total_records"),
+    spark_sum("cmn_4966_stage_invalid").alias("invalid_stages"),
+    spark_sum("ead_inconsistency").alias("invalid_eads"),
+    spark_sum("interest_rate_anomaly").alias("rate_alerts")
+).collect()[0]
+
+print("--- RELATÓRIO DE COMPLIANCE INTERNO - DOC 3040 ---")
+print(f"Total de registros auditados: {compliance_report['total_records']}")
+print(f"Divergências de Estágio ECL (CMN 4.966): {compliance_report['invalid_stages']}")
+print(f"Divergências de Valor (EAD): {compliance_report['invalid_eads']}")
+print(f"Alertas de Anomalias de Taxa: {compliance_report['rate_alerts']}")
+
+# 3. Interrupção do pipeline e disparo de alerta se houver divergências críticas
+if compliance_report['invalid_stages'] &gt; 0 or compliance_report['invalid_eads'] &gt; 0:
+    raise ValueError("Transmissão Abortada: Inconsistências de conformidade críticas detectadas no DOC 3040.")
+else:
+    print("Sucesso: Base validada e pronta para exportação regulatória.")
+</code></pre>
+</div>
+<h4>Arquitetura: Pipeline de Reporte Regulatório &amp; Governança (BACEN)</h4>
+<div class="mxgraph" data-mxgraph='{"highlight": "#e71d36", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "%3CmxGraphModel%20dx%3D%221200%22%20dy%3D%22800%22%20grid%3D%221%22%20gridSize%3D%2210%22%20guides%3D%221%22%20tooltips%3D%221%22%20connect%3D%221%22%20arrows%3D%221%22%20fold%3D%221%22%20page%3D%221%22%20pageScale%3D%221%22%20pageWidth%3D%22900%22%20pageHeight%3D%22300%22%20background%3D%22%230B1121%22%20math%3D%220%22%20shadow%3D%220%22%3E%0A%20%20%3Croot%3E%0A%20%20%20%20%3CmxCell%20id%3D%220%22%20/%3E%0A%20%20%20%20%3CmxCell%20id%3D%221%22%20parent%3D%220%22%20/%3E%0A%20%20%20%20%0A%20%20%20%20%3C%21--%20Title%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22title%22%20value%3D%22PIPELINE%20DE%20GOVERNAN%C3%87A%2C%20QUALIDADE%20DE%20DADOS%20E%20AUDITORIA%20BACEN%20%28DOC%203040%29%22%20style%3D%22text%3Bhtml%3D1%3BstrokeColor%3Dnone%3BfillColor%3Dnone%3Balign%3Dcenter%3BverticalAlign%3Dmiddle%3BwhiteSpace%3Dwrap%3Brounded%3D0%3BfontSize%3D16%3BfontStyle%3D1%3BfontColor%3D%23ffffff%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22200%22%20y%3D%2210%22%20width%3D%22500%22%20height%3D%2230%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3C%21--%20Nodes%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22n1%22%20value%3D%22Core%20DB%20Aurora%26lt%3Bbr%26gt%3B%28Contratos%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.aurora%3BfillColor%3D%233b82f6%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%2250%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n2%22%20value%3D%22AWS%20Glue%20DQ%26lt%3Bbr%26gt%3B%28Valida%C3%A7%C3%A3o%20D-0%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.glue%3BfillColor%3D%23ff9f1c%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22220%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n3%22%20value%3D%22AWS%20Lake%20Formation%26lt%3Bbr%26gt%3B%28Cell-Level%20Filtering%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.lake_formation%3BfillColor%3D%239c27b0%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22400%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22n4%22%20value%3D%22Amazon%20Redshift%26lt%3Bbr%26gt%3B%28Regulatory%20DW%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.redshift%3BfillColor%3D%23e71d36%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22580%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n5%22%20value%3D%22AWS%20Lambda%20%26amp%3Bamp%3B%20API%26lt%3Bbr%26gt%3B%28Envio%20BACEN%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.lambda%3BfillColor%3D%2300bcd4%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22750%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3C%21--%20Edges%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22e1%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n1%22%20target%3D%22n2%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22e2%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n2%22%20target%3D%22n3%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22e3%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n3%22%20target%3D%22n4%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22e4%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n4%22%20target%3D%22n5%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%3C/root%3E%0A%3C/mxGraphModel%3E"}' style="max-width:100%;border:1px dashed var(--border);border-radius:6px;overflow:auto; margin: 20px 0;"></div>
+<div class="callout callout-tip" style="margin-top:12px; border-left:4px solid var(--aws); background:rgba(16,185,129,0.08); padding:14px 18px;">
+<strong>📌 Legenda &amp; Arquitetura — BACEN_AUDIT_PIPELINE:</strong>
+<span>Este pipeline representa o fluxo de governança e auditoria dos reportes. Os dados brutos de contratos do Core Banking Aurora PostgreSQL são extraídos e processados no AWS Glue. O Glue executa os testes de qualidade (Glue Data Quality) aplicando as validações estritas de estágio ECL e taxas descritas no script. Os dados higienizados são depositados no Data Lake corporativo, sob governança central do AWS Lake Formation. No momento da auditoria regulatória do Banco Central, o Lake Formation aplica filtros dinâmicos de células (ocultando CPFs e nomes sensíveis dos tomadores), permitindo que os auditores consultem as tabelas de risco diretamente pelo Redshift de maneira segura e totalmente em conformidade com as regras da LGPD e as normas do BACEN. A exportação definitiva é enviada de forma assíncrona ao BACEN via API Gateway/Lambda assinada digitalmente.</span>
+</div>
+</div></section></main>
 </div>
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
 <script>
