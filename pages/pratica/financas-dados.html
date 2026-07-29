@@ -65,6 +65,27 @@
 <div class="callout">
 <strong>Fluxo de Dados:</strong> O onboarding dispara eventos de negócio em tempo real para os barramentos (Kafka) que orquestram validações assíncronas de antifraude e chamadas a APIs de Bureau e SCR, consolidando uma Feature Store que alimenta o motor de decisão.
     </div>
+<h4>Exemplo de Payload de Evento: <code>credit_onboarding_event.json</code></h4>
+<div class="code-block">
+<pre><code class="language-json">{
+  "eventId": "evt-7738-a99b",
+  "eventType": "ONBOARDING_CREDIT_EVALUATION",
+  "timestamp": "2026-07-27T10:15:30Z",
+  "customer": {
+    "customerId": "usr-889900",
+    "kycStatus": "APPROVED",
+    "biometricsScore": 0.98,
+    "openFinanceConsent": true
+  },
+  "creditDecision": {
+    "probabilityOfDefault": 0.015,
+    "rating": "AA",
+    "approvedLimitBRL": 25000.00,
+    "suggestedInterestRate": 1.45,
+    "modelId": "ml-credit-xgb-v4.2"
+  }
+}</code></pre>
+</div>
 </section><section class="section" id="matematica">
 <div class="sec-hdr">
 <div class="sec-num" style="color:var(--ok)">02</div>
@@ -1053,7 +1074,154 @@ print(f"Credit VaR calculado com sucesso para a carteira de crédito: R$ {credit
 <strong>📌 Legenda &amp; Arquitetura — Governança &amp; Qualidade de Dados BACEN DOC 3040:</strong> <span>Pipeline de conformidade regulatória. [1] Ingestão CDC do Core Banking em Aurora PostgreSQL. [2] Validação automática de regras mandatórias via AWS Glue Data Quality (verificação D-0). [3] Governança e trilha de auditoria no AWS Lake Formation com controle celular. [4] Carga no Redshift Data Mart e transmissão segura via BACEN Direct API Gateway.</span>
 </div>
 </div>
-<section class="section" id="enterprise-arch">
+<div class="callout callout-warning">
+<h4>Resolução CMN 2.682/1999 (Modelo de Perda Incorrida)</h4>
+<p>Estabeleceu o modelo histórico de provisão baseado na perda incorrida, com réguas fixas de risco.</p>
+<blockquote>
+<p>"As instituições financeiras [...] devem classificar as operações de crédito em ordem crescente de risco, observando os seguintes níveis: A, B, C, D, E, F, G e H."</p>
+</blockquote>
+</div><div class="callout callout-warning">
+<h4>Resolução CMN 4.557/2017 (Gestão Integrada de Riscos - GIR)</h4>
+<p>Instituiu a estrutura de gerenciamento de riscos e de gerenciamento de capital.</p>
+<blockquote>
+<p><strong>Art. 6º:</strong> "A estrutura de gerenciamento de riscos deve prever [...] a identificação, a avaliação, o monitoramento, o reporte e o controle dos riscos..."</p>
+<p><strong>Art. 9º:</strong> (Declaração de Apetite por Riscos - RAS) "A declaração de apetite por riscos (RAS) deve estabelecer [...] os níveis de apetite por riscos..."</p>
+<p><strong>Art. 14º:</strong> (Testes de Estresse) "A estrutura de gerenciamento de riscos deve prever a realização de testes de estresse periódicos no EMR..."</p>
+</blockquote>
+</div><div class="callout callout-warning">
+<h4>Resolução CMN 4.966/2021 (Harmonização IFRS 9 e Modelo ECL)</h4>
+<p>Implementa o modelo de Perda de Crédito Esperada (ECL), substituindo o modelo de perda incorrida.</p>
+<blockquote>
+<p><strong>Art. 32º a 45º:</strong> (Harmonização IFRS 9) Estabelecem a necessidade de avaliação contínua sobre o Aumento Significativo de Risco de Crédito (SICR - Significant Increase in Credit Risk) e a caracterização formal e objetiva de <code>Default</code> (inadimplência).</p>
+</blockquote>
+</div><div class="callout callout-warning">
+<h4>Resolução CMN 4.893/2021 (Segurança Cibernética e Nuvem)</h4>
+<p>Dispõe sobre a política de segurança cibernética e sobre os requisitos para a contratação de serviços de processamento e armazenamento de dados e de computação em nuvem AWS.</p>
+<blockquote>
+<p>"As instituições devem assegurar que a contratação de serviços de processamento e armazenamento de dados em nuvem não comprometa o funcionamento regular da instituição nem o cumprimento da legislação..."</p>
+</blockquote>
+</div><h3>Linha do Tempo da Evolução Regulatória Bancária</h3><div class="svg-container" style="margin: 2rem 0; overflow-x: auto;">
+<svg style="background-color: #0B1121; font-family: sans-serif; border-radius: 8px;" viewbox="0 0 900 240" xmlns="http://www.w3.org/2000/svg">
+<!-- Linha Base -->
+<line stroke="#374151" stroke-width="4" x1="50" x2="850" y1="120" y2="120"></line>
+<!-- Milestones e Conectores -->
+<!-- 1999 -->
+<circle cx="150" cy="120" fill="#3B82F6" r="10" stroke="#0B1121" stroke-width="3"></circle>
+<line stroke="#3B82F6" stroke-width="2" x1="150" x2="150" y1="110" y2="60"></line>
+<text fill="#E5E7EB" font-size="14" font-weight="bold" text-anchor="middle" x="150" y="45">1999</text>
+<text fill="#9CA3AF" font-size="12" text-anchor="middle" x="150" y="150">CMN 2.682</text>
+<text fill="#6B7280" font-size="11" text-anchor="middle" x="150" y="170">Perda Incorrida</text>
+<!-- 2017 -->
+<circle cx="350" cy="120" fill="#10B981" r="10" stroke="#0B1121" stroke-width="3"></circle>
+<line stroke="#10B981" stroke-width="2" x1="350" x2="350" y1="130" y2="180"></line>
+<text fill="#E5E7EB" font-size="14" font-weight="bold" text-anchor="middle" x="350" y="210">2017</text>
+<text fill="#9CA3AF" font-size="12" text-anchor="middle" x="350" y="80">CMN 4.557</text>
+<text fill="#6B7280" font-size="11" text-anchor="middle" x="350" y="100">GIR &amp; RAS</text>
+<!-- 2021 -->
+<circle cx="550" cy="120" fill="#F59E0B" r="10" stroke="#0B1121" stroke-width="3"></circle>
+<line stroke="#F59E0B" stroke-width="2" x1="550" x2="550" y1="110" y2="60"></line>
+<text fill="#E5E7EB" font-size="14" font-weight="bold" text-anchor="middle" x="550" y="45">2021 / 2025</text>
+<text fill="#9CA3AF" font-size="12" text-anchor="middle" x="550" y="150">CMN 4.966</text>
+<text fill="#6B7280" font-size="11" text-anchor="middle" x="550" y="170">ECL &amp; IFRS 9</text>
+<!-- 2025+ -->
+<circle cx="750" cy="120" fill="#8B5CF6" r="10" stroke="#0B1121" stroke-width="3"></circle>
+<line stroke="#8B5CF6" stroke-width="2" x1="750" x2="750" y1="130" y2="180"></line>
+<text fill="#E5E7EB" font-size="14" font-weight="bold" text-anchor="middle" x="750" y="210">2025+</text>
+<text fill="#9CA3AF" font-size="12" text-anchor="middle" x="750" y="80">Cloud / AWS</text>
+<text fill="#6B7280" font-size="11" text-anchor="middle" x="750" y="100">Lakehouse / AI</text>
+<!-- Seta Final -->
+<polygon fill="#374151" points="850,110 870,120 850,130"></polygon>
+</svg>
+</div><div class="callout callout-tip">
+<p><strong>Legenda da Evolução:</strong> O gráfico ilustra a transição de um modelo retrospectivo (1999) para um modelo preditivo e integrado (2017 e 2021), culminando num futuro onde estruturas de dados modernas e infraestrutura escalável (Cloud / AI / Lakehouse) são vitais para cumprir com as diretrizes regulatórias avançadas.</p>
+</div><div class="topic-section" style="border-top:1px dashed var(--border); padding-top:30px; margin-top:30px;">
+<h3>Curadoria de Auditoria e Linhagem de Dados (Visão Analista do Banco Central)</h3>
+<p>Sob a supervisão do <strong>Banco Central do Brasil (BACEN)</strong>, a governança de dados deve demonstrar conformidade irrefutável com normativas que exigem controle estrito sobre o ciclo de vida da informação e relatórios de risco regulatório. Durante inspeções de conformidade ou envio de informações cruciais (como a central de risco <strong>SCR</strong> via <strong>DOC 3040</strong>), os auditores examinam a linhagem física dos dados (data lineage) e as checagens automatizadas de qualidade antes do envio.</p>
+<div class="concept-grid">
+<div class="concept-card">
+<h4>SCR (Sistema de Informações de Crédito)</h4>
+<p>O SCR armazena todas as exposições de crédito das instituições financeiras brasileiras. O reporte mensal (DOC 3040) deve casar perfeitamente com os balancetes contábeis e fiscais. Divergências entre o saldo contábil da rubrica de PDD e a soma das perdas calculadas no DOC 3040 disparam auditorias automáticas do BACEN.</p>
+</div>
+<div class="concept-card">
+<h4>Segurança e Governança no Lakehouse</h4>
+<p>Ao disponibilizar dados para auditorias externas (ou do BACEN), as instituições utilizam o <strong>AWS Lake Formation</strong>. Ele permite aplicar filtros no nível de célula (cell-level security), ocultando dados pessoais sensíveis (PII) sob regras da LGPD, enquanto expõe a linhagem, o rating, a taxa efetiva e o saldo devedor.</p>
+</div>
+<div class="concept-card">
+<h4>Validações Cruzadas Mandatórias</h4>
+<p>Uma validação essencial exigida pelos analistas do BACEN é a validação cruzada (Cross-Field checks) no DOC 3040. Os campos determinantes do limite de risco, da modalidade de crédito e da taxa efetiva cobrada devem obedecer regras restritivas para garantir que não haja manipulação ou sub-provisionamento de capital.</p>
+</div>
+</div>
+<div class="abox warning">
+<strong>Trilha de Auditoria no AWS Lake Formation:</strong> A linhagem de dados estruturada no Lake Formation registra todas as transformações sofridas pela tabela de contratações de crédito desde a originação até o arquivo XML final gerado para o reporte regulatório, garantindo transparência total para o regulador.
+    </div>
+<h4>Validação Regulatória do DOC 3040 via PySpark</h4>
+<p>O código abaixo implementa as regras formais de validação do Banco Central aplicadas à carteira consolidada de crédito no ambiente do Data Lake antes do empacotamento e transmissão segura via Direct API do regulador.</p>
+<div class="code-block">
+<pre><code class="language-python"># pyspark_doc3040_rules.py
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, when, sum as spark_sum, count
+
+spark = SparkSession.builder \
+    .appName("BACEN_DOC3040_Compliance_Checks") \
+    .getOrCreate()
+
+# 1. Carregando dados agregados da base regulatória D-0
+doc3040_df = spark.read.parquet("s3://data-lake-gold/regulatory/doc3040_raw/")
+
+# Regra 1: Validação de Estágios da CMN 4.966 (IFRS 9)
+# Atraso acima de 90 dias DEVE estar classificado como Stage 3 (Default).
+# Atraso acima de 30 dias (SICR) não pode estar no Stage 1.
+doc3040_validated = doc3040_df.withColumn(
+    "cmn_4966_stage_invalid",
+    when((col("diasAtraso") &gt; 90) &amp; (col("estagioEcl") != 3), 1)
+    .when((col("diasAtraso") &gt; 30) &amp; (col("estagioEcl") == 1), 1)
+    .otherwise(0)
+)
+
+# Regra 2: Consistência de Exposição (EAD)
+# EAD deve corresponder exatamente à soma do valor vencido e valor a vencer.
+doc3040_validated = doc3040_validated.withColumn(
+    "ead_inconsistency",
+    when(col("valorVencido") + col("valorAVencer") != col("EAD"), 1).otherwise(0)
+)
+
+# Regra 3: Limites de Taxa Efetiva por Modalidade (Resolução CMN 4.958)
+# Taxas de juros cobradas que sejam abusivas ou inconsistentes com a modalidade
+# regulatória são reportadas como alertas graves.
+doc3040_validated = doc3040_validated.withColumn(
+    "interest_rate_anomaly",
+    # Exemplo: Crédito Consignado (modalidade 204) com taxa efetiva &gt; 80% a.a.
+    when((col("modalidade") == 204) &amp; (col("taxaEfetiva") &gt; 80.0), 1).otherwise(0)
+)
+
+# 2. Consolidando relatório de conformidade do lote
+compliance_report = doc3040_validated.agg(
+    count("tomador_id").alias("total_records"),
+    spark_sum("cmn_4966_stage_invalid").alias("invalid_stages"),
+    spark_sum("ead_inconsistency").alias("invalid_eads"),
+    spark_sum("interest_rate_anomaly").alias("rate_alerts")
+).collect()[0]
+
+print("--- RELATÓRIO DE COMPLIANCE INTERNO - DOC 3040 ---")
+print(f"Total de registros auditados: {compliance_report['total_records']}")
+print(f"Divergências de Estágio ECL (CMN 4.966): {compliance_report['invalid_stages']}")
+print(f"Divergências de Valor (EAD): {compliance_report['invalid_eads']}")
+print(f"Alertas de Anomalias de Taxa: {compliance_report['rate_alerts']}")
+
+# 3. Interrupção do pipeline e disparo de alerta se houver divergências críticas
+if compliance_report['invalid_stages'] &gt; 0 or compliance_report['invalid_eads'] &gt; 0:
+    raise ValueError("Transmissão Abortada: Inconsistências de conformidade críticas detectadas no DOC 3040.")
+else:
+    print("Sucesso: Base validada e pronta para exportação regulatória.")
+</code></pre>
+</div>
+<h4>Arquitetura: Pipeline de Reporte Regulatório &amp; Governança (BACEN)</h4>
+<div class="mxgraph" data-mxgraph='{"highlight": "#e71d36", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "%3CmxGraphModel%20dx%3D%221200%22%20dy%3D%22800%22%20grid%3D%221%22%20gridSize%3D%2210%22%20guides%3D%221%22%20tooltips%3D%221%22%20connect%3D%221%22%20arrows%3D%221%22%20fold%3D%221%22%20page%3D%221%22%20pageScale%3D%221%22%20pageWidth%3D%22900%22%20pageHeight%3D%22300%22%20background%3D%22%230B1121%22%20math%3D%220%22%20shadow%3D%220%22%3E%0A%20%20%3Croot%3E%0A%20%20%20%20%3CmxCell%20id%3D%220%22%20/%3E%0A%20%20%20%20%3CmxCell%20id%3D%221%22%20parent%3D%220%22%20/%3E%0A%20%20%20%20%0A%20%20%20%20%3C%21--%20Title%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22title%22%20value%3D%22PIPELINE%20DE%20GOVERNAN%C3%87A%2C%20QUALIDADE%20DE%20DADOS%20E%20AUDITORIA%20BACEN%20%28DOC%203040%29%22%20style%3D%22text%3Bhtml%3D1%3BstrokeColor%3Dnone%3BfillColor%3Dnone%3Balign%3Dcenter%3BverticalAlign%3Dmiddle%3BwhiteSpace%3Dwrap%3Brounded%3D0%3BfontSize%3D16%3BfontStyle%3D1%3BfontColor%3D%23ffffff%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22200%22%20y%3D%2210%22%20width%3D%22500%22%20height%3D%2230%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3C%21--%20Nodes%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22n1%22%20value%3D%22Core%20DB%20Aurora%26lt%3Bbr%26gt%3B%28Contratos%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.aurora%3BfillColor%3D%233b82f6%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%2250%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n2%22%20value%3D%22AWS%20Glue%20DQ%26lt%3Bbr%26gt%3B%28Valida%C3%A7%C3%A3o%20D-0%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.glue%3BfillColor%3D%23ff9f1c%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22220%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n3%22%20value%3D%22AWS%20Lake%20Formation%26lt%3Bbr%26gt%3B%28Cell-Level%20Filtering%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.lake_formation%3BfillColor%3D%239c27b0%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22400%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22n4%22%20value%3D%22Amazon%20Redshift%26lt%3Bbr%26gt%3B%28Regulatory%20DW%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.redshift%3BfillColor%3D%23e71d36%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22580%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n5%22%20value%3D%22AWS%20Lambda%20%26amp%3Bamp%3B%20API%26lt%3Bbr%26gt%3B%28Envio%20BACEN%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.lambda%3BfillColor%3D%2300bcd4%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22750%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3C%21--%20Edges%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22e1%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n1%22%20target%3D%22n2%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22e2%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n2%22%20target%3D%22n3%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22e3%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n3%22%20target%3D%22n4%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22e4%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n4%22%20target%3D%22n5%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%3C/root%3E%0A%3C/mxGraphModel%3E"}' style="max-width:100%;border:1px dashed var(--border);border-radius:6px;overflow:auto; margin: 20px 0;"></div>
+<div class="callout callout-tip" style="margin-top:12px; border-left:4px solid var(--aws); background:rgba(16,185,129,0.08); padding:14px 18px;">
+<strong>📌 Legenda &amp; Arquitetura — BACEN_AUDIT_PIPELINE:</strong>
+<span>Este pipeline representa o fluxo de governança e auditoria dos reportes. Os dados brutos de contratos do Core Banking Aurora PostgreSQL são extraídos e processados no AWS Glue. O Glue executa os testes de qualidade (Glue Data Quality) aplicando as validações estritas de estágio ECL e taxas descritas no script. Os dados higienizados são depositados no Data Lake corporativo, sob governança central do AWS Lake Formation. No momento da auditoria regulatória do Banco Central, o Lake Formation aplica filtros dinâmicos de células (ocultando CPFs e nomes sensíveis dos tomadores), permitindo que os auditores consultem as tabelas de risco diretamente pelo Redshift de maneira segura e totalmente em conformidade com as regras da LGPD e as normas do BACEN. A exportação definitiva é enviada de forma assíncrona ao BACEN via API Gateway/Lambda assinada digitalmente.</span>
+</div>
+</div></section><section class="section" id="enterprise-arch">
 <div class="sec-hdr">
 <div class="sec-num" style="color:var(--aws)">08</div>
 <div class="sec-title">
@@ -1280,94 +1448,7 @@ ORDER BY
 <p>Estudo dos conceitos matemáticos de crédito, análise de risco corporativo, juros e amortizações.</p>
 </div>
 </div>
-</section><div class="topic-section" style="border-top:1px dashed var(--border); padding-top:30px; margin-top:30px;">
-<h3>Curadoria de Auditoria e Linhagem de Dados (Visão Analista do Banco Central)</h3>
-<p>Sob a supervisão do <strong>Banco Central do Brasil (BACEN)</strong>, a governança de dados deve demonstrar conformidade irrefutável com normativas que exigem controle estrito sobre o ciclo de vida da informação e relatórios de risco regulatório. Durante inspeções de conformidade ou envio de informações cruciais (como a central de risco <strong>SCR</strong> via <strong>DOC 3040</strong>), os auditores examinam a linhagem física dos dados (data lineage) e as checagens automatizadas de qualidade antes do envio.</p>
-<div class="concept-grid">
-<div class="concept-card">
-<h4>SCR (Sistema de Informações de Crédito)</h4>
-<p>O SCR armazena todas as exposições de crédito das instituições financeiras brasileiras. O reporte mensal (DOC 3040) deve casar perfeitamente com os balancetes contábeis e fiscais. Divergências entre o saldo contábil da rubrica de PDD e a soma das perdas calculadas no DOC 3040 disparam auditorias automáticas do BACEN.</p>
-</div>
-<div class="concept-card">
-<h4>Segurança e Governança no Lakehouse</h4>
-<p>Ao disponibilizar dados para auditorias externas (ou do BACEN), as instituições utilizam o <strong>AWS Lake Formation</strong>. Ele permite aplicar filtros no nível de célula (cell-level security), ocultando dados pessoais sensíveis (PII) sob regras da LGPD, enquanto expõe a linhagem, o rating, a taxa efetiva e o saldo devedor.</p>
-</div>
-<div class="concept-card">
-<h4>Validações Cruzadas Mandatórias</h4>
-<p>Uma validação essencial exigida pelos analistas do BACEN é a validação cruzada (Cross-Field checks) no DOC 3040. Os campos determinantes do limite de risco, da modalidade de crédito e da taxa efetiva cobrada devem obedecer regras restritivas para garantir que não haja manipulação ou sub-provisionamento de capital.</p>
-</div>
-</div>
-<div class="abox warning">
-<strong>Trilha de Auditoria no AWS Lake Formation:</strong> A linhagem de dados estruturada no Lake Formation registra todas as transformações sofridas pela tabela de contratações de crédito desde a originação até o arquivo XML final gerado para o reporte regulatório, garantindo transparência total para o regulador.
-    </div>
-<h4>Validação Regulatória do DOC 3040 via PySpark</h4>
-<p>O código abaixo implementa as regras formais de validação do Banco Central aplicadas à carteira consolidada de crédito no ambiente do Data Lake antes do empacotamento e transmissão segura via Direct API do regulador.</p>
-<div class="code-block">
-<pre><code class="language-python"># pyspark_doc3040_rules.py
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, sum as spark_sum, count
-
-spark = SparkSession.builder \
-    .appName("BACEN_DOC3040_Compliance_Checks") \
-    .getOrCreate()
-
-# 1. Carregando dados agregados da base regulatória D-0
-doc3040_df = spark.read.parquet("s3://data-lake-gold/regulatory/doc3040_raw/")
-
-# Regra 1: Validação de Estágios da CMN 4.966 (IFRS 9)
-# Atraso acima de 90 dias DEVE estar classificado como Stage 3 (Default).
-# Atraso acima de 30 dias (SICR) não pode estar no Stage 1.
-doc3040_validated = doc3040_df.withColumn(
-    "cmn_4966_stage_invalid",
-    when((col("diasAtraso") &gt; 90) &amp; (col("estagioEcl") != 3), 1)
-    .when((col("diasAtraso") &gt; 30) &amp; (col("estagioEcl") == 1), 1)
-    .otherwise(0)
-)
-
-# Regra 2: Consistência de Exposição (EAD)
-# EAD deve corresponder exatamente à soma do valor vencido e valor a vencer.
-doc3040_validated = doc3040_validated.withColumn(
-    "ead_inconsistency",
-    when(col("valorVencido") + col("valorAVencer") != col("EAD"), 1).otherwise(0)
-)
-
-# Regra 3: Limites de Taxa Efetiva por Modalidade (Resolução CMN 4.958)
-# Taxas de juros cobradas que sejam abusivas ou inconsistentes com a modalidade
-# regulatória são reportadas como alertas graves.
-doc3040_validated = doc3040_validated.withColumn(
-    "interest_rate_anomaly",
-    # Exemplo: Crédito Consignado (modalidade 204) com taxa efetiva &gt; 80% a.a.
-    when((col("modalidade") == 204) &amp; (col("taxaEfetiva") &gt; 80.0), 1).otherwise(0)
-)
-
-# 2. Consolidando relatório de conformidade do lote
-compliance_report = doc3040_validated.agg(
-    count("tomador_id").alias("total_records"),
-    spark_sum("cmn_4966_stage_invalid").alias("invalid_stages"),
-    spark_sum("ead_inconsistency").alias("invalid_eads"),
-    spark_sum("interest_rate_anomaly").alias("rate_alerts")
-).collect()[0]
-
-print("--- RELATÓRIO DE COMPLIANCE INTERNO - DOC 3040 ---")
-print(f"Total de registros auditados: {compliance_report['total_records']}")
-print(f"Divergências de Estágio ECL (CMN 4.966): {compliance_report['invalid_stages']}")
-print(f"Divergências de Valor (EAD): {compliance_report['invalid_eads']}")
-print(f"Alertas de Anomalias de Taxa: {compliance_report['rate_alerts']}")
-
-# 3. Interrupção do pipeline e disparo de alerta se houver divergências críticas
-if compliance_report['invalid_stages'] &gt; 0 or compliance_report['invalid_eads'] &gt; 0:
-    raise ValueError("Transmissão Abortada: Inconsistências de conformidade críticas detectadas no DOC 3040.")
-else:
-    print("Sucesso: Base validada e pronta para exportação regulatória.")
-</code></pre>
-</div>
-<h4>Arquitetura: Pipeline de Reporte Regulatório &amp; Governança (BACEN)</h4>
-<div class="mxgraph" data-mxgraph='{"highlight": "#e71d36", "nav": true, "resize": true, "toolbar": "zoom layers tags lightbox", "edit": "_blank", "xml": "%3CmxGraphModel%20dx%3D%221200%22%20dy%3D%22800%22%20grid%3D%221%22%20gridSize%3D%2210%22%20guides%3D%221%22%20tooltips%3D%221%22%20connect%3D%221%22%20arrows%3D%221%22%20fold%3D%221%22%20page%3D%221%22%20pageScale%3D%221%22%20pageWidth%3D%22900%22%20pageHeight%3D%22300%22%20background%3D%22%230B1121%22%20math%3D%220%22%20shadow%3D%220%22%3E%0A%20%20%3Croot%3E%0A%20%20%20%20%3CmxCell%20id%3D%220%22%20/%3E%0A%20%20%20%20%3CmxCell%20id%3D%221%22%20parent%3D%220%22%20/%3E%0A%20%20%20%20%0A%20%20%20%20%3C%21--%20Title%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22title%22%20value%3D%22PIPELINE%20DE%20GOVERNAN%C3%87A%2C%20QUALIDADE%20DE%20DADOS%20E%20AUDITORIA%20BACEN%20%28DOC%203040%29%22%20style%3D%22text%3Bhtml%3D1%3BstrokeColor%3Dnone%3BfillColor%3Dnone%3Balign%3Dcenter%3BverticalAlign%3Dmiddle%3BwhiteSpace%3Dwrap%3Brounded%3D0%3BfontSize%3D16%3BfontStyle%3D1%3BfontColor%3D%23ffffff%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22200%22%20y%3D%2210%22%20width%3D%22500%22%20height%3D%2230%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3C%21--%20Nodes%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22n1%22%20value%3D%22Core%20DB%20Aurora%26lt%3Bbr%26gt%3B%28Contratos%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.aurora%3BfillColor%3D%233b82f6%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%2250%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n2%22%20value%3D%22AWS%20Glue%20DQ%26lt%3Bbr%26gt%3B%28Valida%C3%A7%C3%A3o%20D-0%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.glue%3BfillColor%3D%23ff9f1c%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22220%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n3%22%20value%3D%22AWS%20Lake%20Formation%26lt%3Bbr%26gt%3B%28Cell-Level%20Filtering%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.lake_formation%3BfillColor%3D%239c27b0%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22400%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22n4%22%20value%3D%22Amazon%20Redshift%26lt%3Bbr%26gt%3B%28Regulatory%20DW%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.redshift%3BfillColor%3D%23e71d36%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22580%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22n5%22%20value%3D%22AWS%20Lambda%20%26amp%3Bamp%3B%20API%26lt%3Bbr%26gt%3B%28Envio%20BACEN%29%22%20style%3D%22outlineConnect%3D0%3Bdashed%3D0%3BverticalLabelPosition%3Dbottom%3BverticalAlign%3Dtop%3Balign%3Dcenter%3Bhtml%3D1%3Bshape%3Dmxgraph.aws4.lambda%3BfillColor%3D%2300bcd4%3BstrokeColor%3Dnone%3BfontColor%3D%23ffffff%3BfontSize%3D11%3B%22%20vertex%3D%221%22%20parent%3D%221%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20x%3D%22750%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2260%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3C%21--%20Edges%20--%3E%0A%20%20%20%20%3CmxCell%20id%3D%22e1%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n1%22%20target%3D%22n2%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22e2%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n2%22%20target%3D%22n3%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%20%20%0A%20%20%20%20%3CmxCell%20id%3D%22e3%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n3%22%20target%3D%22n4%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%0A%20%20%20%20%3CmxCell%20id%3D%22e4%22%20style%3D%22edgeStyle%3DorthogonalEdgeStyle%3Brounded%3D1%3Bhtml%3D1%3BstrokeColor%3D%23ffffff%3BstrokeWidth%3D2%3BendArrow%3Dclassic%3B%22%20edge%3D%221%22%20parent%3D%221%22%20source%3D%22n4%22%20target%3D%22n5%22%3E%0A%20%20%20%20%20%20%3CmxGeometry%20relative%3D%221%22%20as%3D%22geometry%22%20/%3E%0A%20%20%20%20%3C/mxCell%3E%0A%20%20%3C/root%3E%0A%3C/mxGraphModel%3E"}' style="max-width:100%;border:1px dashed var(--border);border-radius:6px;overflow:auto; margin: 20px 0;"></div>
-<div class="callout callout-tip" style="margin-top:12px; border-left:4px solid var(--aws); background:rgba(16,185,129,0.08); padding:14px 18px;">
-<strong>📌 Legenda &amp; Arquitetura — BACEN_AUDIT_PIPELINE:</strong>
-<span>Este pipeline representa o fluxo de governança e auditoria dos reportes. Os dados brutos de contratos do Core Banking Aurora PostgreSQL são extraídos e processados no AWS Glue. O Glue executa os testes de qualidade (Glue Data Quality) aplicando as validações estritas de estágio ECL e taxas descritas no script. Os dados higienizados são depositados no Data Lake corporativo, sob governança central do AWS Lake Formation. No momento da auditoria regulatória do Banco Central, o Lake Formation aplica filtros dinâmicos de células (ocultando CPFs e nomes sensíveis dos tomadores), permitindo que os auditores consultem as tabelas de risco diretamente pelo Redshift de maneira segura e totalmente em conformidade com as regras da LGPD e as normas do BACEN. A exportação definitiva é enviada de forma assíncrona ao BACEN via API Gateway/Lambda assinada digitalmente.</span>
-</div>
-</div></section></main>
+</section></main>
 </div>
 <button id="scrollTop" onclick="scrollToTop()">↑</button>
 <script>
