@@ -1,14 +1,13 @@
-## 2026-07-31T05:35:32Z
-You are the independent Victory Auditor for the AWS Data Mastery project.
-The Project Orchestrator has claimed 100% completion of the project requirements specified in `/Users/mauriciohelfstein/dev/aws-data-mastery/.agents/ORIGINAL_REQUEST.md` (specifically the latest request dated 2026-07-31T02:10:37Z).
+## 2026-07-31T22:39:30Z
+You are the independent Victory Auditor. The Project Orchestrator has claimed completion for the project defined in ORIGINAL_REQUEST.md.
 
-Project Root: `/Users/mauriciohelfstein/dev/aws-data-mastery`
-Your Working Directory: `/Users/mauriciohelfstein/dev/aws-data-mastery/.agents/victory_auditor`
+Working Directory: /Users/mauriciohelfstein/dev/aws-data-mastery
+Your agent directory: /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/victory_auditor/
 
-Conduct an independent 3-phase victory audit (timeline check, cheating/mock detection, empirical test & verification) to verify whether all requirements and acceptance criteria have been genuinely met:
-1. 9 independent HTML pages generated under `pages/financas/` (`onboarding.html`, `matematica-financeira.html`, `ciclo-vida-credito.html`, `pos-venda-reconciliacao.html`, `contabilidade-razonetes.html`, `risco-montecarlo.html`, `normas-regulatorio.html`, `auditoria-dados.html`, `finops-financas.html`).
-2. Deep functional quality, KaTeX math formulas (strictly \( \) and \[ \], NO dollar signs $), responsive SVG diagrams without text overlaps, tables, and accounting/regulatory accuracy.
-3. Global sidebar `/components/sidebar.html` updated with new collapsible category `🏦 Conhecimentos Financeiros` with all 9 pages, and old reference to `financas-dados.html` removed from `visao-geral-cat`.
-4. Visual/script consistency (`style.css`, `sidebar-loader.js`, `a11y.js`, `progress.js`), no broken links, valid redirection from `pages/pratica/financas-dados.html`.
-
-Conduct your audit independently with zero shared context from implementation agents. Return your formal structured verdict (`VICTORY CONFIRMED` or `VICTORY REJECTED`) along with your full detailed audit report to Sentinel (`62886694-f9e1-44c7-8e99-392c020a91df`).
+Instructions:
+1. Conduct a rigorous, independent 3-phase audit:
+   - Phase 1: Timeline & Process Audit (Verify that plan was executed in order and all milestones completed).
+   - Phase 2: Integrity & Anti-Cheating Check (Verify no placeholder/dummy code, mock functions, or fake implementations).
+   - Phase 3: Empirical & Assertion Testing (Independently check all 9 HTML files in /pages/financas/ for sidebar JS functions toggleCategory, toggleNav, scrollToTop, DOM elements #sidebar, #hamburger, Draft-07/2020-12 JSON Schema in onboarding.html, KaTeX math delimiters \( and \[, responsive SVG diagrams without text overlap, CSS variable definitions in style.css, PySpark/SQL/Pandas code blocks, textbook citations, BRGAAP CMN 4.966 EIR section, Monte Carlo simulations, BACEN/CVM lineage, and FinOps cost tables).
+2. Write your audit report to /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/victory_auditor/handoff.md.
+3. Return a structured verdict: VICTORY CONFIRMED or VICTORY REJECTED with detailed findings.

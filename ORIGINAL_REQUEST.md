@@ -52,3 +52,77 @@ A página deve possuir exatamente 13 seções no DOM, diretas filhas de `main`, 
 - [ ] Presença de explicações detalhadas de Basileia III, IRB (F-IRB/A-IRB) e fórmula de Vasicek na seção `#basileia-irb`.
 - [ ] Presença da tabela COSIF estruturada na seção `#contabilidade`.
 - [ ] Presença da arquitetura de custódia e tabela de dados de investimentos na seção `#investimentos-mercado`.
+
+## 2026-07-31T19:23:10Z
+
+<USER_REQUEST>
+O objetivo deste projeto é expandir e aprimorar de forma aprofundada e modular as 9 páginas de Conhecimentos Financeiros em `/pages/financas/` na branch `feat/financas-dados-cleanup`. O projeto deve contar com um fluxo de redação de Agentes Especialistas dedicados por tema e uma auditoria de qualidade visual, de UX e regulatória liderada por um Agente Layout Reviewer, um UX Evaluator e um Agente Juiz independente.
+
+Working directory: /Users/mauriciohelfstein/dev/aws-data-mastery
+Integrity mode: development
+
+## Requirements
+
+### R1. Expansão de Conteúdo e Arquitetura nas Novas Páginas (`/pages/financas/`)
+- **`onboarding.html`**:
+  - Desenhar o fluxo funcional completo de Onboarding e KYC.
+  - Incluir um **JSON Schema completo em formato Standard (Draft-07 ou Draft 2020-12)** para o contrato de dados (Data Contract) do Evento de Proposta de Crédito.
+  - Adicionar diagrama funcional detalhado com ícones AWS (versão 2026) e legendas explicativas.
+- **`matematica-financeira.html`**:
+  - Abordar a matemática financeira do básico ao avançado (Juros Simples/Compostos, Amortização SAC/Price, VPL, Deságio).
+  - Incluir citações estruturadas e referências bibliográficas a livros clássicos (como Alexandre Assaf Neto, Stephen Ross).
+  - Demonstrar códigos funcionais e executáveis que aplicam os cálculos usando Pandas/NumPy, UDFs PySpark e queries SQL analíticas com dados simulados.
+- **`ciclo-vida-credito.html`**:
+  - Explicar separadamente e de forma aprofundada cada um dos eventos do ciclo de vida de crédito (Fases 1 a 6).
+  - Descrever a arquitetura técnica funcional e os fluxos de mensagens de cada evento no ecossistema AWS (versão 2026).
+- **`pos-venda-reconciliacao.html`**:
+  - Explicar e detalhar separadamente todos os eventos de pós-venda (amortização antecipada, atraso, multa e juros de mora).
+  - Projetar a arquitetura técnica e de processamento de dados (ex: Flink, MSK, S3) para cada evento em conformidade com os padrões da AWS 2026.
+- **`contabilidade-razonetes.html`**:
+  - Detalhar separadamente cada evento contábil e propor a modelagem física de tabelas contábeis detalhadas (Fato Lançamento, Dimensão Contas, Dimensão Contratos).
+  - Adicionar múltiplos cenários contábeis com diagramas de razonetes em SVG (pagamento em atraso, amortização parcial, antecipação, renegociação).
+  - Adicionar seção detalhada sobre o novo **BRGAAP (Resolução CMN 4.966)** e o cálculo da Taxa de Juros Efetiva (Taxa Interna de Retorno).
+- **`risco-montecarlo.html`**:
+  - Introduzir detalhadamente a gestão de risco bancário do iniciante ao avançado (Risco de Crédito, IRB, Vasicek, Perda Esperada vs Inesperada, VaR).
+  - Demonstrar simulação de Monte Carlo com PySpark e visualizações associadas.
+- **`normas-regulatorio.html`**:
+  - Citar e analisar a importância das principais normas (CMN 2.682, 4.557, 4.966, 4.893).
+  - Demonstrar graficamente em SVG a distribuição regulatória de estágios de provisão e fluxos de reportes para o BACEN (ex: DOC 3040).
+- **`auditoria-dados.html`**:
+  - Detalhar técnicas de linhagem física de dados para relatórios do BACEN e CVM.
+  - Apresentar exemplos práticos de PySpark para rastreabilidade de dados a nível de coluna (column-level lineage).
+  - Projetar diagramas SVG de governança (Lake Formation RLS/CLS, regras Glue DQDL).
+- **`finops-financas.html`**:
+  - Melhorar e detalhar as seções de otimização de custos FinOps aplicadas a processamento de dados financeiros (Vacuum, Compaction Iceberg, S3 Lifecycle Tiers), incluindo diagramas e tabelas de custos simuladas.
+
+### R2. Correção de Bugs do Sidebar nas Páginas Financeiras
+- Garantir que TODAS as 9 páginas em `/pages/financas/` incluam corretamente os scripts inline (`toggleCategory`, `toggleNav`, `scrollToTop`) e os elementos HTML necessários (`#sidebar`, `#hamburger`), resolvendo o problema de links que "não abrem no sidebar" nas páginas `pos-venda-reconciliacao.html`, `contabilidade-razonetes.html`, `risco-montecarlo.html` e `normas-regulatorio.html`.
+
+### R3. Garantia de Layout e Visualização (Acessibilidade)
+- Manter o design em Dark Mode premium harmonizado (`style.css`), tipografias elegantes e badges de alto contraste.
+- Formatar todas as equações matemáticas estritamente com os delimitadores KaTeX recomendados (`\(` e `\[`).
+- Desenhar diagramas SVG responsivos, com alto contraste, fontes integradas e sem nenhuma sobreposição de textos.
+
+### R4. Estrutura e Homologação por Múltiplos Agentes
+- **Agentes Especialistas**: Um para cada página HTML, encarregado de implementar e revisar as alterações de conteúdo específicas de sua especialidade técnica/financeira.
+- **Agente Layout Reviewer**: Auditar a consistência de CSS, contraste e design responsivo de todos os arquivos.
+- **Agente Usuário (UX Evaluator)**: Testar a legibilidade e fluidez didática de cada seção aprimorada.
+- **Agente Juiz**: Consolidar a auditoria técnica final e homologar o merge dos arquivos na branch `feat/financas-dados-cleanup`.
+
+## Acceptance Criteria
+
+### Estrutura e Correções do Sidebar
+- [ ] O sidebar carrega, colapsa e abre links perfeitamente em todas as 9 páginas em `/pages/financas/`.
+- [ ] Nenhuma das páginas no diretório `/pages/financas/` apresenta erro de console de JavaScript relacionado à ausência de `toggleCategory` ou `toggleNav`.
+
+### Conteúdos Financeiros e de Risco
+- [ ] A página `onboarding.html` contém o JSON Schema Draft-07/2020-12 da Proposta de Crédito e o fluxo funcional SVG com ícones AWS 2026.
+- [ ] A página `matematica-financeira.html` apresenta referências bibliográficas acadêmicas, fórmulas KaTeX e exemplos operacionais de código em Python/PySpark/SQL.
+- [ ] A página `contabilidade-razonetes.html` inclui diagramas SVG de razonetes, propostas de modelagem física e a seção detalhada de cálculo da Taxa de Juros Efetiva sob o novo BRGAAP (CMN 4.966).
+- [ ] A página `risco-montecarlo.html` aborda do básico ao avançado a gestão de risco e implementa simulações de Monte Carlo.
+- [ ] A página `auditoria-dados.html` contém linhagem de dados em PySpark voltada para relatórios do Banco Central e CVM.
+
+### Layout e Visualizações
+- [ ] Todas as equações matemáticas renderizam sem delimitações brutas visíveis de KaTeX.
+- [ ] Todos os novos diagramas SVG nativos estão legíveis, sem sobreposição de textos e adaptados para leitura noturna/diurna.
+</USER_REQUEST>

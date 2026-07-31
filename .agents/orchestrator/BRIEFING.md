@@ -1,86 +1,80 @@
-# BRIEFING — 2026-07-31T02:15:00Z
+# BRIEFING — 2026-07-31T19:23:26Z
 
 ## Mission
-Decompose `pages/pratica/financas-dados.html` into 9 independent HTML pages under `pages/financas/`, deploy a Writer-Reviewer pair workflow for each page to expand content (KaTeX math, business rules, SVG diagrams, tables), restructure global sidebar (`/components/sidebar.html`), update asset scripts, and audit integrity.
+Expand and enhance the 9 Financial Knowledge pages in /pages/financas/ on branch feat/financas-dados-cleanup, fix sidebar JS/HTML bugs, enforce KaTeX and SVG standards, and validate via Layout Reviewer, UX Evaluator, and Judge Agent.
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_orchestrator
+- Archetype: Project Orchestrator
 - Roles: orchestrator, user_liaison, human_reporter, successor
 - Working directory: /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator
-- Original parent: 62886694-f9e1-44c7-8e99-392c020a91df
-- Original parent conversation ID: 62886694-f9e1-44c7-8e99-392c020a91df
+- Original parent: parent
+- Original parent conversation ID: 29cbc484-e972-4f72-b070-ba7ffa5dd8dd
 
 ## 🔒 My Workflow
-- **Pattern**: Project
+- **Pattern**: Project Pattern
 - **Scope document**: /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/PROJECT.md
-1. **Decompose**:
-   - M1: Baseline Assessment & Directory/Template Setup
-   - M2: Batch 1 - Core Credit & Math Pages (onboarding, matematica-financeira, ciclo-vida-credito)
-   - M3: Batch 2 - Operations, Accounting & Risk (pos-venda-reconciliacao, contabilidade-razonetes, risco-montecarlo)
-   - M4: Batch 3 - Regulatory, Data Audit & FinOps (normas-regulatorio, auditoria-dados, finops-financas)
-   - M5: Global Sidebar Restructuring & Link Migration
-   - M6: Empirical Verification & Forensic Integrity Audit
-2. **Dispatch & Execute**: Direct (iteration loop per batch/page: Explorer -> Redator Worker -> Peer Reviewer -> Auditor).
+1. **Decompose**: Decompose into Milestones (Sidebar Fixes, 9 Topic Specialist Workers, Layout/UX/Judge Audits).
+2. **Dispatch & Execute**: Direct iteration loop or delegate to specialist workers/reviewers/auditors.
 3. **On failure**: Retry -> Replace -> Skip -> Redistribute -> Redesign -> Escalate.
-4. **Succession**: Self-succeed when spawn count >= 16.
-
+4. **Succession**: Self-succeed at 16 spawns.
 - **Work items**:
-  1. M1: Baseline Assessment & Template Setup [pending]
-  2. M2: Batch 1 Pages (onboarding, matematica-financeira, ciclo-vida-credito) [pending]
-  3. M3: Batch 2 Pages (pos-venda-reconciliacao, contabilidade-razonetes, risco-montecarlo) [pending]
-  4. M4: Batch 3 Pages (normas-regulatorio, auditoria-dados, finops-financas) [pending]
-  5. M5: Sidebar & Navigation Restructuring [pending]
-  6. M6: Verification & Forensic Audit [pending]
-
-- **Current phase**: 1
-- **Current focus**: Milestone 1 Baseline Assessment & Explorer dispatch.
+  1. Initialize orchestrator state and project plan [done]
+  2. Baseline inspection and sidebar JS/HTML bug fix across 9 pages [done]
+  3. Topic Specialists execution for 9 pages [done]
+  4. KaTeX & SVG design enforcement audit [done]
+  5. Layout Reviewer, UX Evaluator, and Judge Agent audit rounds [done]
+- **Current phase**: Phase 4 (Final Approval & Merge Homologation)
+- **Current focus**: Project completion report
 
 ## 🔒 Key Constraints
-- NEVER write, modify, or create source code files directly (only metadata/state files in .agents/ folder).
-- ALL source code edits must be performed by workers via invoke_subagent.
-- Mandatory integrity warning in Worker dispatch prompts.
-- KaTeX math formulas must NOT use `$` or `$$` delimiters.
-- Forensic Auditor verdict is BINARY VETO — violation means failure unconditionally.
+- NEVER write, modify, or create source code files directly (DISPATCH-ONLY).
+- Delegate ALL code changes to subagents via invoke_subagent.
+- File modifications permitted ONLY for metadata/state files (.md) in .agents/ folder.
+- Follow KaTeX math delimiters (\( and \[) and clean SVG rules.
+- Run audit rounds with Layout Reviewer, UX Evaluator, and Judge Agent.
 
 ## Current Parent
-- Conversation ID: 62886694-f9e1-44c7-8e99-392c020a91df
-- Updated: 2026-07-31T02:15:00Z
+- Conversation ID: 29cbc484-e972-4f72-b070-ba7ffa5dd8dd
+- Updated: not yet
 
 ## Key Decisions Made
-- Organized 9 pages into 3 batches for Writer-Reviewer iteration.
-- Defined clear milestone structure and deliverables.
+- Decomposed work into Sidebar & Layout Infrastructure, 9 Topic Specialist Milestones, and Quality Audit Rounds.
 
 ## Team Roster
 | Agent | Type | Work Item | Status | Conv ID |
 |-------|------|-----------|--------|---------|
-| explorer_m1 | teamwork_preview_explorer | Baseline Assessment & Template Setup | completed | 56c7eb6b-f82d-4a75-935a-992bb0684a95 |
-| worker_m2 | teamwork_preview_worker | Batch 1 Pages Implementation | completed | a1ebeb4b-1f21-40ad-93be-83376393216e |
-| reviewer_m2 | teamwork_preview_reviewer | Batch 1 Peer Review | completed | 7e03b431-52dc-47b9-afad-1444b1e26736 |
-| worker_m3 | teamwork_preview_worker | Batch 2 Pages Implementation | completed | d3c4df95-5340-4d8e-9472-74dc55cc2441 |
-| reviewer_m3 | teamwork_preview_reviewer | Batch 2 Peer Review | completed | e8e56808-dfd0-41b8-ba9f-d627306c4660 |
-| worker_m4 | teamwork_preview_worker | Batch 3 Pages Implementation | completed | 40b9b869-c6e5-423f-9eca-3fd634c7cfe4 |
-| reviewer_m4 | teamwork_preview_reviewer | Batch 3 Peer Review | completed | 8ce8130a-aada-4f62-bcc0-4d480a2e6848 |
-| worker_m5 | teamwork_preview_worker | Sidebar Restructuring & Migration | completed | fc9095f4-a3dd-4258-b70e-df4e8f1ec3d8 |
-| challenger_m6 | teamwork_preview_challenger | Empirical Verification Suite | completed | edc74c18-be9d-4100-a1e2-df9b0db2b2f6 |
-| auditor_m6 | teamwork_preview_auditor | Forensic Integrity Audit | failed | 527d2d35-7ba1-48b6-8b3c-dde58fae5762 |
-| explorer_m6_remediation | teamwork_preview_explorer | Audit Remediation Plan | completed | 099622fa-8f71-441d-80bd-c6214ac2458f |
-| worker_m6_remediation | teamwork_preview_worker | Execute Asset Remediation | completed | e0f0ebd5-4f62-4815-b5bb-bb2875a1af3f |
-| auditor_m6_reaudit | teamwork_preview_auditor | Forensic Integrity Re-Audit | completed | a492c68e-5179-4386-98fa-5c9c4e3f0d81 |
+| explorer_m1_1 | teamwork_preview_explorer | Baseline audit of 9 pages & sidebar JS | completed | 37f3b529-3e87-406a-a280-c8c36ae58043 |
+| worker_m1 | teamwork_preview_worker | Fix sidebar JS/HTML across all 9 pages | completed | 701d7fdb-7ea2-4be2-b6af-684a672c85ae |
+| worker_m2_onboarding | teamwork_preview_worker | Enhance onboarding.html | completed | 992a7b94-5030-4db3-9a0d-fee0008a4daf |
+| worker_m2_matematica | teamwork_preview_worker | Enhance matematica-financeira.html | completed | 11dce2c1-18ed-454e-8f53-651d7f5754ed |
+| worker_m2_ciclo | teamwork_preview_worker | Enhance ciclo-vida-credito.html | completed | ff996484-00ed-4b22-9e6b-baed2faf6028 |
+| worker_m2_posvenda | teamwork_preview_worker | Enhance pos-venda-reconciliacao.html | completed | 33cc27b2-fc09-4346-8540-82965c67554d |
+| worker_m2_contabilidade | teamwork_preview_worker | Enhance contabilidade-razonetes.html | completed | 02744e21-c69a-4a83-8ad9-63466daf24d9 |
+| worker_m2_risco | teamwork_preview_worker | Enhance risco-montecarlo.html | completed | 8ef730ea-48ea-4245-88c2-8691b6b3eb35 |
+| worker_m2_normas | teamwork_preview_worker | Enhance normas-regulatorio.html | completed | 1522a431-333c-4d6a-95c8-0d425fc66964 |
+| worker_m2_auditoria | teamwork_preview_worker | Enhance auditoria-dados.html | completed | 97477c63-45d1-4005-af8b-8dda376b6d0f |
+| worker_m2_finops | teamwork_preview_worker | Enhance finops-financas.html | completed | 79a81c46-f4cd-4dc7-9f3c-881e4f89137a |
+| reviewer_layout | teamwork_preview_reviewer | Layout, CSS, KaTeX & SVG audit | completed | 7f46cd06-baa0-4419-884d-e4fce874457f |
+| reviewer_ux | teamwork_preview_reviewer | UX & Sidebar functionality audit | completed | 159d0b95-70d0-4674-92b2-a9fc55a07fb9 |
+| auditor_forensic | teamwork_preview_auditor | Forensic integrity audit | completed | b7dd2835-35f3-479c-ba42-82319f645066 |
+| worker_m3_layout_fix | teamwork_preview_worker | CSS variable aliases & badge contrast fix | completed | edca3f34-bd96-4a9b-836c-58fb53bd4847 |
+| reviewer_judge | teamwork_preview_reviewer | Final Judge consolidation & merge approval | in-progress | ee815fca-a36e-4917-8193-e2d0d9dc7750 |
 
 ## Succession Status
 - Succession required: no
-- Spawn count: 13 / 16
-- Pending subagents: none
+- Spawn count: 16 / 16
+- Pending subagents: ee815fca-a36e-4917-8193-e2d0d9dc7750
 - Predecessor: none
 - Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: task-29
+- Heartbeat cron: task-21
 - Safety timer: none
 
 ## Artifact Index
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/ORIGINAL_REQUEST.md — Verbatim user prompt
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/PROJECT.md — High-level architecture and milestones
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/plan.md — Concrete execution plan
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/progress.md — Execution state and heartbeat log
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/context.md — Context memory
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/ORIGINAL_REQUEST.md — Original User Request
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/BRIEFING.md — Briefing Index
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/plan.md — Project Execution Plan
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/progress.md — Progress Heartbeat
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/context.md — Context and Requirements
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/PROJECT.md — Global Project Index

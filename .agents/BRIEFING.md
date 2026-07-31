@@ -1,24 +1,23 @@
-# BRIEFING — 2026-07-31T02:10:37Z
+# BRIEFING — 2026-07-31T19:23:10Z
 
 ## Mission
-Coordinate and monitor the project orchestrator and victory auditor to decompose financas-dados.html into 9 independent HTML pages in pages/financas/, integrate a new collapsible sidebar category '🏦 Conhecimentos Financeiros', and deepen technical content using specialized Writer-Reviewer pairs.
+Coordinate and monitor the project orchestrator and victory auditor to expand and enhance the 9 financial pages in /pages/financas/, fix sidebar bugs across all 9 pages, ensure KaTeX/SVG layout quality, and run multi-agent audits (Layout Reviewer, UX Evaluator, Judge).
 
 ## 🔒 My Identity
 - Archetype: sentinel
 - Working directory: /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/
-- Orchestrator: 0812ffa0-5eba-4d84-bc16-6f946a8aeb9b (previous: 29ca5b90-9c90-4124-bb3f-0eee0e95e148)
-- Victory Auditor: 6e7ffdbe-7b89-4f3e-ba2f-13d5362c5c38
+- Orchestrator: e79e8d52-8bef-4381-a212-226e2dbac577
+- Victory Auditor: 8e836024-2995-4e87-87aa-7afa6c2e07e9
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
 - Victory Audit is MANDATORY before reporting completion
-- Must enforce 13 exact sections in DOM order
 - Must monitor via 2 crons (Progress Reporting & Liveness Check)
 
 ## User Context
-- **Last user request**: Decompose financas-dados.html into 9 pages under pages/financas/, add '🏦 Conhecimentos Financeiros' sidebar category, use Writer-Reviewer pairs per topic.
+- **Last user request**: Expand 9 pages in /pages/financas/ on branch feat/financas-dados-cleanup, fix sidebar bugs, implement JSON schemas/SVG diagrams/KaTeX math/PySpark/FinOps, layout & UX review, judge approval.
 - **Pending clarifications**: none
-- **Delivered results**: none
+- **Delivered results**: 9 fully expanded financial pages in /pages/financas/, fixed sidebar navigation, KaTeX formatting, SVG diagrams, PySpark simulations, BRGAAP CMN 4.966 EIR calculations, BACEN lineage, and FinOps tables.
 
 ## Project Status
 - **Phase**: complete

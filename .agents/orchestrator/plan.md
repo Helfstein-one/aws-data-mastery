@@ -1,41 +1,31 @@
-# Execution Plan — Finance Module Decomposition
+# Project Plan: Financial Knowledge Pages Expansion & Quality Audit
 
-## Objective
-Decompose monolithic `pages/pratica/financas-dados.html` into 9 individual HTML pages under `pages/financas/`, refine and expand each page with Writer-Reviewer subagent teams, update the global sidebar `/components/sidebar.html` with collapsible category `🏦 Conhecimentos Financeiros`, ensure full visual/script consistency, and perform end-to-end audit.
+## Overview
+Expand and enhance 9 pages in `/pages/financas/` on branch `feat/financas-dados-cleanup`, resolving all sidebar JS/HTML issues, applying KaTeX and SVG guidelines, and completing full multi-agent audit rounds.
 
-## Milestones & Action Items
+## Milestones
 
-### Milestone 1: Baseline Assessment & Directory Setup
-- [ ] Dispatch Explorer to analyze `pages/pratica/financas-dados.html`, current sidebar `/components/sidebar.html`, asset dependencies, and produce HTML template structure for `pages/financas/`.
-- [ ] Worker creates directory `/pages/financas/`.
+### Milestone 1: Baseline Audit & Sidebar Infrastructure Fix
+- Task 1.1: Explore `/pages/financas/` pages and sidebar JS scripts (`js/sidebar.js`, etc.).
+- Task 1.2: Dispatch Worker to fix sidebar JavaScript/HTML bugs across all 9 pages (ensure `toggleCategory`, `toggleNav`, `scrollToTop`, `#sidebar`, `#hamburger` are present and working without JS errors).
 
-### Milestone 2: Batch 1 - Core Credit & Math Pages
-- [ ] Dispatch Redator Worker for:
-  1. `onboarding.html` (Processo de Crédito, KYC, SCR, Prevenção a Fraude)
-  2. `matematica-financeira.html` (SAC, Price, IOF, VPL, Deságio)
-  3. `ciclo-vida-credito.html` (Fases 1 a 6 e fluxo de eventos/estado do contrato)
-- [ ] Dispatch Peer Reviewer to verify math, diagrams, business rules, accessibility, and visual consistency for Batch 1.
+### Milestone 2: Topic Specialists Content Expansion (9 HTML Pages)
+- Task 2.1: Specialist Worker for `onboarding.html` (KYC flow, Credit Proposal Data Contract in JSON Schema Draft-07/2020-12, AWS 2026 SVG architecture).
+- Task 2.2: Specialist Worker for `matematica-financeira.html` (Financial math basic to advanced, SAC/Price, VPL, Assaf/Ross bibliography, Python/PySpark/SQL executable code).
+- Task 2.3: Specialist Worker for `ciclo-vida-credito.html` (Credit lifecycle phases 1-6 detailed, AWS 2026 technical event streams).
+- Task 2.4: Specialist Worker for `pos-venda-reconciliacao.html` (Post-sales events: prepayments, late payments, fines, interest; Flink/MSK/S3 streaming architecture).
+- Task 2.5: Specialist Worker for `contabilidade-razonetes.html` (COSIF table, accounting entries, SVG T-account diagrams, BRGAAP CMN 4.966 EIR calculation).
+- Task 2.6: Specialist Worker for `risco-montecarlo.html` (Banking risk basic to advanced, IRB, Vasicek, Expected vs Unexpected Loss, PySpark Monte Carlo simulation).
+- Task 2.7: Specialist Worker for `normas-regulatorio.html` (CMN 2.682, 4.557, 4.966, 4.893 analysis, SVG provision stage diagram, BACEN DOC 3040 reports).
+- Task 2.8: Specialist Worker for `auditoria-dados.html` (BACEN/CVM physical lineage, PySpark column-level lineage, Lake Formation & Glue DQDL SVG governance).
+- Task 2.9: Specialist Worker for `finops-financas.html` (FinOps cost optimization: Iceberg Vacuum/Compaction, S3 Lifecycle Tiers, diagrams & cost tables).
 
-### Milestone 3: Batch 2 - Operations, Accounting & Risk Pages
-- [ ] Dispatch Redator Worker for:
-  4. `pos-venda-reconciliacao.html` (Reconciliação, Flink Join, Gateway PIX, DLQ e tolerâncias)
-  5. `contabilidade-razonetes.html` (Partidas dobradas, eventos contábeis, COSIF, carteira contábil)
-  6. `risco-montecarlo.html` (Basileia, IRB, Vasicek, Simulação Monte Carlo, VaR)
-- [ ] Dispatch Peer Reviewer to verify Batch 2.
+### Milestone 3: Design & Quality Standard Enforcement
+- Task 3.1: Enforce KaTeX math delimiters (`\(` and `\[`) across all 9 pages.
+- Task 3.2: Verify dark mode premium theme (`style.css`), high contrast badges, responsive clean SVG diagrams without text overlap.
 
-### Milestone 4: Batch 3 - Regulatory, Data Quality & FinOps Pages
-- [ ] Dispatch Redator Worker for:
-  7. `normas-regulatorio.html` (CMN 4.557, CMN 4.966 / IFRS 9, reporte de risco)
-  8. `auditoria-dados.html` (Qualidade de dados com Glue DQ, linhagem, Bacen DOC 3040)
-  9. `finops-financas.html` (Custos analíticos de dados, FinOps aplicado)
-- [ ] Dispatch Peer Reviewer to verify Batch 3.
-
-### Milestone 5: Global Sidebar Restructuring & Migration
-- [ ] Dispatch Worker to update `/components/sidebar.html`:
-  - Add main collapsible section `🏦 Conhecimentos Financeiros` with links to all 9 pages under `pages/financas/`.
-  - Remove old reference to `financas-dados.html` under `visao-geral-cat`.
-- [ ] Deactivate/remove old `pages/pratica/financas-dados.html` and update any broken references across codebase.
-
-### Milestone 6: Verification & Forensic Integrity Audit
-- [ ] Dispatch Challenger to verify DOM structure, script inclusion, sidebar links, KaTeX rendering, SVG diagram layout across all 9 pages.
-- [ ] Dispatch Forensic Auditor for final integrity verification.
+### Milestone 4: Multi-Agent Audit & Final Homologation
+- Task 4.1: Layout Reviewer audit (CSS, contrast, responsive design).
+- Task 4.2: UX Evaluator audit (readability, didactic flow, navigation).
+- Task 4.3: Forensic Auditor integrity audit (verify genuine implementations, no hardcoded cheating).
+- Task 4.4: Judge Agent final consolidation & approval for `feat/financas-dados-cleanup`.

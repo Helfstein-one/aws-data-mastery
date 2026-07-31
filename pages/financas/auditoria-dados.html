@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="author" content="Mauricio Helfstein"/>
-  <meta name="description" content="Auditoria, Qualidade e Linhagem de Dados Financeiros: Reconciliação BACEN 3040 vs COSIF, AWS Lake Formation Cell-Level Security, Glue DQDL, Circuit Breaker e Custódia no Iceberg - AWS Data Mastery"/>
-  <title>Auditoria, Qualidade & Linhagem de Dados | AWS Data Mastery</title>
+  <meta name="description" content="Auditoria, Qualidade e Linhagem de Dados Financeiros: Reconciliação BACEN 3040 vs COSIF, AWS Lake Formation Cell-Level Security, PySpark Column Lineage, Glue DQDL, Circuit Breaker e Custódia no Iceberg - AWS Data Mastery"/>
+  <title>Auditoria, Qualidade &amp; Linhagem de Dados | AWS Data Mastery</title>
 
   <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
@@ -37,8 +37,8 @@
   </script>
 
   <!-- Open Graph & Favicon -->
-  <meta property="og:title" content="Auditoria, Qualidade & Linhagem de Dados | AWS Data Mastery"/>
-  <meta property="og:description" content="Engenharia de Auditoria Financeira: Reconciliação BACEN 3040 vs COSIF, Lake Formation Cell Security, Glue DQDL, Circuit Breaker e Custódia no Apache Iceberg"/>
+  <meta property="og:title" content="Auditoria, Qualidade &amp; Linhagem de Dados | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Auditoria Financeira: Reconciliação BACEN 3040 vs COSIF, Linhagem Física BACEN/CVM, PySpark Column Lineage, Lake Formation Cell Security, Glue DQDL e Custódia no Apache Iceberg"/>
   <meta property="og:type" content="website"/>
   <meta property="og:image" content="../../assets/og-image.jpg"/>
   <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
@@ -53,17 +53,18 @@
   <!-- Main Content Container -->
   <div id="main">
     <div class="hero" style="background-color: var(--navy)">
-      <div class="hero-ey">Trilha de Engenharia de Auditoria & Governança de Dados</div>
-      <h1>Auditoria, Qualidade & <em>Linhagem de Dados</em></h1>
-      <p class="hero-d">Arquitetura avançada de governança e rastreabilidade financeira: reconciliação automática entre a exposição individual do BACEN DOC 3040 e os balancetes contábeis COSIF, governança celular (Cell-Level Security) e mascaramento PII LGPD no AWS Lake Formation, linhagem física end-to-end (Aurora ➔ DMS ➔ Iceberg ➔ XML BACEN), validação via AWS Glue Data Quality (DQDL) com Circuit Breaker automatizado e arquitetura analítica de custódia de investimentos (MtM, MtC e NAV).</p>
+      <div class="hero-ey">Trilha de Engenharia de Auditoria &amp; Governança de Dados</div>
+      <h1>Auditoria, Qualidade &amp; <em>Linhagem de Dados</em></h1>
+      <p class="hero-d">Arquitetura avançada de governança, auditabilidade e rastreabilidade para o setor financeiro: reconciliação contábil-operacional automatizada (BACEN DOC 3040 vs COSIF), linhagem física end-to-end para reportes regulatórios do Banco Central e CVM, rastreabilidade em nível de coluna com PySpark e OpenLineage, governança celular (Row/Cell-Level Security) e anonimização LGPD no AWS Lake Formation, validação automatizada via AWS Glue Data Quality (DQDL) com Circuit Breaker em Step Functions, e custódia analítica de investimentos (MtM, MtC e NAV).</p>
       <div class="pills">
         <span class="pill">Reconciliação 3040 vs COSIF</span>
-        <span class="pill">AWS Lake Formation Security</span>
-        <span class="pill">Row & Cell-Level Security</span>
-        <span class="pill">Linhagem Física End-to-End</span>
+        <span class="pill">Linhagem Física BACEN &amp; CVM</span>
+        <span class="pill">PySpark Column Lineage</span>
+        <span class="pill">Lake Formation RLS &amp; CLS</span>
+        <span class="pill">Mascaramento LGPD &amp; KMS</span>
         <span class="pill">AWS Glue DQDL</span>
-        <span class="pill">Circuit Breaker Pipeline</span>
-        <span class="pill">Custódia & MtM / MtC / NAV</span>
+        <span class="pill">Circuit Breaker Step Functions</span>
+        <span class="pill">Custódia MtM / MtC / NAV</span>
       </div>
     </div>
 
@@ -79,33 +80,73 @@
           </div>
         </div>
         <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          No Sistema Financeiro Nacional, o saldo contábil das contas patrimoniais do <strong>COSIF (Plano Contábil das Instituições do SFN)</strong> deve coincidir com precisão de centavos com o consolidado analítico das operações individuais transmitidas na Central de Risco do Banco Central <strong>(DOC 3040)</strong>. Qualquer divergência não justificada dispara apontamentos formais de auditoria do BACEN e fiscalização regulatória.
+          No Sistema Financeiro Nacional (SFN), o saldo contábil das contas patrimoniais do <strong>COSIF (Plano Contábil das Instituições do SFN)</strong> deve coincidir com precisão de centavos com o consolidado analítico das operações individuais transmitidas na Central de Risco do Banco Central <strong>(DOC 3040 - SCR)</strong>. Qualquer divergência não justificada dispara apontamentos formais de auditoria do BACEN e fiscalização regulatória.
         </p>
 
-        <p>A fórmula fundamental da reconciliação contábil-operacional em cada data-base (D-0) estabelece que o somatório de todos os saldos vincendos e vencidos das operações ativas no DOC 3040 deve ser perfeitamente igual ao saldo contábil bruto da rubrica COSIF correspondente:</p>
+        <p>A fórmula fundamental da reconciliação contábil-operacional em cada data-base (D-0) estabelece que o somatório de todos os saldos vincendos e vencidos das operações ativas no DOC 3040 deve ser perfeitamente igual ao saldo contábil líquido (Saldo Bruto deduzido das Rendas a Apropriar) da rubrica COSIF correspondente:</p>
 
         <div style="font-size: 1.25rem; text-align: center; margin: 24px 0; background: rgba(255,255,255,0.04); padding: 20px; border-radius: 8px; font-family: 'DM Mono', monospace; border: 1px solid var(--border);">
-          \[ \Delta_{\text{Reconciliação}} = \sum_{i \in \text{DOC 3040}} \left( \text{VlrVinc}_i + \text{VlrVenc}_i \right) - \sum_{k \in \text{Contas COSIF Crédito}} \text{SaldoBruto}_k = 0 \]
+          \[ \Delta_{\text{Reconciliação}} = \sum_{i \in \text{DOC 3040}} \left( \text{VlrVinc}_i + \text{VlrVenc}_i \right) - \left( \sum_{k \in \text{COSIF 1.6.0}} \text{SaldoBruto}_k - \sum_{m \in \text{COSIF 1.6.8}} \text{RendasAApropriar}_m \right) = 0 \]
         </div>
 
         <div class="concept-grid" style="margin-bottom: 28px;">
           <div class="concept-card">
-            <h4>Juros a Apropriar (Pro-Rata)</h4>
-            <p>Tratamento do saldo de juros contratuais ainda não incorridos. No balancete COSIF, a conta retificadora de receita a apropriar reduz o valor de face do contrato para apresentar o custo amortizado exato.</p>
+            <h4>Conta COSIF 1.6.0.00.00-1 (Operações de Crédito)</h4>
+            <p>Registra o valor nominal total dos contratos de empréstimo e financiamento concedidos. No batimento com o DOC 3040, o valor deve corresponder exatamente à soma dos campos <code>VlrVinc</code> (saldos a vencer) e <code>VlrVenc</code> (saldos vencidos).</p>
           </div>
           <div class="concept-card">
-            <h4>Conciliação de Provisão (PDD)</h4>
-            <p>O somatório das provisões individuais calculadas pelos modelos de Perda Esperada (ECL Stage 1, 2 e 3) no DOC 3040 deve casar com o saldo credor da conta COSIF 1.6.9.00.00-7 (Provisão para Operações de Crédito).</p>
+            <h4>Conta Retificadora 1.6.8.00.00-0 (Rendas a Apropriar)</h4>
+            <p>Ajusta os juros pré-fixados contratuais ainda não decorridos pro-rata temporis. A linhagem de dados deve abater este montante para comparar o custo amortizado analítico com a contabilidade sintética.</p>
           </div>
           <div class="concept-card">
-            <h4>Cessão de Crédito e Deságio</h4>
-            <p>Tratamento de carteiras vendidas ou adquiridas com deságio. A linhagem de dados deve segregar o valor contábil líquido do valor nominal registrado na Central de Risco para evitar dupla contagem.</p>
+            <h4>Conta COSIF 1.6.9.00.00-7 (Provisão PDD / CMN 4.966)</h4>
+            <p>O somatório das provisões de perda esperada (ECL Stage 1, 2 e 3) calculadas individualmente por contrato no DOC 3040 deve bater rigorosamente com o saldo credor acumulado no balancete contábil.</p>
           </div>
         </div>
 
         <div class="callout callout-info">
-          <h4>Algoritmo de Reconciliação Automatizada em Spark SQL</h4>
-          <p>Os pipelines de auditoria executam verificações prévias no Apache Spark comparando as tabelas Iceberg Silver do Data Lake com o razão contábil gerado pelo ERP bancário antes da assinatura digital do arquivo XML do BACEN.</p>
+          <h4>Algoritmo de Batimento Contábil em Spark SQL</h4>
+          <p>Antes de gerar o arquivo XML final para transmissão ao Banco Central, o pipeline de auditoria dispara uma consulta comparativa entre as tabelas Iceberg Silver/Gold e o Razão Contábil do ERP Bancário:</p>
+        </div>
+
+        <div class="code-box" style="background:#0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-family: 'DM Mono', monospace; font-size: 0.9rem; overflow-x: auto; color: #f8fafc; margin: 20px 0;">
+<pre style="margin:0;"><code>-- Script Spark SQL: Reconciliação BACEN 3040 vs Razão Contábil COSIF
+WITH doc3040_agregado AS (
+    SELECT 
+        dt_base,
+        modalidade_bacen,
+        SUM(vlr_vinc_ate_30 + vlr_vinc_31_90 + vlr_vinc_acima_90 + vlr_venc_1_14 + vlr_venc_acima_15) AS total_operacional_3040,
+        SUM(vlr_provisao_ecl) AS total_pdd_3040
+    FROM lakehouse_gold.bacen_doc3040_mensal
+    WHERE dt_base = '2026-07-31'
+    GROUP BY dt_base, modalidade_bacen
+),
+cosif_agregado AS (
+    SELECT 
+        dt_base,
+        modalidade_bacen,
+        SUM(saldo_bruto - rendas_a_apropriar) AS total_contabil_cosif,
+        SUM(saldo_pdd_acumulada) AS total_pdd_cosif
+    FROM lakehouse_silver.erp_balancete_cosif
+    WHERE dt_base = '2026-07-31' AND conta_cosif LIKE '1.6.%'
+    GROUP BY dt_base, modalidade_bacen
+)
+SELECT 
+    d.dt_base,
+    d.modalidade_bacen,
+    d.total_operacional_3040,
+    c.total_contabil_cosif,
+    ROUND(d.total_operacional_3040 - c.total_contabil_cosif, 2) AS delta_carteira,
+    d.total_pdd_3040,
+    c.total_pdd_cosif,
+    ROUND(d.total_pdd_3040 - c.total_pdd_cosif, 2) AS delta_pdd,
+    CASE 
+        WHEN ABS(d.total_operacional_3040 - c.total_contabil_cosif) &lt; 0.01 
+         AND ABS(d.total_pdd_3040 - c.total_pdd_cosif) &lt; 0.01 THEN 'RECONCILIADO_OK'
+        ELSE 'DIVERGENCIA_AUDITORIA'
+    END AS status_reconciliacao
+FROM doc3040_agregado d
+JOIN cosif_agregado c ON d.dt_base = c.dt_base AND d.modalidade_bacen = c.modalidade_bacen;</code></pre>
         </div>
       </section>
 
@@ -115,129 +156,427 @@
           <div class="sec-num" style="color:var(--aws)">02</div>
           <div class="sec-title">
             <div class="sec-subtitle">Governança Granular de Dados Sensíveis</div>
-            <h2>AWS Lake Formation Security: Cell-Level Security & Mascaramento LGPD</h2>
+            <h2>AWS Lake Formation Security: Cell-Level Security &amp; Mascaramento LGPD</h2>
           </div>
         </div>
         <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          Para cumprir a <strong>LGPD (Lei Geral de Proteção de Dados)</strong> e as exigências da Resolução CMN 4.893/2021, o repositório de dados de crédito deve permitir que auditores internos, analistas de risco e órgãos reguladores consultem a base sem ter acesso direto a dados pessoais identificáveis (PII - Personally Identifiable Information).
+          Para cumprir as diretrizes da <strong>LGPD (Lei Geral de Proteção de Dados - Lei 13.709/2018)</strong> e da <strong>Resolução CMN 4.893/2021 (Segurança Cibernética e Nuvem)</strong>, a plataforma de auditoria aplica políticas rígidas de acesso baseadas em <strong>AWS Lake Formation</strong>. Isso permite que auditores internos, analistas de risco e órgãos reguladores executem consultas analíticas na mesma tabela Iceberg sem exposição indevida de PII (Personally Identifiable Information).
         </p>
 
         <div class="concept-grid" style="margin-bottom: 28px;">
           <div class="concept-card">
             <h4>Row-Level Security (RLS)</h4>
-            <p>Filtros dinâmicos baseados no perfil do usuário (IAM Role). Exemplo: o analista da Regional Sul enxerga apenas linhas da carteira onde <code>uf_agencia = 'RS'</code>.</p>
+            <p>Filtros de linha dinâmicos atrelados às credenciais IAM do usuário. Por exemplo, analistas da Regional Sul enxergam apenas contratos onde <code>uf_agencia = 'RS'</code>, enquanto auditores nacionais enxergam todas as linhas.</p>
           </div>
           <div class="concept-card">
             <h4>Cell-Level Security (CLS)</h4>
-            <p>Ocultação seletiva de colunas e células sensíveis na mesma tabela. Auditores de risco visualizam o saldo devedor e a PD, mas as colunas de CPF, Nome e Telefone retornam nulas ou mascaradas.</p>
+            <p>Ocultação seletiva de colunas e dados no nível de célula. Modeladores de risco acessam saldos devedores e PDs sem visualizar CPF, Nome ou Endereço do titular, que são omitidos ou retornam <code>NULL</code>.</p>
           </div>
           <div class="concept-card">
             <h4>Tag-Based Access Control (TBAC)</h4>
-            <p>Governança via tags do Data Catalog (ex: <code>DataClassification=Restricted</code>, <code>RegulatoryDomain=BACEN_3040</code>), simplificando a atribuição de permissões a centenas de tabelas Iceberg.</p>
+            <p>Governança simplificada via tags de catálogo (LF-Tags: <code>Classification=Restricted</code>, <code>RegulatoryDomain=BACEN_3040</code>, <code>PII=Sensitive</code>), garantindo autorizações automáticas e consistentes em centenas de tabelas.</p>
           </div>
         </div>
 
-        <p>A anonimização dinâmica utiliza funções hash com salting criptográfico gerenciado no <strong>AWS KMS (Key Management Service)</strong>:</p>
+        <p>Para manter a auditabilidade de relacionamentos entre contratos e clientes sem expor o identificador real, utiliza-se a anonimização dinâmica com salting criptográfico gerenciado no <strong>AWS KMS (Key Management Service)</strong>:</p>
 
         <div style="font-size: 1.15rem; text-align: center; margin: 20px 0; background: rgba(255,255,255,0.03); padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; border: 1px solid var(--border);">
           \[ \text{IdCliHash} = \text{HMAC-SHA256}\left(\text{CPF\_Cliente}, \text{KMS\_Key}_{\text{DynamicSalt}}\right) \]
         </div>
+
+        <!-- DIAGRAMA SVG 1: ARQUITETURA LAKE FORMATION RLS/CLS & TBAC -->
+        <h3 style="margin-top: 36px;">Arquitetura de Governança Granular AWS Lake Formation (RLS/CLS &amp; TBAC)</h3>
+        <p style="color: var(--text-dim);">O diagrama abaixo ilustra como o engine do AWS Lake Formation intercepta consultas Athena/EMR/Redshift Spectrum, aplicando filtros de linha (RLS) e mascaramento de células (CLS) baseados nas permissões atribuídas a cada perfil de auditoria:</p>
+
+        <div class="svg-container" style="margin: 2rem 0; overflow-x: auto; text-align: center;">
+          <svg width="100%" height="auto" viewBox="0 0 920 380" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 10px;">
+            <text x="460" y="30" text-anchor="middle" fill="#f8fafc" font-size="15" font-weight="bold" letter-spacing="1">GOVERNANÇA AWS LAKE FORMATION: RLS, CLS &amp; MASCARAMENTO LGPD</text>
+
+            <!-- Column 1: Personas & IAM Roles -->
+            <g transform="translate(30, 60)">
+              <rect width="180" height="290" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+              <text x="90" y="25" text-anchor="middle" fill="#38bdf8" font-size="12" font-weight="bold">IAM ROLES / PRINCIPALS</text>
+              
+              <!-- Role 1 -->
+              <rect x="15" y="45" width="150" height="65" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1.5"/>
+              <text x="90" y="65" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">Auditor Interno</text>
+              <text x="90" y="82" text-anchor="middle" fill="#94a3b8" font-size="9">Full Read (Unmasked PII)</text>
+              <text x="90" y="97" text-anchor="middle" fill="#3b82f6" font-size="9">Role: IAM_Auditor_Full</text>
+
+              <!-- Role 2 -->
+              <rect x="15" y="125" width="150" height="65" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+              <text x="90" y="145" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">Analista Risco Regional</text>
+              <text x="90" y="162" text-anchor="middle" fill="#94a3b8" font-size="9">RLS: uf_agencia = 'RS'</text>
+              <text x="90" y="177" text-anchor="middle" fill="#f59e0b" font-size="9">CLS: CPF/Nome Masked</text>
+
+              <!-- Role 3 -->
+              <rect x="15" y="205" width="150" height="65" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+              <text x="90" y="225" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">Regulador (BACEN/CVM)</text>
+              <text x="90" y="242" text-anchor="middle" fill="#94a3b8" font-size="9">TBAC: BACEN_3040 Tag</text>
+              <text x="90" y="257" text-anchor="middle" fill="#10b981" font-size="9">Sanitized Regulatory View</text>
+            </g>
+
+            <line x1="210" y1="205" x2="250" y2="205" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="250,200 260,205 250,210" fill="#94a3b8"/>
+
+            <!-- Column 2: Lake Formation Engine -->
+            <g transform="translate(260, 60)">
+              <rect width="250" height="290" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2"/>
+              <text x="125" y="25" text-anchor="middle" fill="#c084fc" font-size="13" font-weight="bold">AWS LAKE FORMATION ENGINE</text>
+              
+              <rect x="15" y="45" width="220" height="50" rx="6" fill="#0f172a" stroke="#a855f7" stroke-width="1"/>
+              <text x="125" y="66" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">Tag-Based Access Control (TBAC)</text>
+              <text x="125" y="82" text-anchor="middle" fill="#c084fc" font-size="9">Evaluates LF-Tags &amp; Resource Catalog Policies</text>
+
+              <rect x="15" y="105" width="220" height="50" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
+              <text x="125" y="126" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">Cell-Level Security (CLS Filter)</text>
+              <text x="125" y="142" text-anchor="middle" fill="#f59e0b" font-size="9">Strips PII Columns: CPF, Nome, Email</text>
+
+              <rect x="15" y="165" width="220" height="50" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
+              <text x="125" y="186" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">Row-Level Security (RLS Expression)</text>
+              <text x="125" y="202" text-anchor="middle" fill="#3b82f6" font-size="9">Injects Dynamic SQL Predicates: WHERE uf = 'RS'</text>
+
+              <rect x="15" y="225" width="220" height="50" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
+              <text x="125" y="246" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">KMS Salting &amp; Anonymization Engine</text>
+              <text x="125" y="262" text-anchor="middle" fill="#10b981" font-size="9">HMAC-SHA256 (CPF, KMS_DynamicSalt)</text>
+            </g>
+
+            <line x1="510" y1="205" x2="550" y2="205" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="550,200 560,205 550,210" fill="#94a3b8"/>
+
+            <!-- Column 3: Storage & Output Views -->
+            <g transform="translate(560, 60)">
+              <rect width="330" height="290" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+              <text x="165" y="25" text-anchor="middle" fill="#34d399" font-size="12" font-weight="bold">ICEBERG GOLD &amp; DYNAMIC VIEWS</text>
+
+              <!-- View Output 1 -->
+              <rect x="15" y="45" width="300" height="65" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
+              <text x="25" y="65" fill="#f8fafc" font-size="10" font-weight="bold">View: v_auditoria_completa (Full Access)</text>
+              <text x="25" y="82" fill="#94a3b8" font-size="9">Colunas: id_contrato, cpf_cliente, nome, saldo, pdd</text>
+              <text x="25" y="97" fill="#3b82f6" font-size="9">Retorno: Dados integrais sem qualquer restrição</text>
+
+              <!-- View Output 2 -->
+              <rect x="15" y="125" width="300" height="65" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
+              <text x="25" y="145" fill="#f8fafc" font-size="10" font-weight="bold">View: v_risco_regional (RLS + CLS Applied)</text>
+              <text x="25" y="162" fill="#94a3b8" font-size="9">Colunas: id_contrato, id_hash, ***MASKED***, saldo, pdd</text>
+              <text x="25" y="177" fill="#f59e0b" font-size="9">Filtro Aplicado: WHERE uf_agencia = 'RS'</text>
+
+              <!-- View Output 3 -->
+              <rect x="15" y="205" width="300" height="65" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
+              <text x="25" y="225" fill="#f8fafc" font-size="10" font-weight="bold">View: v_bacen_3040_sanitized (Regulatory Mart)</text>
+              <text x="25" y="242" fill="#94a3b8" font-size="9">Colunas: cod_op, id_cli_hash, mod, vlr_vinc, stg_ecl</text>
+              <text x="25" y="257" fill="#10b981" font-size="9">Conformidade: LGPD Art. 13 &amp; BACEN 3040 XML</text>
+            </g>
+          </svg>
+        </div>
       </section>
 
-      <!-- SEÇÃO 03: LINHAGEM FÍSICA DE DADOS END-TO-END -->
+      <!-- SEÇÃO 03: LINHAGEM FÍSICA DE DADOS END-TO-END PARA REPORTES BACEN E CVM -->
       <section class="section" id="linhagem-dados">
         <div class="sec-hdr">
           <div class="sec-num" style="color:var(--spark)">03</div>
           <div class="sec-title">
             <div class="sec-subtitle">Trilha de Auditoria Inviolável</div>
-            <h2>Linhagem Física de Dados: Trilha de Auditoria End-to-End</h2>
+            <h2>Linhagem Física de Dados: Reportes BACEN &amp; CVM</h2>
           </div>
         </div>
         <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          Uma exigência central das auditorias do Banco Central é a capacidade de demonstrar a <strong>linhagem física dos dados (Data Lineage)</strong>: a rastreabilidade completa de como cada número informado no XML do DOC 3040 foi originado no banco de dados transacional e transformado ao longo da arquitetura Lakehouse.
+          Uma exigência central dos órgãos reguladores (Banco Central e Comissão de Valores Mobiliários) é a capacidade de demonstrar a <strong>linhagem física dos dados (Data Lineage)</strong>. A instituição deve comprovar como cada valor numérico publicado nos informes regulatórios foi originado nos sistemas transacionais de custódia e concessão, registrando cada transformação ao longo da malha de dados.
         </p>
 
-        <h3>Etapas da Trilha Física de Ingestão e Processamento</h3>
-        <ol style="line-height: 1.9; color: var(--text-dim); margin-left: 20px; margin-bottom: 28px;">
-          <li><strong>Origem Transacional (Core Banking OLTP):</strong> Banco de Dados Amazon Aurora PostgreSQL registrando as movimentações de concessão, liquidação e renegociação em tempo real.</li>
-          <li><strong>Captura de Mudanças (CDC - Change Data Capture):</strong> AWS DMS (Database Migration Service) extraindo os logs do Postgres WAL e transmitindo em streaming para o Amazon MSK (Apache Kafka).</li>
-          <li><strong>S3 Bronze Layer (Raw Ingestion):</strong> Armazenamento imutável dos eventos originais em formato Parquet particionado por ano, mês, dia e hora (padrão de auditabilidade RAW).</li>
-          <li><strong>S3 Silver Layer (Iceberg Curated):</strong> Jobs PySpark no AWS EMR deduplicando registros, aplicando padronização de tipos e persistindo em tabelas Apache Iceberg com suporte a Time Travel.</li>
-          <li><strong>S3 Gold Layer (Reporting Mart):</strong> Aplicação dos modelos estatísticos de ECL (Perda Esperada CMN 4.966), classificação de estágios e agregação mensal por modalidade.</li>
-          <li><strong>Gerador XML BACEN DOC 3040:</strong> Serviço containerizado (ECS/Fargate) consumindo a Gold Layer e estruturando o XML homologado pela API Direct do Banco Central.</li>
-        </ol>
+        <h3>Escopo de Reportes Regulatórios Atendidos</h3>
+        <div class="concept-grid" style="margin-bottom: 28px;">
+          <div class="concept-card">
+            <h4>BACEN DOC 3040 &amp; DLO (DOC 2061)</h4>
+            <p>Rastreamento individualizado de carteiras de crédito, inadimplência e alocação de capital regulatório de risco (Patrimônio de Referência / Basileia III).</p>
+          </div>
+          <div class="concept-card">
+            <h4>CVM Informe Diário (Res. CVM 175/555)</h4>
+            <p>Linhagem contínua da apuração do NAV (Net Asset Value), movimentações de cotistas, aplicações e resgates diários dos fundos de investimento.</p>
+          </div>
+          <div class="concept-card">
+            <h4>CVM CDA (Composição de Carteiras)</h4>
+            <p>Detalhamento físico da custódia de ativos (Títulos Públicos SELIC, Debêntures B3, Ações, FIDC), batendo posições com custodiantes centrais.</p>
+          </div>
+        </div>
+
+        <h3>Técnicas de Implementação de Linhagem Física</h3>
+        <ul style="line-height: 1.9; color: var(--text-dim); margin-left: 20px; margin-bottom: 28px;">
+          <li><strong>Padrão OpenLineage &amp; Marquez:</strong> Emissão de eventos estruturados no pipeline PySpark notificando início, progresso e fim dos jobs, registrando namespace dos datasets, Run IDs, schemas de entrada/saída e facetas de transformação.</li>
+          <li><strong>Agente Spline em Apache Spark:</strong> Inspeção automática do plano lógico do Spark (Catalyst <code>LogicalPlan</code> AST) para extração da linhagem em nível de coluna sem necessidade de instrumentação manual do código.</li>
+          <li><strong>Metadata Lineage no Apache Iceberg:</strong> Utilização das tabelas do sistema Iceberg (<code>snapshots</code>, <code>manifests</code>, <code>history</code> e a função <code>system.ancestors_of()</code>) para garantir uma trilha temporal inviolável com suporte a Time Travel e auditoria retrospectiva.</li>
+        </ul>
+
+        <h3>Matriz de Proveniência em Nível de Coluna (Field-Level Lineage Matrix)</h3>
+        <div style="overflow-x:auto; margin: 24px 0;">
+          <table style="width:100%; border-collapse: collapse; text-align: left; font-size:14px; background:var(--card-bg); border-radius:8px; overflow:hidden; border: 1px solid var(--border);">
+            <thead>
+              <tr style="background:#1e293b; color:#94a3b8; border-bottom:1px solid #334155;">
+                <th style="padding:14px;">Reporte Alvo</th>
+                <th style="padding:14px;">Campo Regulatório Target</th>
+                <th style="padding:14px;">Tabela / Coluna Origem (OLTP)</th>
+                <th style="padding:14px;">Camada Silver (Iceberg Curated)</th>
+                <th style="padding:14px;">Transformação / Regra de Negócio</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid #334155;">
+                <td style="padding:12px; font-weight:bold; color:var(--aws);">BACEN 3040</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">VlrVinc</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">aurora.tb_contrato.vl_saldo_vincendo</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">silver.contratos_dedup.vlr_vincendo</td>
+                <td style="padding:12px;">Deduplicação CDC + Abatimento de Juros Pro-Rata.</td>
+              </tr>
+              <tr style="border-bottom:1px solid #334155;">
+                <td style="padding:12px; font-weight:bold; color:var(--aws);">BACEN 3040</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">StgECL</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">aurora.tb_contrato.qt_dias_atraso</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">silver.contratos_dedup.dias_atraso</td>
+                <td style="padding:12px;">Classificação CMN 4.966 (Stage 1, 2 ou 3 via SICR).</td>
+              </tr>
+              <tr style="border-bottom:1px solid #334155;">
+                <td style="padding:12px; font-weight:bold; color:var(--spark);">CVM 175</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">VL_COTA_DIA</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">b3.tb_posicao_titulos.pu_fechamento</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">silver.carteiras_mtm.valor_posicao_mtm</td>
+                <td style="padding:12px;">Consolidação MtM / Quantidade Cotas Emitidas.</td>
+              </tr>
+              <tr>
+                <td style="padding:12px; font-weight:bold; color:var(--spark);">CVM CDA</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">QtdMat</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">selic.tb_custodia_diaria.qtd_titulos</td>
+                <td style="padding:12px; font-family:'DM Mono', monospace;">silver.custodia_selic.qtd_custodiada</td>
+                <td style="padding:12px;">Reconciliação de Posições com Extrato SELIC.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      <!-- SEÇÃO 04: AWS GLUE DATA QUALITY (DQDL) & CIRCUIT BREAKER -->
-      <section class="section" id="glue-dqdl">
+      <!-- SEÇÃO 04: SNIPPETS PRÁTICOS DE PYSPARK PARA LINHAGEM DE COLUNA -->
+      <section class="section" id="pyspark-lineage">
         <div class="sec-hdr">
           <div class="sec-num" style="color:var(--aws)">04</div>
           <div class="sec-title">
-            <div class="sec-subtitle">Qualidade Automatizada com Bloqueio de Pipeline</div>
-            <h2>AWS Glue Data Quality (DQDL) & Circuit Breaker Automatizado</h2>
+            <div class="sec-subtitle">Código de Produção &amp; Rastreabilidade</div>
+            <h2>Snippets Práticos de PySpark para Linhagem de Coluna</h2>
           </div>
         </div>
         <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          Para evitar o envio de arquivos regulatórios com erros de inconsistência ao Banco Central, a plataforma utiliza o <strong>AWS Glue Data Quality</strong> acoplado a um mecanismo de <strong>Circuit Breaker</strong>. As regras são declaradas em <strong>DQDL (Data Quality Definition Language)</strong> e avaliadas antes da etapa de empacotamento XML.
+          Abaixo apresentamos dois scripts PySpark completos e prontos para produção, demonstrando a instrumentação de linhagem em nível de coluna e a auditoria histórica via Apache Iceberg Time-Travel.
         </p>
 
-        <h3>Exemplo de Conjunto de Regras DQDL para Carteira de Crédito</h3>
-        <div class="code-box" style="background:#0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-family: 'DM Mono', monospace; font-size: 0.9rem; overflow-x: auto; color: #f8fafc; margin: 20px 0;">
+        <h3>1. Pipeline PySpark com Emissão de Eventos OpenLineage &amp; Metadata Ingestion</h3>
+        <p>O snippet a seguir realiza a leitura da camada Silver, aplica transformações regulatórias de crédito e registra explicitamente a proveniência das colunas nos metadados da tabela Gold e no barramento OpenLineage:</p>
+
+        <div class="code-box" style="background:#0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-family: 'DM Mono', monospace; font-size: 0.85rem; overflow-x: auto; color: #f8fafc; margin: 20px 0;">
+<pre style="margin:0;"><code># PySpark Job: Ingestao Gold com Rastreabilidade de Coluna e Facetas OpenLineage
+import json
+import time
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, DecimalType, IntegerType
+
+def create_spark_lineage_session() -&gt; SparkSession:
+    """Inicializa Spark Session configurada para Apache Iceberg e OpenLineage Listener."""
+    return SparkSession.builder \
+        .appName("BACEN_3040_Column_Lineage_Pipeline") \
+        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
+        .config("spark.sql.catalog.lakehouse", "org.apache.iceberg.spark.SparkCatalog") \
+        .config("spark.sql.catalog.lakehouse.type", "glue") \
+        .config("spark.extraListeners", "io.openlineage.spark.agent.OpenLineageSparkListener") \
+        .config("spark.openlineage.transport.type", "http") \
+        .config("spark.openlineage.transport.url", "http://marquez.data-governance.internal:5000") \
+        .config("spark.openlineage.namespace", "production_financial_lakehouse") \
+        .getOrCreate()
+
+def process_bacen_3040_gold_lineage(spark: SparkSession, dt_base: str):
+    # 1. Leitura com captura de linhagem de origem
+    df_silver = spark.read.table("lakehouse.silver_credito.tb_operacoes_contrato") \
+        .filter(F.col("dt_snapshot") == dt_base)
+
+    # 2. Transformacoes de Coluna com Annotations de Metadata
+    # Transformacao 1: Hash Anonimizado de PII via HMAC SHA256 (LGPD Compliance)
+    kms_salt = "KMS_SECRET_SALT_2026_SFN"
+    df_transformed = df_silver.withColumn(
+        "id_cli_hash",
+        F.sha2(F.concat(F.col("cpf_cnpj_cliente"), F.lit(kms_salt)), 256)
+    )
+
+    # Transformacao 2: Calculo de Estagio ECL CMN 4.966 (IFRS 9)
+    df_transformed = df_transformed.withColumn(
+        "stg_ecl",
+        F.when(F.col("dias_atraso") &lt;= 30, F.lit(1))
+         .when((F.col("dias_atraso") &gt; 30) &amp; (F.col("dias_atraso") &lt;= 90), F.lit(2))
+         .otherwise(F.lit(3))
+    )
+
+    # Transformacao 3: Agregacao de Saldos Vincendos para BACEN DOC 3040
+    df_transformed = df_transformed.withColumn(
+        "vlr_vinc_total",
+        F.col("vlr_vinc_curto_prazo") + F.col("vlr_vinc_longo_prazo")
+    )
+
+    # 3. Mapeamento de Dicionario de Linhagem de Colunas (Column Lineage Facet)
+    column_lineage_metadata = {
+        "dataset": "lakehouse.gold_bacen.doc3040_mensal",
+        "dt_base": dt_base,
+        "transformations": [
+            {
+                "target_column": "id_cli_hash",
+                "source_columns": ["silver_credito.tb_operacoes_contrato.cpf_cnpj_cliente"],
+                "transform_type": "HMAC_SHA256_HASH_ANONYMIZATION",
+                "rule": "LGPD Art 13 & CMN 4893"
+            },
+            {
+                "target_column": "stg_ecl",
+                "source_columns": ["silver_credito.tb_operacoes_contrato.dias_atraso"],
+                "transform_type": "BUSINESS_RULE_BUCKETING",
+                "rule": "CMN 4.966 Stage Classification"
+            },
+            {
+                "target_column": "vlr_vinc_total",
+                "source_columns": [
+                    "silver_credito.tb_operacoes_contrato.vlr_vinc_curto_prazo",
+                    "silver_credito.tb_operacoes_contrato.vlr_vinc_longo_prazo"
+                ],
+                "transform_type": "ARITHMETIC_ADDITION",
+                "rule": "BACEN 3040 Vincendo Consolidado"
+            }
+        ]
+    }
+
+    # 4. Escrita na Gold Layer Iceberg injetando Dicionario de Linhagem nas Propriedades da Tabela
+    json_lineage = json.dumps(column_lineage_metadata)
+    
+    df_transformed.write \
+        .format("iceberg") \
+        .mode("overwrite") \
+        .option("snapshot-property.lineage_facet", json_lineage) \
+        .option("snapshot-property.audit_user", "emr_bacen_pipeline_role") \
+        .saveAsTable("lakehouse.gold_bacen.doc3040_mensal")
+
+    print(f"[SUCCESS] Tabela Gold BACEN 3040 gerada para {dt_base} com linhagem de coluna gravada.")
+
+if __name__ == "__main__":
+    spark_sess = create_spark_lineage_session()
+    process_bacen_3040_gold_lineage(spark_sess, "2026-07-31")</code></pre>
+        </div>
+
+        <h3>2. Auditar Linhagem e Snapshot History no Apache Iceberg com PySpark SQL</h3>
+        <p>Este script é utilizado por auditores para rastrear a evolução dos commits de uma tabela, verificar rollback de dados e extrair o histórico de ancestrais em casos de fiscalização regulatória:</p>
+
+        <div class="code-box" style="background:#0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-family: 'DM Mono', monospace; font-size: 0.85rem; overflow-x: auto; color: #f8fafc; margin: 20px 0;">
+<pre style="margin:0;"><code># PySpark Script: Auditoria de Linhagem Historica e Metadata Iceberg Time-Travel
+from pyspark.sql import SparkSession
+
+def audit_iceberg_table_lineage(spark: SparkSession, table_name: str):
+    print(f"==================================================")
+    print(f"AUDITORIA DE LINHAGEM E COMMITS: {table_name}")
+    print(f"==================================================")
+
+    # 1. Consulta Historico de Snapshots (Commits Imutaveis)
+    print("\n--- 1. HISTORICO DE COMMITS DA TABELA (Iceberg Snapshots) ---")
+    df_snapshots = spark.sql(f"SELECT committed_at, snapshot_id, parent_id, operation, summary['lineage_facet'] as lineage_metadata FROM {table_name}.snapshots ORDER BY committed_at DESC")
+    df_snapshots.show(10, truncate=False)
+
+    # 2. Consulta de Linhagem Ancestral (System Ancestors)
+    print("\n--- 2. TRILHA DE ANCESTRAIS DA REVISAO ATUAL ---")
+    df_ancestors = spark.sql(f"SELECT snapshot_id, parent_id, is_current_ancestor FROM {table_name}.ancestors_of((SELECT snapshot_id FROM {table_name}.snapshots ORDER BY committed_at DESC LIMIT 1))")
+    df_ancestors.show(10, truncate=False)
+
+    # 3. Leitura Time-Travel para Comparacao de Auditoria (Snapshot N-1 vs Snapshot Atual)
+    snapshots_list = df_snapshots.collect()
+    if len(snapshots_list) &gt;= 2:
+        current_snap = snapshots_list[0]['snapshot_id']
+        previous_snap = snapshots_list[1]['snapshot_id']
+        
+        print(f"\n--- 3. COMPARATIVO TIME-TRAVEL: Snapshots {previous_snap} vs {current_snap} ---")
+        df_prev = spark.read.option("snapshot-id", previous_snap).table(table_name)
+        df_curr = spark.read.option("snapshot-id", current_snap).table(table_name)
+        
+        diff_count = df_curr.count() - df_prev.count()
+        print(f"Variação liquida de registros entre commits: {diff_count} linhas.")
+
+if __name__ == "__main__":
+    spark = SparkSession.builder.getOrCreate()
+    audit_iceberg_table_lineage(spark, "lakehouse.gold_bacen.doc3040_mensal")</code></pre>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: AWS GLUE DATA QUALITY (DQDL) & CIRCUIT BREAKER -->
+      <section class="section" id="glue-dqdl">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Qualidade Automatizada com Bloqueio de Pipeline</div>
+            <h2>AWS Glue Data Quality (DQDL) &amp; Circuit Breaker Automatizado</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para evitar a transmissão de reportes inconsistentes ao Banco Central ou à CVM, a plataforma utiliza o <strong>AWS Glue Data Quality</strong> acoplado a um mecanismo de <strong>Circuit Breaker</strong>. As regras são declaradas em <strong>DQDL (Data Quality Definition Language)</strong> e avaliadas antes de qualquer etapa de empacotamento XML.
+        </p>
+
+        <h3>Conjunto de Regras DQDL Completo para Carteiras de Crédito e Investimentos</h3>
+        <div class="code-box" style="background:#0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-family: 'DM Mono', monospace; font-size: 0.85rem; overflow-x: auto; color: #f8fafc; margin: 20px 0;">
 <pre style="margin:0;"><code>Rules = [
-    # Completude obrigatória das chaves primárias e campos de risco
+    # 1. Completude obrigatoria de identificadores e atributos criticos
     Completeness "CodOp" = 1.0,
     Completeness "Mod" = 1.0,
     Completeness "TaxEfet" = 1.0,
     Completeness "StgECL" = 1.0,
 
-    # Unicidade da operação no snapshot mensal
+    # 2. Unicidade da chave primaria no snapshot mensal
     Uniqueness "CodOp" &gt; 0.9999,
 
-    # Validação de domínio das modalidades de crédito BACEN
-    ColumnValues "Mod" in [0202, 0401, 0801, 1401, 1502],
+    # 3. Validacao de dominio das modalidades de credito BACEN
+    ColumnValues "Mod" in [0202, 0401, 0801, 1401, 1502, 1801],
 
-    # Garantia de taxas efetivas positivas e razoáveis
+    # 4. Limites de razoabilidade para taxas efetivas anuais
     ColumnValues "TaxEfet" &gt; 0.0,
     ColumnValues "TaxEfet" &lt;= 250.0,
 
-    # Validação de consistência do Estágio ECL CMN 4.966
+    # 5. Validacao de consistencia dos Estagios ECL da CMN 4.966
     ColumnValues "StgECL" in [1, 2, 3],
 
-    # Regra de Negócio Customizada: Operações com atraso &gt; 90d devem estar obrigatoriamente no Stage 3
+    # 6. Regra de Negocio Customizada: Operacoes com atraso &gt;= 90d devem estar obrigatoriamente no Stage 3
     CustomSql "SELECT COUNT(*) FROM primary WHERE DiasAtraso &gt;= 90 AND StgECL &lt;&gt; 3" = 0,
 
-    # Reconciliação com valor total do balancete COSIF (tolerância de 0,1%)
+    # 7. Regra de Negocio Customizada: Validacao de consistencia da cota de fundos CVM
+    CustomSql "SELECT COUNT(*) FROM primary WHERE VL_COTA_DIA &lt;= 0 OR NAV &lt;= 0" = 0,
+
+    # 8. Reconciliacao de valor total com o balancete COSIF (tolerancia maxima de 0,1%)
     AggregateMatch "SUM(VlrVinc + VlrVenc)" BETWEEN 0.999 * SUM_COSIF AND 1.001 * SUM_COSIF
 ]</code></pre>
         </div>
 
         <div class="concept-grid">
           <div class="concept-card">
-            <h4>Mecanismo do Circuit Breaker</h4>
-            <p>Se a pontuação de qualidade (DQ Score) for inferior a 100% ou se qualquer regra crítica falhar, o orquestrador (AWS Step Functions) interrompe a execução do pipeline imediatamente, impedindo a geração do XML.</p>
+            <h4>Mecanismo do Circuit Breaker em Step Functions</h4>
+            <p>Se a pontuação de qualidade (DQ Score) for inferior a 100% ou se qualquer regra de integridade crítica falhar, o orquestrador interrompe a execução do pipeline imediatamente, impedindo a geração do XML BACEN/CVM.</p>
           </div>
           <div class="concept-card">
-            <h4>Dead Letter Queue (DLQ) & Alertas</h4>
-            <p>Os registros reprovados pelas regras DQDL são isolados em uma bucket S3 Quarantine (DLQ), e um alerta de alta prioridade é disparado via Amazon EventBridge e SNS para o time de Data Quality e Conformidade.</p>
+            <h4>Quarentena em Dead Letter Queue (DLQ) &amp; Alertas</h4>
+            <p>Os registros que violarem as regras DQDL são isolados em uma bucket S3 de Quarentena (DLQ) para análise da equipe de Data Quality. O Amazon EventBridge dispara um alerta crítico via SNS e PagerDuty.</p>
           </div>
         </div>
       </section>
 
-      <!-- SEÇÃO 05: ARQUITETURA DE DADOS DE CUSTÓDIA E INVESTIMENTOS -->
+      <!-- SEÇÃO 06: ARQUITETURA DE DADOS DE CUSTÓDIA E INVESTIMENTOS -->
       <section class="section" id="custodia-investimentos">
         <div class="sec-hdr">
-          <div class="sec-num" style="color:var(--spark)">05</div>
+          <div class="sec-num" style="color:var(--spark)">06</div>
           <div class="sec-title">
             <div class="sec-subtitle">Gestão de Ativos de Mercado no Lakehouse</div>
             <h2>Arquitetura de Dados de Custódia e Investimentos</h2>
           </div>
         </div>
         <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          A consolidacão de ativos de tesouraria, carteiras administradas e fundos de investimento exige um modelo de dados escalável no Lakehouse para processar cotações diárias dos custodiantes centrais <strong>(B3, SELIC, CETIP)</strong>.
+          A consolidação de ativos de tesouraria, carteiras administradas e fundos de investimento exige um modelo de dados escalável no Lakehouse para processar cotações diárias dos custodiantes centrais <strong>(B3, SELIC, CETIP)</strong> e gerar reportes para a CVM.
         </p>
 
         <h3>Precificação de Renda Fixa: Marcação a Mercado (MtM) vs Marcação na Curva (MtC)</h3>
-        <p>A contabilidade bancária exige a coexistência de dois critérios de valoração para títulos públicos e privados (NTN-B, LFT, Debêntures, CDBs):</p>
+        <p>A contabilidade de ativos financeiros exige a coexistência de dois critérios de valoração para títulos públicos e privados (NTN-B, LFT, Debêntures, CDBs):</p>
 
         <ul style="line-height: 1.8; color: var(--text-dim); margin-left: 20px; margin-bottom: 24px;">
           <li><strong>Marcação na Curva (MtC - Custo Amortizado):</strong> O valor do título evolui diariamente pela taxa de juros contratada pro-rata temporis:
@@ -252,8 +591,8 @@
           </li>
         </ul>
 
-        <h3>Apuração do Valor da Cota em Fundos de Investimento (NAV)</h3>
-        <p>Para fundos de investimento (FIC, FIM, FII, FIDC), o cálculo diário do <strong>NAV (Net Asset Value - Valor Patrimonial da Cota)</strong> consolida a carteira de ativos deduzida das provisões de taxas e passivos:</p>
+        <h3>Apuração do Valor da Cota em Fundos de Investimento (NAV CVM)</h3>
+        <p>Para fundos de investimento (Resolução CVM 175), o cálculo diário do <strong>NAV (Net Asset Value - Valor Patrimonial da Cota)</strong> consolida a carteira de ativos deduzida das provisões de taxas e passivos:</p>
 
         <div style="font-size: 1.2rem; text-align: center; margin: 20px 0; background: rgba(255,255,255,0.03); padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; border: 1px solid var(--border);">
           \[ \text{NAV}_t = \frac{\sum \text{Ativos}_{\text{MtM}} - \text{Passivos e Taxas de Adm/Performance}}{\text{Quantidade Total de Cotas Emitidas}} \]
@@ -268,7 +607,7 @@
                 <th style="padding:14px;">Classe de Ativo</th>
                 <th style="padding:14px;">Mecanismo de Precificação</th>
                 <th style="padding:14px;">Custodiante Central</th>
-                <th style="padding:14px;">Regra Contábil COSIF</th>
+                <th style="padding:14px;">Regra Contábil COSIF / CVM</th>
                 <th style="padding:14px;">Particionamento Iceberg</th>
               </tr>
             </thead>
@@ -281,7 +620,7 @@
                 <td style="padding:12px; font-family:'DM Mono', monospace;">days(dt_posicao), classe_ativo</td>
               </tr>
               <tr style="border-bottom:1px solid #334155;">
-                <td style="padding:12px; font-weight:bold; color:var(--aws);">Debêntures / Cri / Cra</td>
+                <td style="padding:12px; font-weight:bold; color:var(--aws);">Debêntures / CRI / CRA</td>
                 <td style="padding:12px;">MtM via taxas de spread ANBIMA.</td>
                 <td style="padding:12px;">B3 / CETIP</td>
                 <td style="padding:12px;">Ativos Financeiros a Valor Justo via Resultado.</td>
@@ -296,7 +635,7 @@
               </tr>
               <tr>
                 <td style="padding:12px; font-weight:bold; color:var(--aws);">Cotas de Fundos (FIM/FIDC)</td>
-                <td style="padding:12px;">Valor da Cota Diário (NAV).</td>
+                <td style="padding:12px;">Valor da Cota Diário (NAV CVM 175).</td>
                 <td style="padding:12px;">Administrador do Fundo</td>
                 <td style="padding:12px;">Aplicações em Cotas de Fundos de Investimento.</td>
                 <td style="padding:12px; font-family:'DM Mono', monospace;">days(dt_posicao), cnpj_fundo</td>
@@ -306,90 +645,97 @@
         </div>
       </section>
 
-      <!-- SEÇÃO 06: DIAGRAMA SVG NATIVO: LINHAGEM & CIRCUIT BREAKER -->
+      <!-- SEÇÃO 07: DIAGRAMA SVG NATIVO: LINHAGEM & CIRCUIT BREAKER -->
       <section class="section" id="diagrama-linhagem">
         <div class="sec-hdr">
-          <div class="sec-num" style="color:var(--spark)">06</div>
+          <div class="sec-num" style="color:var(--spark)">07</div>
           <div class="sec-title">
             <div class="sec-subtitle">Arquitetura de Qualidade e Governança</div>
-            <h2>Linhagem Física End-to-End & Circuit Breaker Glue DQ</h2>
+            <h2>Linhagem Física End-to-End &amp; Circuit Breaker Glue DQ</h2>
           </div>
         </div>
         <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          O diagrama interativo abaixo apresenta a malha de linhagem física desde o banco transacional de originação até a geração homologada do XML BACEN 3040, destacando a atuação do bloqueador automatizado (Circuit Breaker) e da governança de dados sensíveis no AWS Lake Formation.
+          O diagrama interativo abaixo apresenta a malha de linhagem física desde os bancos transacionais de originação e custódia até a geração homologada dos XMLs regulatórios para BACEN e CVM, destacando a atuação do bloqueador automatizado (Circuit Breaker) e da governança no AWS Lake Formation.
         </p>
 
+        <!-- DIAGRAMA SVG 2: LINHAGEM END-TO-END E CIRCUIT BREAKER -->
         <div class="svg-container" style="margin: 2rem 0; overflow-x: auto; text-align: center;">
-          <svg width="100%" height="auto" viewBox="0 0 920 320" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 10px;">
-            <text x="460" y="30" text-anchor="middle" fill="#f8fafc" font-size="15" font-weight="bold" letter-spacing="1">LINHAGEM FÍSICA END-TO-END &amp; GLUE DQ CIRCUIT BREAKER</text>
+          <svg width="100%" height="auto" viewBox="0 0 960 350" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 10px;">
+            <text x="480" y="30" text-anchor="middle" fill="#f8fafc" font-size="15" font-weight="bold" letter-spacing="1">LINHAGEM FÍSICA END-TO-END &amp; GLUE DQ CIRCUIT BREAKER (BACEN &amp; CVM)</text>
             
             <!-- Swimlane Labels / Flow Nodes -->
 
             <!-- Node 1: OLTP Core -->
-            <g transform="translate(30, 80)">
-              <rect width="140" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2.5"/>
-              <text x="70" y="28" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="bold">1. Core Banking</text>
-              <text x="70" y="48" text-anchor="middle" fill="#94a3b8" font-size="10">Aurora PostgreSQL</text>
-              <text x="70" y="66" text-anchor="middle" fill="#3b82f6" font-size="10">OLTP Contratos</text>
+            <g transform="translate(20, 80)">
+              <rect width="135" height="95" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2.5"/>
+              <text x="67" y="28" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">1. OLTP &amp; Custódia</text>
+              <text x="67" y="48" text-anchor="middle" fill="#94a3b8" font-size="9">Aurora PostgreSQL</text>
+              <text x="67" y="64" text-anchor="middle" fill="#94a3b8" font-size="9">SELIC / B3 Feeds</text>
+              <text x="67" y="80" text-anchor="middle" fill="#3b82f6" font-size="9">Transacional Core</text>
             </g>
 
-            <line x1="170" y1="125" x2="200" y2="125" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
-            <polygon points="200,120 210,125 200,130" fill="#94a3b8"/>
+            <line x1="155" y1="127" x2="185" y2="127" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="185,122 195,127 185,132" fill="#94a3b8"/>
 
             <!-- Node 2: Streaming Ingestion -->
-            <g transform="translate(210, 80)">
-              <rect width="140" height="90" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2.5"/>
-              <text x="70" y="28" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="bold">2. Ingestão CDC</text>
-              <text x="70" y="48" text-anchor="middle" fill="#94a3b8" font-size="10">AWS DMS + MSK</text>
-              <text x="70" y="66" text-anchor="middle" fill="#a855f7" font-size="10">Streaming Real-Time</text>
+            <g transform="translate(195, 80)">
+              <rect width="135" height="95" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2.5"/>
+              <text x="67" y="28" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">2. Ingestão CDC</text>
+              <text x="67" y="48" text-anchor="middle" fill="#94a3b8" font-size="9">AWS DMS + MSK</text>
+              <text x="67" y="64" text-anchor="middle" fill="#94a3b8" font-size="9">OpenLineage Agent</text>
+              <text x="67" y="80" text-anchor="middle" fill="#a855f7" font-size="9">Streaming Raw</text>
             </g>
 
-            <line x1="350" y1="125" x2="380" y2="125" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
-            <polygon points="380,120 390,125 380,130" fill="#94a3b8"/>
+            <line x1="330" y1="127" x2="360" y2="127" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="360,122 370,127 360,132" fill="#94a3b8"/>
 
             <!-- Node 3: Glue Data Quality -->
-            <g transform="translate(390, 80)">
-              <rect width="150" height="90" rx="8" fill="#1e293b" stroke="#facc15" stroke-width="2.5"/>
-              <text x="75" y="28" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="bold">3. AWS Glue DQ</text>
-              <text x="75" y="48" text-anchor="middle" fill="#94a3b8" font-size="10">Regras DQDL &amp; COSIF</text>
-              <text x="75" y="66" text-anchor="middle" fill="#facc15" font-size="10">Validação Automática</text>
+            <g transform="translate(370, 80)">
+              <rect width="145" height="95" rx="8" fill="#1e293b" stroke="#facc15" stroke-width="2.5"/>
+              <text x="72" y="28" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">3. AWS Glue DQ</text>
+              <text x="72" y="48" text-anchor="middle" fill="#94a3b8" font-size="9">Regras DQDL &amp; COSIF</text>
+              <text x="72" y="64" text-anchor="middle" fill="#94a3b8" font-size="9">Validação de Cota NAV</text>
+              <text x="72" y="80" text-anchor="middle" fill="#facc15" font-size="9">Quality Engine</text>
             </g>
 
             <!-- Circuit Breaker Branching -->
             <!-- Path PASS (Green) -->
-            <line x1="540" y1="125" x2="580" y2="125" stroke="#10b981" stroke-width="3"/>
-            <polygon points="580,120 590,125 580,130" fill="#10b981"/>
-            <text x="560" y="115" text-anchor="middle" fill="#10b981" font-size="10" font-weight="bold">PASS</text>
+            <line x1="515" y1="127" x2="555" y2="127" stroke="#10b981" stroke-width="3"/>
+            <polygon points="555,122 565,127 555,132" fill="#10b981"/>
+            <text x="535" y="117" text-anchor="middle" fill="#10b981" font-size="10" font-weight="bold">PASS</text>
 
             <!-- Path FAIL (Red - Circuit Breaker Triggered) -->
-            <line x1="465" y1="170" x2="465" y2="230" stroke="#ef4444" stroke-width="3"/>
-            <polygon points="460,230 465,240 470,230" fill="#ef4444"/>
-            <text x="495" y="200" fill="#ef4444" font-size="10" font-weight="bold">FAIL (DQ &lt; 100%)</text>
+            <line x1="442" y1="175" x2="442" y2="235" stroke="#ef4444" stroke-width="3"/>
+            <polygon points="437,235 442,245 447,235" fill="#ef4444"/>
+            <text x="475" y="205" fill="#ef4444" font-size="10" font-weight="bold">FAIL (DQ &lt; 100%)</text>
 
             <!-- DLQ / Block Node -->
-            <g transform="translate(390, 240)">
-              <rect width="150" height="60" rx="6" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
-              <text x="75" y="25" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="bold">CIRCUIT BREAKER</text>
-              <text x="75" y="42" text-anchor="middle" fill="#fca5a5" font-size="9">Bloqueio + DLQ + Alerta SNS</text>
+            <g transform="translate(370, 245)">
+              <rect width="145" height="65" rx="6" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
+              <text x="72" y="25" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="bold">CIRCUIT BREAKER</text>
+              <text x="72" y="42" text-anchor="middle" fill="#fca5a5" font-size="9">Step Functions Halt</text>
+              <text x="72" y="55" text-anchor="middle" fill="#fca5a5" font-size="9">Quarentena S3 DLQ + SNS</text>
             </g>
 
             <!-- Node 4: Lake Formation & Iceberg -->
-            <g transform="translate(590, 80)">
-              <rect width="140" height="90" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2.5"/>
-              <text x="70" y="28" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="bold">4. Lake Formation</text>
-              <text x="70" y="48" text-anchor="middle" fill="#94a3b8" font-size="10">Cell Security + LGPD</text>
-              <text x="70" y="66" text-anchor="middle" fill="#10b981" font-size="10">Iceberg Gold Layer</text>
+            <g transform="translate(565, 80)">
+              <rect width="145" height="95" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2.5"/>
+              <text x="72" y="28" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">4. Lake Formation</text>
+              <text x="72" y="48" text-anchor="middle" fill="#94a3b8" font-size="9">Cell Security + RLS/CLS</text>
+              <text x="72" y="64" text-anchor="middle" fill="#94a3b8" font-size="9">Spline AST Lineage</text>
+              <text x="72" y="80" text-anchor="middle" fill="#10b981" font-size="9">Iceberg Gold Layer</text>
             </g>
 
-            <line x1="730" y1="125" x2="760" y2="125" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
-            <polygon points="760,120 770,125 760,130" fill="#94a3b8"/>
+            <line x1="710" y1="127" x2="740" y2="127" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="740,122 750,127 740,132" fill="#94a3b8"/>
 
-            <!-- Node 5: BACEN XML -->
-            <g transform="translate(770, 80)">
-              <rect width="125" height="90" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
-              <text x="62" y="28" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="bold">5. BACEN XML</text>
-              <text x="62" y="48" text-anchor="middle" fill="#94a3b8" font-size="10">DOC 3040 Direct</text>
-              <text x="62" y="66" text-anchor="middle" fill="#38bdf8" font-size="10">Transmissão SFN</text>
+            <!-- Node 5: BACEN & CVM XML Dispatcher -->
+            <g transform="translate(750, 80)">
+              <rect width="185" height="95" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
+              <text x="92" y="28" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="bold">5. Transmissão Regulatória</text>
+              <text x="92" y="48" text-anchor="middle" fill="#94a3b8" font-size="9">BACEN DOC 3040 / DLO</text>
+              <text x="92" y="64" text-anchor="middle" fill="#94a3b8" font-size="9">CVM 175 NAV / CDA XML</text>
+              <text x="92" y="80" text-anchor="middle" fill="#38bdf8" font-size="9">SFN Direct Integration</text>
             </g>
           </svg>
         </div>
@@ -432,10 +778,30 @@
         }
       }
     }
+    window.toggleNav = toggleNav;
+
+    function toggleCategory(catId, element) {
+      const categoryContent = document.getElementById(catId);
+      if (categoryContent) {
+        categoryContent.classList.toggle('expanded');
+        categoryContent.classList.toggle('open');
+        if (element) {
+          element.classList.toggle('expanded');
+          element.classList.toggle('active');
+          const arrow = element.querySelector('.arrow');
+          if (arrow) {
+            const isOpen = categoryContent.classList.contains('expanded') || categoryContent.classList.contains('open');
+            arrow.innerHTML = isOpen ? '▼' : '▶';
+          }
+        }
+      }
+    }
+    window.toggleCategory = toggleCategory;
 
     function scrollToTop() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    window.scrollToTop = scrollToTop;
 
     window.addEventListener('scroll', function() {
       var scrollY = window.pageYOffset;
