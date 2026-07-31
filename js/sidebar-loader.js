@@ -54,31 +54,35 @@ window.scrollToTop = scrollToTop;
 
 if (typeof document !== 'undefined' && document.addEventListener) {
     document.addEventListener("DOMContentLoaded", () => {
-        // Determine the root prefix based on the script's src
-        // This allows the sidebar to load correctly regardless of folder depth
+        // Resolve the absolute URL of THIS script using its resolved src attribute.
+        // document.currentScript only works during initial parse, so we use querySelector.
         const scriptTag = document.querySelector('script[src*="sidebar-loader.js"]');
         if (!scriptTag) return;
-        
-        const src = scriptTag.getAttribute('src');
-        const rootPrefix = src.replace('js/sidebar-loader.js', '');
-        
-        fetch(`${rootPrefix}components/sidebar.html?t=${Date.now()}`)
+
+        // Build the absolute URL of the script by resolving it against the document base.
+        // This works correctly on GitHub Pages regardless of folder depth.
+        const scriptAbsUrl = new URL(scriptTag.getAttribute('src'), window.location.href).href;
+        // rootAbsUrl = everything up to and including the repo root (where index.html lives)
+        // e.g. "https://user.github.io/repo/" or "http://localhost:5500/"
+        const rootAbsUrl = scriptAbsUrl.replace(/js\/sidebar-loader\.js(\?.*)?$/, '');
+
+        fetch(`${rootAbsUrl}components/sidebar.html?t=${Date.now()}`)
             .then(response => {
-                if (!response.ok) throw new Error('Failed to load sidebar');
+                if (!response.ok) throw new Error('Failed to load sidebar: ' + response.status);
                 return response.text();
             })
             .then(html => {
-                // Re-map the relative paths in the sidebar HTML so they resolve correctly
-                // from the current page's directory level.
+                // Re-map all relative hrefs in the sidebar to absolute URLs rooted at rootAbsUrl.
+                // This ensures links work from any page depth.
                 let modifiedHtml = html;
-                
-                // 1. Fix standard page links (e.g., href="pages/...")
-                modifiedHtml = modifiedHtml.replace(/href="(pages\/[^"]*)"/g, `href="${rootPrefix}$1"`);
-                // 2. Fix index link (href="index.html")
-                modifiedHtml = modifiedHtml.replace(/href="(index\.html[^"]*)"/g, `href="${rootPrefix}$1"`);
-                // 3. Fix absolute-looking links that were generated in subpages previously (e.g., href="../../pages/...")
-                modifiedHtml = modifiedHtml.replace(/href="\.\.\/\.\.\/(pages\/[^"]*)"/g, `href="${rootPrefix}$1"`);
-                modifiedHtml = modifiedHtml.replace(/href="\.\.\/\.\.\/(index\.html[^"]*)"/g, `href="${rootPrefix}$1"`);
+
+                // 1. Fix standard page links: href="pages/..."  →  href="<root>pages/..."
+                modifiedHtml = modifiedHtml.replace(/href="(pages\/[^"]*)"/g, `href="${rootAbsUrl}$1"`);
+                // 2. Fix index link: href="index.html"  →  href="<root>index.html"
+                modifiedHtml = modifiedHtml.replace(/href="(index\.html[^"]*)"/g, `href="${rootAbsUrl}$1"`);
+                // 3. Fix any leftover relative links like href="../../pages/..."
+                modifiedHtml = modifiedHtml.replace(/href="\.\.\/\.\.\/(pages\/[^"]*)"/g, `href="${rootAbsUrl}$1"`);
+                modifiedHtml = modifiedHtml.replace(/href="\.\.\/\.\.\/(index\.html[^"]*)"/g, `href="${rootAbsUrl}$1"`);
 
                 const sidebarEl = document.getElementById('sidebar');
                 if (sidebarEl) {
