@@ -62,7 +62,7 @@ if (typeof document !== 'undefined' && document.addEventListener) {
         const src = scriptTag.getAttribute('src');
         const rootPrefix = src.replace('js/sidebar-loader.js', '');
         
-        fetch(`${rootPrefix}components/sidebar.html`)
+        fetch(`${rootPrefix}components/sidebar.html?t=${Date.now()}`)
             .then(response => {
                 if (!response.ok) throw new Error('Failed to load sidebar');
                 return response.text();
