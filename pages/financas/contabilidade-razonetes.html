@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Contabilização Bancária, Plano de Contas COSIF, Partidas Dobradas, Spot Accrual, CMN 4.966 Estágio 3 e Razonete Distribuído Data Mesh - AWS Data Mastery"/>
+  <title>Contabilização Bancária & Razonetes | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/financas/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Contabilização Bancária & Razonetes | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Dados Contábeis: Partidas Dobradas, Plano COSIF 15 dígitos, Accounting Translator e Data Mesh com Iceberg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+
+  <!-- Estilos Específicos para os Cards de Razonetes (T-Accounts) -->
+  <style>
+    .t-account-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 24px 0;
+    }
+    .t-account-card {
+      background: var(--card-bg, #0f172a);
+      border: 1px solid var(--border, #1e293b);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .t-account-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-bright, #f8fafc);
+      text-align: center;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--spark, #3b82f6);
+      margin-bottom: 12px;
+      font-family: 'DM Mono', monospace;
+    }
+    .t-account-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+    }
+    .t-account-body::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: var(--border, #334155);
+    }
+    .t-col {
+      padding: 0 8px;
+    }
+    .t-col-header {
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .t-col-debit { color: var(--ok, #10b981); }
+    .t-col-credit { color: var(--err, #f43f5e); }
+    .t-entry {
+      font-size: 0.8rem;
+      font-family: 'DM Mono', monospace;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Engenharia Financeira & Contabilidade</div>
+      <h1>Contabilização Bancária <em>& Razonete Distribuído</em></h1>
+      <p class="hero-d">A física das partidas dobradas na era do Data Mesh: Saldo Contábil de Curva vs Saldo Devedor, Plano de Contas COSIF de 15 dígitos do BACEN, Spot Accrual, Stop Accrual sob a Resolução CMN 4.966 Estágio 3 e Accounting Engine Translator com Apache Iceberg.</p>
+      <div class="pills">
+        <span class="pill">Partidas Dobradas (D/C)</span>
+        <span class="pill">COSIF BACEN 15 Dígitos</span>
+        <span class="pill">Spot & Stop Accrual</span>
+        <span class="pill">CMN 4.966 Estágio 3</span>
+        <span class="pill">Accounting Translator</span>
+        <span class="pill">Ledger Iceberg Data Mesh</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: SALDO CONTÁBIL VS SALDO DEVEDOR & SPOT ACCRUAL -->
+      <section class="section" id="saldo-accrual">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ext)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Valoração de Carteira e Reconhecimento de Receita</div>
+            <h2>Saldo Contábil (Curva / Valor Presente) vs Saldo Devedor Total</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Uma das distinções conceituais mais vitais entre a visão operacional de um sistema transacional e a visão contábil de um balanço bancário reside na diferença entre o dinheiro nominal contratado e o valor presente contábil da carteira de crédito.
+        </p>
+
+        <div class="callout callout-info" style="border-left-color: var(--ext);">
+          <h4 style="color: var(--ext);">Exemplo Prático de Curva Contábil</h4>
+          <p>Imagine uma operação de crédito de <strong>R$ 10.000,00</strong> (principal liberado ao cliente) contratada à taxa de 2,0% ao mês pelo prazo de 12 meses. O valor total de parcelas a serem pagas pelo cliente ao longo de um ano soma aproximadamente <strong>R$ 12.682,00</strong> (Principal + Juros Acumulados).</p>
+          
+          <ul style="margin-top: 10px; padding-left: 20px; line-height: 1.7;">
+            <li><strong>Saldo Devedor Total (Nominal):</strong> R$ 12.682,00. É o total de fluxos futuros que o cliente pagará caso honre o contrato até o vencimento sem amortização antecipada.</li>
+            <li><strong>Saldo Contábil (Curva / Valor Presente):</strong> No dia da originação (D-0), o Ativo do balanço registra exatamente <strong>R$ 10.000,00</strong>. A diferença de R$ 2.682,00 consiste em <em>Juros Vincendos Não Incorridos</em>, mantida em uma conta redutora de Ativo.</li>
+          </ul>
+        </div>
+
+        <h3>Mecânica da Apropriação Diária (Spot Accrual)</h3>
+        <p>
+          Pelo princípio contábil da competência (<em>Accrual Basis</em>), a receita financeira de juros não pode ser reconhecida toda no dia da assinatura do contrato, nem apenas no dia do pagamento da parcela pelo cliente. Ela deve ser apropriada <strong>pro-rata die</strong> (dia a dia util) no resultado do banco conforme o tempo transcorre.
+        </p>
+
+        <p>A fórmula da apropriação diária de juros (Spot Accrual) no dia \(d\) é dada por:</p>
+        <div style="font-size: 1.15rem; text-align: center; margin: 18px 0; background: rgba(255,255,255,0.03); padding: 14px; border-radius: 8px; font-family: 'DM Mono', monospace;">
+          \[ \text{Accrual}_d = \text{Saldo Contábil}_{d-1} \times \left[ (1 + i_{\text{anual}})^{\frac{1}{252}} - 1 \right] \]
+        </div>
+
+        <p>
+          Todo fim de dia útil (D-0), a rotina de dados roda o pipeline de Accrual. O valor calculado é incorporado ao Saldo Contábil do Ativo (fazendo a curva crescer) e creditado na DRE como <em>Receita de Operações de Crédito</em>.
+        </p>
+      </section>
+
+      <!-- SEÇÃO 02: PLANO DE CONTAS COSIF & RAZONETES T-ACCOUNT -->
+      <section class="section" id="plano-cosif">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ok)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Normatização BACEN & Partidas Dobradas</div>
+            <h2>Plano de Contas COSIF & Lançamentos Contábeis de Carteira</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O Plano Contábil das Instituições do Sistema Financeiro Nacional (COSIF), normatizado pelo Banco Central do Brasil, padroniza as contas contábeis através de uma estrutura analítica codificada em 15 dígitos. Cada movimentação financeira deve satisfazer o princípio das <strong>Partidas Dobradas</strong>: a soma de todos os Débitos deve ser estritamente igual à soma de todos os Créditos (\(\sum D - \sum C = 0\)).
+        </p>
+
+        <h3>Matriz do Plano de Contas COSIF (15 Dígitos BACEN)</h3>
+        <div style="overflow-x:auto; margin: 20px 0;">
+          <table class="data-table" style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+            <thead>
+              <tr style="background:var(--card-bg); text-align:left; border-bottom:2px solid var(--border);">
+                <th style="padding:10px;">Evento Financeiro</th>
+                <th style="padding:10px;">Título da Conta COSIF</th>
+                <th style="padding:10px;">Classificação Patrimonial</th>
+                <th style="padding:10px;">Código COSIF (15 dígitos)</th>
+                <th style="padding:10px;">D/C</th>
+                <th style="padding:10px;">Função Contábil & Descrição</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Concessao -->
+              <tr>
+                <td rowspan="2" style="font-weight:bold; background:rgba(255,255,255,0.02);">1. Concessão do Crédito</td>
+                <td>Financiamentos e Empréstimos</td>
+                <td>Ativo Circulante</td>
+                <td><code>1.6.1.10.00-1</code> (1.6.1.10.00.00-00-1)</td>
+                <td><span class="badge" style="background:var(--ok); color:#000;">D</span></td>
+                <td>Registra o direito de crédito (valor presente do principal liberado).</td>
+              </tr>
+              <tr>
+                <td>Caixa / Reservas Bancárias BACEN</td>
+                <td>Ativo (Disponividades)</td>
+                <td><code>1.1.1.10.00-4</code> (1.1.1.10.00.00-00-4)</td>
+                <td><span class="badge" style="background:var(--err); color:#fff;">C</span></td>
+                <td>Saída de recursos financeiros das disponividades da instituição.</td>
+              </tr>
+              <!-- Accrual -->
+              <tr style="border-top:1px solid var(--border);">
+                <td rowspan="2" style="font-weight:bold; background:rgba(255,255,255,0.02);">2. Spot Accrual Diário</td>
+                <td>Rendas a Receber (Juros Acumulados)</td>
+                <td>Ativo Circulante (Curva)</td>
+                <td><code>1.6.1.90.00-3</code> (1.6.1.90.00.00-00-3)</td>
+                <td><span class="badge" style="background:var(--ok); color:#000;">D</span></td>
+                <td>Incorpora pro-rata die os juros no valor contábil do Ativo.</td>
+              </tr>
+              <tr>
+                <td>Receitas de Operações de Crédito</td>
+                <td>DRE (Resultado Operacional)</td>
+                <td><code>7.1.1.10.00-9</code> (7.1.1.10.00.00-00-9)</td>
+                <td><span class="badge" style="background:var(--err); color:#fff;">C</span></td>
+                <td>Reconhecimento do resultado financeiro auferido no dia no DRE.</td>
+              </tr>
+              <!-- PDD -->
+              <tr style="border-top:1px solid var(--border);">
+                <td rowspan="2" style="font-weight:bold; background:rgba(255,255,255,0.02);">3. Provisão PDD (CMN 4.966)</td>
+                <td>Despesa com Provisão para Crédito</td>
+                <td>DRE (Despesa Operacional)</td>
+                <td><code>8.1.1.20.00-2</code> (8.1.1.20.00.00-00-2)</td>
+                <td><span class="badge" style="background:var(--ok); color:#000;">D</span></td>
+                <td>Impacta negativamente o lucro com base na Perda Esperada (ECL).</td>
+              </tr>
+              <tr>
+                <td>Provisão para Devedores Duvidosos</td>
+                <td>Ativo (Conta Redutora)</td>
+                <td><code>1.6.9.10.00-5</code> (1.6.9.10.00.00-00-5)</td>
+                <td><span class="badge" style="background:var(--err); color:#fff;">C</span></td>
+                <td>Reduz o valor contábil líquido da carteira no Balanço Patrimonial.</td>
+              </tr>
+              <!-- Write Off -->
+              <tr style="border-top:1px solid var(--border);">
+                <td rowspan="2" style="font-weight:bold; background:rgba(255,255,255,0.02);">4. Baixa a Prejuízo (Write-Off)</td>
+                <td>Provisão para Devedores Duvidosos</td>
+                <td>Ativo (Conta Redutora)</td>
+                <td><code>1.6.9.10.00-5</code> (1.6.9.10.00.00-00-5)</td>
+                <td><span class="badge" style="background:var(--ok); color:#000;">D</span></td>
+                <td>Reverte e consome a provisão PDD previamente constituída.</td>
+              </tr>
+              <tr>
+                <td>Financiamentos e Empréstimos</td>
+                <td>Ativo Circulante</td>
+                <td><code>1.6.1.10.00-1</code> (1.6.1.10.00.00-00-1)</td>
+                <td><span class="badge" style="background:var(--err); color:#fff;">C</span></td>
+                <td>Baixa definitiva do contrato baixado da carteira ativa.</td>
+              </tr>
+              <!-- Recuperação -->
+              <tr style="border-top:1px solid var(--border);">
+                <td rowspan="2" style="font-weight:bold; background:rgba(255,255,255,0.02);">5. Recuperação de Prejuízo</td>
+                <td>Caixa / Reservas Bancárias BACEN</td>
+                <td>Ativo (Disponividades)</td>
+                <td><code>1.1.1.10.00-4</code> (1.1.1.10.00.00-00-4)</td>
+                <td><span class="badge" style="background:var(--ok); color:#000;">D</span></td>
+                <td>Entrada do valor recuperado via cobrança/jurídico em caixa.</td>
+              </tr>
+              <tr>
+                <td>Recuperação de Créditos Baixados</td>
+                <td>DRE (Outras Receitas)</td>
+                <td><code>7.1.9.10.00-7</code> (7.1.9.10.00.00-00-7)</td>
+                <td><span class="badge" style="background:var(--err); color:#fff;">C</span></td>
+                <td>Reconhecimento da receita de recuperação diretamente no DRE.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top: 32px;">Representação Gráfica dos Razonetes (T-Accounts)</h3>
+        <p>Abaixo estão os cards de razonetes que demonstram visualmente os fluxos de Débitos e Créditos em cada etapa da operação:</p>
+
+        <div class="t-account-grid">
+          <!-- T-Account 1: Concessao -->
+          <div class="t-account-card">
+            <div class="t-account-title">1.6.1.10 — Empréstimos (Ativo)</div>
+            <div class="t-account-body">
+              <div class="t-col">
+                <div class="t-col-header t-col-debit">Débito (D)</div>
+                <div class="t-entry"><span>Originação:</span><span>+10.000</span></div>
+              </div>
+              <div class="t-col">
+                <div class="t-col-header t-col-credit">Crédito (C)</div>
+                <div class="t-entry"><span>Write-Off:</span><span>-10.000</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- T-Account 2: Accrual -->
+          <div class="t-account-card">
+            <div class="t-account-title">7.1.1.10 — Receita Crédito (DRE)</div>
+            <div class="t-account-body">
+              <div class="t-col">
+                <div class="t-col-header t-col-debit">Débito (D)</div>
+                <div class="t-entry"><span>Estorno:</span><span>0</span></div>
+              </div>
+              <div class="t-col">
+                <div class="t-col-header t-col-credit">Crédito (C)</div>
+                <div class="t-entry"><span>Accrual D0:</span><span>+15,40</span></div>
+                <div class="t-entry"><span>Accrual D1:</span><span>+15,42</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- T-Account 3: PDD -->
+          <div class="t-account-card">
+            <div class="t-account-title">1.6.9.10 — Provisão PDD (Redutora)</div>
+            <div class="t-account-body">
+              <div class="t-col">
+                <div class="t-col-header t-col-debit">Débito (D)</div>
+                <div class="t-entry"><span>Write-Off:</span><span>+5.000</span></div>
+              </div>
+              <div class="t-col">
+                <div class="t-col-header t-col-credit">Crédito (C)</div>
+                <div class="t-entry"><span>ECL Stage 1:</span><span>+570</span></div>
+                <div class="t-entry"><span>ECL Stage 2:</span><span>+4.344</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- T-Account 4: Recuperacao -->
+          <div class="t-account-card">
+            <div class="t-account-title">7.1.9.10 — Recup. Prejuízo (DRE)</div>
+            <div class="t-account-body">
+              <div class="t-col">
+                <div class="t-col-header t-col-debit">Débito (D)</div>
+                <div class="t-entry"><span>—</span><span>—</span></div>
+              </div>
+              <div class="t-col">
+                <div class="t-col-header t-col-credit">Crédito (C)</div>
+                <div class="t-entry"><span>Recup. PIX:</span><span>+2.500</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: STOP ACCRUAL & WRITE-OFF CMN 4.966 -->
+      <section class="section" id="stop-accrual-writeoff">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--warn)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Tratamento Contábil de Inadimplência Severa</div>
+            <h2>Stop Accrual & Write-Off sob a Resolução CMN 4.966 Estágio 3</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A Resolução CMN 4.966/2021 estabelece critérios rigorosos para o provisionamento e reconhecimento de receitas em ativos com problemas de recuperação. Entenda a dinâmica do Stop Accrual e da baixa definitiva a prejuízo (Write-Off).
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card" style="border-top: 4px solid var(--warn);">
+            <div class="cc-tag">Stop Accrual (Estágio 3)</div>
+            <div class="cc-body">
+              <p>Quando um contrato de crédito sofre deterioração severa e ultrapassa <strong>90 dias de atraso</strong> (ou entra em Estágio 3 pelo critério de impairment), o Banco Central proíbe a instituição de continuar reconhecendo receita de juros no DRE por competência.</p>
+              <p>O motor de apropriação aciona a regra de <strong>Stop Accrual</strong>. O contrato continua contabilizando encargos moratórios contratualmente para fins de cobrança do devedor, porém esses valores são direcionados para <em>Contas de Compensação Fora do Balanço</em> (Off-Balance). Os juros só voltarão a impactar a DRE se forem efetivamente pagos em dinheiro pelo cliente (regime de caixa).</p>
+            </div>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--navy);">
+            <div class="cc-tag">Write-Off (Baixa a Prejuízo)</div>
+            <div class="cc-body">
+              <p>Se o atraso persistir por períodos prolongados (geralmente entre 180 e 360 dias) e a probabilidade de recuperação tornar-se nula, a instituição financeira é obrigada a realizar a baixa definitiva a prejuízo (<strong>Write-Off</strong>).</p>
+              <p>No evento de Write-Off, o saldo do principal é retirado do Ativo Circulante (crédito na conta <code>1.6.1.10.00-1</code>) utilizando a provisão PDD acumulada no Passivo/Ativo Redutor (débito na conta <code>1.6.9.10.00-5</code>). O contrato recebe a flag analítica <code>is_written_off = TRUE</code> e é transferido para a carteira de recuperação judicial/extrajudicial.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: RAZONETE DISTRIBUÍDO EM DATA MESH & ACCOUNTING TRANSLATOR -->
+      <section class="section" id="razonete-datamesh">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Arquitetura de Dados Enterprise</div>
+            <h2>Razonete Distribuído em Data Mesh & Accounting Engine Iceberg</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Em arquiteturas modernas desacopladas (Data Mesh), os domínios de negócio (Ex: Cartão de Crédito, Consignado, PIX) não devem conter código contábil hardcoded em seus microserviços transacionais. A conversão de eventos brutos de negócio em partidas dobradas é realizada por um microserviço especializado: o <strong>Accounting Engine Translator</strong>.
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card">
+            <h4>1. Evento de Negócio Agnóstico (Raw)</h4>
+            <p>O domínio de Cartões emite um evento agnóstico no Kafka: <code>{ "event_type": "BILL_PAID", "amount": 250.00, "contract_id": "CT-1092" }</code>. Esse evento não contém referências a contas COSIF nem conceitos de Débito/Crédito.</p>
+          </div>
+          <div class="concept-card">
+            <h4>2. Accounting Engine Translator</h4>
+            <p>Uma aplicação Flink / Spark Streaming consome o evento raw, consulta o catálogo de regras contábeis (Chart of Accounts no DynamoDB/Redis) e gera instantaneamente o par de lançamentos simétricos de partidas dobradas no tópico <code>ledger.journal.events</code>.</p>
+          </div>
+          <div class="concept-card">
+            <h4>3. Ledger Analítico Iceberg & Idempotência</h4>
+            <p>O Data Lakehouse persiste o Razonete em tabelas Apache Iceberg no S3, particionadas por <code>data_competencia</code> e <code>conta_cosif</code>. Idempotência estrita é garantida por deduplicação de <code>event_uuid</code> via comando SQL <code>MERGE INTO</code> no Iceberg.</p>
+          </div>
+        </div>
+
+        <div class="callout callout-tip" style="border-left-color: var(--spark);">
+          <h4 style="color: var(--spark);">Garantia de Qualidade via Data Contracts (Protobuf/Schema Registry)</h4>
+          <p>Para evitar que alterações inadvertidas nos payloads dos sistemas produtores quebrem silenciosamente a escrituração contábil do banco, a comunicação entre domínios exige o uso estrito de <strong>Data Contracts</strong> validados por Confluent Schema Registry ou Protobuf. Qualquer mudança em schemas que fira o contrato bloqueia a esteira de CI/CD automaticamente.</p>
+        </div>
+
+        <!-- DIAGRAMA NATIVO EM SVG DO ACCOUNTING TRANSLATOR -->
+        <h3 style="margin-top: 40px; text-align: center;">Arquitetura Nativa: Accounting Engine Translator em Data Mesh</h3>
+        <div class="svg-container" style="margin: 2rem 0; overflow-x: auto; text-align: center;">
+          <svg width="100%" height="auto" viewBox="0 0 920 280" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;">
+            <text x="460" y="32" fill="#f8fafc" font-size="16" font-weight="bold" letter-spacing="1" text-anchor="middle">ARQUITETURA DE RAZONETE DISTRIBUÍDO E ACCOUNTING TRANSLATOR</text>
+            
+            <!-- Step 1: Raw Domain Events -->
+            <rect x="30" y="80" width="160" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2.5"/>
+            <text x="110" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">1. Domain Event (Raw)</text>
+            <text x="110" y="127" fill="#94a3b8" font-size="10" text-anchor="middle">Kafka MSK Stream</text>
+            <text x="110" y="143" fill="#94a3b8" font-size="10" text-anchor="middle">Payload de Negócio</text>
+
+            <line x1="190" y1="125" x2="225" y2="125" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="225,119 235,125 225,131" fill="#94a3b8"/>
+
+            <!-- Step 2: Accounting Engine -->
+            <rect x="235" y="80" width="190" height="90" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2.5"/>
+            <text x="330" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">2. Accounting Translator</text>
+            <text x="330" y="125" fill="#94a3b8" font-size="10" text-anchor="middle">Regras COSIF (DynamoDB)</text>
+            <text x="330" y="141" fill="#94a3b8" font-size="10" text-anchor="middle">Validação \(\sum D - \sum C = 0\)</text>
+
+            <line x1="425" y1="125" x2="460" y2="125" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="460,119 470,125 460,131" fill="#94a3b8"/>
+
+            <!-- Step 3: Double Entry Events -->
+            <rect x="470" y="80" width="180" height="90" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2.5"/>
+            <text x="560" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">3. Double-Entry Events</text>
+            <text x="560" y="127" fill="#94a3b8" font-size="10" text-anchor="middle">Mensagens D/C Duplas</text>
+            <text x="560" y="143" fill="#94a3b8" font-size="10" text-anchor="middle">Schema Registry Validado</text>
+
+            <line x1="650" y1="125" x2="685" y2="125" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="685,119 695,125 685,131" fill="#94a3b8"/>
+
+            <!-- Step 4: Iceberg Ledger -->
+            <rect x="695" y="80" width="195" height="90" rx="8" fill="#1e293b" stroke="#facc15" stroke-width="2.5"/>
+            <text x="792" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">4. Ledger Analítico Iceberg</text>
+            <text x="792" y="127" fill="#94a3b8" font-size="10" text-anchor="middle">S3 Data Lakehouse Gold</text>
+            <text x="792" y="143" fill="#94a3b8" font-size="10" text-anchor="middle">Consultas Athena / Trino</text>
+          </svg>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+  <!-- Navigation, Drawer & UI Interactivity Script -->
+  <script>
+    function toggleNav() {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      var main = document.getElementById('main');
+      if (!sb) return;
+      
+      var isMobile = window.innerWidth <= 960;
+      if (isMobile) {
+        var isOpen = sb.classList.contains('open');
+        if (!isOpen) {
+          sb.classList.add('open');
+          if (hb) hb.innerHTML = '✕';
+        } else {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      } else {
+        var isClosed = sb.classList.contains('closed');
+        if (!isClosed) {
+          sb.classList.add('closed');
+          if (main) main.classList.add('sidebar-closed');
+          if (hb) hb.innerHTML = '☰';
+        } else {
+          sb.classList.remove('closed');
+          if (main) main.classList.remove('sidebar-closed');
+          if (hb) hb.innerHTML = '✕';
+        }
+      }
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths for pages/financas/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

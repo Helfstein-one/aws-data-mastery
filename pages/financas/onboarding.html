@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Processo de Crédito, KYC, Biometria, SCR BACEN e Arquitetura de Onboarding - AWS Data Mastery"/>
+  <title>Onboarding & Concessão de Crédito | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/financas/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Onboarding & Concessão de Crédito | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Dados Financeiros: KYC, Liveness Detection, SCR BACEN e Motor de Crédito"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Engenharia Financeira & Concessão</div>
+      <h1>Processo de Crédito <em>& Onboarding</em></h1>
+      <p class="hero-d">Intermediação financeira, KYC, biometria facial, SCR BACEN, prevenção a fraude e arquitetura de streaming em tempo real para tomada de decisão de risco.</p>
+      <div class="pills">
+        <span class="pill">KYC & Antifraude</span>
+        <span class="pill">SCR BACEN</span>
+        <span class="pill">Risk-Based Pricing</span>
+        <span class="pill">Feature Store</span>
+        <span class="pill">Kafka & MSK</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: INTERMEDIAÇÃO & SPREAD -->
+      <section class="section" id="intermediacao-spread">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--emr)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Economia Bancária</div>
+            <h2>Intermediação Financeira e Spread Bancário</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A intermediação financeira é a função primordial das instituições autorizadas pelo Banco Central do Brasil (BACEN). Consiste em captar recursos de agentes econômicos superavitários (poupadores e investidores) e transferi-los a agentes deficitários (tomadores de empréstimos e financiamentos), assumindo o risco de crédito da operação.
+        </p>
+
+        <div class="abox info" style="border-left-color: var(--emr);">
+          <div class="abox-hdr" style="background: var(--emr); color: #0f172a;">A Decomposição do Spread Bancário</div>
+          <div class="abox-body">
+            <p>O <strong>Spread Bancário Bruto</strong> é a diferença simples entre a taxa cobrada do tomador (\(i_{\text{aplicação}}\)) e a taxa paga ao captador (\(i_{\text{captação}}\)). Contudo, a precificação real exige o cálculo do <strong>Spread Líquido</strong>, que desconta perdas operacionais, inadimplência e custos tributários.</p>
+            
+            \[\text{Spread Gross} = i_{\text{aplicação}} - i_{\text{captação}}\]
+
+            \[\text{Spread Net} = i_{\text{aplicação}} - i_{\text{captação}} - \text{ECL} - \text{Custo Operacional} - \text{Tributos e Compulsórios}\]
+
+            <p style="margin-top: 12px;">Onde \(\text{ECL}\) representa a Perda Esperada de Crédito (<em>Expected Credit Loss</em>), composta pela probabilidade de calote e pela taxa de recuperação do ativo.</p>
+          </div>
+        </div>
+
+        <div class="tbl-wrap" style="margin-top: 24px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Componente do Spread</th>
+                <th>Descrição Econômica</th>
+                <th>Impacto em Arquitetura de Dados</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Taxa de Captação (\(i_{\text{captação}}\))</strong></td>
+                <td>Custo do dinheiro captado via CDB, LF, DPGE ou Selic/CDI.</td>
+                <td>Fechamento diário de ALM (<em>Asset Liability Management</em>) e curvas de juros em PySpark.</td>
+              </tr>
+              <tr>
+                <td><strong>Custo de Inadimplência (\(\text{ECL}\))</strong></td>
+                <td>Provisão para créditos de liquidação duvidosa (PD \(\times\) LGD \(\times\) EAD).</td>
+                <td>Pipelines batch/streaming de cálculo de provisão regulatória (CMN 4.966 / IFRS 9).</td>
+              </tr>
+              <tr>
+                <td><strong>Custos Operacionais (Administrative Cost)</strong></td>
+                <td>Despesas com tecnologia, folha, agências e processamento.</td>
+                <td>FinOps de nuvem (AWS MSK, Glue, EMR) por transação originada.</td>
+              </tr>
+              <tr>
+                <td><strong>Encargos Fiscais & Compulsórios</strong></td>
+                <td>IOF, PIS/COFINS, CSLL/IRPJ e depósito compulsório sobre depósitos.</td>
+                <td>Motor de cálculo tributário e emissão de obrigações acessórias ao FISCO.</td>
+              </tr>
+              <tr>
+                <td><strong>Margem Líquida da Instituição</strong></td>
+                <td>Retorno sobre o capital investido ajustado ao risco (RORAC).</td>
+                <td>Datamarts executivos para análise de rentabilidade por canal e produto.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: ONBOARDING DIGITAL & FRAUD PREVENTION -->
+      <section class="section" id="onboarding-kyc">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Validação Cadastral & Segurança</div>
+            <h2>Onboarding Digital, Liveness Detection & KYC</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          No modelo de originação 100% digital, a abertura de conta e solicitação de crédito ocorrem em poucos segundos. O sistema de dados deve executar verificações assíncronas e síncronas de validação de identidade (Know Your Customer - KYC) e prevenção a fraudes de identidade (usurpação/deepfake).
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card" style="border-top: 4px solid var(--aws);">
+            <h4>1. OCR & Extração de Documentos</h4>
+            <p>O proponente envia foto da CNH ou RG. Modelos de OCR com redes neurais convolucionais (CNN) extraem CPF, nome, data de nascimento e filiação, validando dígitos verificadores de CPF e checksums do espelho do documento.</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>2. Biometria Facial & Liveness Detection</h4>
+            <p>Captura de vídeo/selfie com teste de prova de vida (movimento ocular, resposta a estímulo facial). Gera um vetor de embedding e calcula a distância de cosseno (\(S_{\text{match}}\)) contra a base oficial (ex: Denatran / Serpro):</p>
+            \[S_{\text{match}} = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\| \|\mathbf{v}\|}\]
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--alert);">
+            <h4>3. Background Check & Sanções AML</h4>
+            <p>Varredura em tempo real em listas restritivas internacionais (OFAC, ONU, EU) e nacionais (PEP - Pessoas Expostas Politicamente, CEIS, CNEP, Polícia Federal) para prevenção à lavagem de dinheiro (AML - <em>Anti-Money Laundering</em>).</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 32px;">Matriz de Decisão por Confidence Score Biométrico</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Faixa de Confidence Score (\(S_{\text{match}}\))</th>
+                <th>Classificação de Risco Facial</th>
+                <th>Ação Automática da Plataforma</th>
+                <th>Roteamento de Workflow</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span style="background:rgba(16, 185, 129, 0.15); color:#34d399; padding:4px 8px; border-radius:4px; font-weight:bold;">0.95 a 1.00</span></td>
+                <td>Correspondência Alta (Pass)</td>
+                <td>Aprovação Cadastral Automática</td>
+                <td>Encaminha para Motor de Crédito (SCR)</td>
+              </tr>
+              <tr>
+                <td><span style="background:rgba(250, 204, 21, 0.15); color:#facc15; padding:4px 8px; border-radius:4px; font-weight:bold;">0.80 a 0.94</span></td>
+                <td>Correspondência Suspeita (Medium)</td>
+                <td>Bloqueio Temporário / Análise Manual</td>
+                <td>Fila de Atendimento - Mesa de Antifraude</td>
+              </tr>
+              <tr>
+                <td><span style="background:rgba(244, 63, 94, 0.15); color:#f43f5e; padding:4px 8px; border-radius:4px; font-weight:bold;">Abaixo de 0.80</span></td>
+                <td>Falha de Biometria / Incompatível</td>
+                <td>Rejeição Instantânea de Proposta</td>
+                <td>Event <code>ONBOARDING_REJECTED_FRAUD</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: SCR BACEN -->
+      <section class="section" id="scr-bacen">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ok)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Regulação & Exposição Sistemática</div>
+            <h2>SCR (Sistema de Informações de Crédito - BACEN)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O SCR é o banco de dados gerido pelo Banco Central que armazena informações sobre operações de crédito, garantias e limites concedidos por instituições financeiras a pessoas físicas e jurídicas no Brasil (operações acima de R$ 200,00).
+        </p>
+
+        <div class="abox info" style="border-left-color: var(--ok);">
+          <div class="abox-hdr" style="background: var(--ok); color: #0f172a;">Consulta de Endividamento Global no SFN</div>
+          <div class="abox-body">
+            <p>Com o consentimento explícito do cliente (LGPD e Resolução CMN 4.571), o motor de crédito realiza uma chamada síncrona/assíncrona à API do Banco Central ou bureau autorizado para retornar o relatório consolidado do tomador:</p>
+            <ul>
+              <li><strong>Crédito a Vencer:</strong> Vencimentos segregados em faixas (1-30d, 31-60d, 61-90d, 91-180d, 181-360d, >360d).</li>
+              <li><strong>Crédito Vencido (Delinquente):</strong> Saldo inadimplente acumulado no Sistema Financeiro Nacional.</li>
+              <li><strong>Prejuízo (Write-off acumulado):</strong> Operações baixadas a prejuízo nos últimos 5 anos.</li>
+              <li><strong>Garantias Prestadas:</strong> Alienação fiduciária, hipoteca, avales ou fianças vinculadas.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout callout-tip" style="margin-top: 24px;">
+          <strong>Equação da Capacidade Residual de Endividamento:</strong>
+          \[\text{Capacidade Residual} = \left( \text{Renda Mensal Comprovada} \times \eta_{\text{max}} \right) - \sum \text{Parcelas Mensais SCR}\]
+          <p style="margin-top: 8px;">Onde \(\eta_{\text{max}}\) representa a margem consignável ou margem de comprometimento limite (ex: 30% a 35% para crédito pessoal/imobiliário).</p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: MOTOR DE CRÉDITO & OPEN FINANCE -->
+      <section class="section" id="motor-credito">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Precificação & Score</div>
+            <h2>Motor de Crédito, Open Finance & Risk-Based Pricing</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O Motor de Decisão de Crédito consome os atributos cadastrais, o retorno do SCR e dados transacionais enriquecidos via Open Finance para estimar a <strong>Probabilidade de Default (PD)</strong> em 12 meses e definir a política de concessão.
+        </p>
+
+        <div class="grid-2">
+          <div class="card" style="border-top: 4px solid var(--spark);">
+            <div class="card-lbl" style="color: var(--spark);">Inovação Tecnológica</div>
+            <h4>Open Finance & Enriquecimento de Atributos</h4>
+            <p>Através do compartilhamento de dados via APIs padronizadas do BACEN, a plataforma recebe o histórico de saldo em conta corrente, investimentos e notas fiscais eletrônicas. Atributos como <em>volatilidade de saldo diário</em> e <em>recorrência de depósitos</em> entram diretamente na Feature Store.</p>
+          </div>
+          <div class="card" style="border-top: 4px solid var(--emr);">
+            <div class="card-lbl" style="color: var(--emr);">Matemática do Risco</div>
+            <h4>Risk-Based Pricing (Precificação por Risco)</h4>
+            <p>Clientes de maior risco (PD elevada) recebem uma taxa contratual mais alta para compensar o Custo de Capital e a Provisão Esperada (\(\text{ECL}\)). Clientes de baixo risco recebem taxas competitivas:</p>
+            \[i_{\text{contrato}} = i_{\text{risk-free}} + \left( \text{PD} \times \text{LGD} \right) + \text{Spread Operational} + \text{Margem Líquida}\]
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: ARQUITETURA DE STREAMING & FEATURE STORE -->
+      <section class="section" id="arquitetura-streaming">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--alert)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Engenharia de Dados AWS</div>
+            <h2>Arquitetura Kafka Event Streaming & Feature Store</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para viabilizar decisões em milissegundos sem sobrecarregar bancos OLTP transacionais, a arquitetura moderna de onboarding utiliza barramentos de eventos no Apache Kafka (Amazon MSK) e uma Feature Store de baixa latência (DynamoDB + S3 Iceberg).
+        </p>
+
+        <div class="svg-container" style="margin: 2.5rem 0; text-align: center;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 12px;">Arquitetura de Dados de Onboarding e Motor de Crédito Real-Time</div>
+          <svg style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;" viewBox="0 0 900 320" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <text x="450" y="30" fill="#f8fafc" font-size="15" font-weight="bold" text-anchor="middle" letter-spacing="1">PIPELINE DE ONBOARDING & ENGINES DE DECISÃO (AWS MSK + FEATURE STORE)</text>
+            
+            <!-- App Client -->
+            <rect x="30" y="80" width="120" height="70" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+            <text x="90" y="110" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">App / Web</text>
+            <text x="90" y="130" fill="#94a3b8" font-size="10" text-anchor="middle">Proposta Crédito</text>
+            
+            <!-- Arrow 1 -->
+            <line x1="150" y1="115" x2="190" y2="115" stroke="#475569" stroke-width="2" stroke-dasharray="4 4"/>
+            <polygon points="190,110 200,115 190,120" fill="#94a3b8"/>
+            
+            <!-- Amazon MSK -->
+            <rect x="200" y="70" width="160" height="200" rx="8" fill="#020617" stroke="#f59e0b" stroke-width="2"/>
+            <text x="280" y="95" fill="#fbbf24" font-size="13" font-weight="bold" text-anchor="middle">Amazon MSK (Kafka)</text>
+            <rect x="215" y="110" width="130" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="280" y="130" fill="#cbd5e1" font-size="10" font-anchor="middle" text-anchor="middle">proposals.submitted</text>
+            <rect x="215" y="150" width="130" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="280" y="170" fill="#cbd5e1" font-size="10" font-anchor="middle" text-anchor="middle">biometrics.verified</text>
+            <rect x="215" y="190" width="130" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="280" y="210" fill="#cbd5e1" font-size="10" font-anchor="middle" text-anchor="middle">scr.responses</text>
+
+            <!-- Arrow 2 -->
+            <line x1="360" y1="170" x2="400" y2="170" stroke="#475569" stroke-width="2"/>
+            <polygon points="400,165 410,170 400,175" fill="#94a3b8"/>
+
+            <!-- Flink Stateful Processor -->
+            <rect x="410" y="80" width="140" height="180" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+            <text x="480" y="110" fill="#34d399" font-size="12" font-weight="bold" text-anchor="middle">Apache Flink</text>
+            <text x="480" y="130" fill="#94a3b8" font-size="10" text-anchor="middle">Stateful Enrichment</text>
+            <text x="480" y="155" fill="#cbd5e1" font-size="10" text-anchor="middle">• Join Biometria</text>
+            <text x="480" y="175" fill="#cbd5e1" font-size="10" text-anchor="middle">• Lookup SCR</text>
+            <text x="480" y="195" fill="#cbd5e1" font-size="10" text-anchor="middle">• Calc Features</text>
+            <text x="480" y="225" fill="#94a3b8" font-size="9" text-anchor="middle">RocksDB State Backend</text>
+
+            <!-- Arrow 3 -->
+            <line x1="550" y1="170" x2="590" y2="170" stroke="#475569" stroke-width="2"/>
+            <polygon points="590,165 600,170 590,175" fill="#94a3b8"/>
+
+            <!-- Feature Store -->
+            <rect x="600" y="70" width="130" height="90" rx="8" fill="#1e293b" stroke="#ec4899" stroke-width="2"/>
+            <text x="665" y="95" fill="#f472b6" font-size="11" font-weight="bold" text-anchor="middle">Online Feature Store</text>
+            <text x="665" y="115" fill="#cbd5e1" font-size="10" text-anchor="middle">Amazon DynamoDB</text>
+            <text x="665" y="135" fill="#94a3b8" font-size="9" text-anchor="middle">Latência &lt; 10ms</text>
+
+            <!-- Offline Lakehouse Store -->
+            <rect x="600" y="180" width="130" height="90" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="665" y="205" fill="#38bdf8" font-size="11" font-weight="bold" text-anchor="middle">Offline Feature Store</text>
+            <text x="665" y="225" fill="#cbd5e1" font-size="10" text-anchor="middle">S3 Iceberg Table</text>
+            <text x="665" y="245" fill="#94a3b8" font-size="9" text-anchor="middle">Treino de ML (SageMaker)</text>
+
+            <!-- Decision Engine -->
+            <rect x="760" y="125" width="120" height="90" rx="8" fill="#020617" stroke="#6366f1" stroke-width="2"/>
+            <text x="820" y="150" fill="#818cf8" font-size="11" font-weight="bold" text-anchor="middle">Credit Engine</text>
+            <text x="820" y="170" fill="#cbd5e1" font-size="9" text-anchor="middle">Inferencia XGBoost</text>
+            <text x="820" y="190" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">CREDIT_APPROVED</text>
+          </svg>
+        </div>
+
+        <div class="callout callout-info" style="margin-top: 24px;">
+          <strong>Data Contract de Evento de Proposta de Crédito (Schema JSON):</strong>
+          <pre style="background: #020617; padding: 14px; border-radius: 6px; color: #38bdf8; font-family: 'DM Mono', monospace; font-size: 12px; overflow-x: auto; margin-top: 8px;">
+{
+  "event_id": "evt_98410294-811c-4bfa",
+  "event_type": "PROPOSAL_SUBMITTED",
+  "timestamp": "2026-07-30T23:12:36Z",
+  "proposal": {
+    "proposal_id": "prop_88419",
+    "customer_cpf_hash": "a5f8e2...019c",
+    "requested_amount": 25000.00,
+    "term_months": 36,
+    "declared_income": 8500.00
+  },
+  "device_fingerprint": {
+    "ip": "200.180.45.10",
+    "device_model": "iPhone14,2",
+    "confidence_geo_score": 0.98
+  }
+}</pre>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+  <!-- Navigation, Drawer & UI Interactivity Script -->
+  <script>
+    function toggleNav() {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      var main = document.getElementById('main');
+      if (!sb) return;
+      
+      var isMobile = window.innerWidth <= 960;
+      if (isMobile) {
+        var isOpen = sb.classList.contains('open');
+        if (!isOpen) {
+          sb.classList.add('open');
+          if (hb) hb.innerHTML = '✕';
+        } else {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      } else {
+        var isClosed = sb.classList.contains('closed');
+        if (!isClosed) {
+          sb.classList.add('closed');
+          if (main) main.classList.add('sidebar-closed');
+          if (hb) hb.innerHTML = '☰';
+        } else {
+          sb.classList.remove('closed');
+          if (main) main.classList.remove('sidebar-closed');
+          if (hb) hb.innerHTML = '✕';
+        }
+      }
+    }
+
+    function toggleCategory(catId, headerEl) {
+      var content = document.getElementById(catId);
+      var arrow = headerEl.querySelector('.arrow');
+      if (!content) return;
+      var isOpen = content.classList.contains('open');
+      if (isOpen) {
+        content.classList.remove('open');
+        headerEl.classList.remove('active');
+        if (arrow) arrow.innerHTML = '▶';
+      } else {
+        content.classList.add('open');
+        headerEl.classList.add('active');
+        if (arrow) arrow.innerHTML = '▼';
+      }
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths for pages/financas/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Pós-Venda, Reconciliação Financeira, Flink Join, Gateway PIX, Liquidação CIP/SLC e DLQ Contábil - AWS Data Mastery"/>
+  <title>Pós-Venda, Reconciliação & Settling | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/financas/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Pós-Venda, Reconciliação & Settling | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Dados Financeiros: Motor de Reconciliação Flink, Gateway PIX, VPL e Dead Letter Queue (DLQ)"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Engenharia Financeira & Operações</div>
+      <h1>Pós-Venda, Reconciliação <em>& Settling Streaming</em></h1>
+      <p class="hero-d">Arquitetura de liquidação financeira contínua: quitação antecipada via VPL, motor de reconciliação em Apache Flink, Gateway PIX, câmara CIP/SLC, late arriving events e tratamento de exceções com Dead Letter Queue (DLQ).</p>
+      <div class="pills">
+        <span class="pill">Reconciliação Flink</span>
+        <span class="pill">Gateway PIX & CIP</span>
+        <span class="pill">Late Arriving Events</span>
+        <span class="pill">Quitação VPL</span>
+        <span class="pill">DLQ & Backposting</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: QUITAÇÃO ANTECIPADA E PENALIDADES -->
+      <section class="section" id="quitacao-penalidades">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Cálculo Financeiro Operacional</div>
+            <h2>Quitação Antecipada (VPL) & Penalidades por Atraso</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Após a concessão do crédito, a operação financeira transita para a fase de pós-venda. A engenharia de dados precisa suportar dois eventos operacionais críticos com precisão matemática estrita: o abatimento proporcional de juros na quitação antecipada e a incidência rigorosa de encargos contratuais em cenários de inadimplência.
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <div class="cc-tag">Quitação Antecipada via VPL</div>
+            <div class="cc-body">
+              <p>Por exigência regulatória do Banco Central (Resoluções CMN), o tomador de crédito tem o direito de antecipar a liquidação parcial ou total do seu contrato com o desconto proporcional dos juros vincendos. O valor exigível para quitação imediata na data \(t_0\) é calculado trazendo os fluxos de caixa futuros ao seu <strong>Valor Presente Líquido (VPL)</strong> utilizando a taxa efetiva do contrato (\(i_{\text{efetiva}}\)):</p>
+              
+              <div style="font-size: 1.1rem; text-align: center; margin: 16px 0; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; font-family: 'DM Mono', monospace;">
+                \[ VPL = \sum_{t=1}^{n} \frac{PMT_t}{(1 + i_{\text{efetiva}})^{t}} \]
+              </div>
+
+              <p>Onde \(PMT_t\) representa o valor da parcela vincenda na data \(t\), e \(n\) é o número de parcelas restantes. Na arquitetura orientada a eventos, o sistema transacional publica o evento <code>AntecipacaoEfetuada</code> no barramento Amazon MSK/Kafka. O pipeline analítico intercepta a mensagem, reprocessa o saldo devedor contábil expurgando os juros não incorridos, e atualiza instantaneamente as métricas de <em>Duration</em> e <em>Yield Average</em> da carteira no Data Lakehouse.</p>
+            </div>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--warn);">
+            <div class="cc-tag">Penalidades em Atraso: Multa + Mora</div>
+            <div class="cc-body">
+              <p>Quando o vencimento da parcela é ultrapassado sem a devida confirmação de liquidação, o motor de cobrança dispara o cálculo dos encargos moratórios, divididos estritamente em duas rubricas operacionais:</p>
+              <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.7;">
+                <li><strong>1. Multa Moratória:</strong> Penalidade fixa percentual (limitada a 2% sobre o principal vencido segundo o Código de Defesa do Consumidor - CDC) aplicável <em>uma única vez</em> na ocorrência do atraso:
+                  <div style="margin: 8px 0; font-family: 'DM Mono', monospace; text-align: center;">
+                    \[ \text{Multa} = 0,02 \times \text{Principal Inadimplente} \]
+                  </div>
+                </li>
+                <li><strong>2. Juros de Mora:</strong> Compensação financeira pelo tempo de atraso (tipicamente 1% ao mês ou 12% ao ano), apurada <em>pro-rata die</em> por cada dia de inadimplência sobre a parcela em atraso:
+                  <div style="margin: 8px 0; font-family: 'DM Mono', monospace; text-align: center;">
+                    \[ \text{Juros Mora} = \text{Principal Inadimplente} \times \left[ \left(1 + i_{\text{mora}}\right)^{\frac{d}{30}} - 1 \right] \]
+                  </div>
+                </li>
+              </ul>
+              <p> A engenharia de dados deve modelar a Multa e os Juros de Mora em tabelas fato segregadas. Isso permite à contabilidade reconhecer a <em>Receita de Penalidades Operacionais</em> separadamente da <em>Receita de Juros de Originação</em>, preservando a auditoria fiscal e o reporte ao BACEN.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: CASE FALSO INADIMPLENTE DO FIM DE SEMANA -->
+      <section class="section" id="falso-inadimplente">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--warn)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Desacoplamento Transacional vs Financeiro</div>
+            <h2>Case de Divergência: O "Falso Inadimplente do Fim de Semana"</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Em instituições financeiras de grande porte, o dinheiro é gerenciado por múltiplos subsistemas autônomos com janelas operacionais distintas. Entender a assincronia entre o sistema de faturamento e as câmaras de liquidação é fundamental para evitar graves erros operacionais e sanções regulatórias.
+        </p>
+
+        <div class="callout callout-warning">
+          <h4 style="color: var(--warn); margin-bottom: 8px;">Cenário do Problema: Desfasamento CIP/SLC D+1/D+2</h4>
+          <p><strong>Fluxo dos Fatos:</strong> Na sexta-feira às 23:45, o cliente liquida o boleto de seu empréstimo pelo aplicativo do banco. O Gateway de Faturamento (<em>Billing System</em>) intercepta o pagamento e registra imediatamente o status da fatura como <code>PAGO</code> (Confirmação Transacional).</p>
+          <p>Porém, a <strong>Câmara Interbancária de Pagamentos (CIP / SLC)</strong> opera em lote e encerra sua janela diária de compensação financeira às 22:00. O lote processado na sexta-feira à noite só é efetivamente compensado e creditado na conta de reservas do banco na segunda-feira pela manhã (Janela D+1/D+2 útil).</p>
+          <p><strong>O Erro Analítico:</strong> Se o pipeline noturno de crédito rodar no sábado de madrugada (Batch D-0) consultando unicamente o <em>Ledger Financeiro</em> (Livro Razão), o saldo devedor continuará em aberto porque a compensação bancária da CIP ainda não foi liquidada. Como resultado, a rotina rotula o cliente erroneamente como <strong>"Overdue / Inadimplente"</strong>, bloqueando seu limite de crédito no aplicativo e negativando seu rating no SCR (Sistema de Informações de Crédito do Banco Central).</p>
+          <p><strong>Solução de Engenharia:</strong> O Motor de Reconciliação deve implementar uma tabela transitória de <em>Settlement Pending Window</em>. O pipeline realiza um outer join entre a perna de Billing (status <code>PAGO</code>) e a perna de Liquidação CIP (status <code>PENDENTE</code>). Caso o evento de Billing possua timestamp dentro do fim de semana, o contrato é marcado com a flag transitória <code>PENDING_SETTLEMENT</code>, inibindo qualquer ação punitiva de cobrança até a abertura do ciclo de compensação da CIP na segunda-feira.</p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: MOTOR DE RECONCILIAÇÃO FLINK & MATRIZ DE REGRAS -->
+      <section class="section" id="motor-reconciliacao">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--navy)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Processamento em Tempo Real</div>
+            <h2>Motor de Reconciliação em Apache Flink & Matriz de Tolerâncias</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A reconciliação financeira em tempo real exige cruzar múltiplos fluxos de streaming de dados (Billing, SPB/PIX Gateway, CIP/SLC e Core Ledger). O Apache Flink sobressai-se nessa arquitetura devido à sua capacidade nativa de processar <em>Stateful Stream Joins</em> sob janelas temporais configuráveis.
+        </p>
+
+        <h3>Cenários Analíticos Fundamentais do Motor de Reconciliação</h3>
+        <div class="concept-grid" style="margin-bottom: 24px;">
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>1. Full Match (Batimento Integral)</h4>
+            <p>Ocorre quando os identificadores universais (UUID do Contrato e <code>EndToEndId</code> do PIX) e os valores baterem exatamente até a terceira casa decimal. O pipeline gera um evento <code>ReconciliationSucceeded</code> e grava o lançamento liquidado no Ledger Analítico.</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>2. Mismatch com Tolerância (Micro-divergência)</h4>
+            <p>O cliente efetuou um pagamento de R$ 999,99 para liquidar uma parcela de R$ 1.000,00. Regras de engenharia configuráveis aceitam tolerâncias (ex: \(\le R\$ 0,01\)), efetuando um <em>write-off</em> automático de 1 centavo via API de ajuste contábil para não estagnar o pipeline por divergências desprezíveis.</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--warn);">
+            <h4>3. Orphan Events (Falta de Perna)</h4>
+            <p>Um extrato do BACEN acusa entrada de R$ 5.000,00 via PIX no horário H, mas não existe qualquer payload correspondente registrado no Gateway de Billing. Trata-se de um "evento órfão" que indica perda de eventos na mensageria ou falha de cadastro, exigindo isolamento imediato.</p>
+          </div>
+        </div>
+
+        <h3>Matriz de Regras do Motor de Reconciliação</h3>
+        <div style="overflow-x:auto; margin: 24px 0;">
+          <table class="data-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead>
+              <tr style="background:var(--card-bg); text-align:left; border-bottom:2px solid var(--border);">
+                <th style="padding:12px;">Cenário Operacional</th>
+                <th style="padding:12px;">Perna Transacional (Billing)</th>
+                <th style="padding:12px;">Perna Liquidação (PIX / CIP)</th>
+                <th style="padding:12px;">Tolerância de Valor</th>
+                <th style="padding:12px;">Tolerância Temporal</th>
+                <th style="padding:12px;">Ação do Pipeline Flink</th>
+                <th style="padding:12px;">Status Final</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Full Match Exact</td>
+                <td>ID Presente, Valor V</td>
+                <td>ID Match, Valor V</td>
+                <td>R$ 0,00</td>
+                <td>\(\le 30\) minutos</td>
+                <td>Aprova liquidação direta e atualiza saldo</td>
+                <td><span class="badge" style="background:var(--ok); color:#000;">RECONCILED</span></td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Micro Divergência</td>
+                <td>Valor R$ 1.000,00</td>
+                <td>Valor R$ 999,99</td>
+                <td>\(\le R\$ 0,01\)</td>
+                <td>\(\le 2\) horas</td>
+                <td>Executa Auto Write-off de R$ 0,01 e aprova</td>
+                <td><span class="badge" style="background:var(--spark); color:#000;">AUTO_ADJUSTED</span></td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Divergência Material</td>
+                <td>Valor R$ 1.000,00</td>
+                <td>Valor R$ 850,00</td>
+                <td>\(> R\$ 0,01\)</td>
+                <td>\(\le 2\) horas</td>
+                <td>Gera liquidação parcial e saldo devedor residual</td>
+                <td><span class="badge" style="background:var(--warn); color:#fff;">PARTIAL_MATCH</span></td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Orphan Payment</td>
+                <td>Evento Não Encontrado</td>
+                <td>PIX Confirmado R$ 500,00</td>
+                <td>N/A</td>
+                <td>Excedido 2 horas</td>
+                <td>Redireciona para DLQ & Notifica Backoffice (P1)</td>
+                <td><span class="badge" style="background:var(--err); color:#fff;">ORPHAN_DLQ</span></td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Late Arrival Settled</td>
+                <td>Billing D-1 Registrado</td>
+                <td>CIP Chega em D-0 (Atrasado)</td>
+                <td>R$ 0,00</td>
+                <td>\(> 2\) horas (Fora da Janela)</td>
+                <td>Side Output Flink ➔ Pipeline Backposting Contábil</td>
+                <td><span class="badge" style="background:var(--ext); color:#fff;">BACKPOSTED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: LATE ARRIVING EVENTS & DLQ ARCHITECTURE -->
+      <section class="section" id="late-events-dlq">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ext)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Resiliência e Tolerância a Falhas</div>
+            <h2>Late Arriving Events, Watermarking & DLQ Contábil</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Em arquiteturas distribuídas de alta volumetria, os eventos transacionais raramente chegam ao cluster de processamento na ordem cronológica exata em que ocorreram. Entenda como gerenciar desfasamentos temporais sem comprometer a integridade do balancete contábil.
+        </p>
+
+        <div class="callout callout-info" style="border-left-color: var(--ext);">
+          <h4 style="color: var(--ext);">Desafio Temporal: Event Time vs Processing Time</h4>
+          <p>O <strong>Event Time</strong> representa o momento exato em que a transação ocorreu no dispositivo do cliente (ex: 23:59:10 do dia D). O <strong>Processing Time</strong> reflete o instante em que a mensagem atinge os nós executores do cluster Apache Flink ou Spark Streaming (ex: 00:45:00 do dia D+1 devido à instabilidade de conectividade da adquirente).</p>
+          <p>Se a janela de fechamento contábil do dia D for encerrada exatamente às 00:00:00 com base no Processing Time, a transação realizada em D será indevidamente omitida do balancete de fechamento diário enviado ao Banco Central.</p>
+        </div>
+
+        <h3>Mecanismo de Watermarking & Side Outputs no Flink</h3>
+        <p>
+          Para lidar com eventos fora de ordem, o Apache Flink emprega a heurística de <strong>Watermarking</strong> baseada em <code>BoundedOutOfOrdernessTimestampExtractor</code>. Define-se um atraso máximo tolerado (<em>Allowed Lateness</em>), por exemplo, de 2 horas. Durante esse intervalo de tolerância, o estado da janela temporária é mantido em memória de altíssimo desempenho sustentada pelo **RocksDB State Backend**.
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card">
+            <h4>1. Processamento na Janela (RocksDB)</h4>
+            <p>Se o evento atrasado chega dentro do período de <em>Allowed Lateness</em> (ex: 45 minutos de atraso), o Flink reabre a janela em memória RocksDB, recalcula a agregação de saldos e emite uma atualização incremental (retração contábil).</p>
+          </div>
+          <div class="concept-card">
+            <h4>2. Redirecionamento via Side Outputs</h4>
+            <p>Eventos que violam o tempo limite de <em>Allowed Lateness</em> (ex: chegam 5 horas depois) são descartados da janela principal e redirecionados para um fluxo paralelo de alta prioridade usando <code>OutputTag</code> (Side Output).</p>
+          </div>
+          <div class="concept-card">
+            <h4>3. Workflow de Backposting Contábil</h4>
+            <p>O fluxo de Side Output engatilha um pipeline de <strong>Backposting</strong>. Em vez de mutar retroativamente dados históricos selados, o pipeline gera um lançamento de ajuste contábil no dia corrente (D-0), com metadata apontando para a data de competência original (D-1/D-2).</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 32px;">Tratamento de Exceções com Dead Letter Queue (DLQ) Contábil</h3>
+        <p>
+          Eventos com erros irrecuperáveis de formato (schema incompatível, chave de contrato inexistente no cadastro ou corrupção de payload) não podem travar o streaming de reconciliação nem serem descartados silenciosamente. Eles são direcionados para uma <strong>DLQ (Dead Letter Queue) Contábil</strong> sustentada por tópicos dedicados do Amazon MSK/SQS.
+        </p>
+
+        <div class="callout callout-tip" style="border-left-color: var(--ok);">
+          <h4 style="color: var(--ok);">Estrutura do Envelope de Mensagem DLQ</h4>
+          <p>Todo evento enviado para a DLQ é envelopado com metadados detalhados de diagnóstico:</p>
+          <pre style="background: rgba(15, 23, 42, 0.9); padding: 16px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.85rem; color: #f8fafc; overflow-x: auto;">
+{
+  "dlq_uuid": "e4a89c10-5321-4f92-a1b7-99120482012a",
+  "original_topic": "financial.payments.gateway.v1",
+  "timestamp_failed": "2026-07-30T23:45:12.981Z",
+  "error_code": "ERR_ACCOUNT_TRANSLATION_NOT_FOUND",
+  "error_message": "COSIF rule not found for payment_method=PIX_AGRO",
+  "retry_count": 3,
+  "payload": {
+    "transaction_id": "TX99481023",
+    "contract_id": "CTR-88192",
+    "amount": 15400.50,
+    "currency": "BRL"
+  }
+}</pre>
+        </div>
+
+        <!-- DIAGRAMA NATIVO INTERATIVO E RESPONSIVO EM SVG -->
+        <h3 style="margin-top: 40px; text-align: center;">Arquitetura Nativa: Streaming Reconciliation, Watermark & DLQ</h3>
+        <div class="svg-container" style="margin: 2rem 0; overflow-x: auto; text-align: center;">
+          <svg width="100%" height="auto" viewBox="0 0 920 280" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;">
+            <text x="460" y="32" fill="#f8fafc" font-size="16" font-weight="bold" letter-spacing="1" text-anchor="middle">MOTOR DE RECONCILIAÇÃO FLINK STREAMING &amp; TRATAMENTO DLQ</text>
+            
+            <!-- Step 1: Ingestion -->
+            <rect x="30" y="80" width="160" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2.5"/>
+            <text x="110" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">1. MSK Ingestion</text>
+            <text x="110" y="127" fill="#94a3b8" font-size="10" text-anchor="middle">Billing D0 Events &amp;</text>
+            <text x="110" y="143" fill="#94a3b8" font-size="10" text-anchor="middle">PIX / CIP Gateways</text>
+
+            <line x1="190" y1="125" x2="225" y2="125" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="225,119 235,125 225,131" fill="#94a3b8"/>
+
+            <!-- Step 2: Flink Stream Join & Watermarking -->
+            <rect x="235" y="80" width="190" height="90" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2.5"/>
+            <text x="330" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">2. Flink Join Engine</text>
+            <text x="330" y="125" fill="#94a3b8" font-size="10" text-anchor="middle">RocksDB State Backend</text>
+            <text x="330" y="141" fill="#94a3b8" font-size="10" text-anchor="middle">Watermark (2h Lateness)</text>
+
+            <!-- Success path to Gold Ledger -->
+            <line x1="425" y1="110" x2="475" y2="110" stroke="#10b981" stroke-width="2.5"/>
+            <polygon points="475,104 485,110 475,116" fill="#10b981"/>
+
+            <rect x="485" y="70" width="170" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2.5"/>
+            <text x="570" y="95" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">3. Ledger Gold (Iceberg)</text>
+            <text x="570" y="117" fill="#94a3b8" font-size="10" text-anchor="middle">Eventos Reconciliados &amp;</text>
+            <text x="570" y="133" fill="#94a3b8" font-size="10" text-anchor="middle">Auto Write-Off (\(\le R\$0.01\))</text>
+
+            <!-- Side output to Backposting -->
+            <path d="M 330 170 L 330 220 L 485 220" fill="none" stroke="#facc15" stroke-width="2" stroke-dasharray="3 3"/>
+            <polygon points="485,214 495,220 485,226" fill="#facc15"/>
+
+            <rect x="495" y="185" width="160" height="70" rx="8" fill="#1e293b" stroke="#facc15" stroke-width="2"/>
+            <text x="575" y="210" fill="#f8fafc" font-size="11" font-weight="bold" text-anchor="middle">4. Side Output Flink</text>
+            <text x="575" y="230" fill="#94a3b8" font-size="9" text-anchor="middle">Backposting Contábil (D-1)</text>
+
+            <!-- Error path to DLQ -->
+            <line x1="425" y1="150" x2="685" y2="150" stroke="#f43f5e" stroke-width="2"/>
+            <polygon points="685,144 695,150 685,156" fill="#f43f5e"/>
+
+            <rect x="695" y="110" width="180" height="90" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="2.5"/>
+            <text x="785" y="135" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">5. DLQ Contábil (MSK)</text>
+            <text x="785" y="157" fill="#94a3b8" font-size="10" text-anchor="middle">Orphan Events &amp; Errors</text>
+            <text x="785" y="173" fill="#94a3b8" font-size="10" text-anchor="middle">Tratamento Manual &amp; Re-drive</text>
+          </svg>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+  <!-- Navigation, Drawer & UI Interactivity Script -->
+  <script>
+    function toggleNav() {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      var main = document.getElementById('main');
+      if (!sb) return;
+      
+      var isMobile = window.innerWidth <= 960;
+      if (isMobile) {
+        var isOpen = sb.classList.contains('open');
+        if (!isOpen) {
+          sb.classList.add('open');
+          if (hb) hb.innerHTML = '✕';
+        } else {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      } else {
+        var isClosed = sb.classList.contains('closed');
+        if (!isClosed) {
+          sb.classList.add('closed');
+          if (main) main.classList.add('sidebar-closed');
+          if (hb) hb.innerHTML = '☰';
+        } else {
+          sb.classList.remove('closed');
+          if (main) main.classList.remove('sidebar-closed');
+          if (hb) hb.innerHTML = '✕';
+        }
+      }
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths for pages/financas/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

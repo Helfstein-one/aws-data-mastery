@@ -225,39 +225,39 @@ window.searchIndex = [
         "content": "REF Refer\u00eancias &amp; Notas de Curadoria Documentos originais e literatura t\u00e9cnica de refer\u00eancia para este m\u00f3dulo AWS Certified Data Engineer Guide AWS Specialty Certifications Guia oficial e simulados oficiais para a prova AWS Certified Data Engineer (DEA-C01). Acessar Certifica\u00e7\u00e3o"
     },
     {
-        "title": "Arquitetura de Dados - Origina\u00e7\u00e3o, KYC e Modelagem de Risco",
-        "url": "pages/pratica/financas-dados.html#jornada",
-        "content": "01 Origina\u00e7\u00e3o, KYC e Modelagem de Risco O in\u00edcio do relacionamento: como o Onboarding gera dados vitais para os modelos de Scoring e determina\u00e7\u00e3o da Probability of Default (PD). Conceito de Neg\u00f3cio: KYC (Know Your Customer) e Onboarding A primeira etapa de um relacionamento banc\u00e1rio \u00e9 a captura de dados demogr\u00e1ficos, biom\u00e9tricos e financeiros (renda presumida). O KYC \u00e9 regulat\u00f3rio (Preven\u00e7\u00e3o \u00e0 Lavagem de Dinheiro - PLD). Na perspectiva de cr\u00e9dito, a institui\u00e7\u00e3o precisa responder a uma pergunta d"
+        "title": "Arquitetura de Dados - Originação, KYC e Modelagem de Risco",
+        "url": "pages/financas/onboarding.html",
+        "content": "01 Originação, KYC e Modelagem de Risco O início do relacionamento: como o Onboarding gera dados vitais para os modelos de Scoring e determinação da Probability of Default (PD). Conceito de Negócio: KYC (Know Your Customer) e Onboarding A primeira etapa de um relacionamento bancário é a captura de dados demográficos, biométricos e financeiros (renda presumida). O KYC é regulatório (Prevenção à Lavagem de Dinheiro - PLD). Na perspectiva de crédito, a instituição precisa responder a uma pergunta d"
     },
     {
-        "title": "Arquitetura de Dados - Matem\u00e1tica do Contrato: Juros, IOF e Amortiza\u00e7\u00e3o",
-        "url": "pages/pratica/financas-dados.html#matematica",
-        "content": "02 Matem\u00e1tica do Contrato: Juros, IOF e Amortiza\u00e7\u00e3o A f\u00edsica do dinheiro: como um contrato \u00e9 capitalizado ao longo do tempo e os dois principais sistemas de pagamentos. 1. Juros Simples vs. Compostos O mercado de cr\u00e9dito opera esmagadoramente com Juros Compostos (juros sobre juros). A f\u00f3rmula cl\u00e1ssica de capitaliza\u00e7\u00e3o \u00e9 M = C * (1 + i)^t , onde C \u00e9 o Capital, i a taxa de juros e t o tempo. Imposto sobre Opera\u00e7\u00f5es Financeiras (IOF) No Brasil, toda opera\u00e7\u00e3o de cr\u00e9dito sofre tributa\u00e7\u00e3o de IOF. Ele "
+        "title": "Arquitetura de Dados - Matemática do Contrato: Juros, IOF e Amortização",
+        "url": "pages/financas/matematica-financeira.html",
+        "content": "02 Matemática do Contrato: Juros, IOF e Amortização A física do dinheiro: como um contrato é capitalizado ao longo do tempo e os dois principais sistemas de pagamentos. 1. Juros Simples vs. Compostos O mercado de crédito opera esmagadoramente com Juros Compostos (juros sobre juros). A fórmula clássica de capitalização é M = C * (1 + i)^t , onde C é o Capital, i a taxa de juros e t o tempo. Imposto sobre Operações Financeiras (IOF) No Brasil, toda operação de crédito sofre tributação de IOF. Ele "
     },
     {
-        "title": "Arquitetura de Dados - P\u00f3s-venda, Inadimpl\u00eancia e Reconcilia\u00e7\u00e3o",
-        "url": "pages/pratica/financas-dados.html#pos-venda",
-        "content": "03 P\u00f3s-venda, Inadimpl\u00eancia e Reconcilia\u00e7\u00e3o A fase complexa do Billing: liquida\u00e7\u00f5es, c\u00e1lculos de multas, estornos e motores de concilia\u00e7\u00e3o. Liquida\u00e7\u00e3o Antecipada (VPL) Por lei, o cliente pode antecipar parcelas com abatimento de juros. Aplicamos o Valor Presente L\u00edquido (VPL) com a taxa de Des\u00e1gio (a mesma taxa da contrata\u00e7\u00e3o). A Engenharia escuta eventos de AntecipacaoEfetuada no MSK/Kafka para recalcular a Duration da carteira. Atraso: Multa + Juros de Mora Se passar do vencimento: 1. Multa: V"
+        "title": "Arquitetura de Dados - Pós-venda, Inadimplência e Reconciliação",
+        "url": "pages/financas/pos-venda-reconciliacao.html",
+        "content": "03 Pós-venda, Inadimplência e Reconciliação A fase complexa do Billing: liquidações, cálculos de multas, estornos e motores de conciliação. Liquidação Antecipada (VPL) Por lei, o cliente pode antecipar parcelas com abatimento de juros. Aplicamos o Valor Presente Líquido (VPL) com a taxa de Deságio (a mesma taxa da contratação). A Engenharia escuta eventos de AntecipacaoEfetuada no MSK/Kafka para recalcular a Duration da carteira. Atraso: Multa + Juros de Mora Se passar do vencimento: 1. Multa: V"
     },
     {
-        "title": "Arquitetura de Dados - Contabilidade Banc\u00e1ria & Engenharia Avan\u00e7ada",
-        "url": "pages/pratica/financas-dados.html#contabilidade",
-        "content": "04 Contabilidade Banc\u00e1ria & Engenharia Avan\u00e7ada O cora\u00e7\u00e3o financeiro: Stop Accrual, Write-off, Diferimentos e Razonetes baseados em Event Sourcing. Saldo Cont\u00e1bil vs. Saldo L\u00edquido (Curva) No banco transacional, um contrato de R$ 10.000 a pagar em 12x de R$ 1.000 possui um Saldo Cont\u00e1bil de R$ 12.000. Contudo, o Saldo L\u00edquido (Curva Presente) \u00e9 R$ 10.000. Os R$ 2.000 de juros s\u00f3 s\u00e3o reconhecidos como lucro ao longo do tempo (Diferimento). Apropria\u00e7\u00e3o Di\u00e1ria (Spot Accrual) A engenharia de dados p"
+        "title": "Arquitetura de Dados - Contabilidade Bancária & Engenharia Avançada",
+        "url": "pages/financas/contabilidade-razonetes.html",
+        "content": "04 Contabilidade Bancária & Engenharia Avançada O coração financeiro: Stop Accrual, Write-off, Diferimentos e Razonetes baseados em Event Sourcing. Saldo Contábil vs. Saldo Líquido (Curva) No banco transacional, um contrato de R$ 10.000 a pagar em 12x de R$ 1.000 possui um Saldo Contábil de R$ 12.000. Contudo, o Saldo Líquido (Curva Presente) é R$ 10.000. Os R$ 2.000 de juros só são reconhecidos como lucro ao longo do tempo (Diferimento). Apropriação Diária (Spot Accrual) A engenharia de dados p"
     },
     {
-        "title": "Arquitetura de Dados - Mec\u00e2nica de Razonetes e o Ciclo de Vida do Cr\u00e9dito",
-        "url": "pages/pratica/financas-dados.html#razo-timeline",
-        "content": "04 Fundamentos Cont\u00e1beis Mec\u00e2nica de Razonetes e o Ciclo de Vida do Cr\u00e9dito Para atuar na plataforma de dados financeira, \u00e9 imperativo compreender como os sistemas reagem aos eventos. O cl\u00e1ssico Razonete (T-Account) \u00e9 a representa\u00e7\u00e3o visual da conta cont\u00e1bil. Contas do ATIVO (Bens e Direitos) As contas de Ativo (Ex: Carteira de Cr\u00e9dito, Caixa, Receb\u00edveis) possuem natureza devedora . \u2b06\ufe0f Aumenta com D\u00e9bito (D) \u2b07\ufe0f Diminui com Cr\u00e9dito (C) PASSIVO, PL e RECEITAS As contas de Passivo, Patrim\u00f4nio L\u00edqui"
+        "title": "Arquitetura de Dados - Mecânica de Razonetes e o Ciclo de Vida do Crédito",
+        "url": "pages/financas/ciclo-vida-credito.html",
+        "content": "04 Fundamentos Contábeis Mecânica de Razonetes e o Ciclo de Vida do Crédito Para atuar na plataforma de dados financeira, é imperativo compreender como os sistemas reagem aos eventos. O clássico Razonete (T-Account) é a representação visual da conta contábil. Contas do ATIVO (Bens e Direitos) As contas de Ativo (Ex: Carteira de Crédito, Caixa, Recebíveis) possuem natureza devedora . ⬆️ Aumenta com Débito (D) ⬇️ Diminui com Crédito (C) PASSIVO, PL e RECEITAS As contas de Passivo, Patrimônio Líqui"
     },
     {
-        "title": "Arquitetura de Dados - Refer\u00eancias &amp; Notas de Curadoria",
-        "url": "pages/pratica/financas-dados.html#referencias",
-        "content": "REF Refer\u00eancias &amp; Notas de Curadoria Documentos originais e literatura t\u00e9cnica de refer\u00eancia para este m\u00f3dulo. Contabilidade Banc\u00e1ria FEBRABAN (Edi\u00e7\u00f5es) Manuais e guias de diretrizes oficiais para contabilidade de institui\u00e7\u00f5es financeiras no Brasil. Finan\u00e7as Corporativas e An\u00e1lise de Cr\u00e9dito Alexandre Assaf Neto (Editora Atlas) Estudo dos conceitos matem\u00e1ticos de cr\u00e9dito, an\u00e1lise de risco corporativo, juros e amortiza\u00e7\u00f5es."
+        "title": "Arquitetura de Dados - Referências &amp; Notas de Curadoria",
+        "url": "pages/financas/onboarding.html#referencias",
+        "content": "REF Referências &amp; Notas de Curadoria Documentos originais e literatura técnica de referência para este módulo. Contabilidade Bancária FEBRABAN (Edições) Manuais e guias de diretrizes oficiais para contabilidade de instituições financeiras no Brasil. Finanças Corporativas e Análise de Crédito Alexandre Assaf Neto (Editora Atlas) Estudo dos conceitos matemáticos de crédito, análise de risco corporativo, juros e amortizações."
     },
     {
         "title": "Arquitetura de Dados - Arquitetura AWS Corporativa e Lakehouse Medallion",
-        "url": "pages/pratica/financas-dados.html#enterprise-arch",
-        "content": "05 Enterprise Data Platform Arquitetura AWS Corporativa e Lakehouse Medallion Vis\u00e3o sist\u00eamica massiva (\"Big Picture\") de como os 6 eventos do Ciclo de Vida de Cr\u00e9dito fluem desde a Ingest\u00e3o at\u00e9 as camadas Anal\u00edticas (Medallion Architecture), protegidos sob as fronteiras de Seguran\u00e7a da AWS (IAM, KMS, Lake Formation)."
+        "url": "pages/financas/auditoria-dados.html",
+        "content": "05 Enterprise Data Platform Arquitetura AWS Corporativa e Lakehouse Medallion Visão sistêmica massiva (\"Big Picture\") de como os 6 eventos do Ciclo de Vida de Crédito fluem desde a Ingestão até as camadas Analíticas (Medallion Architecture), protegidos sob as fronteiras de Segurança da AWS (IAM, KMS, Lake Formation)."
     },
     {
         "title": "Perguntas de Entrevista: DataOps &amp; CI/CD - Bateria de Quest\u00f5es: Dataops IA",

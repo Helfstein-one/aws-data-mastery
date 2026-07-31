@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Ciclo de Vida do Contrato de Crédito: 6 Estágios, Partidas Dobradas, MSK, Flink e Spark Batch - AWS Data Mastery"/>
+  <title>Ciclo de Vida de Crédito | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/financas/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Ciclo de Vida de Crédito | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Dados Financeiros: Estágios de Contrato, Eventos Kafka, Flink e Contabilidade D/C"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Engenharia Financeira & Processamento de Eventos</div>
+      <h1>Ciclo de Vida de Crédito <em>& Arquitetura de Eventos</em></h1>
+      <p class="hero-d">Os 6 Estágios de Vida do Contrato (Origination, Accrual, Installment, Delinquency, Refinancing, Write-off), partidas dobradas (D/C), barramentos Kafka/MSK e processamento de estado via Apache Flink e Spark.</p>
+      <div class="pills">
+        <span class="pill">6 Estágios do Contrato</span>
+        <span class="pill">Lançamentos Contábeis (D/C)</span>
+        <span class="pill">Kafka / MSK</span>
+        <span class="pill">Flink Stateful Processing</span>
+        <span class="pill">Apache Iceberg Ledger</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: OS 6 ESTÁGIOS DO CONTRATO -->
+      <section class="section" id="estagios-contrato">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--emr)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Estágios Funcionais</div>
+            <h2>Os 6 Estágios de Vida do Contrato de Crédito</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Um contrato de crédito não é um registro estático em uma tabela; é uma entidade viva governada por uma máquina de estados finitos (FSM). Cada transição de estado reflete um evento financeiro que dispara lançamentos contábeis em partidas dobradas e enriquece o Data Lakehouse em tempo real.
+        </p>
+
+        <div class="card" style="margin-bottom: 30px; border-top: 4px solid var(--aws);">
+          <div class="card-lbl" style="color:var(--aws)">Diagrama de Estados do Contrato (State Machine)</div>
+          <div class="mermaid" style="text-align: center; margin: 20px 0; background: transparent;">
+            graph LR
+              A[1. Origination<br/>CREDIT_GRANTED] --> B[2. Spot Accrual<br/>ACCRUAL_CALC]
+              B --> C{Liquidação?}
+              C -- Pagamento Ok --> D[3. Installment<br/>INSTALL_PAID]
+              D --> B
+              C -- Atraso (DPD > 0) --> E[4. Delinquency<br/>ECL_PROVISION]
+              E --> F{Resolução?}
+              F -- Acordo Comercial --> G[5. Refinancing<br/>REFINANCING]
+              G --> B
+              F -- Default > 180d/360d --> H[6. Write-off<br/>WRITEOFF]
+              
+              classDef default fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff;
+              classDef alert fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff;
+              classDef ok fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff;
+              class E,H alert;
+              class D ok;
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <!-- Fase 1 -->
+          <div class="abox info" style="border-left-color:var(--aws)">
+            <div class="abox-hdr" style="background:var(--aws); color:#0f172a;">1. Contratação (Origination)</div>
+            <div class="abox-body">
+              <p>Assinatura da CCB e desembolso do valor para a conta do cliente.</p>
+              <div style="background:#0f172a; padding:8px 12px; border-radius:4px; font-family:monospace; margin:8px 0; color:#38bdf8; font-size:12px;">
+                Event: CREDIT_GRANTED
+              </div>
+              <strong>Lançamento Contábil:</strong>
+              <ul style="margin-top:5px; font-size:12px;">
+                <li style="color:#34d399"><strong>D:</strong> Carteira de Crédito (Ativo ⬆)</li>
+                <li style="color:#ef4444"><strong>C:</strong> Caixa / Conta Corrente (Ativo ⬇)</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Fase 2 -->
+          <div class="abox info" style="border-left-color:var(--spark)">
+            <div class="abox-hdr" style="background:var(--spark)">2. Spot Accrual (Juros Diários)</div>
+            <div class="abox-body">
+              <p>Apropriação diária do rendimento pro-rata die decorrido.</p>
+              <div style="background:#0f172a; padding:8px 12px; border-radius:4px; font-family:monospace; margin:8px 0; color:#facc15; font-size:12px;">
+                Event: ACCRUAL_CALC
+              </div>
+              <strong>Lançamento Contábil:</strong>
+              <ul style="margin-top:5px; font-size:12px;">
+                <li style="color:#34d399"><strong>D:</strong> Juros a Receber (Ativo ⬆)</li>
+                <li style="color:#ef4444"><strong>C:</strong> Receita de Crédito (DRE ⬆)</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Fase 3 -->
+          <div class="abox info" style="border-left-color:var(--ok)">
+            <div class="abox-hdr" style="background:var(--ok)">3. Pagamento (Installment)</div>
+            <div class="abox-body">
+              <p>Liquidação da parcela via boleto, PIX ou débito automático.</p>
+              <div style="background:#0f172a; padding:8px 12px; border-radius:4px; font-family:monospace; margin:8px 0; color:#4ade80; font-size:12px;">
+                Event: INSTALL_PAID
+              </div>
+              <strong>Lançamento Contábil:</strong>
+              <ul style="margin-top:5px; font-size:12px;">
+                <li style="color:#34d399"><strong>D:</strong> Caixa (Ativo ⬆)</li>
+                <li style="color:#ef4444"><strong>C:</strong> Carteira de Crédito (Ativo ⬇)</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Fase 4 -->
+          <div class="abox info" style="border-left-color:var(--alert)">
+            <div class="abox-hdr" style="background:var(--alert); color:#0f172a;">4. Provisão / Atraso (ECL)</div>
+            <div class="abox-body">
+              <p>Inadimplência do cliente e elevação de provisão (CMN 4.966).</p>
+              <div style="background:#0f172a; padding:8px 12px; border-radius:4px; font-family:monospace; margin:8px 0; color:#fb923c; font-size:12px;">
+                Event: ECL_PROVISION
+              </div>
+              <strong>Lançamento Contábil:</strong>
+              <ul style="margin-top:5px; font-size:12px;">
+                <li style="color:#34d399"><strong>D:</strong> Despesa de PDD (DRE ⬇)</li>
+                <li style="color:#ef4444"><strong>C:</strong> Provisão para Perdas (Redutora Ativo ⬆)</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Fase 5 -->
+          <div class="abox info" style="border-left-color:var(--emr)">
+            <div class="abox-hdr" style="background:var(--emr)">5. Renegociação (Refinancing)</div>
+            <div class="abox-body">
+              <p>Repactuação de dívida vencida e criação de novo contrato.</p>
+              <div style="background:#0f172a; padding:8px 12px; border-radius:4px; font-family:monospace; margin:8px 0; color:#818cf8; font-size:12px;">
+                Event: REFINANCING
+              </div>
+              <strong>Lançamento Contábil:</strong>
+              <ul style="margin-top:5px; font-size:12px;">
+                <li style="color:#34d399"><strong>D:</strong> Nova Carteira (Ativo ⬆)</li>
+                <li style="color:#ef4444"><strong>C:</strong> Carteira Antiga (Ativo ⬇)</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Fase 6 -->
+          <div class="abox info" style="border-left-color:var(--red)">
+            <div class="abox-hdr" style="background:var(--red); color:#0f172a;">6. Write-off (Prejuízo)</div>
+            <div class="abox-body">
+              <p>Baixa contábil a prejuízo após atraso prolongado (> 180/360 dias).</p>
+              <div style="background:#0f172a; padding:8px 12px; border-radius:4px; font-family:monospace; margin:8px 0; color:#f87171; font-size:12px;">
+                Event: WRITEOFF
+              </div>
+              <strong>Lançamento Contábil:</strong>
+              <ul style="margin-top:5px; font-size:12px;">
+                <li style="color:#34d399"><strong>D:</strong> Provisão Acumulada (Redutora Ativo ⬇)</li>
+                <li style="color:#ef4444"><strong>C:</strong> Carteira de Crédito (Ativo ⬇)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: TABELA MÁQUINA DE ESTADOS DO CONTRATO -->
+      <section class="section" id="tabela-fsm">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Regras de Negócio & Governança</div>
+            <h2>Tabela de Transição de Estados (Finite State Machine)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A tabela a seguir consolida as regras de transição, pré-condições operacionais e os impactos contábeis exigidos pela regulação bancária (BACEN / COSIF).
+        </p>
+
+        <div class="tbl-wrap">
+          <table style="font-size:13px;">
+            <thead>
+              <tr style="background:#020617; color:#f8fafc;">
+                <th>Estado Origem</th>
+                <th>Evento Kafka</th>
+                <th>Estado Destino</th>
+                <th>Validação / Pre-condição</th>
+                <th>Lançamento Contábil (D/C)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>NEW_PROPOSAL</code></td>
+                <td><code>CREDIT_GRANTED</code></td>
+                <td><code>ACTIVE_PERFORMING</code></td>
+                <td>KYC Aprovado + SCR Validado + Assinatura CCB</td>
+                <td>D: Carteira (Ativo) / C: Caixa (Ativo)</td>
+              </tr>
+              <tr>
+                <td><code>ACTIVE_PERFORMING</code></td>
+                <td><code>ACCRUAL_CALC</code></td>
+                <td><code>ACTIVE_PERFORMING</code></td>
+                <td>Fechamento de dia útil bancário (D0)</td>
+                <td>D: Juros a Receber / C: Receita Crédito (DRE)</td>
+              </tr>
+              <tr>
+                <td><code>ACTIVE_PERFORMING</code></td>
+                <td><code>INSTALL_PAID</code></td>
+                <td><code>ACTIVE_PERFORMING</code> / <code>SETTLED</code></td>
+                <td>Liquidação financeira confirmada (PIX/Boleto)</td>
+                <td>D: Caixa (Ativo) / C: Carteira (Ativo)</td>
+              </tr>
+              <tr>
+                <td><code>ACTIVE_PERFORMING</code></td>
+                <td><code>INSTALLMENT_OVERDUE</code></td>
+                <td><code>DELINQUENT_STAGE_2</code></td>
+                <td>Vencimento sem pagamento (DPD > 30)</td>
+                <td>D: Despesa PDD / C: Provisão ECL (Redutora)</td>
+              </tr>
+              <tr>
+                <td><code>DELINQUENT_STAGE_2</code></td>
+                <td><code>RENEGOTIATION_AGREED</code></td>
+                <td><code>REFINANCED</code></td>
+                <td>Pagamento de entrada da renegociação</td>
+                <td>D: Nova Carteira / C: Carteira Antiga</td>
+              </tr>
+              <tr>
+                <td><code>DELINQUENT_STAGE_3</code></td>
+                <td><code>WRITEOFF_TRIGGERED</code></td>
+                <td><code>WRITTEN_OFF</code></td>
+                <td>Atraso superior a 180/360 dias + 100% ECL</td>
+                <td>D: Provisão (Redutora) / C: Carteira (Ativo)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: ARQUITETURA DE STREAMING AWS -->
+      <section class="section" id="arquitetura- streaming-ciclo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Engenharia de Dados AWS</div>
+            <h2>Arquitetura MSK, Flink Stateful Processing & Iceberg Ledger</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para registrar cada mudança de estado do contrato sem perda de dados e com garantia de ordenação exata (<em>exactly-once semantics</em>), os eventos trafegam pelo Amazon MSK e são processados pelo Apache Flink com persistência no Apache Iceberg.
+        </p>
+
+        <!-- DIAGRAMA SVG ARQUITETURA DE EVENTOS DO CICLO DE VIDA -->
+        <div class="svg-container" style="margin: 2.5rem 0; text-align: center;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 12px;">Pipeline de Processamento em Tempo Real dos Eventos de Crédito</div>
+          <svg viewBox="0 0 900 300" width="100%" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;" xmlns="http://www.w3.org/2000/svg">
+            <text x="450" y="30" fill="#f8fafc" font-size="15" font-weight="bold" text-anchor="middle" letter-spacing="1">STREAMING PIPELINE: KAFKA MSK ➔ FLINK ➔ ICEBERG LEDGER ANALÍTICO</text>
+
+            <!-- Event Sources -->
+            <rect x="30" y="80" width="130" height="180" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+            <text x="95" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">Sistemas Origem</text>
+            <text x="95" y="135" fill="#cbd5e1" font-size="10" text-anchor="middle">• Core Bancário</text>
+            <text x="95" y="160" fill="#cbd5e1" font-size="10" text-anchor="middle">• Gateway PIX/Boleto</text>
+            <text x="95" y="185" fill="#cbd5e1" font-size="10" text-anchor="middle">• Engine Cobrança</text>
+            <text x="95" y="210" fill="#cbd5e1" font-size="10" text-anchor="middle">• Motor Accrual</text>
+
+            <!-- Arrow 1 -->
+            <line x1="160" y1="170" x2="200" y2="170" stroke="#475569" stroke-width="2"/>
+            <polygon points="200,165 210,170 200,175" fill="#94a3b8"/>
+
+            <!-- Amazon MSK -->
+            <rect x="210" y="80" width="160" height="180" rx="8" fill="#020617" stroke="#f59e0b" stroke-width="2"/>
+            <text x="290" y="105" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">Amazon MSK Cluster</text>
+            <rect x="225" y="120" width="130" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="290" y="137" fill="#94a3b8" font-size="9" text-anchor="middle">topic: credit-events</text>
+            <rect x="225" y="155" width="130" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="290" y="172" fill="#94a3b8" font-size="9" text-anchor="middle">topic: payment-clearing</text>
+            <rect x="225" y="190" width="130" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="290" y="207" fill="#94a3b8" font-size="9" text-anchor="middle">topic: writeoff-alerts</text>
+
+            <!-- Arrow 2 -->
+            <line x1="370" y1="170" x2="410" y2="170" stroke="#475569" stroke-width="2"/>
+            <polygon points="410,165 420,170 410,175" fill="#94a3b8"/>
+
+            <!-- Flink Stateful Processing -->
+            <rect x="420" y="80" width="170" height="180" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+            <text x="505" y="105" fill="#34d399" font-size="12" font-weight="bold" text-anchor="middle">Apache Flink App</text>
+            <text x="505" y="130" fill="#cbd5e1" font-size="10" text-anchor="middle">• FSM State Machine</text>
+            <text x="505" y="150" fill="#cbd5e1" font-size="10" text-anchor="middle">• KeyedStream by contract_id</text>
+            <text x="505" y="170" fill="#cbd5e1" font-size="10" text-anchor="middle">• Watermarking & Allowed Late</text>
+            <text x="505" y="190" fill="#cbd5e1" font-size="10" text-anchor="middle">• Accounting Translation</text>
+            <text x="505" y="220" fill="#94a3b8" font-size="9" text-anchor="middle">RocksDB Checkpointing S3</text>
+
+            <!-- Arrow 3 -->
+            <line x1="590" y1="170" x2="630" y2="170" stroke="#475569" stroke-width="2"/>
+            <polygon points="630,165 640,170 630,175" fill="#94a3b8"/>
+
+            <!-- Apache Iceberg Ledger -->
+            <rect x="640" y="80" width="230" height="180" rx="8" fill="#020617" stroke="#38bdf8" stroke-width="2"/>
+            <text x="755" y="105" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">Amazon S3 Lakehouse</text>
+            <rect x="655" y="120" width="200" height="35" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="755" y="142" fill="#f8fafc" font-size="10" font-weight="bold" text-anchor="middle">Iceberg: ledger_analitico_db</text>
+            <rect x="655" y="165" width="200" height="35" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="755" y="187" fill="#f8fafc" font-size="10" font-weight="bold" text-anchor="middle">Iceberg: contract_fsm_history</text>
+            <text x="755" y="225" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">ACID Merge & Time-Travel Ready</text>
+          </svg>
+        </div>
+
+        <div class="callout callout-info" style="margin-top:24px;">
+          <strong>Fórmula KaTeX de Apropriação Diária de Juros (Spot Accrual):</strong>
+          \[J_{\text{diário}} = SD_{t-1} \times \left[ (1 + i_{\text{mensal}})^{\frac{1}{30}} - 1 \right]\]
+          <p style="margin-top: 8px;">Onde \(SD_{t-1}\) é o saldo devedor do contrato no dia anterior e \(i_{\text{mensal}}\) é a taxa efetiva pactuada na CCB.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+  <!-- Navigation, Drawer & UI Interactivity Script -->
+  <script>
+    function toggleNav() {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      var main = document.getElementById('main');
+      if (!sb) return;
+      
+      var isMobile = window.innerWidth <= 960;
+      if (isMobile) {
+        var isOpen = sb.classList.contains('open');
+        if (!isOpen) {
+          sb.classList.add('open');
+          if (hb) hb.innerHTML = '✕';
+        } else {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      } else {
+        var isClosed = sb.classList.contains('closed');
+        if (!isClosed) {
+          sb.classList.add('closed');
+          if (main) main.classList.add('sidebar-closed');
+          if (hb) hb.innerHTML = '☰';
+        } else {
+          sb.classList.remove('closed');
+          if (main) main.classList.remove('sidebar-closed');
+          if (hb) hb.innerHTML = '✕';
+        }
+      }
+    }
+
+    function toggleCategory(catId, headerEl) {
+      var content = document.getElementById(catId);
+      var arrow = headerEl.querySelector('.arrow');
+      if (!content) return;
+      var isOpen = content.classList.contains('open');
+      if (isOpen) {
+        content.classList.remove('open');
+        headerEl.classList.remove('active');
+        if (arrow) arrow.innerHTML = '▶';
+      } else {
+        content.classList.add('open');
+        headerEl.classList.add('active');
+        if (arrow) arrow.innerHTML = '▼';
+      }
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths for pages/financas/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

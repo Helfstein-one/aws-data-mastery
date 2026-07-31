@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Matemática Financeira de Crédito: SAC, Price, IOF, CET, VPL e Simulação em PySpark - AWS Data Mastery"/>
+  <title>Matemática Financeira & Amortização | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/financas/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Matemática Financeira & Amortização | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Dados Financeiros: Tabela Price, SAC, IOF, CET, PySpark ALM e SCD Tipo 2"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Engenharia Financeira & Engenharia de Ativos</div>
+      <h1>Matemática Financeira <em>& Sistemas de Amortização</em></h1>
+      <p class="hero-d">A física do dinheiro no tempo: Juros simples e compostos, tributação de IOF, CET, confronto prático SAC vs Price, indexação IPCA e vetorização de curvas de caixa via PySpark.</p>
+      <div class="pills">
+        <span class="pill">Tabela Price</span>
+        <span class="pill">Tabela SAC</span>
+        <span class="pill">IOF & CET</span>
+        <span class="pill">PySpark pandas_udf</span>
+        <span class="pill">SCD Tipo 2 Iceberg</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: JUROS SIMPLES VS COMPOSTOS -->
+      <section class="section" id="juros-simples-compostos">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ok)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Capitalização & Juros</div>
+            <h2>Juros Simples vs. Juros Compostos</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A matemática financeira estabelece as regras de remuneração do capital ao longo do tempo. Na modalidade de juros simples, a taxa incide exclusivamente sobre o principal inicial. No mercado bancário e de capitais, vigora soberanamente o regime de <strong>Juros Compostos</strong> (juros sobre juros).
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card" style="border-top: 4px solid var(--muted);">
+            <h4>Regime de Juros Simples</h4>
+            <p>O rendimento é constante em cada período. O montante final é dado por:</p>
+            \[M = C \cdot (1 + i \cdot t)\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Utilizado pontualmente em descontos comerciais de curtíssimo prazo e títulos públicos de curto prazo.</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>Regime de Juros Compostos</h4>
+            <p>Os juros de cada período são incorporados ao saldo devedor para o cálculo do período seguinte:</p>
+            \[M = C \cdot (1 + i)^t \quad \implies \quad J = C \left[ (1 + i)^t - 1 \right]\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Padrão obrigatório para financiamentos, empréstimos bancários e derivativos.</p>
+          </div>
+        </div>
+
+        <div class="abox info" style="margin-top: 24px; border-left-color: var(--ok);">
+          <div class="abox-hdr" style="background: var(--ok); color: #0f172a;">Conversão de Taxa Nominal para Taxa Efetiva</div>
+          <div class="abox-body">
+            <p>Quando a taxa de juros informada é nominal com capitalização em periodicidade distinta (ex: 12% ao ano com capitalização mensal), a taxa efetiva mensal (\(i_m\)) e anual (\(i_a\)) são calculadas por equivalência de taxas compostas:</p>
+
+            \[i_m = \frac{i_{\text{nominal}}}{12} \quad \implies \quad i_a = (1 + i_m)^{12} - 1\]
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: IOF & CET -->
+      <section class="section" id="iof-cet">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Tributação & Custo Efetivo</div>
+            <h2>Tributação de IOF & Custo Efetivo Total (CET)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          No Brasil, as operações de crédito estão sujeitas à incidência do Imposto sobre Operações Financeiras (IOF), regulamentado pelo Decreto nº 6.306/2007. O IOF é financiado junto com o principal e incorporado ao Custo Efetivo Total (CET).
+        </p>
+
+        <div class="grid-2">
+          <div class="card" style="border-top: 4px solid var(--spark);">
+            <div class="card-lbl" style="color: var(--spark);">Estrutura do IOF Crédito (Pessoa Física)</div>
+            <ul style="margin-top: 10px; font-size: 13px; line-height: 1.6;">
+              <li><strong>IOF Fixo (Adicional):</strong> Alíquota única de <strong>0,38%</strong> incidente sobre o valor total desembolsado no dia da liberação (D0).</li>
+              <li><strong>IOF Diário:</strong> Alíquota de <strong>0,0082% ao dia</strong> (equivalente a 3,00% ao ano) cobrada pro-rata die com limite de 365 dias.</li>
+            </ul>
+            \[\text{IOF}_{\text{total}} = \left( C \times 0.0038 \right) + \sum_{k=1}^n \left( P_k \times d_k \times 0.000082 \right)\]
+          </div>
+          <div class="card" style="border-top: 4px solid var(--emr);">
+            <div class="card-lbl" style="color: var(--emr);">Custo Efetivo Total (CET - Res. CMN 3.517)</div>
+            <p style="font-size: 13px; line-height: 1.6;">
+              O CET representa a taxa real que o tomador paga, considerando juros, IOF, tarifas de cadastro, seguros e despesas operacionais. É a taxa interna de retorno (TIR) que iguala o fluxo de desembolso ao fluxo de pagamentos:
+            </p>
+            \[C_0 - \text{IOF}_0 - \text{Tarifas}_0 = \sum_{t=1}^n \frac{R_t}{(1 + CET)^t}\]
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: COMPARATIVO TABELA PRICE VS SAC -->
+      <section class="section" id="price-vs-sac">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Sistemas de Amortização</div>
+            <h2>Tabela Price vs. Tabela SAC</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A escolha do sistema de amortização altera profundamente o fluxo de desembolso do cliente e a curva de exposição de risco da instituição financeira.
+        </p>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Dimensão Operacional</th>
+                <th>Tabela Price (Sistema Francês)</th>
+                <th>Tabela SAC (Amortização Constante)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Prestação Total (\(PMT\))</strong></td>
+                <td><span style="background:rgba(250, 204, 21, 0.15); color:#facc15; padding:4px 8px; border-radius:4px; font-weight:bold;">Constante</span> ao longo do contrato.</td>
+                <td><span style="background:rgba(16, 185, 129, 0.15); color:#34d399; padding:4px 8px; border-radius:4px; font-weight:bold;">Decrescente</span> (Primeira parcela mais alta).</td>
+              </tr>
+              <tr>
+                <td><strong>Amortização do Principal (\(A\))</strong></td>
+                <td>Crescente. O pagamento abate pouco principal no início.</td>
+                <td><strong>Constante</strong> (\(A = P / n\)). Redução linear do saldo.</td>
+              </tr>
+              <tr>
+                <td><strong>Juros Acumulados (\(J\))</strong></td>
+                <td>Maior volume de juros totais ao final do contrato.</td>
+                <td>Menor volume de juros totais devido à amortização veloz.</td>
+              </tr>
+              <tr>
+                <td><strong>Fórmula Principal</strong></td>
+                <td>\(PMT = P \cdot \frac{i(1+i)^n}{(1+i)^n - 1}\)</td>
+                <td>\(A = \frac{P}{n}, \quad PMT_k = A + (SD_{k-1} \cdot i)\)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top: 32px;">Exemplo Numérico Comparativo (Empréstimo R$ 100.000,00 | Taxa: 1,5% a.m. | 10 Parcelas)</h3>
+        <div class="tbl-wrap">
+          <table style="font-size: 13px;">
+            <thead>
+              <tr style="background:#020617; color:#94a3b8;">
+                <th>#</th>
+                <th>SAC: Parcela (A + J)</th>
+                <th>SAC: Amortização</th>
+                <th>Price: Parcela (A + J)</th>
+                <th>Price: Amortização</th>
+                <th>Comparativo Dívida Residual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1</strong></td>
+                <td>R$ 11.500,00</td>
+                <td>R$ 10.000,00</td>
+                <td>R$ 10.843,42</td>
+                <td>R$ 9.343,42</td>
+                <td>SAC reduz saldo mais rápido (-R$ 656,58)</td>
+              </tr>
+              <tr>
+                <td><strong>5</strong></td>
+                <td>R$ 10.900,00</td>
+                <td>R$ 10.000,00</td>
+                <td>R$ 10.843,42</td>
+                <td>R$ 9.922,65</td>
+                <td>Parcela Price fica próxima da SAC</td>
+              </tr>
+              <tr>
+                <td><strong>10</strong></td>
+                <td>R$ 10.150,00</td>
+                <td>R$ 10.000,00</td>
+                <td>R$ 10.843,42</td>
+                <td>R$ 10.683,17</td>
+                <td>Price encerra com custo total de juros maior</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- DIAGRAMA SVG DE CURVAS DE AMORTIZAÇÃO -->
+        <div class="svg-container" style="margin: 2.5rem 0; text-align: center;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 12px;">Curvas de Amortização Contínua: SAC vs Price vs Inflação (IPCA)</div>
+          <svg viewBox="0 0 800 400" width="100%" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;" xmlns="http://www.w3.org/2000/svg">
+            <!-- Eixos -->
+            <line x1="80" y1="50" x2="80" y2="330" stroke="#475569" stroke-width="2"/>
+            <line x1="80" y1="330" x2="750" y2="330" stroke="#475569" stroke-width="2"/>
+            
+            <!-- Rótulos Eixos -->
+            <text x="730" y="360" fill="#94a3b8" font-size="12" text-anchor="middle">Tempo (Parcelas)</text>
+            <text x="40" y="200" fill="#94a3b8" font-size="12" text-anchor="middle" transform="rotate(-90 40 200)">Saldo Devedor (%)</text>
+            
+            <!-- Marcadores Eixo Y -->
+            <text x="70" y="60" fill="#64748b" font-size="11" text-anchor="end">100%</text>
+            <text x="70" y="195" fill="#64748b" font-size="11" text-anchor="end">50%</text>
+            <text x="70" y="330" fill="#64748b" font-size="11" text-anchor="end">0%</text>
+            
+            <!-- Curva SAC (Verde Esmeralda - Linear Decrescente) -->
+            <path d="M 80 60 L 700 330" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
+            
+            <!-- Curva PRICE (Amarelo Ouro - Convexa) -->
+            <path d="M 80 60 Q 420 120 700 330" fill="none" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+            
+            <!-- Curva IPCA (Vermelho Coral - Amortização Negativa no Início) -->
+            <path d="M 80 60 C 200 10, 350 40, 700 330" fill="none" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
+            
+            <!-- Início (100k) -->
+            <circle cx="80" cy="60" r="6" fill="#ffffff"/>
+            
+            <!-- Legendas -->
+            <g transform="translate(540, 40)">
+              <rect x="0" y="0" width="200" height="95" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+              
+              <line x1="15" y1="20" x2="35" y2="20" stroke="#10b981" stroke-width="3"/>
+              <text x="45" y="24" fill="#f8fafc" font-size="11" font-weight="bold">SAC (Amortização Linear)</text>
+              
+              <line x1="15" y1="45" x2="35" y2="45" stroke="#facc15" stroke-width="3"/>
+              <text x="45" y="49" fill="#f8fafc" font-size="11" font-weight="bold">PRICE (Parcela Constante)</text>
+              
+              <line x1="15" y1="70" x2="35" y2="70" stroke="#f43f5e" stroke-width="3"/>
+              <text x="45" y="74" fill="#f8fafc" font-size="11" font-weight="bold">IPCA (Amort. Negativa Initial)</text>
+            </g>
+            
+            <text x="120" y="380" fill="#64748b" font-size="10" text-anchor="start">▲ Nota: O modelo indexado ao IPCA reflete o crescimento temporário do saldo devedor quando a inflação supera a amortização.</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: AMORTIZAÇÃO IPCA & INFLAÇÃO -->
+      <section class="section" id="amortizacao-ipca">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--alert)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Indexação Monetária</div>
+            <h2>Amortização Indexada ao IPCA & Amortização Negativa</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Em operações imobiliárias e de infraestrutura de longo prazo, o saldo devedor é corrigido mensalmente pelo IPCA antes da aplicação da taxa de juros real do contrato.
+        </p>
+
+        <div class="abox info" style="border-left-color: var(--alert);">
+          <div class="abox-hdr" style="background: var(--alert); color: #0f172a;">Mecanismo de Correção Monetária</div>
+          <div class="abox-body">
+            \[SD_k' = SD_{k-1} \times \left(1 + \text{IPCA}_k\right)\]
+            \[J_k = SD_k' \times i_{\text{real}}\]
+            <p style="margin-top: 10px;">Se a variação do IPCA em um determinado mês for muito elevada, o reajuste do saldo devedor (\(SD_k' - SD_{k-1}\)) pode ser superior ao valor amortizado na parcela, gerando o efeito de <strong>Amortização Negativa</strong> (a dívida cresce apesar do pagamento pontual).</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: PYSPARK VECTORIZATION & ALM -->
+      <section class="section" id="pyspark-alm">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--emr)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Engenharia de Dados em Escala</div>
+            <h2>PySpark pandas_udf Arrow Vectorization para ALM</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para projetar os fluxos de caixa de carteiras com dezenas de milhões de contratos ativas, a iteração linha por linha em Python puro é inviável. Utilizamos UDFs vetorizadas do Apache Arrow (<code>pandas_udf</code>) em clusters PySpark (Amazon EMR) para executar cálculos financeiros nativos em C/C++ sobre blocos de memória.
+        </p>
+
+        <div class="callout callout-info">
+          <strong>Exemplo de Código PySpark Vetorizado para Projeção de Amortização Price:</strong>
+          <pre style="background: #020617; padding: 14px; border-radius: 6px; color: #38bdf8; font-family: 'DM Mono', monospace; font-size: 12px; overflow-x: auto; margin-top: 8px;">
+import pandas as pd
+import numpy as np
+from pyspark.sql.functions import pandas_udf
+from pyspark.sql.types import DoubleType
+
+@pandas_udf(DoubleType())
+def calculate_price_pmt_udf(principal: pd.Series, rate_monthly: pd.Series, term_months: pd.Series) -> pd.Series:
+    """
+    Vetorização com Apache Arrow para cálculo de PMT da Tabela Price em PySpark.
+    """
+    compound_factor = np.power(1.0 + rate_monthly, term_months)
+    pmt = principal * (rate_monthly * compound_factor) / (compound_factor - 1.0)
+    return pd.Series(pmt)
+
+# Aplicação no PySpark DataFrame
+# df_contracts = df_contracts.withColumn("pmt_calculated", calculate_price_pmt_udf("principal", "taxa_mes", "prazo"))</pre>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 06: SCD TIPO 2 & VPL DESÁGIO -->
+      <section class="section" id="scd2-vpl">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Lakehouse & Recebíveis</div>
+            <h2>SCD Tipo 2 no Lakehouse & VPL/Deságio</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Contratos de crédito passam por renegociações, repactuações de taxa e aditivos formais. Na plataforma de Data Lakehouse (Apache Iceberg / Delta Lake), a preservação do histórico analítico é garantida através de <strong>Slowly Changing Dimensions (SCD Tipo 2)</strong>.
+        </p>
+
+        <div class="grid-2">
+          <div class="card" style="border-top: 4px solid var(--spark);">
+            <div class="card-lbl" style="color: var(--spark);">SCD Tipo 2 no Apache Iceberg</div>
+            <p style="font-size: 13px; line-height: 1.6;">
+              Cada alteração contratual insere um novo registro com o estado atualizado do contrato, marcando a versão anterior com <code>is_current = false</code> e registrando o timestamp exato de <code>valid_to</code>. Isso viabiliza auditabilidade e reprodução de cenários históricos (Time-Travel).
+            </p>
+          </div>
+          <div class="card" style="border-top: 4px solid var(--emr);">
+            <div class="card-lbl" style="color: var(--emr);">VPL & Deságio em Antecipação de Recebíveis</div>
+            <p style="font-size: 13px; line-height: 1.6;">
+              Em operações de antecipação de duplicatas ou cartões, o valor pago ao cedente é o Valor Presente Líquido (VPL) descontado pela taxa de deságio da operação (\(r\)):
+            </p>
+            \[VPL = \sum_{t=1}^n \frac{CF_t}{(1 + r)^t} \quad \implies \quad \text{Deságio} = VF - VPL\]
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+  <!-- Navigation, Drawer & UI Interactivity Script -->
+  <script>
+    function toggleNav() {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      var main = document.getElementById('main');
+      if (!sb) return;
+      
+      var isMobile = window.innerWidth <= 960;
+      if (isMobile) {
+        var isOpen = sb.classList.contains('open');
+        if (!isOpen) {
+          sb.classList.add('open');
+          if (hb) hb.innerHTML = '✕';
+        } else {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      } else {
+        var isClosed = sb.classList.contains('closed');
+        if (!isClosed) {
+          sb.classList.add('closed');
+          if (main) main.classList.add('sidebar-closed');
+          if (hb) hb.innerHTML = '☰';
+        } else {
+          sb.classList.remove('closed');
+          if (main) main.classList.remove('sidebar-closed');
+          if (hb) hb.innerHTML = '✕';
+        }
+      }
+    }
+
+    function toggleCategory(catId, headerEl) {
+      var content = document.getElementById(catId);
+      var arrow = headerEl.querySelector('.arrow');
+      if (!content) return;
+      var isOpen = content.classList.contains('open');
+      if (isOpen) {
+        content.classList.remove('open');
+        headerEl.classList.remove('active');
+        if (arrow) arrow.innerHTML = '▶';
+      } else {
+        content.classList.add('open');
+        headerEl.classList.add('active');
+        if (arrow) arrow.innerHTML = '▼';
+      }
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths for pages/financas/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

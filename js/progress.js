@@ -71,7 +71,7 @@
 
     // Fase 6
     "business-value": { name: "Valor de Negócio", badge: "Especialista", color: "#db2777", items: ["business-value.html"] },
-    "financas-dados": { name: "Finanças para Dados", badge: "Especialista", color: "#db2777", items: ["financas-dados.html"] },
+    "financas-dados": { name: "Conhecimentos Financeiros", badge: "Especialista", color: "#0284c7", items: ["onboarding.html", "matematica-financeira.html", "ciclo-vida-credito.html", "pos-venda-reconciliacao.html", "contabilidade-razonetes.html", "risco-montecarlo.html", "normas-regulatorio.html", "auditoria-dados.html", "finops-financas.html"] },
     "cases-reais": { name: "Cases Reais: Arq", badge: "Especialista", color: "#db2777", items: ["cases-reais.html"] },
     "cases-ecosistema": { name: "Cases: Ecossistema", badge: "Especialista", color: "#db2777", items: ["cases-ecosistema.html"] },
     "cases-batch-lakehouse": { name: "Cases: Batch", badge: "Especialista", color: "#db2777", items: ["cases-batch-lakehouse.html"] },
