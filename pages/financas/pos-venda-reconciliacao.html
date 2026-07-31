@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Pós-Venda, Reconciliação Financeira, Quitação Antecipada VPL, Amortização Parcial, Mora e Multa, Arquitetura AWS 2026 MSK, Flink e S3 Lifecycle Tiers - AWS Data Mastery"/>
+  <title>Pós-Venda, Reconciliação &amp; Settling | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/financas/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Pós-Venda, Reconciliação &amp; Settling | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Dados Financeiros: Eventos Pós-Venda, Motor de Reconciliação Apache Flink, Arquitetura AWS 2026 MSK e S3 Lifecycle Tiers, Gateway PIX, VPL e Dead Letter Queue (DLQ)"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Engenharia Financeira &amp; Processamento de Eventos AWS 2026</div>
+      <h1>Pós-Venda, Reconciliação &amp; <em>Settling Streaming</em></h1>
+      <p class="hero-d">Arquitetura de liquidação financeira contínua: quitação antecipada total via VPL vs. amortização antecipada parcial, tratamento de atraso e encargos moratórios (multa de 2% e juros de mora pro-rata die), motor de reconciliação em Apache Flink, barramento Amazon MSK, S3 Lifecycle Tiers, late arriving events e Dead Letter Queue (DLQ) contábil.</p>
+      <div class="pills">
+        <span class="pill">Quitação VPL &amp; Amortização</span>
+        <span class="pill">Encargos: Multa &amp; Mora</span>
+        <span class="pill">AWS MSK &amp; Flink 2026</span>
+        <span class="pill">S3 Lifecycle Tiers</span>
+        <span class="pill">Reconciliação Flink</span>
+        <span class="pill">DLQ &amp; Backposting</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: EVENTOS DE PÓS-VENDA: QUITAÇÃO ANTECIPADA & AMORTIZAÇÃO PARCIAL -->
+      <section class="section" id="quitacao-amortizacao">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Cálculo Financeiro &amp; Regulatório BACEN</div>
+            <h2>Quitação Antecipada Total (VPL) &amp; Amortização Antecipada Parcial</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Após a concessão do crédito, a operação transita para a fase de pós-venda. A legislação bancária brasileira (Resoluções CMN nº 3.516/2007 e nº 4.949/2021) assegura ao tomador de crédito o direito à liquidação antecipada, total ou parcial, com a redução proporcional dos juros não incorridos. A engenharia de dados financeira deve suportar a recalculação determinística do saldo devedor e a emissão de lançamentos contábeis em partidas dobradas no plano de contas COSIF.
+        </p>
+
+        <div class="concept-grid" style="margin-bottom: 24px;">
+          
+          <!-- Quitação Antecipada Total -->
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <div class="cc-tag">1.1 Quitação Antecipada Total (Full Settlement)</div>
+            <div class="cc-body">
+              <p>Na quitação antecipada total, o cliente liquida a totalidade do saldo devedor remanescente antes do prazo contratual final. O valor presente exigível para quitação na data \(t_0\) é calculado desfazendo a capitalização de juros das parcelas vincendas trazidas a <strong>Valor Presente Líquido (VPL)</strong> pela taxa efetiva do contrato (\(i_{\text{efetiva}}\)):</p>
+              
+              <div style="font-size: 1.1rem; text-align: center; margin: 16px 0; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; font-family: 'DM Mono', monospace;">
+                \[ VPL = \sum_{t=1}^{n} \frac{PMT_t}{(1 + i_{\text{efetiva}})^{t}} \]
+              </div>
+
+              <p>Onde \(PMT_t\) representa o valor da parcela vincenda no tempo \(t\), e \(n\) é a quantidade de parcelas restantes. O desconto de juros não incorridos (juros expurgados) é dado por:</p>
+              
+              <div style="font-size: 0.95rem; text-align: center; margin: 12px 0; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; font-family: 'DM Mono', monospace;">
+                \[ \text{Desconto Juros Vincendos} = \left(\sum_{t=1}^{n} PMT_t\right) - VPL \]
+              </div>
+
+              <p><strong>Partidas Dobradas COSIF (Lançamento Contábil):</strong></p>
+              <ul style="margin-top: 8px; padding-left: 18px; line-height: 1.6; font-size: 0.9rem;">
+                <li><strong>Débito:</strong> <code>1.1.1.10.00-0</code> Caixa / Reservas Bancárias BACEN (\(VPL\) efetivamente recebido)</li>
+                <li><strong>Débito:</strong> <code>8.1.9.00.00-0</code> Desconto Concedido em Liquidação Antecipada (Expurgo de Juros Vincendos)</li>
+                <li><strong>Crédito:</strong> <code>1.6.1.10.00-0</code> Carteira de Empréstimos - Saldo Devedor Nominal (\(\sum PMT_t\))</li>
+              </ul>
+              <p style="margin-top: 10px;">O estado do contrato no motor FSM transiciona para <code>SETTLED_FULL</code>, liberando garantias e baixando a operação do SCR/BACEN.</p>
+            </div>
+          </div>
+
+          <!-- Amortização Antecipada Parcial -->
+          <div class="concept-card" style="border-top: 4px solid var(--emr);">
+            <div class="cc-tag">1.2 Amortização Antecipada Parcial (Partial Amortization)</div>
+            <div class="cc-body">
+              <p>Na amortização parcial, o tomador efetua um aporte extraordinário \(A\) para abater o principal sem encerrar o contrato. O saldo devedor atualizado torna-se \(SD_{\text{novo}} = SD_{\text{atual}} - A\). Regulatoriamente, o cliente opta entre duas modalidades operacionais de recalculação do cronograma:</p>
+              
+              <div style="margin: 14px 0; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+                <p style="font-weight: bold; color: var(--spark); margin-bottom: 6px;">Modalidade A: Redução do Valor da Parcela (Mantém o Prazo Original \(n\))</p>
+                <p style="font-size: 0.9rem;">O número de parcelas restantes \(n\) permanece inalterado, recalculando-se a prestação mensal reduzida (\(PMT_{\text{novo}}\)):</p>
+                <div style="font-size: 1rem; text-align: center; margin: 8px 0; font-family: 'DM Mono', monospace;">
+                  \[ PMT_{\text{novo}} = SD_{\text{novo}} \times \left[ \frac{i_{\text{efetiva}} (1 + i_{\text{efetiva}})^n}{(1 + i_{\text{efetiva}})^n - 1} \right] \]
+                </div>
+              </div>
+
+              <div style="margin: 14px 0; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+                <p style="font-weight: bold; color: var(--emr); margin-bottom: 6px;">Modalidade B: Redução do Prazo de Liquidação (Mantém a Parcela \(PMT\))</p>
+                <p style="font-size: 0.9rem;">O valor da prestação mensal \(PMT\) é mantido constante, recalculando-se a redução do número de parcelas vincendas (\(n_{\text{novo}}\)):</p>
+                <div style="font-size: 1rem; text-align: center; margin: 8px 0; font-family: 'DM Mono', monospace;">
+                  \[ n_{\text{novo}} = -\frac{\ln\left(1 - \frac{SD_{\text{novo}} \cdot i_{\text{efetiva}}}{PMT}\right)}{\ln(1 + i_{\text{efetiva}})} \]
+                </div>
+              </div>
+
+              <p><strong>Partidas Dobradas COSIF:</strong> Débito em <code>1.1.1.10.00-0</code> (Caixa/Reservas) pelo valor \(A\) e Crédito em <code>1.6.1.10.00-0</code> (Carteira de Empréstimos - Abatimento de Principal). O contrato permanece <code>ACTIVE_AMORTIZED</code> com tabela Price/SAC recalculada no Data Lakehouse.</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: INADIMPLÊNCIA, ATRASO & ENCARGOS MORATÓRIOS (MULTA VS. JUROS DE MORA) -->
+      <section class="section" id="inadimplencia-encargos">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--warn)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Gestão de Delinquência &amp; Regras Fiscais</div>
+            <h2>Atraso, Multa Moratória &amp; Juros de Mora (Pro-Rata Die)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Quando o vencimento da parcela é ultrapassado sem a liquidação confirmada, a operação transita do estado <code>CURRENT</code> para <code>OVERDUE</code>. A contabilidade bancária exige a aplicação estrita e segregada de penalidades contratuais e compensatórias, respeitando os limites do Código de Defesa do Consumidor (CDC) e as normas de provisionamento da Resolução CMN nº 2.682/1999 (PECLD / IFRS 9).
+        </p>
+
+        <div class="concept-grid" style="margin-bottom: 24px;">
+
+          <!-- Atraso e Delinquência -->
+          <div class="concept-card" style="border-top: 4px solid var(--err);">
+            <div class="cc-tag">2.1 Atraso e Transição para Delinquência</div>
+            <div class="cc-body">
+              <p>No dia D+1 pós-vencimento, o contrato entra em estado de inadimplência. Duas ações contábeis e de risco ocorrem em paralelo:</p>
+              <ul style="margin-top: 8px; padding-left: 18px; line-height: 1.6; font-size: 0.9rem;">
+                <li><strong>Stop Accrual (CMN 2.682):</strong> Se o atraso ultrapassar 60 dias (ou política da instituição), cessa-se o reconhecimento de receita de juros remuneratórios normais no resultado (DRE). Os juros passam a ser contabilizados em contas de compensação fora do balanço.</li>
+                <li><strong>Provisionamento PECLD (IFRS 9 Stage 2/3):</strong> Reclassificação do rating de risco (A a H) e provisionamento compulsório do saldo devedor total em contas de resultado contra provisão acumulada.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Multa Moratória -->
+          <div class="concept-card" style="border-top: 4px solid var(--warn);">
+            <div class="cc-tag">2.2 Multa Moratória (Penalidade Punitiva Fixa)</div>
+            <div class="cc-body">
+              <p>A multa moratória é uma sanção punitiva pelo descumprimento do prazo. Nos termos do Art. 52, § 1º do Código de Defesa do Consumidor (CDC), a multa é estritamente <strong>limitada a 2%</strong> sobre o valor do principal/parcela inadimplente e incide <em>uma única vez</em> no momento do atraso:</p>
+              
+              <div style="font-size: 1.05rem; text-align: center; margin: 14px 0; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; font-family: 'DM Mono', monospace;">
+                \[ \text{Multa Moratória} = 0{,}02 \times PMT_{\text{vencida}} \]
+              </div>
+
+              <p><strong>Lançamento COSIF:</strong> Débito em <code>1.6.9.10.00-0</code> (Encargos Moratórios a Receber) e Crédito em <code>7.1.5.20.00-0</code> (Receitas de Multas Contratuais).</p>
+            </div>
+          </div>
+
+          <!-- Juros de Mora -->
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <div class="cc-tag">2.3 Juros de Mora (Compensação Pro-Rata Die)</div>
+            <div class="cc-body">
+              <p>Os juros de mora representam a indenização financeira pelo atraso temporal, calculados <strong>pro-rata die</strong> por cada dia corrido de inadimplência \(d\) sobre o valor da parcela em atraso, à taxa mensal \(i_{\text{mora}}\) (tipicamente 1% a.m.):</p>
+
+              <div style="font-size: 1.05rem; text-align: center; margin: 14px 0; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; font-family: 'DM Mono', monospace;">
+                \[ \text{Juros de Mora} = PMT_{\text{vencida}} \times \left[ \left(1 + i_{\text{mora}}\right)^{\frac{d}{30}} - 1 \right] \]
+              </div>
+
+              <p><strong>Lançamento COSIF:</strong> Débito em <code>1.6.9.10.00-0</code> (Encargos Moratórios a Receber) e Crédito em <code>7.1.5.10.00-0</code> (Receita de Juros de Mora por Atraso). Os juros de mora devem ser auditados em conta fatos segregada para impedir a contaminação da receita de originação no SPED Fiscal.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- DIAGRAMA SVG 1: FLUXO FINANCEIRO E CONTÁBIL DOS EVENTOS PÓS-VENDA -->
+        <h3 style="margin-top: 32px; text-align: center;">Fluxo Financeiro &amp; Partidas Dobradas (COSIF) por Evento de Pós-Venda</h3>
+        <div class="svg-container" style="margin: 2rem 0; overflow-x: auto; text-align: center;">
+          <svg width="100%" height="auto" viewBox="0 0 960 320" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;">
+            <text x="480" y="28" fill="#f8fafc" font-size="15" font-weight="bold" letter-spacing="1" text-anchor="middle">MODELAGEM FINANCEIRA &amp; CONTÁBIL DOS EVENTOS DE PÓS-VENDA</text>
+            
+            <!-- Card 1: Quitação Total VPL -->
+            <rect x="20" y="60" width="215" height="230" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="127" y="88" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">QUITAÇÃO TOTAL (VPL)</text>
+            <line x1="35" y1="98" x2="220" y2="98" stroke="#334155" stroke-width="1"/>
+            <text x="127" y="120" fill="#f8fafc" font-size="10" font-weight="600" text-anchor="middle">VPL = Σ [ PMT_t / (1+i)^t ]</text>
+            <text x="127" y="140" fill="#94a3b8" font-size="9" text-anchor="middle">Desconto Juros Vincendos</text>
+            <text x="127" y="155" fill="#94a3b8" font-size="9" text-anchor="middle">= Σ PMT_t - VPL</text>
+            <rect x="30" y="175" width="195" height="100" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+            <text x="127" y="195" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">Contabilidade COSIF:</text>
+            <text x="40" y="215" fill="#cbd5e1" font-size="9">D: 1.1.1.10 (Caixa/BACEN = VPL)</text>
+            <text x="40" y="232" fill="#cbd5e1" font-size="9">D: 8.1.9.00 (Desconto Juros)</text>
+            <text x="40" y="249" fill="#cbd5e1" font-size="9">C: 1.6.1.10 (Saldo Devedor)</text>
+            <text x="127" y="266" fill="#10b981" font-size="9" font-weight="bold" text-anchor="middle">FSM: SETTLED_FULL</text>
+
+            <!-- Card 2: Amortização Parcial -->
+            <rect x="255" y="60" width="215" height="230" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2"/>
+            <text x="362" y="88" fill="#a855f7" font-size="12" font-weight="bold" text-anchor="middle">AMORTIZAÇÃO PARCIAL</text>
+            <line x1="270" y1="98" x2="455" y2="98" stroke="#334155" stroke-width="1"/>
+            <text x="362" y="120" fill="#f8fafc" font-size="10" font-weight="600" text-anchor="middle">SD_novo = SD_atual - Aporte</text>
+            <text x="362" y="140" fill="#94a3b8" font-size="9" text-anchor="middle">Alt A: PMT_novo com Prazo n</text>
+            <text x="362" y="155" fill="#94a3b8" font-size="9" text-anchor="middle">Alt B: Prazo n_novo com PMT</text>
+            <rect x="265" y="175" width="195" height="100" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+            <text x="362" y="195" fill="#a855f7" font-size="9" font-weight="bold" text-anchor="middle">Contabilidade COSIF:</text>
+            <text x="275" y="218" fill="#cbd5e1" font-size="9">D: 1.1.1.10 (Caixa = Aporte A)</text>
+            <text x="275" y="238" fill="#cbd5e1" font-size="9">C: 1.6.1.10 (Abatimento Principal)</text>
+            <text x="362" y="266" fill="#a855f7" font-size="9" font-weight="bold" text-anchor="middle">FSM: ACTIVE_AMORTIZED</text>
+
+            <!-- Card 3: Multa Moratória -->
+            <rect x="490" y="60" width="215" height="230" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+            <text x="597" y="88" fill="#f59e0b" font-size="12" font-weight="bold" text-anchor="middle">MULTA MORATÓRIA (2%)</text>
+            <line x1="505" y1="98" x2="690" y2="98" stroke="#334155" stroke-width="1"/>
+            <text x="597" y="120" fill="#f8fafc" font-size="10" font-weight="600" text-anchor="middle">Multa = 0,02 x PMT_vencida</text>
+            <text x="597" y="140" fill="#94a3b8" font-size="9" text-anchor="middle">Sanção Punitiva Fixa</text>
+            <text x="597" y="155" fill="#94a3b8" font-size="9" text-anchor="middle">Limite CDC Art. 52 § 1º</text>
+            <rect x="500" y="175" width="195" height="100" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+            <text x="597" y="195" fill="#f59e0b" font-size="9" font-weight="bold" text-anchor="middle">Contabilidade COSIF:</text>
+            <text x="510" y="218" fill="#cbd5e1" font-size="9">D: 1.6.9.10 (Encargos Mora)</text>
+            <text x="510" y="238" fill="#cbd5e1" font-size="9">C: 7.1.5.20 (Rec. Multas Contrato)</text>
+            <text x="597" y="266" fill="#f59e0b" font-size="9" font-weight="bold" text-anchor="middle">Incidência Única D+1</text>
+
+            <!-- Card 4: Juros de Mora -->
+            <rect x="725" y="60" width="215" height="230" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+            <text x="832" y="88" fill="#f43f5e" font-size="12" font-weight="bold" text-anchor="middle">JUROS DE MORA (PRO-RATA)</text>
+            <line x1="740" y1="98" x2="925" y2="98" stroke="#334155" stroke-width="1"/>
+            <text x="832" y="120" fill="#f8fafc" font-size="10" font-weight="600" text-anchor="middle">Mora = PMT x [(1+i)^(d/30) - 1]</text>
+            <text x="832" y="140" fill="#94a3b8" font-size="9" text-anchor="middle">Compensação Diária por Atraso</text>
+            <text x="832" y="155" fill="#94a3b8" font-size="9" text-anchor="middle">Apurado Pro-Rata Die (d dias)</text>
+            <rect x="735" y="175" width="195" height="100" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+            <text x="832" y="195" fill="#f43f5e" font-size="9" font-weight="bold" text-anchor="middle">Contabilidade COSIF:</text>
+            <text x="745" y="218" fill="#cbd5e1" font-size="9">D: 1.6.9.10 (Encargos Mora)</text>
+            <text x="745" y="238" fill="#cbd5e1" font-size="9">C: 7.1.5.10 (Rec. Juros Mora DRE)</text>
+            <text x="832" y="266" fill="#f43f5e" font-size="9" font-weight="bold" text-anchor="middle">Acúmulo Diário Flink</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: ARQUITETURA TÉCNICA AWS 2026 E DATA PROCESSING -->
+      <section class="section" id="arquitetura-aws">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--navy)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Pipeline Distribuído de Alta Desempenho</div>
+            <h2>Arquitetura AWS 2026: Amazon MSK, Flink &amp; S3 Lifecycle Tiers</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para suportar milhões de eventos de pós-venda por dia com garantia de consistência transacional e auditoria fiscal, a arquitetura AWS 2026 utiliza <strong>Amazon MSK (Managed Streaming for Apache Kafka)</strong> como barramento de ingestão desacoplado, <strong>Managed Service for Apache Flink</strong> para computação de estado em tempo real, e <strong>S3 Storage Lifecycle Tiers</strong> para retenção regulatória eficiente.
+        </p>
+
+        <div class="concept-grid">
+          <!-- MSK -->
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>3.1 Amazon MSK: Barramento de Ingestão Desacoplado</h4>
+            <p>Os sistemas de originação, aplicativos móveis e gateways de cobrança publicam eventos em tópicos MSK segregados por tipo de evento de pós-venda:</p>
+            <ul style="margin-top: 8px; padding-left: 16px; font-size: 0.88rem; line-height: 1.6;">
+              <li><code>financial.post_sale.full_settlement.v1</code></li>
+              <li><code>financial.post_sale.partial_amortization.v1</code></li>
+              <li><code>financial.post_sale.overdue.v1</code></li>
+              <li><code>financial.post_sale.penalties.v1</code></li>
+            </ul>
+            <p style="margin-top: 8px; font-size: 0.88rem;"><strong>Estratégia de Particionamento:</strong> A chave de partição é obrigatoriamente <code>partition_key = contract_id</code>. Isso garante que todos os eventos do mesmo contrato caiam na mesma partição Kafka, assegurando ordenação cronológica estrita por partição sem necessidade de lock distribuído global.</p>
+          </div>
+
+          <!-- Managed Flink -->
+          <div class="concept-card" style="border-top: 4px solid var(--emr);">
+            <h4>3.2 Managed Service for Apache Flink (Stateful Engine)</h4>
+            <p>O cluster Flink consome os tópicos MSK e mantém o estado transacional em memória RocksDB com checkpoints automáticos:</p>
+            <ul style="margin-top: 8px; padding-left: 16px; font-size: 0.88rem; line-height: 1.6;">
+              <li><strong>Quitação &amp; Amortização:</strong> Intercepta solicitações, busca o saldo devedor no DynamoDB ODS, calcula o VPL / novo cronograma em memória e emite o evento <code>AmortizationScheduleUpdated</code>.</li>
+              <li><strong>Atraso &amp; Encargos:</strong> Executa janelas de tempo deslizantes (Sliding Windows) apurando o acúmulo diário de juros de mora pro-rata die e gravando os lançamentos de débito/crédito.</li>
+              <li><strong>Watermarking &amp; Allowed Lateness:</strong> Tolera atrasos de até 2 horas via <code>BoundedOutOfOrdernessTimestampExtractor</code>. Eventos mais atrasados são desviados para Side Outputs de Backposting.</li>
+            </ul>
+          </div>
+
+          <!-- S3 Storage Tiers -->
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>3.3 Storage Tiers &amp; Lakehouse Lifecycle (AWS 2026)</h4>
+            <p>A camada de armazenamento combina latência de sub-milissegundo com custos otimizados de arquivamento de longo prazo:</p>
+            <ul style="margin-top: 8px; padding-left: 16px; font-size: 0.88rem; line-height: 1.6;">
+              <li><strong>S3 Express One Zone:</strong> Armazenamento de ultra-alta velocidade para gravação de RocksDB Checkpoints e micro-batches de liquidação hot.</li>
+              <li><strong>S3 Standard (Lakehouse Iceberg):</strong> Formato Apache Iceberg para tabelas Bronze, Silver e Gold Ledger com suporte a ACID Time-Travel.</li>
+              <li><strong>S3 Standard-IA (Infrequent Access):</strong> Transição automática via Lifecycle Policy após 30 dias de inatividade.</li>
+              <li><strong>S3 Glacier Instant / Flexible Retrieval:</strong> Transição após 90 dias para consultas operacionais e auditorias periódicas.</li>
+              <li><strong>S3 Glacier Deep Archive:</strong> Transição após 365 dias para retenção fiscal regulatória de 10 anos (BACEN / Receita Federal) ao custo de ~$0.00099/GB/mês.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- DIAGRAMA SVG 2: ARQUITETURA AWS 2026 PROCESSAMENTO PÓS-VENDA -->
+        <h3 style="margin-top: 40px; text-align: center;">Arquitetura AWS 2026: Ingestão, Stream Processing &amp; S3 Lifecycle Tiers</h3>
+        <div class="svg-container" style="margin: 2rem 0; overflow-x: auto; text-align: center;">
+          <svg width="100%" height="auto" viewBox="0 0 960 320" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;">
+            <text x="480" y="28" fill="#f8fafc" font-size="15" font-weight="bold" letter-spacing="1" text-anchor="middle">ARQUITETURA TÉCNICA AWS 2026: EVENTOS DE PÓS-VENDA &amp; DATA PIPELINE</text>
+
+            <!-- Layer 1: MSK Ingestion -->
+            <rect x="20" y="65" width="200" height="225" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+            <text x="120" y="90" fill="#3b82f6" font-size="12" font-weight="bold" text-anchor="middle">1. Amazon MSK Topics</text>
+            <text x="120" y="108" fill="#94a3b8" font-size="9" text-anchor="middle">partition_key = contract_id</text>
+            <line x1="30" y1="116" x2="210" y2="116" stroke="#334155" stroke-width="1"/>
+
+            <rect x="30" y="125" width="180" height="32" rx="4" fill="#0f172a" stroke="#334155"/>
+            <text x="120" y="145" fill="#38bdf8" font-size="9" font-family="DM Mono" text-anchor="middle">full_settlement.v1</text>
+
+            <rect x="30" y="163" width="180" height="32" rx="4" fill="#0f172a" stroke="#334155"/>
+            <text x="120" y="183" fill="#a855f7" font-size="9" font-family="DM Mono" text-anchor="middle">partial_amortization.v1</text>
+
+            <rect x="30" y="201" width="180" height="32" rx="4" fill="#0f172a" stroke="#334155"/>
+            <text x="120" y="221" fill="#f59e0b" font-size="9" font-family="DM Mono" text-anchor="middle">overdue.v1</text>
+
+            <rect x="30" y="239" width="180" height="32" rx="4" fill="#0f172a" stroke="#334155"/>
+            <text x="120" y="259" fill="#f43f5e" font-size="9" font-family="DM Mono" text-anchor="middle">penalties.v1</text>
+
+            <!-- Arrow 1 to 2 -->
+            <line x1="220" y1="175" x2="255" y2="175" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="255,169 265,175 255,181" fill="#94a3b8"/>
+
+            <!-- Layer 2: Managed Flink -->
+            <rect x="265" y="65" width="220" height="225" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2"/>
+            <text x="375" y="90" fill="#a855f7" font-size="12" font-weight="bold" text-anchor="middle">2. Managed Apache Flink</text>
+            <text x="375" y="108" fill="#94a3b8" font-size="9" text-anchor="middle">Stateful Stream Processing</text>
+            <line x1="275" y1="116" x2="475" y2="116" stroke="#334155" stroke-width="1"/>
+
+            <rect x="275" y="125" width="200" height="42" rx="4" fill="#0f172a" stroke="#334155"/>
+            <text x="375" y="143" fill="#f8fafc" font-size="10" font-weight="600" text-anchor="middle">VPL &amp; Amortization Engine</text>
+            <text x="375" y="158" fill="#94a3b8" font-size="8" text-anchor="middle">RocksDB Key-Value State</text>
+
+            <rect x="275" y="175" width="200" height="42" rx="4" fill="#0f172a" stroke="#334155"/>
+            <text x="375" y="193" fill="#f8fafc" font-size="10" font-weight="600" text-anchor="middle">Pro-Rata Mora &amp; Multa Window</text>
+            <text x="375" y="208" fill="#94a3b8" font-size="8" text-anchor="middle">Sliding 24h Tumbling Accumulator</text>
+
+            <rect x="275" y="225" width="200" height="42" rx="4" fill="#0f172a" stroke="#334155"/>
+            <text x="375" y="243" fill="#f8fafc" font-size="10" font-weight="600" text-anchor="middle">Watermark &amp; Side Outputs</text>
+            <text x="375" y="258" fill="#94a3b8" font-size="8" text-anchor="middle">Allowed Lateness = 2h</text>
+
+            <!-- Arrow 2 to 3 -->
+            <line x1="485" y1="175" x2="520" y2="175" stroke="#475569" stroke-width="2.5"/>
+            <polygon points="520,169 530,175 520,181" fill="#94a3b8"/>
+
+            <!-- Layer 3: Storage & S3 Tiers -->
+            <rect x="530" y="65" width="410" height="225" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+            <text x="735" y="90" fill="#10b981" font-size="12" font-weight="bold" text-anchor="middle">3. AWS Storage &amp; S3 Lifecycle Tiers (AWS 2026)</text>
+            <line x1="540" y1="102" x2="930" y2="102" stroke="#334155" stroke-width="1"/>
+
+            <!-- Sub Tier 1: S3 Express -->
+            <rect x="542" y="115" width="180" height="70" rx="6" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+            <text x="632" y="135" fill="#38bdf8" font-size="10" font-weight="bold" text-anchor="middle">S3 Express One Zone</text>
+            <text x="632" y="152" fill="#94a3b8" font-size="8" text-anchor="middle">Sub-ms Latency Buffer</text>
+            <text x="632" y="167" fill="#94a3b8" font-size="8" text-anchor="middle">Flink Checkpoints &amp; Hot State</text>
+
+            <!-- Sub Tier 2: S3 Standard Iceberg -->
+            <rect x="735" y="115" width="190" height="70" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+            <text x="830" y="135" fill="#10b981" font-size="10" font-weight="bold" text-anchor="middle">S3 Standard (Iceberg)</text>
+            <text x="830" y="152" fill="#94a3b8" font-size="8" text-anchor="middle">Bronze / Silver / Gold Ledger</text>
+            <text x="830" y="167" fill="#94a3b8" font-size="8" text-anchor="middle">ACID Time-Travel &amp; Snapshot</text>
+
+            <!-- Sub Tier 3: Lifecycle progression -->
+            <rect x="542" y="200" width="383" height="75" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+            <text x="733" y="220" fill="#f8fafc" font-size="10" font-weight="bold" text-anchor="middle">S3 Lifecycle Policy (Automated Archival)</text>
+            
+            <rect x="552" y="230" width="115" height="35" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+            <text x="609" y="245" fill="#f59e0b" font-size="8" font-weight="bold" text-anchor="middle">S3 Standard-IA</text>
+            <text x="609" y="257" fill="#94a3b8" font-size="7" text-anchor="middle">Após 30 dias</text>
+
+            <rect x="677" y="230" width="120" height="35" rx="4" fill="#1e293b" stroke="#a855f7" stroke-width="1"/>
+            <text x="737" y="245" fill="#a855f7" font-size="8" font-weight="bold" text-anchor="middle">Glacier Instant</text>
+            <text x="737" y="257" fill="#94a3b8" font-size="7" text-anchor="middle">Após 90 dias</text>
+
+            <rect x="807" y="230" width="108" height="35" rx="4" fill="#1e293b" stroke="#f43f5e" stroke-width="1"/>
+            <text x="861" y="245" fill="#f43f5e" font-size="8" font-weight="bold" text-anchor="middle">Deep Archive</text>
+            <text x="861" y="257" fill="#94a3b8" font-size="7" text-anchor="middle">10 Anos BACEN (365d+)</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: CASE FALSO INADIMPLENTE DO FIM DE SEMANA -->
+      <section class="section" id="falso-inadimplente">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--warn)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Desacoplamento Transacional vs Financeiro</div>
+            <h2>Case de Divergência: O "Falso Inadimplente do Fim de Semana"</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Em instituições financeiras de grande porte, o dinheiro é gerenciado por múltiplos subsistemas autônomos com janelas operacionais distintas. Entender a assincronia entre o sistema de faturamento e as câmaras de liquidação é fundamental para evitar graves erros operacionais e sanções regulatórias.
+        </p>
+
+        <div class="callout callout-warning">
+          <h4 style="color: var(--warn); margin-bottom: 8px;">Cenário do Problema: Desfasamento CIP/SLC D+1/D+2</h4>
+          <p><strong>Fluxo dos Fatos:</strong> Na sexta-feira às 23:45, o cliente liquida o boleto de seu empréstimo pelo aplicativo do banco. O Gateway de Faturamento (<em>Billing System</em>) intercepta o pagamento e registra imediatamente o status da fatura como <code>PAGO</code> (Confirmação Transacional).</p>
+          <p>Porém, a <strong>Câmara Interbancária de Pagamentos (CIP / SLC)</strong> opera em lote e encerra sua janela diária de compensação financeira às 22:00. O lote processado na sexta-feira à noite só é efetivamente compensado e creditado na conta de reservas do banco na segunda-feira pela manhã (Janela D+1/D+2 útil).</p>
+          <p><strong>O Erro Analítico:</strong> Se o pipeline noturno de crédito rodar no sábado de madrugada (Batch D-0) consultando unicamente o <em>Ledger Financeiro</em> (Livro Razão), o saldo devedor continuará em aberto porque a compensação bancária da CIP ainda não foi liquidada. Como resultado, a rotina rotula o cliente erroneamente como <strong>"Overdue / Inadimplente"</strong>, bloqueando seu limite de crédito no aplicativo e negativando seu rating no SCR (Sistema de Informações de Crédito do Banco Central).</p>
+          <p><strong>Solução de Engenharia:</strong> O Motor de Reconciliação deve implementar uma tabela transitória de <em>Settlement Pending Window</em>. O pipeline realiza um outer join entre a perna de Billing (status <code>PAGO</code>) e a perna de Liquidação CIP (status <code>PENDENTE</code>). Caso o evento de Billing possua timestamp dentro do fim de semana, o contrato é marcado com a flag transitória <code>PENDING_SETTLEMENT</code>, inibindo qualquer ação punitiva de cobrança até a abertura do ciclo de compensação da CIP na segunda-feira.</p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: MOTOR DE RECONCILIAÇÃO FLINK & MATRIZ DE REGRAS -->
+      <section class="section" id="motor-reconciliacao">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--navy)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Processamento em Tempo Real</div>
+            <h2>Motor de Reconciliação em Apache Flink &amp; Matriz de Tolerâncias</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A reconciliação financeira em tempo real exige cruzar múltiplos fluxos de streaming de dados (Billing, SPB/PIX Gateway, CIP/SLC e Core Ledger). O Apache Flink sobressai-se nessa arquitetura devido à sua capacidade nativa de processar <em>Stateful Stream Joins</em> sob janelas temporais configuráveis.
+        </p>
+
+        <h3>Cenários Analíticos Fundamentais do Motor de Reconciliação</h3>
+        <div class="concept-grid" style="margin-bottom: 24px;">
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>1. Full Match (Batimento Integral)</h4>
+            <p>Ocorre quando os identificadores universais (UUID do Contrato e <code>EndToEndId</code> do PIX) e os valores baterem exatamente até a terceira casa decimal. O pipeline gera um evento <code>ReconciliationSucceeded</code> e grava o lançamento liquidado no Ledger Analítico.</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>2. Mismatch com Tolerância (Micro-divergência)</h4>
+            <p>O cliente efetuou um pagamento de R$ 999,99 para liquidar uma parcela de R$ 1.000,00. Regras de engenharia configuráveis aceitam tolerâncias (ex: \(\le R\$ 0,01\)), efetuando um <em>write-off</em> automático de 1 centavo via API de ajuste contábil para não estagnar o pipeline por divergências desprezíveis.</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--warn);">
+            <h4>3. Orphan Events (Falta de Perna)</h4>
+            <p>Um extrato do BACEN acusa entrada de R$ 5.000,00 via PIX no horário H, mas não existe qualquer payload correspondente registrado no Gateway de Billing. Trata-se de um "evento órfão" que indica perda de eventos na mensageria ou falha de cadastro, exigindo isolamento imediato.</p>
+          </div>
+        </div>
+
+        <h3>Matriz de Regras do Motor de Reconciliação</h3>
+        <div style="overflow-x:auto; margin: 24px 0;">
+          <table class="data-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead>
+              <tr style="background:var(--card-bg); text-align:left; border-bottom:2px solid var(--border);">
+                <th style="padding:12px;">Cenário Operacional</th>
+                <th style="padding:12px;">Perna Transacional (Billing)</th>
+                <th style="padding:12px;">Perna Liquidação (PIX / CIP)</th>
+                <th style="padding:12px;">Tolerância de Valor</th>
+                <th style="padding:12px;">Tolerância Temporal</th>
+                <th style="padding:12px;">Ação do Pipeline Flink</th>
+                <th style="padding:12px;">Status Final</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Full Match Exact</td>
+                <td>ID Presente, Valor V</td>
+                <td>ID Match, Valor V</td>
+                <td>R$ 0,00</td>
+                <td>\(\le 30\) minutos</td>
+                <td>Aprova liquidação direta e atualiza saldo</td>
+                <td><span class="badge" style="background:var(--ok); color:#000;">RECONCILED</span></td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Micro Divergência</td>
+                <td>Valor R$ 1.000,00</td>
+                <td>Valor R$ 999,99</td>
+                <td>\(\le R\$ 0,01\)</td>
+                <td>\(\le 2\) horas</td>
+                <td>Executa Auto Write-off de R$ 0,01 e aprova</td>
+                <td><span class="badge" style="background:var(--spark); color:#000;">AUTO_ADJUSTED</span></td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Divergência Material</td>
+                <td>Valor R$ 1.000,00</td>
+                <td>Valor R$ 850,00</td>
+                <td>\(> R\$ 0,01\)</td>
+                <td>\(\le 2\) horas</td>
+                <td>Gera liquidação parcial e saldo devedor residual</td>
+                <td><span class="badge" style="background:var(--warn); color:#fff;">PARTIAL_MATCH</span></td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Orphan Payment</td>
+                <td>Evento Não Encontrado</td>
+                <td>PIX Confirmado R$ 500,00</td>
+                <td>N/A</td>
+                <td>Excedido 2 horas</td>
+                <td>Redireciona para DLQ &amp; Notifica Backoffice (P1)</td>
+                <td><span class="badge" style="background:var(--err); color:#fff;">ORPHAN_DLQ</span></td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="font-weight:bold; background:rgba(255,255,255,0.02);">Late Arrival Settled</td>
+                <td>Billing D-1 Registrado</td>
+                <td>CIP Chega em D-0 (Atrasado)</td>
+                <td>R$ 0,00</td>
+                <td>\(> 2\) horas (Fora da Janela)</td>
+                <td>Side Output Flink ➔ Pipeline Backposting Contábil</td>
+                <td><span class="badge" style="background:var(--ext); color:#fff;">BACKPOSTED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 06: LATE ARRIVING EVENTS & DLQ ARCHITECTURE -->
+      <section class="section" id="late-events-dlq">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ext)">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Resiliência e Tolerância a Falhas</div>
+            <h2>Late Arriving Events, Watermarking &amp; DLQ Contábil</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Em arquiteturas distribuídas de alta volumetria, os eventos transacionais raramente chegam ao cluster de processamento na ordem cronológica exata em que ocorreram. Entenda como gerenciar desfasamentos temporais sem comprometer a integridade do balancete contábil.
+        </p>
+
+        <div class="callout callout-info" style="border-left-color: var(--ext);">
+          <h4 style="color: var(--ext);">Desafio Temporal: Event Time vs Processing Time</h4>
+          <p>O <strong>Event Time</strong> representa o momento exato em que a transação ocorreu no dispositivo do cliente (ex: 23:59:10 do dia D). O <strong>Processing Time</strong> reflete o instante em que a mensagem atinge os nós executores do cluster Apache Flink ou Spark Streaming (ex: 00:45:00 do dia D+1 devido à instabilidade de conectividade da adquirente).</p>
+          <p>Se a janela de fechamento contábil do dia D for encerrada exatamente às 00:00:00 com base no Processing Time, a transação realizada em D será indevidamente omitida do balancete de fechamento diário enviado ao Banco Central.</p>
+        </div>
+
+        <h3>Mecanismo de Watermarking &amp; Side Outputs no Flink</h3>
+        <p>
+          Para lidar com eventos fora de ordem, o Apache Flink emprega a heurística de <strong>Watermarking</strong> baseada em <code>BoundedOutOfOrdernessTimestampExtractor</code>. Define-se um atraso máximo tolerado (<em>Allowed Lateness</em>), por exemplo, de 2 horas. Durante esse intervalo de tolerância, o estado da janela temporária é mantido em memória de altíssimo desempenho sustentada pelo <strong>RocksDB State Backend</strong>.
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card">
+            <h4>1. Processamento na Janela (RocksDB)</h4>
+            <p>Se o evento atrasado chega dentro do período de <em>Allowed Lateness</em> (ex: 45 minutos de atraso), o Flink reabre a janela em memória RocksDB, recalcula a agregação de saldos e emite uma atualização incremental (retração contábil).</p>
+          </div>
+          <div class="concept-card">
+            <h4>2. Redirecionamento via Side Outputs</h4>
+            <p>Eventos que violam o tempo limite de <em>Allowed Lateness</em> (ex: chegam 5 horas depois) são descartados da janela principal e redirecionados para um fluxo paralelo de alta prioridade usando <code>OutputTag</code> (Side Output).</p>
+          </div>
+          <div class="concept-card">
+            <h4>3. Workflow de Backposting Contábil</h4>
+            <p>O fluxo de Side Output engatilha um pipeline de <strong>Backposting</strong>. Em vez de mutar retroativamente dados históricos selados, o pipeline gera um lançamento de ajuste contábil no dia corrente (D-0), com metadata apontando para a data de competência original (D-1/D-2).</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 32px;">Tratamento de Exceções com Dead Letter Queue (DLQ) Contábil</h3>
+        <p>
+          Eventos com erros irrecuperáveis de formato (schema incompatível, chave de contrato inexistente no cadastro ou corrupção de payload) não podem travar o streaming de reconciliação nem serem descartados silenciosamente. Eles são direcionados para uma <strong>DLQ (Dead Letter Queue) Contábil</strong> sustentada por tópicos dedicados do Amazon MSK/SQS.
+        </p>
+
+        <div class="callout callout-tip" style="border-left-color: var(--ok);">
+          <h4 style="color: var(--ok);">Estrutura do Envelope de Mensagem DLQ</h4>
+          <p>Todo evento enviado para a DLQ é envelopado com metadados detalhados de diagnóstico:</p>
+          <pre style="background: rgba(15, 23, 42, 0.9); padding: 16px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.85rem; color: #f8fafc; overflow-x: auto;">
+{
+  "dlq_uuid": "e4a89c10-5321-4f92-a1b7-99120482012a",
+  "original_topic": "financial.payments.gateway.v1",
+  "timestamp_failed": "2026-07-30T23:45:12.981Z",
+  "error_code": "ERR_ACCOUNT_TRANSLATION_NOT_FOUND",
+  "error_message": "COSIF rule not found for payment_method=PIX_AGRO",
+  "retry_count": 3,
+  "payload": {
+    "transaction_id": "TX99481023",
+    "contract_id": "CTR-88192",
+    "amount": 15400.50,
+    "currency": "BRL"
+  }
+}</pre>
+        </div>
+
+        <!-- DIAGRAMA SVG 3: RECONCILIAÇÃO FLINK, WATERMARK & DLQ -->
+        <h3 style="margin-top: 40px; text-align: center;">Arquitetura Nativa: Streaming Reconciliation, Watermark &amp; DLQ</h3>
+        <div class="svg-container" style="margin: 2rem 0; overflow-x: auto; text-align: center;">
+          <svg width="100%" height="auto" viewBox="0 0 920 280" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;">
+            <text x="460" y="32" fill="#f8fafc" font-size="16" font-weight="bold" letter-spacing="1" text-anchor="middle">MOTOR DE RECONCILIAÇÃO FLINK STREAMING &amp; TRATAMENTO DLQ</text>
+            
+            <!-- Step 1: Ingestion -->
+            <rect x="30" y="80" width="160" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2.5"/>
+            <text x="110" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">1. MSK Ingestion</text>
+            <text x="110" y="127" fill="#94a3b8" font-size="10" text-anchor="middle">Billing D0 Events &amp;</text>
+            <text x="110" y="143" fill="#94a3b8" font-size="10" text-anchor="middle">PIX / CIP Gateways</text>
+
+            <line x1="190" y1="125" x2="225" y2="125" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <polygon points="225,119 235,125 225,131" fill="#94a3b8"/>
+
+            <!-- Step 2: Flink Stream Join & Watermarking -->
+            <rect x="235" y="80" width="190" height="90" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2.5"/>
+            <text x="330" y="105" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">2. Flink Join Engine</text>
+            <text x="330" y="125" fill="#94a3b8" font-size="10" text-anchor="middle">RocksDB State Backend</text>
+            <text x="330" y="141" fill="#94a3b8" font-size="10" text-anchor="middle">Watermark (2h Lateness)</text>
+
+            <!-- Success path to Gold Ledger -->
+            <line x1="425" y1="110" x2="475" y2="110" stroke="#10b981" stroke-width="2.5"/>
+            <polygon points="475,104 485,110 475,116" fill="#10b981"/>
+
+            <rect x="485" y="70" width="170" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2.5"/>
+            <text x="570" y="95" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">3. Ledger Gold (Iceberg)</text>
+            <text x="570" y="117" fill="#94a3b8" font-size="10" text-anchor="middle">Eventos Reconciliados &amp;</text>
+            <text x="570" y="133" fill="#94a3b8" font-size="10" text-anchor="middle">Auto Write-Off (≤ R$ 0,01)</text>
+
+            <!-- Side output to Backposting -->
+            <path d="M 330 170 L 330 220 L 485 220" fill="none" stroke="#facc15" stroke-width="2" stroke-dasharray="3 3"/>
+            <polygon points="485,214 495,220 485,226" fill="#facc15"/>
+
+            <rect x="495" y="185" width="160" height="70" rx="8" fill="#1e293b" stroke="#facc15" stroke-width="2"/>
+            <text x="575" y="210" fill="#f8fafc" font-size="11" font-weight="bold" text-anchor="middle">4. Side Output Flink</text>
+            <text x="575" y="230" fill="#94a3b8" font-size="9" text-anchor="middle">Backposting Contábil (D-1)</text>
+
+            <!-- Error path to DLQ -->
+            <line x1="425" y1="150" x2="685" y2="150" stroke="#f43f5e" stroke-width="2"/>
+            <polygon points="685,144 695,150 685,156" fill="#f43f5e"/>
+
+            <rect x="695" y="110" width="180" height="90" rx="8" fill="#1e293b" stroke="#f43f5e" stroke-width="2.5"/>
+            <text x="785" y="135" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">5. DLQ Contábil (MSK)</text>
+            <text x="785" y="157" fill="#94a3b8" font-size="10" text-anchor="middle">Orphan Events &amp; Errors</text>
+            <text x="785" y="173" fill="#94a3b8" font-size="10" text-anchor="middle">Tratamento Manual &amp; Re-drive</text>
+          </svg>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+  <!-- Navigation, Drawer & UI Interactivity Script -->
+  <script>
+    function toggleNav() {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      var main = document.getElementById('main');
+      if (!sb) return;
+      
+      var isMobile = window.innerWidth <= 960;
+      if (isMobile) {
+        var isOpen = sb.classList.contains('open');
+        if (!isOpen) {
+          sb.classList.add('open');
+          if (hb) hb.innerHTML = '✕';
+        } else {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      } else {
+        var isClosed = sb.classList.contains('closed');
+        if (!isClosed) {
+          sb.classList.add('closed');
+          if (main) main.classList.add('sidebar-closed');
+          if (hb) hb.innerHTML = '☰';
+        } else {
+          sb.classList.remove('closed');
+          if (main) main.classList.remove('sidebar-closed');
+          if (hb) hb.innerHTML = '✕';
+        }
+      }
+    }
+    window.toggleNav = toggleNav;
+
+    function toggleCategory(catId, element) {
+      const categoryContent = document.getElementById(catId);
+      if (categoryContent) {
+        categoryContent.classList.toggle('expanded');
+        categoryContent.classList.toggle('open');
+        if (element) {
+          element.classList.toggle('expanded');
+          element.classList.toggle('active');
+          const arrow = element.querySelector('.arrow');
+          if (arrow) {
+            const isOpen = categoryContent.classList.contains('expanded') || categoryContent.classList.contains('open');
+            arrow.innerHTML = isOpen ? '▼' : '▶';
+          }
+        }
+      }
+    }
+    window.toggleCategory = toggleCategory;
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.scrollToTop = scrollToTop;
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths for pages/financas/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

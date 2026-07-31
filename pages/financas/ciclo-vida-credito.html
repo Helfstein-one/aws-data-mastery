@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Ciclo de Vida do Contrato de Crédito: 6 Estágios (Origination, Disbursement, Accrual, Payment, Delinquency, Write-off/Recovery), Partidas Dobradas (COSIF), MSK, EventBridge, DynamoDB Single-Table e Apache Iceberg Ledger - AWS Data Mastery"/>
+  <title>Ciclo de Vida de Crédito &amp; Arquitetura de Eventos AWS 2026 | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/financas/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Ciclo de Vida de Crédito &amp; Arquitetura de Eventos AWS 2026 | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Dados Financeiros: 6 Estágios de Contrato, Event Streaming com Amazon MSK &amp; EventBridge, DynamoDB Single-Table e Apache Iceberg Ledger."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Engenharia Financeira &amp; Processamento de Eventos AWS 2026</div>
+      <h1>Ciclo de Vida de Crédito &amp; <em>Arquitetura de Eventos</em></h1>
+      <p class="hero-d">Os 6 Estágios Funcionais do Contrato (Origination, Disbursement, Accrual, Payment, Delinquency, Write-off/Recovery), partidas dobradas (COSIF D/C), barramentos Amazon MSK e EventBridge, DynamoDB Single-Table ODS e Lakehouse Ledger em Apache Iceberg.</p>
+      <div class="pills">
+        <span class="pill">6 Estágios de Vida</span>
+        <span class="pill">Partidas Dobradas (COSIF)</span>
+        <span class="pill">Amazon MSK</span>
+        <span class="pill">Amazon EventBridge</span>
+        <span class="pill">DynamoDB Single-Table</span>
+        <span class="pill">Apache Iceberg Ledger</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: VISÃO GERAL E MÁQUINA DE ESTADOS FINITOS (FSM) -->
+      <section class="section" id="visao-geral-fsm">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--emr)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Estágios Funcionais do Crédito</div>
+            <h2>Visão Geral &amp; Máquina de Estados Finitos (FSM)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Um contrato de crédito bancário não é um mero registro estático em banco de dados SQL. Trata-se de uma entidade financeira viva governada por uma <strong>Máquina de Estados Finitos (FSM - Finite State Machine)</strong>. Cada transição de estado é disparada por eventos de negócio (como formalização da CCB, desembolso via PIX, apropriação pro-rata die, amortização ou atraso) que exigem <strong>lançamentos contábeis em partidas dobradas (Débito/Crédito)</strong> no plano de contas COSIF e persistência determinística no Data Lakehouse.
+        </p>
+
+        <!-- DIAGRAMA SVG 1: PIPELINE DOS 6 ESTÁGIOS DE VIDA DO CONTRATO -->
+        <div class="svg-container" style="margin: 2.5rem 0; text-align: center;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 12px;">Fluxo Linear dos 6 Estágios do Contrato de Crédito</div>
+          <svg viewBox="0 0 960 230" width="100%" style="background-color: #020617; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 15px;" xmlns="http://www.w3.org/2000/svg">
+            <text x="480" y="25" fill="#f8fafc" font-size="14" font-weight="bold" text-anchor="middle" letter-spacing="1">CICLO DE VIDA DE CRÉDITO: 6 FASES ESSENCIAIS DO CONTRATO</text>
+
+            <!-- Box 1: Origination -->
+            <rect x="15" y="55" width="140" height="150" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+            <text x="85" y="80" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">1. Origination</text>
+            <text x="85" y="100" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Originação</text>
+            <text x="85" y="125" fill="#cbd5e1" font-size="9" text-anchor="middle">Proposta &amp; Formalização</text>
+            <text x="85" y="140" fill="#cbd5e1" font-size="9" text-anchor="middle">Assinatura da CCB</text>
+            <text x="85" y="155" fill="#cbd5e1" font-size="9" text-anchor="middle">Análise de Risco / SCR</text>
+            <rect x="25" y="170" width="120" height="22" rx="4" fill="#1e293b"/>
+            <text x="85" y="185" fill="#38bdf8" font-size="9" font-family="DM Mono" text-anchor="middle">credit.originated.v1</text>
+
+            <!-- Arrow 1-2 -->
+            <line x1="155" y1="130" x2="173" y2="130" stroke="#475569" stroke-width="2"/>
+            <polygon points="173,125 181,130 173,135" fill="#94a3b8"/>
+
+            <!-- Box 2: Disbursement -->
+            <rect x="181" y="55" width="140" height="150" rx="8" fill="#0f172a" stroke="#06b6d4" stroke-width="2"/>
+            <text x="251" y="80" fill="#06b6d4" font-size="12" font-weight="bold" text-anchor="middle">2. Disbursement</text>
+            <text x="251" y="100" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Desembolso</text>
+            <text x="251" y="125" fill="#cbd5e1" font-size="9" text-anchor="middle">Liberação de Capital</text>
+            <text x="251" y="140" fill="#cbd5e1" font-size="9" text-anchor="middle">Transferência PIX/TED</text>
+            <text x="251" y="155" fill="#cbd5e1" font-size="9" text-anchor="middle">Ativação no Balanço</text>
+            <rect x="191" y="170" width="120" height="22" rx="4" fill="#1e293b"/>
+            <text x="251" y="185" fill="#06b6d4" font-size="9" font-family="DM Mono" text-anchor="middle">credit.disbursed.v1</text>
+
+            <!-- Arrow 2-3 -->
+            <line x1="321" y1="130" x2="339" y2="130" stroke="#475569" stroke-width="2"/>
+            <polygon points="339,125 347,130 339,135" fill="#94a3b8"/>
+
+            <!-- Box 3: Accrual -->
+            <rect x="347" y="55" width="140" height="150" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+            <text x="417" y="80" fill="#f59e0b" font-size="12" font-weight="bold" text-anchor="middle">3. Accrual</text>
+            <text x="417" y="100" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Apropriação Juros</text>
+            <text x="417" y="125" fill="#cbd5e1" font-size="9" text-anchor="middle">Spot Accrual Diário</text>
+            <text x="417" y="140" fill="#cbd5e1" font-size="9" text-anchor="middle">Juros Pro-rata Die</text>
+            <text x="417" y="155" fill="#cbd5e1" font-size="9" text-anchor="middle">Receita Competência</text>
+            <rect x="357" y="170" width="120" height="22" rx="4" fill="#1e293b"/>
+            <text x="417" y="185" fill="#f59e0b" font-size="9" font-family="DM Mono" text-anchor="middle">credit.accrual.v1</text>
+
+            <!-- Arrow 3-4 -->
+            <line x1="487" y1="130" x2="505" y2="130" stroke="#475569" stroke-width="2"/>
+            <polygon points="505,125 513,130 505,135" fill="#94a3b8"/>
+
+            <!-- Box 4: Payment -->
+            <rect x="513" y="55" width="140" height="150" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+            <text x="583" y="80" fill="#10b981" font-size="12" font-weight="bold" text-anchor="middle">4. Payment</text>
+            <text x="583" y="100" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Pagamento</text>
+            <text x="583" y="125" fill="#cbd5e1" font-size="9" text-anchor="middle">Liquidação Parcela</text>
+            <text x="583" y="140" fill="#cbd5e1" font-size="9" text-anchor="middle">Waterfall de Baixa</text>
+            <text x="583" y="155" fill="#cbd5e1" font-size="9" text-anchor="middle">Amortização Principal</text>
+            <rect x="523" y="170" width="120" height="22" rx="4" fill="#1e293b"/>
+            <text x="583" y="185" fill="#10b981" font-size="9" font-family="DM Mono" text-anchor="middle">credit.payment.v1</text>
+
+            <!-- Arrow 4-5 -->
+            <line x1="653" y1="130" x2="671" y2="130" stroke="#475569" stroke-width="2"/>
+            <polygon points="671,125 679,130 671,135" fill="#94a3b8"/>
+
+            <!-- Box 5: Delinquency -->
+            <rect x="679" y="55" width="140" height="150" rx="8" fill="#0f172a" stroke="#f97316" stroke-width="2"/>
+            <text x="749" y="80" fill="#f97316" font-size="12" font-weight="bold" text-anchor="middle">5. Delinquency</text>
+            <text x="749" y="100" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">Inadimplência</text>
+            <text x="749" y="125" fill="#cbd5e1" font-size="9" text-anchor="middle">Atraso &amp; Contagem DPD</text>
+            <text x="749" y="140" fill="#cbd5e1" font-size="9" text-anchor="middle">Provisão PDD / ECL</text>
+            <text x="749" y="155" fill="#cbd5e1" font-size="9" text-anchor="middle">CMN 4.966 Estágios 1-3</text>
+            <rect x="689" y="170" width="120" height="22" rx="4" fill="#1e293b"/>
+            <text x="749" y="185" fill="#f97316" font-size="9" font-family="DM Mono" text-anchor="middle">credit.delinquency.v1</text>
+
+            <!-- Arrow 5-6 -->
+            <line x1="819" y1="130" x2="837" y2="130" stroke="#475569" stroke-width="2"/>
+            <polygon points="837,125 845,130 837,135" fill="#94a3b8"/>
+
+            <!-- Box 6: Write-off / Recovery -->
+            <rect x="845" y="55" width="105" height="150" rx="8" fill="#0f172a" stroke="#ef4444" stroke-width="2"/>
+            <text x="897" y="75" fill="#ef4444" font-size="10" font-weight="bold" text-anchor="middle">6. Write-off</text>
+            <text x="897" y="90" fill="#a855f7" font-size="10" font-weight="bold" text-anchor="middle">&amp; Recovery</text>
+            <text x="897" y="112" fill="#f8fafc" font-size="10" font-weight="600" text-anchor="middle">Baixa &amp; Recup.</text>
+            <text x="897" y="132" fill="#cbd5e1" font-size="8" text-anchor="middle">Perda &gt;180/360d</text>
+            <text x="897" y="147" fill="#cbd5e1" font-size="8" text-anchor="middle">Cobrança NPL</text>
+            <rect x="850" y="170" width="95" height="22" rx="4" fill="#1e293b"/>
+            <text x="897" y="185" fill="#ef4444" font-size="8" font-family="DM Mono" text-anchor="middle">credit.writeoff.v1</text>
+          </svg>
+        </div>
+
+        <div class="card" style="margin-bottom: 30px; border-top: 4px solid var(--aws);">
+          <div class="card-lbl" style="color:var(--aws)">Diagrama de Transição de Estados (Mermaid State Machine)</div>
+          <div class="mermaid" style="text-align: center; margin: 20px 0; background: transparent;">
+            graph TD
+              A[1. Origination<br/>PROPOSAL_APPROVED] --> B[2. Disbursement<br/>CREDIT_DISBURSED]
+              B --> C[3. Accrual<br/>ACCRUAL_CALCULATED]
+              C --> D{Evento Liquidação?}
+              D -- Pagamento Parcela --> E[4. Payment<br/>INSTALLMENT_PAID]
+              E -- Mais parcelas em aberto --> C
+              E -- Última parcela quitada --> F[Contrato Quitado<br/>SETTLED]
+              D -- Atraso (DPD > 0) --> G[5. Delinquency<br/>OVERDUE_STAGE_1_2_3]
+              G -- Renegociação / Acordo --> E
+              G -- Inadimplência > 180d/360d --> H[6. Write-off & Recovery<br/>WRITTEN_OFF_PREJUIZO]
+              H -- Cobrança Pós-Baixa --> I[Recuperação de Crédito<br/>RECOVERY_RECEIVED]
+
+              classDef default fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff;
+              classDef alert fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff;
+              classDef ok fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff;
+              classDef warn fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#fff;
+              class G,H alert;
+              class E,F,I ok;
+              class A,B,C warn;
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: DETALHAMENTO DOS 6 ESTÁGIOS DE VIDA DO CONTRATO -->
+      <section class="section" id="detalhamento-estagios">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Engenharia Financeira &amp; Contabilidade COSIF</div>
+            <h2>Detalhamento Separado dos 6 Estágios de Crédito</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Abaixo, cada uma das 6 fases do ciclo de vida é explicada detalhadamente em termos de negócio, gatilhos de eventos, máquina de estados e impactos contábeis no padrão <strong>COSIF (Plano de Contas das Instituições do Sistema Financeiro Nacional)</strong>.
+        </p>
+
+        <div class="grid-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; margin-bottom: 30px;">
+          
+          <!-- FASE 1: ORIGINATION -->
+          <div class="abox info" style="border-left-color:var(--aws); background: #0f172a; border-radius: 8px; padding: 18px; border-left: 5px solid var(--aws);">
+            <div class="abox-hdr" style="background:var(--aws); color:#0f172a; padding: 6px 12px; font-weight: bold; border-radius: 4px; font-size: 0.95rem;">
+              1. Originação (Origination)
+            </div>
+            <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
+              <p><strong>Descrição de Negócio:</strong> Etapa de formalização contratual. Envolve aprovação da proposta de crédito, checagem KYC/AML, consulta ao Registrato/SCR do BACEN, assinatura eletrônica da Cédula de Crédito Bancário (CCB) e registro de garantias.</p>
+              <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#38bdf8; font-size:12px; border: 1px solid #1e293b;">
+                Event Kafka: credit.originated.v1<br/>
+                FSM State: NEW_PROPOSAL ➔ ORIGINATED
+              </div>
+              <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
+              <p style="margin-top: 4px; color: #cbd5e1;">Neste momento, antes da entrega efetiva do dinheiro, o crédito é um compromisso extracontábil (Contas de Compensação).</p>
+              <ul style="margin-top:5px; padding-left: 18px;">
+                <li style="color:#34d399"><strong>Débito (D):</strong> Operações de Crédito a Libertas (Compensação ⬆) — COSIF 3.0.1.10.x0-1</li>
+                <li style="color:#ef4444"><strong>Crédito (C):</strong> Compromissos de Crédito Contratados (Compensação ⬇) — COSIF 3.0.9.10.x0-8</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- FASE 2: DISBURSEMENT -->
+          <div class="abox info" style="border-left-color:#06b6d4; background: #0f172a; border-radius: 8px; padding: 18px; border-left: 5px solid #06b6d4;">
+            <div class="abox-hdr" style="background:#06b6d4; color:#0f172a; padding: 6px 12px; font-weight: bold; border-radius: 4px; font-size: 0.95rem;">
+              2. Desembolso (Disbursement)
+            </div>
+            <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
+              <p><strong>Descrição de Negócio:</strong> Efetiva transferência financeira dos recursos aprovados para a conta corrente ou chave PIX do tomador (Funding). O direito de crédito entra formalmente para o balanço patrimonial da instituição como ativo bancário.</p>
+              <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#06b6d4; font-size:12px; border: 1px solid #1e293b;">
+                Event Kafka: credit.disbursed.v1<br/>
+                FSM State: ORIGINATED ➔ ACTIVE_PERFORMING
+              </div>
+              <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
+              <p style="margin-top: 4px; color: #cbd5e1;">Reversão das contas de compensação e reconhecimento da carteira principal no Ativo do Balanço.</p>
+              <ul style="margin-top:5px; padding-left: 18px;">
+                <li style="color:#34d399"><strong>Débito (D):</strong> Empréstimos e Financiamentos / Carteira Principal (Ativo ⬆) — COSIF 1.6.1.10.x</li>
+                <li style="color:#ef4444"><strong>Crédito (C):</strong> Disponibilidades / Conta Corrente de Clientes (Ativo ⬇ / Passivo ⬆) — COSIF 4.1.1.10.x</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- FASE 3: ACCRUAL -->
+          <div class="abox info" style="border-left-color:var(--spark); background: #0f172a; border-radius: 8px; padding: 18px; border-left: 5px solid var(--spark);">
+            <div class="abox-hdr" style="background:var(--spark); color:#ffffff; padding: 6px 12px; font-weight: bold; border-radius: 4px; font-size: 0.95rem;">
+              3. Apropriação de Juros (Accrual / Spot Accrual)
+            </div>
+            <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
+              <p><strong>Descrição de Negócio:</strong> Apropriação diária da receita de juros remuneratórios calculados <em>pro-rata die</em> sobre o saldo devedor de curva (Regime de Competência). Sob a Resolução CMN 4.966, se DPD &gt; 90 (Estágio 3), ocorre o <strong>Stop Accrual</strong> (interrupção do reconhecimento de receita em DRE).</p>
+              <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#facc15; font-size:12px; border: 1px solid #1e293b;">
+                Event Kafka: credit.accrual.calculated.v1<br/>
+                FSM State: ACTIVE_PERFORMING (Atualização Diária)
+              </div>
+              <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
+              <ul style="margin-top:5px; padding-left: 18px;">
+                <li style="color:#34d399"><strong>Débito (D):</strong> Rendimentos a Receber de Empréstimos (Ativo ⬆) — COSIF 1.6.9.10.x</li>
+                <li style="color:#ef4444"><strong>Crédito (C):</strong> Receitas de Operações de Crédito (DRE / Resultado ⬆) — COSIF 7.1.1.10.x</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- FASE 4: PAYMENT -->
+          <div class="abox info" style="border-left-color:var(--ok); background: #0f172a; border-radius: 8px; padding: 18px; border-left: 5px solid var(--ok);">
+            <div class="abox-hdr" style="background:var(--ok); color:#ffffff; padding: 6px 12px; font-weight: bold; border-radius: 4px; font-size: 0.95rem;">
+              4. Pagamento e Amortização (Payment)
+            </div>
+            <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
+              <p><strong>Descrição de Negócio:</strong> Efetivação do pagamento da parcela pelo tomador via PIX, Boleto ou Débito Automático. Aplicação rígida do <em>Waterfall de Liquidação</em>: 1º Encargos/Impostos (IOF), 2º Multa/Juros de Mora, 3º Juros Remuneratórios Accruados, 4º Amortização do Principal.</p>
+              <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#4ade80; font-size:12px; border: 1px solid #1e293b;">
+                Event Kafka: credit.payment.received.v1<br/>
+                FSM State: ACTIVE_PERFORMING ➔ SETTLED (se última)
+              </div>
+              <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
+              <ul style="margin-top:5px; padding-left: 18px;">
+                <li style="color:#34d399"><strong>Débito (D):</strong> Caixa / Disponibilidades PIX (Ativo ⬆) — COSIF 1.1.1.10.x</li>
+                <li style="color:#ef4444"><strong>Crédito (C):</strong> Rendimentos a Receber (Ativo ⬇) — COSIF 1.6.9.10.x</li>
+                <li style="color:#ef4444"><strong>Crédito (C):</strong> Carteira Principal Amortizada (Ativo ⬇) — COSIF 1.6.1.10.x</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- FASE 5: DELINQUENCY -->
+          <div class="abox info" style="border-left-color:#f97316; background: #0f172a; border-radius: 8px; padding: 18px; border-left: 5px solid #f97316;">
+            <div class="abox-hdr" style="background:#f97316; color:#0f172a; padding: 6px 12px; font-weight: bold; border-radius: 4px; font-size: 0.95rem;">
+              5. Inadimplência e Provisão (Delinquency &amp; ECL)
+            </div>
+            <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
+              <p><strong>Descrição de Negócio:</strong> Inadimplência contratual após o não pagamento na data de vencimento (DPD &gt; 0). Enquadramento nas réguas de cobrança e alocação nos Estágios de Risco de Crédito sob a Resolução CMN 4.966 / IFRS 9 (Estágio 1, Estágio 2 e Estágio 3) com constituição obrigatória de Perda Esperada (ECL).</p>
+              <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#fb923c; font-size:12px; border: 1px solid #1e293b;">
+                Event Kafka: credit.delinquency.updated.v1<br/>
+                FSM State: DELINQUENT_STAGE_1 ➔ STAGE_2 ➔ STAGE_3
+              </div>
+              <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
+              <ul style="margin-top:5px; padding-left: 18px;">
+                <li style="color:#34d399"><strong>Débito (D):</strong> Despesa com Provisão para Perdas de Crédito (DRE ⬇) — COSIF 8.1.1.10.x</li>
+                <li style="color:#ef4444"><strong>Crédito (C):</strong> Provisão para Perdas de Crédito (Redutora do Ativo ⬆) — COSIF 1.6.9.90.x</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- FASE 6: WRITE-OFF / RECOVERY -->
+          <div class="abox info" style="border-left-color:var(--red); background: #0f172a; border-radius: 8px; padding: 18px; border-left: 5px solid var(--red);">
+            <div class="abox-hdr" style="background:var(--red); color:#ffffff; padding: 6px 12px; font-weight: bold; border-radius: 4px; font-size: 0.95rem;">
+              6. Baixa a Prejuízo &amp; Recuperação (Write-off &amp; Recovery)
+            </div>
+            <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
+              <p><strong>Descrição de Negócio:</strong> 
+                <strong>Write-off:</strong> Desreconhecimento contábil da carteira após atraso prolongado (&gt; 180 a 360 dias) com 100% de provisão acumula. O ativo sai do balanço patrimonial e vai para contas de compensação de prejuízo.<br/>
+                <strong>Recovery:</strong> Valores recuperados posteriormente via cobrança judicial/extrajudicial são contabilizados diretamente como receita operacional.
+              </p>
+              <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#f87171; font-size:12px; border: 1px solid #1e293b;">
+                Events Kafka: credit.writeoff.executed.v1 &amp; credit.recovery.received.v1<br/>
+                FSM State: DELINQUENT_STAGE_3 ➔ WRITTEN_OFF ➔ RECOVERED
+              </div>
+              <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
+              <ul style="margin-top:5px; padding-left: 18px;">
+                <li style="color:#34d399"><strong>Write-off (D):</strong> Provisão para Perdas Acumulada (Redutora Ativo ⬇) — COSIF 1.6.9.90.x</li>
+                <li style="color:#ef4444"><strong>Write-off (C):</strong> Carteira de Crédito em Atraso (Ativo ⬇) — COSIF 1.6.1.10.x</li>
+                <li style="color:#34d399"><strong>Recovery (D):</strong> Caixa / Banco (Ativo ⬆) — COSIF 1.1.1.10.x</li>
+                <li style="color:#ef4444"><strong>Recovery (C):</strong> Recuperação de Créditos Baixados como Prejuízo (DRE ⬆) — COSIF 7.1.9.10.x</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: TABELA MÁQUINA DE ESTADOS DO CONTRATO -->
+      <section class="section" id="tabela-fsm">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Regras de Negócio &amp; Governança COSIF</div>
+            <h2>Tabela Completa de Transição de Estados (FSM Matrix)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A matriz a seguir consolida as regras de transição de estado da FSM do contrato de crédito, validadas via motor de regras deterministicamente integrado ao barramento de eventos MSK e ao banco de estado DynamoDB.
+        </p>
+
+        <div class="tbl-wrap">
+          <table style="font-size:12.5px; width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background:#020617; color:#f8fafc; border-bottom: 2px solid #334155;">
+                <th style="padding: 10px; text-align: left;">Fase</th>
+                <th style="padding: 10px; text-align: left;">Estado Origem</th>
+                <th style="padding: 10px; text-align: left;">Evento Kafka / EventBridge</th>
+                <th style="padding: 10px; text-align: left;">Estado Destino</th>
+                <th style="padding: 10px; text-align: left;">Validação / Pré-condição Operacional</th>
+                <th style="padding: 10px; text-align: left;">Impacto Contábil COSIF (D/C)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #1e293b;">
+                <td style="padding: 10px; font-weight: bold; color: #38bdf8;">1. Origination</td>
+                <td style="padding: 10px;"><code>PROPOSAL_NEW</code></td>
+                <td style="padding: 10px;"><code>credit.originated.v1</code></td>
+                <td style="padding: 10px;"><code>ORIGINATED</code></td>
+                <td style="padding: 10px;">KYC/AML Aprovado + SCR Validado + Assinatura CCB Hash Validada</td>
+                <td style="padding: 10px;">D: Operações a Libertas (Compensação)<br/>C: Compromissos Contratados (Compensação)</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.5);">
+                <td style="padding: 10px; font-weight: bold; color: #06b6d4;">2. Disbursement</td>
+                <td style="padding: 10px;"><code>ORIGINATED</code></td>
+                <td style="padding: 10px;"><code>credit.disbursed.v1</code></td>
+                <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
+                <td style="padding: 10px;">Confirmação de transferência bancária via PIX/STR + Saldo disponível</td>
+                <td style="padding: 10px;">D: Carteira Principal (Ativo ⬆)<br/>C: Conta Corrente do Cliente (Passivo ⬆)</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #1e293b;">
+                <td style="padding: 10px; font-weight: bold; color: #f59e0b;">3. Accrual</td>
+                <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
+                <td style="padding: 10px;"><code>credit.accrual.calculated.v1</code></td>
+                <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
+                <td style="padding: 10px;">Fechamento de dia útil bancário + DPD &le; 90 (Sem Stop Accrual)</td>
+                <td style="padding: 10px;">D: Juros a Receber (Ativo ⬆)<br/>C: Receita de Crédito (DRE ⬆)</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.5);">
+                <td style="padding: 10px; font-weight: bold; color: #10b981;">4. Payment</td>
+                <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
+                <td style="padding: 10px;"><code>credit.payment.received.v1</code></td>
+                <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code> / <code>SETTLED</code></td>
+                <td style="padding: 10px;">Liquidação financeira confirmada na CIP/SPI + Waterfall de amortização</td>
+                <td style="padding: 10px;">D: Disponibilidades / Caixa (Ativo ⬆)<br/>C: Juros a Receber &amp; Carteira Principal (Ativo ⬇)</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #1e293b;">
+                <td style="padding: 10px; font-weight: bold; color: #f97316;">5. Delinquency</td>
+                <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
+                <td style="padding: 10px;"><code>credit.delinquency.updated.v1</code></td>
+                <td style="padding: 10px;"><code>DELINQUENT_STAGE_1_2_3</code></td>
+                <td style="padding: 10px;">Atraso no vencimento (DPD &gt; 0) + Recálculo de Matriz de Transição ECL</td>
+                <td style="padding: 10px;">D: Despesa com Provisão PDD (DRE ⬇)<br/>C: Provisão para Perdas (Redutora Ativo ⬆)</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.5);">
+                <td style="padding: 10px; font-weight: bold; color: #ef4444;">6. Write-off</td>
+                <td style="padding: 10px;"><code>DELINQUENT_STAGE_3</code></td>
+                <td style="padding: 10px;"><code>credit.writeoff.executed.v1</code></td>
+                <td style="padding: 10px;"><code>WRITTEN_OFF</code></td>
+                <td style="padding: 10px;">DPD &gt; 180 (ou 360 dias) + 100% de provisão acumulada (CMN 4.966)</td>
+                <td style="padding: 10px;">D: Provisão Acumulada (Redutora Ativo ⬇)<br/>C: Carteira Principal em Atraso (Ativo ⬇)</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #1e293b;">
+                <td style="padding: 10px; font-weight: bold; color: #a855f7;">6. Recovery</td>
+                <td style="padding: 10px;"><code>WRITTEN_OFF</code></td>
+                <td style="padding: 10px;"><code>credit.recovery.received.v1</code></td>
+                <td style="padding: 10px;"><code>RECOVERED</code></td>
+                <td style="padding: 10px;">Entrada efetiva de recursos em conta após cobrança NPL pós-baixa</td>
+                <td style="padding: 10px;">D: Disponibilidades / Caixa (Ativo ⬆)<br/>C: Receita de Recuperação de Crédito (DRE ⬆)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: ARQUITETURA DE STREAMING E ARMAZENAMENTO AWS 2026 -->
+      <section class="section" id="arquitetura-aws">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Engenharia de Dados &amp; Event Streaming AWS 2026</div>
+            <h2>Arquitetura MSK, EventBridge, DynamoDB Single-Table &amp; Apache Iceberg</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para garantir processamento em tempo real com garantia <strong>Exactly-Once Semantics</strong>, conciliação contábil contínua e auditabilidade mandatória pelo Banco Central do Brasil, a arquitetura moderna em nuvem AWS integra mensageria de alta vazão no <strong>Amazon MSK</strong>, roteamento de eventos no <strong>Amazon EventBridge</strong>, persistência operacional no <strong>Amazon DynamoDB (Single-Table Design)</strong> e Data Lakehouse analítico em <strong>Apache Iceberg sobre Amazon S3</strong>.
+        </p>
+
+        <!-- DIAGRAMA SVG 2: ARQUITETURA DE EVENTOS E ARMAZENAMENTO COMPLETA -->
+        <div class="svg-container" style="margin: 2.5rem 0; text-align: center;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 12px;">Arquitetura Event-Driven &amp; Armazenamento de Crédito AWS 2026</div>
+          <svg viewBox="0 0 980 430" width="100%" style="background-color: #020617; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 15px;" xmlns="http://www.w3.org/2000/svg">
+            <text x="490" y="25" fill="#f8fafc" font-size="14" font-weight="bold" text-anchor="middle" letter-spacing="1">AWS 2026: EVENT STREAMING, DYNAMODB SINGLE-TABLE &amp; ICEBERG LEDGER</text>
+
+            <!-- Layer 1: Producers -->
+            <rect x="20" y="65" width="140" height="340" rx="8" fill="#0f172a" stroke="#475569" stroke-width="2"/>
+            <text x="90" y="90" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">Sistemas Origem</text>
+            <rect x="30" y="110" width="120" height="40" rx="4" fill="#1e293b"/>
+            <text x="90" y="128" fill="#cbd5e1" font-size="10" text-anchor="middle">Core Bancário</text>
+            <text x="90" y="142" fill="#94a3b8" font-size="8" text-anchor="middle">(Originação / CCB)</text>
+
+            <rect x="30" y="165" width="120" height="40" rx="4" fill="#1e293b"/>
+            <text x="90" y="183" fill="#cbd5e1" font-size="10" text-anchor="middle">Gateway PIX / SPI</text>
+            <text x="90" y="197" fill="#94a3b8" font-size="8" text-anchor="middle">(Liquidação Pagamentos)</text>
+
+            <rect x="30" y="220" width="120" height="40" rx="4" fill="#1e293b"/>
+            <text x="90" y="238" fill="#cbd5e1" font-size="10" text-anchor="middle">Motor Accrual Batch</text>
+            <text x="90" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">(Juros Pro-rata Die)</text>
+
+            <rect x="30" y="275" width="120" height="40" rx="4" fill="#1e293b"/>
+            <text x="90" y="293" fill="#cbd5e1" font-size="10" text-anchor="middle">Engine Cobrança</text>
+            <text x="90" y="307" fill="#94a3b8" font-size="8" text-anchor="middle">(Regras Inadimplência)</text>
+
+            <rect x="30" y="330" width="120" height="40" rx="4" fill="#1e293b"/>
+            <text x="90" y="348" fill="#cbd5e1" font-size="10" text-anchor="middle">Mesa NPL / Write-off</text>
+            <text x="90" y="362" fill="#94a3b8" font-size="8" text-anchor="middle">(Recuperação Dívidas)</text>
+
+            <!-- Arrow 1-2 -->
+            <line x1="160" y1="235" x2="185" y2="235" stroke="#475569" stroke-width="2"/>
+            <polygon points="185,230 195,235 185,240" fill="#94a3b8"/>
+
+            <!-- Layer 2: Amazon MSK -->
+            <rect x="195" y="65" width="165" height="340" rx="8" fill="#0b1329" stroke="#f59e0b" stroke-width="2"/>
+            <text x="277" y="90" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">Amazon MSK Cluster</text>
+            <text x="277" y="105" fill="#94a3b8" font-size="9" text-anchor="middle">Kafka 3.x KRaft / Multi-AZ</text>
+
+            <rect x="210" y="120" width="135" height="35" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="277" y="142" fill="#38bdf8" font-size="9" font-family="DM Mono" text-anchor="middle">credit.originated.v1</text>
+
+            <rect x="210" y="165" width="135" height="35" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="277" y="187" fill="#06b6d4" font-size="9" font-family="DM Mono" text-anchor="middle">credit.disbursed.v1</text>
+
+            <rect x="210" y="210" width="135" height="35" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="277" y="232" fill="#facc15" font-size="9" font-family="DM Mono" text-anchor="middle">credit.payment.v1</text>
+
+            <rect x="210" y="255" width="135" height="35" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="277" y="277" fill="#fb923c" font-size="9" font-family="DM Mono" text-anchor="middle">credit.delinquency.v1</text>
+
+            <rect x="210" y="300" width="135" height="35" rx="4" fill="#1e293b" stroke="#334155"/>
+            <text x="277" y="322" fill="#f87171" font-size="9" font-family="DM Mono" text-anchor="middle">credit.writeoff.v1</text>
+
+            <text x="277" y="365" fill="#cbd5e1" font-size="9" text-anchor="middle">Keyed by: contract_id</text>
+            <text x="277" y="385" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">Exactly-Once Semantics</text>
+
+            <!-- Arrow 2-3 -->
+            <line x1="360" y1="235" x2="385" y2="235" stroke="#475569" stroke-width="2"/>
+            <polygon points="385,230 395,235 385,240" fill="#94a3b8"/>
+
+            <!-- Layer 3: Amazon EventBridge -->
+            <rect x="395" y="65" width="155" height="340" rx="8" fill="#0b1329" stroke="#a855f7" stroke-width="2"/>
+            <text x="472" y="90" fill="#c084fc" font-size="12" font-weight="bold" text-anchor="middle">Amazon EventBridge</text>
+            <text x="472" y="105" fill="#94a3b8" font-size="9" text-anchor="middle">Pipes &amp; Event Bus</text>
+
+            <rect x="408" y="125" width="130" height="45" rx="4" fill="#1e293b"/>
+            <text x="472" y="145" fill="#f8fafc" font-size="9" font-weight="bold" text-anchor="middle">EventBridge Pipes</text>
+            <text x="472" y="160" fill="#cbd5e1" font-size="8" text-anchor="middle">Filtering &amp; Enrichment</text>
+
+            <rect x="408" y="185" width="130" height="45" rx="4" fill="#1e293b"/>
+            <text x="472" y="205" fill="#f8fafc" font-size="9" font-weight="bold" text-anchor="middle">Schema Registry</text>
+            <text x="472" y="220" fill="#cbd5e1" font-size="8" text-anchor="middle">OpenAPI / JSON Schema</text>
+
+            <rect x="408" y="245" width="130" height="45" rx="4" fill="#1e293b"/>
+            <text x="472" y="265" fill="#f8fafc" font-size="9" font-weight="bold" text-anchor="middle">Cross-Service Routing</text>
+            <text x="472" y="280" fill="#cbd5e1" font-size="8" text-anchor="middle">Notificações / Webhooks</text>
+
+            <rect x="408" y="305" width="130" height="45" rx="4" fill="#1e293b"/>
+            <text x="472" y="325" fill="#f8fafc" font-size="9" font-weight="bold" text-anchor="middle">Step Functions</text>
+            <text x="472" y="340" fill="#cbd5e1" font-size="8" text-anchor="middle">Orquestração Renegociação</text>
+
+            <!-- Arrow 3-4 (Top: DynamoDB) -->
+            <line x1="550" y1="160" x2="575" y2="160" stroke="#475569" stroke-width="2"/>
+            <polygon points="575,155 585,160 575,165" fill="#94a3b8"/>
+
+            <!-- Arrow 3-5 (Bottom: Flink) -->
+            <line x1="550" y1="310" x2="575" y2="310" stroke="#475569" stroke-width="2"/>
+            <polygon points="575,305 585,310 575,315" fill="#94a3b8"/>
+
+            <!-- Layer 4A: Amazon DynamoDB -->
+            <rect x="585" y="65" width="170" height="160" rx="8" fill="#0b1329" stroke="#38bdf8" stroke-width="2"/>
+            <text x="670" y="88" fill="#38bdf8" font-size="11" font-weight="bold" text-anchor="middle">Amazon DynamoDB</text>
+            <text x="670" y="103" fill="#94a3b8" font-size="8" text-anchor="middle">Single-Table ODS State Store</text>
+            <rect x="595" y="112" width="150" height="25" rx="4" fill="#1e293b"/>
+            <text x="670" y="128" fill="#cbd5e1" font-size="8" font-family="DM Mono" text-anchor="middle">PK: CONTRACT#id</text>
+            <rect x="595" y="142" width="150" height="25" rx="4" fill="#1e293b"/>
+            <text x="670" y="158" fill="#cbd5e1" font-size="8" font-family="DM Mono" text-anchor="middle">SK: METADATA | EVENT#ts</text>
+            <text x="670" y="185" fill="#34d399" font-size="8" font-weight="bold" text-anchor="middle">DynamoDB Streams CDC</text>
+            <text x="670" y="200" fill="#94a3b8" font-size="8" text-anchor="middle">Strong Consistency / Locks</text>
+
+            <!-- Layer 4B: Apache Flink -->
+            <rect x="585" y="245" width="170" height="160" rx="8" fill="#0b1329" stroke="#10b981" stroke-width="2"/>
+            <text x="670" y="268" fill="#34d399" font-size="11" font-weight="bold" text-anchor="middle">Apache Flink Engine</text>
+            <text x="670" y="283" fill="#94a3b8" font-size="8" text-anchor="middle">Managed Service for Apache Flink</text>
+            <rect x="595" y="292" width="150" height="25" rx="4" fill="#1e293b"/>
+            <text x="670" y="308" fill="#cbd5e1" font-size="8" text-anchor="middle">KeyedStream FSM Evaluator</text>
+            <rect x="595" y="322" width="150" height="25" rx="4" fill="#1e293b"/>
+            <text x="670" y="338" fill="#cbd5e1" font-size="8" text-anchor="middle">Accounting Translator (COSIF)</text>
+            <text x="670" y="365" fill="#fbbf24" font-size="8" font-weight="bold" text-anchor="middle">RocksDB State Backend</text>
+            <text x="670" y="380" fill="#94a3b8" font-size="8" text-anchor="middle">Sub-second Aggregations</text>
+
+            <!-- Arrow 4-5 (DynamoDB Stream & Flink to S3 Iceberg) -->
+            <line x1="755" y1="145" x2="775" y2="145" stroke="#475569" stroke-width="2"/>
+            <polygon points="775,140 785,145 775,150" fill="#94a3b8"/>
+
+            <line x1="755" y1="325" x2="775" y2="325" stroke="#475569" stroke-width="2"/>
+            <polygon points="775,320 785,325 775,330" fill="#94a3b8"/>
+
+            <!-- Layer 5: Apache Iceberg S3 Lakehouse -->
+            <rect x="785" y="65" width="175" height="340" rx="8" fill="#0b1329" stroke="#06b6d4" stroke-width="2"/>
+            <text x="872" y="90" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">Amazon S3 Lakehouse</text>
+            <text x="872" y="105" fill="#94a3b8" font-size="9" text-anchor="middle">Apache Iceberg Ledger</text>
+
+            <rect x="798" y="120" width="150" height="40" rx="4" fill="#1e293b"/>
+            <text x="872" y="138" fill="#f8fafc" font-size="9" font-weight="bold" text-anchor="middle">ledger_analitico_db</text>
+            <text x="872" y="152" fill="#94a3b8" font-size="8" text-anchor="middle">Partidas Dobradas COSIF</text>
+
+            <rect x="798" y="170" width="150" height="40" rx="4" fill="#1e293b"/>
+            <text x="872" y="188" fill="#f8fafc" font-size="9" font-weight="bold" text-anchor="middle">contract_fsm_history</text>
+            <text x="872" y="202" fill="#94a3b8" font-size="8" text-anchor="middle">Trilha Auditável FSM</text>
+
+            <rect x="798" y="220" width="150" height="40" rx="4" fill="#1e293b"/>
+            <text x="872" y="238" fill="#f8fafc" font-size="9" font-weight="bold" text-anchor="middle">credit_provision_ecl</text>
+            <text x="872" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">Matriz de Risco CMN 4.966</text>
+
+            <rect x="798" y="275" width="150" height="60" rx="4" fill="#0f172a" stroke="#1e293b"/>
+            <text x="872" y="293" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">Capacidades Chave:</text>
+            <text x="872" y="308" fill="#cbd5e1" font-size="8" text-anchor="middle">• Time-Travel BACEN D0</text>
+            <text x="872" y="322" fill="#cbd5e1" font-size="8" text-anchor="middle">• Write-Audit-Publish (WAP)</text>
+
+            <text x="872" y="375" fill="#f59e0b" font-size="9" font-weight="bold" text-anchor="middle">AWS Glue Data Catalog</text>
+          </svg>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; margin-top: 24px;">
+          <!-- Componente 1: MSK -->
+          <div class="card" style="background:#0f172a; border: 1px solid #1e293b; padding: 18px; border-radius: 8px;">
+            <h3 style="color: #fbbf24; font-size: 1.05rem; margin-bottom: 8px;">1. Amazon MSK (Managed Streaming for Kafka)</h3>
+            <p style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+              Responsável pelo enfileiramento de alta capacidade e ordenação estrita por chave (<code>key = contract_id</code>). Garante que todos os eventos do mesmo contrato (originação, desembolso, juros, amortização e baixa) sejam processados sequencialmente no mesmo particionamento Kafka, prevenindo concorrência e condições de corrida (<em>race conditions</em>).
+            </p>
+          </div>
+
+          <!-- Componente 2: EventBridge -->
+          <div class="card" style="background:#0f172a; border: 1px solid #1e293b; padding: 18px; border-radius: 8px;">
+            <h3 style="color: #c084fc; font-size: 1.05rem; margin-bottom: 8px;">2. Amazon EventBridge &amp; EventBridge Pipes</h3>
+            <p style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+              Conecta os tópicos do MSK aos serviços de consumo de maneira desacoplada e sem código de cola (<em>glue code</em>). O EventBridge Pipes filtra mensagens sem interesse analítico, valida contratos via Schema Registry e despacha eventos de transição para microserviços externos de cobrança, réguas de e-mail/push e orquestrações de renegociação via AWS Step Functions.
+            </p>
+          </div>
+
+          <!-- Componente 3: DynamoDB -->
+          <div class="card" style="background:#0f172a; border: 1px solid #1e293b; padding: 18px; border-radius: 8px;">
+            <h3 style="color: #38bdf8; font-size: 1.05rem; margin-bottom: 8px;">3. Amazon DynamoDB (Single-Table Operational State)</h3>
+            <p style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+              Banco de dados operacional de altíssima velocidade (latência milissegunda). Utiliza modelagem <strong>Single-Table Design</strong> para armazenar o estado atual do contrato (saldo devedor de principal, juros acumulados, DPD e estágio de risco) em um único item, com controle de versão otimista (<em>optimistic locking</em>) para garantir transações atômicas de amortização.
+            </p>
+          </div>
+
+          <!-- Componente 4: Iceberg S3 -->
+          <div class="card" style="background:#0f172a; border: 1px solid #1e293b; padding: 18px; border-radius: 8px;">
+            <h3 style="color: #34d399; font-size: 1.05rem; margin-bottom: 8px;">4. Apache Iceberg no Amazon S3 (Ledger Analítico)</h3>
+            <p style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+              Repositório contábil imutável e com suporte a transações ACID no Data Lakehouse. O Apache Flink grava os lançamentos de partidas dobradas e o histórico de FSM em tabelas Iceberg particionadas por mês e tipo de evento. Permite consultas <strong>Time-Travel</strong> para reconstruir exatamente a posição da carteira de crédito em qualquer data/hora do passado para auditorias do BACEN.
+            </p>
+          </div>
+        </div>
+
+        <!-- MODELAGEM DYNAMODB SINGLE-TABLE DESIGN -->
+        <div class="card" style="margin-top: 30px; border-top: 4px solid var(--aws); background: #0b1329;">
+          <div class="card-lbl" style="color:var(--aws)">Modelagem Single-Table Design no Amazon DynamoDB</div>
+          <p style="font-size: 13px; color: #cbd5e1; margin: 10px 0 16px 0;">
+            Exemplo da estrutura dos itens armazenados na tabela operacional <code>CreditContractStateStore</code>:
+          </p>
+          <div class="tbl-wrap">
+            <table style="font-size:12px; width: 100%;">
+              <thead>
+                <tr style="background:#020617; color:#38bdf8;">
+                  <th>Partition Key (PK)</th>
+                  <th>Sort Key (SK)</th>
+                  <th>GSI1PK</th>
+                  <th>GSI1SK</th>
+                  <th>Atributos Principais (Payload)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>CONTRACT#CTR-88912</code></td>
+                  <td><code>METADATA</code></td>
+                  <td><code>STAGE#STAGE_1</code></td>
+                  <td><code>DPD#000</code></td>
+                  <td><code>status: ACTIVE_PERFORMING, principal_balance: 50000.00, accrued_interest: 420.15, rate: 0.0195, version: 14</code></td>
+                </tr>
+                <tr>
+                  <td><code>CONTRACT#CTR-88912</code></td>
+                  <td><code>EVENT#2026-07-31T10:00:00Z#EVT-01</code></td>
+                  <td><code>EVENT_TYPE#DISBURSED</code></td>
+                  <td><code>2026-07-31T10:00:00Z</code></td>
+                  <td><code>amount: 50000.00, channel: PIX_SPI, idempotency_key: IDM-9918231</code></td>
+                </tr>
+                <tr>
+                  <td><code>CONTRACT#CTR-88912</code></td>
+                  <td><code>INSTALLMENT#01</code></td>
+                  <td><code>STATUS#PAID</code></td>
+                  <td><code>DUE#2026-08-10</code></td>
+                  <td><code>amount_due: 1850.00, principal_paid: 1200.00, interest_paid: 650.00, paid_at: 2026-08-08</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SEÇÃO 05: SCHEMAS DE MENSAGENS E DATA CONTRACTS -->
+      <section class="section" id="data-contracts">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Governança de Dados &amp; Data Contracts</div>
+            <h2>Schemas de Mensagens Event-Driven (JSON Payloads)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para garantir a integridade entre o barramento de eventos Amazon MSK, o motor Flink e o Lakehouse Iceberg, cada evento de transição possui um <strong>Data Contract</strong> estritamente versionado.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 20px;">
+          
+          <!-- Schema 1: credit.disbursed.v1 -->
+          <div>
+            <div style="font-weight: bold; color: #06b6d4; font-size: 13px; margin-bottom: 6px; font-family: 'DM Mono', monospace;">
+              📄 Schema: credit.disbursed.v1
+            </div>
+            <pre style="background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; font-family: 'DM Mono', monospace; font-size: 11px; color: #f8fafc; overflow-x: auto;">
+{
+  "event_id": "evt_9901823a-4421-4f1a-b312",
+  "event_type": "credit.disbursed.v1",
+  "event_timestamp": "2026-07-31T14:30:00.000Z",
+  "correlation_id": "corr_ccb_88912301",
+  "idempotency_key": "idm_disburse_88912301",
+  "contract_id": "CTR-88912",
+  "customer_id": "CUST-9901",
+  "payload": {
+    "disbursement_amount": 50000.00,
+    "currency": "BRL",
+    "payment_method": "PIX",
+    "destination_pix_key": "11999998888",
+    "disbursement_account": "COSIF-4.1.1.10.01",
+    "loan_asset_account": "COSIF-1.6.1.10.02",
+    "accrual_rate_monthly": 0.0195,
+    "total_installments": 36
+  }
+}
+            </pre>
+          </div>
+
+          <!-- Schema 2: credit.payment.received.v1 -->
+          <div>
+            <div style="font-weight: bold; color: #10b981; font-size: 13px; margin-bottom: 6px; font-family: 'DM Mono', monospace;">
+              📄 Schema: credit.payment.received.v1
+            </div>
+            <pre style="background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; font-family: 'DM Mono', monospace; font-size: 11px; color: #f8fafc; overflow-x: auto;">
+{
+  "event_id": "evt_77182390-1120-4a88-9901",
+  "event_type": "credit.payment.received.v1",
+  "event_timestamp": "2026-08-10T09:15:22.000Z",
+  "correlation_id": "corr_pay_77123901",
+  "idempotency_key": "idm_pay_inst_01_CTR88912",
+  "contract_id": "CTR-88912",
+  "payload": {
+    "installment_number": 1,
+    "total_paid_amount": 1850.00,
+    "waterfall_breakdown": {
+      "tax_iof": 0.00,
+      "late_penalty": 0.00,
+      "accrued_interest_cleared": 650.00,
+      "principal_amortization": 1200.00
+    },
+    "remaining_principal_balance": 48800.00,
+    "next_due_date": "2026-09-10"
+  }
+}
+            </pre>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SEÇÃO 06: FÓRMULAS MATEMÁTICAS E REGULAÇÃO BACEN CMN 4.966 -->
+      <section class="section" id="regregulacao-matematica">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Matemática Financeira &amp; CMN 4.966 / IFRS 9</div>
+            <h2>Fórmulas de Apropriação Diária e Perda Esperada (ECL)</h2>
+          </div>
+        </div>
+
+        <div class="callout callout-info" style="margin-top:20px; background: #0f172a; border: 1px solid #1e293b; padding: 20px; border-radius: 8px;">
+          <h3 style="color: #fbbf24; font-size: 1.05rem; margin-bottom: 10px;">1. Fórmula de Apropriação Diária de Juros (Spot Accrual pro-rata die):</h3>
+          <p style="color: #cbd5e1; margin-bottom: 12px; font-size: 13.5px;">
+            A apropriação diária dos juros remuneratórios incide sobre o saldo devedor de curva do contrato no fechamento do dia anterior (\(SD_{t-1}\)):
+          </p>
+          \[J_{\text{diário}} = SD_{t-1} \times \left[ (1 + i_{\text{mensal}})^{\frac{1}{30}} - 1 \right]\]
+          <p style="margin-top: 12px; font-size: 12.5px; color: #94a3b8;">
+            Onde \(i_{\text{mensal}}\) é a taxa efetiva acordada na Cédula de Crédito Bancário (CCB).
+          </p>
+        </div>
+
+        <div class="callout callout-warn" style="margin-top:20px; background: #0f172a; border: 1px solid #1e293b; padding: 20px; border-radius: 8px;">
+          <h3 style="color: #f97316; font-size: 1.05rem; margin-bottom: 10px;">2. Cálculo de Perda Esperada de Crédito (ECL - Expected Credit Loss):</h3>
+          <p style="color: #cbd5e1; margin-bottom: 12px; font-size: 13.5px;">
+            Sob a Resolução CMN 4.966 do BACEN (alinhada à IFRS 9), a provisão para perdas incorridas e esperadas é calculada pela fórmula:
+          </p>
+          \[ECL = PD \times LGD \times EAD \times DF\]
+          <ul style="margin-top: 10px; padding-left: 20px; font-size: 12.5px; color: #cbd5e1; line-height: 1.8;">
+            <li><strong>PD (Probability of Default):</strong> Probabilidade de inadimplência do devedor no horizonte de 12 meses (Estágio 1) ou durante toda a vida útil do contrato (Estágios 2 e 3).</li>
+            <li><strong>LGD (Loss Given Default):</strong> Percentual da perda em caso de inadimplência efetiva (descontando o valor de recuperação de garantias).</li>
+            <li><strong>EAD (Exposure at Default):</strong> Valor total da exposição de crédito na data estimada de default (incluindo saldo devedor + juros acoplados).</li>
+            <li><strong>DF (Discount Factor):</strong> Fator de desconto a presente trazido pela taxa de juros efetiva do contrato.</li>
+          </ul>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+  <!-- Navigation, Drawer &amp; UI Interactivity Script -->
+  <script>
+    function toggleNav() {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      var main = document.getElementById('main');
+      if (!sb) return;
+      
+      var isMobile = window.innerWidth <= 960;
+      if (isMobile) {
+        var isOpen = sb.classList.contains('open');
+        if (!isOpen) {
+          sb.classList.add('open');
+          if (hb) hb.innerHTML = '✕';
+        } else {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      } else {
+        var isClosed = sb.classList.contains('closed');
+        if (!isClosed) {
+          sb.classList.add('closed');
+          if (main) main.classList.add('sidebar-closed');
+          if (hb) hb.innerHTML = '☰';
+        } else {
+          sb.classList.remove('closed');
+          if (main) main.classList.remove('sidebar-closed');
+          if (hb) hb.innerHTML = '✕';
+        }
+      }
+    }
+    window.toggleNav = toggleNav;
+
+    function toggleCategory(catId, element) {
+      const categoryContent = document.getElementById(catId);
+      if (categoryContent) {
+        categoryContent.classList.toggle('expanded');
+        categoryContent.classList.toggle('open');
+        if (element) {
+          element.classList.toggle('expanded');
+          element.classList.toggle('active');
+          const arrow = element.querySelector('.arrow');
+          if (arrow) {
+            const isOpen = categoryContent.classList.contains('expanded') || categoryContent.classList.contains('open');
+            arrow.innerHTML = isOpen ? '▼' : '▶';
+          }
+        }
+      }
+    }
+    window.toggleCategory = toggleCategory;
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.scrollToTop = scrollToTop;
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths for pages/financas/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>
