@@ -709,145 +709,17 @@
           Para viabilizar decisões em milissegundos sem sobrecarregar bancos OLTP transacionais, a arquitetura moderna de onboarding utiliza barramentos de eventos no Apache Kafka (Amazon MSK) e uma dual Feature Store de baixa latência (DynamoDB Online + S3 Iceberg Offline).
         </p>
 
-        <!-- DIAGRAMA SVG ARQUITETURAL AWS 2026 (SEM DELIMITADORES KATEX EM TEXTO) -->
-        <div class="svg-container" style="margin: 2.5rem 0; text-align: center;">
-          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 14px;">
-            Arquitetura de Dados de Onboarding, Streaming & Decision Engine (AWS 2026)
-          </div>
-          <svg style="background-color: #0b1329; font-family: 'DM Sans', sans-serif; border-radius: 12px; border: 1px solid #1e293b; padding: 20px;" viewBox="0 0 960 440" width="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="gradMsk" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#020617"/>
-                <stop offset="100%" stop-color="#1e1b4b"/>
-              </linearGradient>
-              <linearGradient id="gradFlink" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#064e3b"/>
-                <stop offset="100%" stop-color="#022c22"/>
-              </linearGradient>
-              <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
-              </marker>
-            </defs>
-
-            <!-- Titulo Superior -->
-            <text x="480" y="28" fill="#f8fafc" font-size="14" font-weight="bold" text-anchor="middle" letter-spacing="1">PIPELINE DE ONBOARDING, DATA CONTRACT & MOTOR DE CREDITO (AWS 2026)</text>
-            
-            <!-- 1. App Client Mobile -->
-            <rect x="20" y="75" width="115" height="175" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
-            <rect x="30" y="88" width="95" height="24" rx="4" fill="#3b82f6"/>
-            <text x="77" y="104" fill="#ffffff" font-size="10" font-weight="bold" text-anchor="middle">1. App SDK</text>
-            <text x="77" y="132" fill="#f8fafc" font-size="11" font-weight="bold" text-anchor="middle">Mobile Banking</text>
-            <text x="77" y="152" fill="#94a3b8" font-size="9" text-anchor="middle">• OCR Biometria</text>
-            <text x="77" y="168" fill="#94a3b8" font-size="9" text-anchor="middle">• Proposta BRL</text>
-            <text x="77" y="184" fill="#94a3b8" font-size="9" text-anchor="middle">• Fingerprint IP</text>
-            <text x="77" y="210" fill="#38bdf8" font-size="9" text-anchor="middle">JSON Schema Client</text>
-
-            <!-- Arrow 1 -> 2 -->
-            <line x1="135" y1="162" x2="165" y2="162" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
-            <text x="150" y="154" fill="#94a3b8" font-size="8" text-anchor="middle">POST</text>
-
-            <!-- 2. Ingestao & Auth -->
-            <rect x="170" y="75" width="115" height="175" rx="8" fill="#1e293b" stroke="#ec4899" stroke-width="2"/>
-            <rect x="180" y="88" width="95" height="24" rx="4" fill="#ec4899"/>
-            <text x="227" y="104" fill="#ffffff" font-size="10" font-weight="bold" text-anchor="middle">2. API & Auth</text>
-            <text x="227" y="132" fill="#f8fafc" font-size="11" font-weight="bold" text-anchor="middle">AWS Gateway</text>
-            <text x="227" y="150" fill="#cbd5e1" font-size="9" text-anchor="middle">& Lambda Authorizer</text>
-            <text x="227" y="174" fill="#94a3b8" font-size="9" text-anchor="middle">• Schema Registry</text>
-            <text x="227" y="190" fill="#94a3b8" font-size="9" text-anchor="middle">• Validation DLQ</text>
-            <text x="227" y="214" fill="#f472b6" font-size="9" text-anchor="middle">Draft-07 Check</text>
-
-            <!-- Arrow 2 -> 3 -->
-            <line x1="285" y1="162" x2="315" y2="162" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
-
-            <!-- 3. Amazon MSK (Kafka Event Streaming) -->
-            <rect x="320" y="65" width="180" height="205" rx="8" fill="url(#gradMsk)" stroke="#f59e0b" stroke-width="2"/>
-            <text x="410" y="88" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">3. Amazon MSK (Kafka)</text>
-            
-            <rect x="335" y="102" width="150" height="30" rx="4" fill="#1e293b" stroke="#475569"/>
-            <text x="410" y="121" fill="#cbd5e1" font-size="9" text-anchor="middle">proposals.submitted</text>
-            
-            <rect x="335" y="138" width="150" height="30" rx="4" fill="#1e293b" stroke="#475569"/>
-            <text x="410" y="157" fill="#cbd5e1" font-size="9" text-anchor="middle">kyc.biometrics.verified</text>
-            
-            <rect x="335" y="174" width="150" height="30" rx="4" fill="#1e293b" stroke="#475569"/>
-            <text x="410" y="193" fill="#cbd5e1" font-size="9" text-anchor="middle">scr.enrichment.responses</text>
-
-            <rect x="335" y="210" width="150" height="30" rx="4" fill="#1e293b" stroke="#475569"/>
-            <text x="410" y="229" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">credit.decisions.emitted</text>
-
-            <!-- Arrow 3 -> 4 -->
-            <line x1="500" y1="162" x2="530" y2="162" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
-
-            <!-- 4. Flink Processor -->
-            <rect x="535" y="75" width="135" height="175" rx="8" fill="url(#gradFlink)" stroke="#10b981" stroke-width="2"/>
-            <text x="602" y="98" fill="#34d399" font-size="11" font-weight="bold" text-anchor="middle">4. Apache Flink</text>
-            <text x="602" y="118" fill="#94a3b8" font-size="9" text-anchor="middle">Stateful Stream Join</text>
-            <text x="602" y="142" fill="#cbd5e1" font-size="9" text-anchor="middle">• Windowing 5min</text>
-            <text x="602" y="158" fill="#cbd5e1" font-size="9" text-anchor="middle">• Join Biometria</text>
-            <text x="602" y="174" fill="#cbd5e1" font-size="9" text-anchor="middle">• Lookup SCR SFN</text>
-            <text x="602" y="190" fill="#cbd5e1" font-size="9" text-anchor="middle">• Calc Features DTI</text>
-            <text x="602" y="216" fill="#6ee7b7" font-size="9" font-weight="bold" text-anchor="middle">RocksDB Backend</text>
-
-            <!-- Arrow 4 -> Dual Feature Store -->
-            <path d="M 670 120 L 710 120 L 710 100 L 730 100" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
-            <path d="M 670 190 L 710 190 L 710 220 L 730 220" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
-
-            <!-- 5. Online Feature Store (DynamoDB) -->
-            <rect x="735" y="65" width="130" height="85" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
-            <text x="800" y="86" fill="#60a5fa" font-size="10" font-weight="bold" text-anchor="middle">5. Online Store</text>
-            <text x="800" y="104" fill="#cbd5e1" font-size="9" text-anchor="middle">Amazon DynamoDB</text>
-            <text x="800" y="122" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">Latencia &lt; 10ms</text>
-            <text x="800" y="136" fill="#94a3b8" font-size="8" text-anchor="middle">Low-Latency Lookup</text>
-
-            <!-- 6. Offline Feature Store (S3 Iceberg) -->
-            <rect x="735" y="175" width="130" height="85" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
-            <text x="800" y="196" fill="#38bdf8" font-size="10" font-weight="bold" text-anchor="middle">6. Offline Store</text>
-            <text x="800" y="214" fill="#cbd5e1" font-size="9" text-anchor="middle">S3 Iceberg Table</text>
-            <text x="800" y="232" fill="#94a3b8" font-size="8" text-anchor="middle">SageMaker ML Training</text>
-            <text x="800" y="246" fill="#94a3b8" font-size="8" text-anchor="middle">Time-Travel Queries</text>
-
-            <!-- 7. Decision Engine (SageMaker XGBoost) -->
-            <rect x="735" y="280" width="205" height="75" rx="8" fill="#020617" stroke="#8b5cf6" stroke-width="2"/>
-            <text x="837" y="302" fill="#c084fc" font-size="11" font-weight="bold" text-anchor="middle">7. Credit Decision Engine</text>
-            <text x="837" y="320" fill="#cbd5e1" font-size="9" text-anchor="middle">SageMaker Endpoint (XGBoost)</text>
-            <text x="837" y="338" fill="#facc15" font-size="9" font-weight="bold" text-anchor="middle">PD 12m + Risk-Based Pricing</text>
-
-            <!-- Line from DynamoDB to SageMaker -->
-            <path d="M 800 150 L 800 280" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="3 3"/>
-
-            <!-- 8. EventBridge & AppSync -->
-            <rect x="320" y="290" width="350" height="65" rx="8" fill="#020617" stroke="#6366f1" stroke-width="2"/>
-            <text x="495" y="312" fill="#818cf8" font-size="11" font-weight="bold" text-anchor="middle">8. Notification & Gateway Push (Amazon EventBridge + AppSync)</text>
-            <text x="495" y="332" fill="#cbd5e1" font-size="9" text-anchor="middle">Emissao de evento de aprovacao/rejeicao para App Mobile em Websocket tempo real</text>
-
-            <path d="M 735 320 L 670 320" fill="none" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow)"/>
-
-            <!-- PAINEL DE LEGENDA EXPLICATIVA (BOTTOM OF SVG) -->
-            <g transform="translate(20, 370)">
-              <rect x="0" y="0" width="920" height="55" rx="6" fill="#020617" stroke="#334155" stroke-width="1"/>
-              <text x="15" y="20" fill="#94a3b8" font-size="10" font-weight="bold">LEGENDA EXPLICATIVA DO FLUXO DE DADOS:</text>
-              
-              <!-- Item Legenda 1 -->
-              <rect x="15" y="30" width="12" height="12" rx="2" fill="#ec4899"/>
-              <text x="32" y="40" fill="#cbd5e1" font-size="9">Ingestao API &amp; Auth</text>
-
-              <!-- Item Legenda 2 -->
-              <rect x="160" y="30" width="12" height="12" rx="2" fill="#f59e0b"/>
-              <text x="177" y="40" fill="#cbd5e1" font-size="9">Event Bus Kafka (Amazon MSK)</text>
-
-              <!-- Item Legenda 3 -->
-              <rect x="345" y="30" width="12" height="12" rx="2" fill="#10b981"/>
-              <text x="362" y="40" fill="#cbd5e1" font-size="9">Flink Stream Processor</text>
-
-              <!-- Item Legenda 4 -->
-              <rect x="505" y="30" width="12" height="12" rx="2" fill="#3b82f6"/>
-              <text x="522" y="40" fill="#cbd5e1" font-size="9">Feature Store DynamoDB/Iceberg</text>
-
-              <!-- Item Legenda 5 -->
-              <rect x="710" y="30" width="12" height="12" rx="2" fill="#8b5cf6"/>
-              <text x="727" y="40" fill="#cbd5e1" font-size="9">SageMaker Decision Engine</text>
-            </g>
-          </svg>
+        <!-- DIAGRAMA DRAW.IO ARQUITETURAL AWS 2026 COM ÍCONES OFICIAIS -->
+        <div class="drawio-wrap" style="margin-top: 24px; margin-bottom: 24px;">
+          <div class="drawio-label"><span class="dot"></span>Arquitetura de Dados de Onboarding, Streaming &amp; Decision Engine (AWS 2026)</div>
+          <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph="{&quot;highlight&quot;: &quot;#0ea5e9&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1000\&quot; pageHeight=\&quot;560\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;sec05_0\&quot;/&gt;&lt;mxCell id=\&quot;sec05_1\&quot; parent=\&quot;sec05_0\&quot;/&gt;&lt;mxCell id=\&quot;sec05_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry width=\&quot;1000\&quot; height=\&quot;560\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_title\&quot; value=\&quot;ARQUITETURA DE ONBOARDING, KAFKA STREAMING &amp;amp; DECISION ENGINE (AWS 2026 ICONS)\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=12;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry y=\&quot;10\&quot; width=\&quot;1000\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- VPC BOUNDARY --&gt;&lt;mxCell id=\&quot;sec05_vpc\&quot; value=\&quot;Amazon VPC (Multi-AZ Private Subnets &amp;amp; Security Groups)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=none;strokeColor=#f59e0b;strokeWidth=2;fontColor=#fcd34d;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;dashed=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;45\&quot; width=\&quot;960\&quot; height=\&quot;495\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- 1. CLIENT LAYER --&gt;&lt;mxCell id=\&quot;sec05_client_box\&quot; value=\&quot;Client Layer\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=top;spacingTop=8;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;85\&quot; width=\&quot;120\&quot; height=\&quot;160\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_app\&quot; value=\&quot;Mobile Banking&amp;#10;App SDK\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.amplify;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;80\&quot; y=\&quot;125\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- 2. INGESTION &amp; AUTH --&gt;&lt;mxCell id=\&quot;sec05_ingest_box\&quot; value=\&quot;Ingestion &amp;amp; Auth\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=top;spacingTop=8;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;190\&quot; y=\&quot;85\&quot; width=\&quot;130\&quot; height=\&quot;160\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_gw\&quot; value=\&quot;API Gateway\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;210\&quot; y=\&quot;125\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_auth\&quot; value=\&quot;Lambda Auth&amp;#10;(LGPD Hash)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;265\&quot; y=\&quot;125\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- 3. KAFKA EVENT STREAMING (MSK) --&gt;&lt;mxCell id=\&quot;sec05_msk_box\&quot; value=\&quot;Event Bus (Amazon MSK)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#f59e0b;strokeWidth=2;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=11;align=center;verticalAlign=top;spacingTop=8;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;350\&quot; y=\&quot;85\&quot; width=\&quot;170\&quot; height=\&quot;430\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_msk\&quot; value=\&quot;Amazon MSK&amp;#10;(Kafka Cluster)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;415\&quot; y=\&quot;120\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_topic1\&quot; value=\&quot;proposals.submitted\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#38bdf8;fontColor=#38bdf8;fontFamily=DM Mono;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;365\&quot; y=\&quot;195\&quot; width=\&quot;140\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_topic2\&quot; value=\&quot;kyc.biometrics.verified\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#a855f7;fontColor=#c084fc;fontFamily=DM Mono;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;365\&quot; y=\&quot;245\&quot; width=\&quot;140\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_topic3\&quot; value=\&quot;scr.enrichment.responses\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#10b981;fontColor=#34d399;fontFamily=DM Mono;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;365\&quot; y=\&quot;295\&quot; width=\&quot;140\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_topic4\&quot; value=\&quot;credit.decisions.emitted\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#f43f5e;fontColor=#fb7185;fontFamily=DM Mono;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;365\&quot; y=\&quot;345\&quot; width=\&quot;140\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- 4. FLINK STREAM PROCESSOR --&gt;&lt;mxCell id=\&quot;sec05_flink_box\&quot; value=\&quot;Apache Flink Engine\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#10b981;strokeWidth=2;fontColor=#34d399;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=top;spacingTop=8;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;550\&quot; y=\&quot;85\&quot; width=\&quot;170\&quot; height=\&quot;270\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_flink\&quot; value=\&quot;Managed Flink&amp;#10;(Stateful Join)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis_data_analytics;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;615\&quot; y=\&quot;125\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_rocks\&quot; value=\&quot;RocksDB State&amp;#10;(5min Window Join)\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#10b981;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;565\&quot; y=\&quot;200\&quot; width=\&quot;140\&quot; height=\&quot;35\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- 5. FEATURE STORE &amp; DECISION ENGINE --&gt;&lt;mxCell id=\&quot;sec05_engine_box\&quot; value=\&quot;Feature Store &amp;amp; Decision Engine\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#38bdf8;strokeWidth=2;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=11;align=center;verticalAlign=top;spacingTop=8;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;750\&quot; y=\&quot;85\&quot; width=\&quot;210\&quot; height=\&quot;430\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_dynamo\&quot; value=\&quot;DynamoDB&amp;#10;(Online Store &amp;lt; 10ms)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;780\&quot; y=\&quot;125\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_s3\&quot; value=\&quot;S3 Iceberg&amp;#10;(Offline Store ML)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;890\&quot; y=\&quot;125\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_sagemaker\&quot; value=\&quot;SageMaker Endpoint&amp;#10;(XGBoost PD 12m Engine)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;835\&quot; y=\&quot;225\&quot; width=\&quot;44\&quot; height=\&quot;44\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_eventbridge\&quot; value=\&quot;Amazon EventBridge&amp;#10;(Push Bus)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;780\&quot; y=\&quot;335\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_appsync\&quot; value=\&quot;AWS AppSync&amp;#10;(GraphQL Websocket)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.appsync;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;sec05_1\&quot;&gt;&lt;mxGeometry x=\&quot;890\&quot; y=\&quot;335\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- EDGES --&gt;&lt;mxCell id=\&quot;sec05_e1\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;sec05_1\&quot; source=\&quot;sec05_app\&quot; target=\&quot;sec05_gw\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ec4899;strokeWidth=1.5;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_e2\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;sec05_1\&quot; source=\&quot;sec05_gw\&quot; target=\&quot;sec05_msk\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f97316;strokeWidth=1.5;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_e3\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;sec05_1\&quot; source=\&quot;sec05_msk\&quot; target=\&quot;sec05_flink\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_e4\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;sec05_1\&quot; source=\&quot;sec05_flink\&quot; target=\&quot;sec05_dynamo\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_e5\&quot; value=\&quot;\&quot; edge=\&quot;1\&quot; parent=\&quot;sec05_1\&quot; source=\&quot;sec05_dynamo\&quot; target=\&quot;sec05_sagemaker\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1.5;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_e6\&quot; value=\&quot;Decis\u00e3o\&quot; edge=\&quot;1\&quot; parent=\&quot;sec05_1\&quot; source=\&quot;sec05_sagemaker\&quot; target=\&quot;sec05_eventbridge\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ec4899;strokeWidth=1.5;fontColor=#f472b6;fontSize=8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;sec05_e7\&quot; value=\&quot;Push\&quot; edge=\&quot;1\&quot; parent=\&quot;sec05_1\&quot; source=\&quot;sec05_eventbridge\&quot; target=\&quot;sec05_appsync\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ec4899;strokeWidth=1.5;fontColor=#f472b6;fontSize=8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
+        </div>
+        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 24px;">
+          <strong style="color: var(--accent);">Explicação Arquitetural:</strong>
+          <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+            <li style="margin-bottom: 4px;"><strong>Componentes Principais:</strong> App Banking SDK, API Gateway + Lambda Authorizer (LGPD Hash), Amazon MSK Kafka Cluster, Apache Flink Stream Processor, DynamoDB Online Feature Store (&lt; 10ms), S3 Iceberg Offline Feature Store, SageMaker XGBoost Decision Engine, Amazon EventBridge &amp; AWS AppSync.</li>
+            <li><strong>Fluxo Operacional:</strong> A proposta entra via API Gateway, passa por validação e é enfileirada no MSK. O Apache Flink realiza o join em tempo real com as respostas do SCR BACEN e Rekognition, abastecendo o DynamoDB. O SageMaker consulta as features em tempo real, executa o motor de crédito e gera a notificação push WebSocket no app do cliente via EventBridge + AppSync.</li>
+          </ul>
         </div>
 
         <div class="callout callout-info" style="margin-top: 24px;">
