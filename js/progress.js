@@ -71,7 +71,16 @@
 
     // Fase 6
     "business-value": { name: "Valor de Negócio", badge: "Especialista", color: "#db2777", items: ["business-value.html"] },
-    "financas-dados": { name: "Conhecimentos Financeiros", badge: "Especialista", color: "#0284c7", items: ["onboarding.html", "matematica-financeira.html", "ciclo-vida-credito.html", "pos-venda-reconciliacao.html", "contabilidade-razonetes.html", "risco-montecarlo.html", "normas-regulatorio.html", "auditoria-dados.html", "finops-financas.html"] },
+        // Fase 6 - Conhecimentos Financeiros & Risco
+    "onboarding": { name: "Originação & KYC", badge: "Originação", color: "#3b82f6", items: ["onboarding.html"] },
+    "matematica-financeira": { name: "Matemática Financeira", badge: "Quant", color: "#f59e0b", items: ["matematica-financeira.html"] },
+    "ciclo-vida-credito": { name: "Ciclo de Crédito", badge: "Crédito", color: "#10b981", items: ["ciclo-vida-credito.html"] },
+    "pos-venda-reconciliacao": { name: "Reconciliação & PIX", badge: "Reconciliação", color: "#0ea5e9", items: ["pos-venda-reconciliacao.html"] },
+    "contabilidade-razonetes": { name: "Contabilidade COSIF", badge: "COSIF", color: "#8b5cf6", items: ["contabilidade-razonetes.html"] },
+    "risco-montecarlo": { name: "Monte Carlo & VaR", badge: "Risk Manager", color: "#ef4444", items: ["risco-montecarlo.html"] },
+    "normas-regulatorio": { name: "Normas & BACEN 3040", badge: "Regulatory", color: "#d97706", items: ["normas-regulatorio.html"] },
+    "auditoria-dados": { name: "Auditoria & Linhagem", badge: "Data Auditor", color: "#a855f7", items: ["auditoria-dados.html"] },
+    "finops-financas": { name: "FinOps Financeiro", badge: "FinOps", color: "#10b981", items: ["finops-financas.html"] },
     "cases-reais": { name: "Cases Reais: Arq", badge: "Especialista", color: "#db2777", items: ["cases-reais.html"] },
     "cases-ecosistema": { name: "Cases: Ecossistema", badge: "Especialista", color: "#db2777", items: ["cases-ecosistema.html"] },
     "cases-batch-lakehouse": { name: "Cases: Batch", badge: "Especialista", color: "#db2777", items: ["cases-batch-lakehouse.html"] },
@@ -665,6 +674,42 @@
       business_value: { 
         colors: ["#f59e0b", "#d97706"], 
         icon: `<path class="badge-fin-coin" d="M22 28 l10 -5 l10 5 l-10 5 z M22 28 v10 l10 5 v-10 z M42 28 v10 l-10 5 v-10 z" fill="none" stroke="url(#grad-business_value)" stroke-width="2" stroke-linejoin="round"/>` 
+      },
+            onboarding: { 
+        colors: ["#3b82f6", "#1d4ed8"], 
+        icon: `<path fill="none" stroke="url(#grad-onboarding)" stroke-width="2" d="M 22 18 H 42 V 46 H 22 Z M 28 26 H 36 M 28 32 H 36 M 28 38 H 32"/>` 
+      },
+      "matematica-financeira": { 
+        colors: ["#f59e0b", "#d97706"], 
+        icon: `<text x="32" y="38" font-size="18" font-weight="900" font-family="'DM Sans', sans-serif" text-anchor="middle" fill="url(#grad-matematica-financeira)">%</text>` 
+      },
+      "ciclo-vida-credito": { 
+        colors: ["#10b981", "#059669"], 
+        icon: `<path fill="none" stroke="url(#grad-ciclo-vida-credito)" stroke-width="2" d="M 18 32 C 18 20, 46 20, 46 32 C 46 44, 18 44, 18 32 Z M 32 20 V 44"/>` 
+      },
+      "pos-venda-reconciliacao": { 
+        colors: ["#0ea5e9", "#0284c7"], 
+        icon: `<path fill="none" stroke="url(#grad-pos-venda-reconciliacao)" stroke-width="2" d="M 20 24 L 32 36 L 44 24 M 20 40 L 44 40"/>` 
+      },
+      "contabilidade-razonetes": { 
+        colors: ["#8b5cf6", "#7c3aed"], 
+        icon: `<path fill="none" stroke="url(#grad-contabilidade-razonetes)" stroke-width="2.5" d="M 18 20 H 46 M 32 20 V 46"/>` 
+      },
+      "risco-montecarlo": { 
+        colors: ["#ef4444", "#b91c1c"], 
+        icon: `<path fill="none" stroke="url(#grad-risco-montecarlo)" stroke-width="2" d="M 18 44 Q 28 44, 32 20 Q 36 44, 46 44"/>` 
+      },
+      "normas-regulatorio": { 
+        colors: ["#d97706", "#b45309"], 
+        icon: `<path fill="none" stroke="url(#grad-normas-regulatorio)" stroke-width="2" d="M 32 16 L 48 24 V 40 L 32 48 L 16 40 V 24 Z"/>` 
+      },
+      "auditoria-dados": { 
+        colors: ["#a855f7", "#9333ea"], 
+        icon: `<circle cx="32" cy="32" r="10" fill="none" stroke="url(#grad-auditoria-dados)" stroke-width="2"/><path d="M 39 39 L 47 47" stroke="url(#grad-auditoria-dados)" stroke-width="2.5"/>` 
+      },
+      "finops-financas": { 
+        colors: ["#10b981", "#047857"], 
+        icon: `<circle cx="32" cy="32" r="12" fill="none" stroke="url(#grad-finops-financas)" stroke-width="2"/><text x="32" y="37" font-size="14" font-weight="bold" text-anchor="middle" fill="url(#grad-finops-financas)">$</text>` 
       },
       financas: { 
         colors: ["#0284c7", "#0369a1"], 
