@@ -885,74 +885,360 @@
         </div>
 
 
-        <h4>1. Schema da Tabela Dimensão Contrato (<code>dim_contrato</code>)</h4>
-        <div class="sql-code-block">
-<span class="sql-keyword">CREATE TABLE</span> dim_contrato (
-    contrato_sk <span class="sql-type">BIGINT</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Chave substituta (Surrogate Key)</span>,
-    contrato_id <span class="sql-type">VARCHAR(64)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- ID Natural da Operação (ex: CT-2026-9912)</span>,
-    cliente_id <span class="sql-type">VARCHAR(64)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Hash do Cliente (LGPD Compliance)</span>,
-    produto_codigo <span class="sql-type">VARCHAR(32)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Ex: CONSIGNADO, GIRO_FLEX, CREDIT_CARD</span>,
-    data_originacao <span class="sql-type">DATE</span> <span class="sql-keyword">NOT NULL</span>,
-    data_vencimento_final <span class="sql-type">DATE</span> <span class="sql-keyword">NOT NULL</span>,
-    valor_principal_nominal <span class="sql-type">DECIMAL(18,2)</span> <span class="sql-keyword">NOT NULL</span>,
-    taxa_juros_anual_nom <span class="sql-type">DECIMAL(8,6)</span> <span class="sql-keyword">NOT NULL</span>,
-    taxa_interna_retorno_tir <span class="sql-type">DECIMAL(8,6)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Effective Interest Rate (TIR / CMN 4.966)</span>,
-    custo_transacao_inicial <span class="sql-type">DECIMAL(12,2)</span> <span class="sql-keyword">DEFAULT</span> 0.00 <span class="sql-comment">-- Custos de Originação Diferidos</span>,
-    prazo_meses <span class="sql-type">INT</span> <span class="sql-keyword">NOT NULL</span>,
-    sistema_amortizacao <span class="sql-type">VARCHAR(16)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- PRICE, SAC, SAM</span>,
-    estagio_cmn_4966 <span class="sql-type">INT</span> <span class="sql-keyword">NOT NULL DEFAULT</span> 1 <span class="sql-comment">-- Estágios 1, 2 ou 3</span>,
-    status_contrato <span class="sql-type">VARCHAR(32)</span> <span class="sql-keyword">NOT NULL DEFAULT</span> <span class="sql-string">'ATIVO'</span> <span class="sql-comment">-- ATIVO, ATRASO, WRITTEN_OFF, LIQUIDADO</span>,
-    dias_atraso_atual <span class="sql-type">INT</span> <span class="sql-keyword">NOT NULL DEFAULT</span> 0,
-    is_written_off <span class="sql-type">BOOLEAN</span> <span class="sql-keyword">NOT NULL DEFAULT</span> FALSE,
-    dt_insercao <span class="sql-type">TIMESTAMP WITH TIME ZONE</span> <span class="sql-keyword">DEFAULT</span> CURRENT_TIMESTAMP,
-    dt_atualizacao <span class="sql-type">TIMESTAMP WITH TIME ZONE</span> <span class="sql-keyword">DEFAULT</span> CURRENT_TIMESTAMP,
-    <span class="sql-keyword">PRIMARY KEY</span> (contrato_sk)
-);
+        <!-- ── 1. dim_contrato ── -->
+        <div style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
+          <span style="background:rgba(59,130,246,0.15);color:#60a5fa;font-size:0.7rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:0.08em;">ICEBERG · SCD TYPE 2 · UPSERT</span>
+          <h4 style="margin:0;">1. Schema Apache Iceberg — <code>dim_contrato</code></h4>
         </div>
-
-        <h4>2. Schema da Tabela Dimensão Plano COSIF (<code>dim_conta_cosif</code>)</h4>
         <div class="sql-code-block">
-<span class="sql-keyword">CREATE TABLE</span> dim_conta_cosif (
-    conta_cosif_sk <span class="sql-type">BIGINT</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Chave substituta da conta</span>,
-    codigo_cosif_15 <span class="sql-type">VARCHAR(20)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Formato BACEN: 1.6.1.10.00.00-00-1 (15 dígitos)</span>,
-    codigo_cosif_raw <span class="sql-type">VARCHAR(15)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Apenas dígitos: 161100000000001</span>,
-    titulo_conta <span class="sql-type">VARCHAR(120)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Ex: Financiamentos e Empréstimos</span>,
-    nivel_hierarquico <span class="sql-type">INT</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Nível 1 (Classe) até Nível 5 (Analítica)</span>,
-    conta_pai_codigo <span class="sql-type">VARCHAR(20)</span> <span class="sql-comment">-- Código da conta sintética superior</span>,
-    classificacao_patrimonial <span class="sql-type">VARCHAR(32)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- ATIVO, PASSIVO, DRE_RECEITA, DRE_DESPESA, COMPENSACAO</span>,
-    natureza_saldo_dc <span class="sql-type">CHAR(1)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- 'D' (Débito) ou 'C' (Crédito)</span>,
-    indicador_redutora <span class="sql-type">BOOLEAN</span> <span class="sql-keyword">NOT NULL DEFAULT</span> FALSE <span class="sql-comment">-- True para PDD e Juros Vincendos</span>,
-    estagio_operacional_cmn4966 <span class="sql-type">VARCHAR(32)</span> <span class="sql-comment">-- ESTAGIO_1, ESTAGIO_2, ESTAGIO_3, OFF_BALANCE</span>,
-    ativo_indicador <span class="sql-type">BOOLEAN</span> <span class="sql-keyword">NOT NULL DEFAULT</span> TRUE,
-    dt_inicio_vigencia <span class="sql-type">DATE</span> <span class="sql-keyword">NOT NULL</span>,
-    dt_fim_vigencia <span class="sql-type">DATE</span>,
-    <span class="sql-keyword">PRIMARY KEY</span> (conta_cosif_sk)
-);
-        </div>
+<span class="sql-comment">-- ══════════════════════════════════════════════════════════════════
+-- dim_contrato  |  Dimensão Contrato de Crédito
+-- Engine: Apache Iceberg v2  |  Catalog: AWS Glue / Nessie
+-- Storage: Amazon S3 (s3://lakehouse-gold/accounting/dim_contrato/)
+-- SCD Type 2: histórico completo por versão de contrato
+-- ══════════════════════════════════════════════════════════════════</span>
+<span class="sql-keyword">CREATE TABLE</span> glue_catalog.accounting.dim_contrato (
 
-        <h4>3. Schema da Tabela Fato Lançamento Contábil (<code>fato_lancamento</code> - Apache Iceberg)</h4>
-        <div class="sql-code-block">
-<span class="sql-keyword">CREATE TABLE</span> fato_lancamento (
-    lancamento_sk <span class="sql-type">BIGINT</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Chave substituta do lançamento</span>,
-    event_uuid <span class="sql-type">VARCHAR(36)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- UUID idempotente do evento de origem</span>,
-    chave_idempotencia <span class="sql-type">VARCHAR(128)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Hash único para dedup de lançamentos</span>,
-    contrato_sk <span class="sql-type">BIGINT</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- FK para dim_contrato</span>,
-    conta_cosif_sk <span class="sql-type">BIGINT</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- FK para dim_conta_cosif</span>,
-    data_competencia <span class="sql-type">DATE</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Data contábil do fechamento (D-0)</span>,
-    data_hora_processamento <span class="sql-type">TIMESTAMP WITH TIME ZONE</span> <span class="sql-keyword">NOT NULL</span>,
-    tipo_evento_contabil <span class="sql-type">VARCHAR(48)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- ORIGINACAO, ACCRUAL, AMORTIZACAO, STOP_ACCRUAL, PECLD, WRITE_OFF</span>,
-    valor_lancamento <span class="sql-type">DECIMAL(18,2)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Valor absoluto do movimento</span>,
-    natureza_lancamento_dc <span class="sql-type">CHAR(1)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- 'D' (Débito) ou 'C' (Crédito)</span>,
-    codigo_historico_contabil <span class="sql-type">INT</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Histórico padronizado COSIF</span>,
-    descricao_historico <span class="sql-type">VARCHAR(255)</span> <span class="sql-keyword">NOT NULL</span>,
-    dominio_origem <span class="sql-type">VARCHAR(32)</span> <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- Ex: CONSIGNADO, CREDIT_CARDS, PIX</span>,
-    batch_run_id <span class="sql-type">VARCHAR(64)</span>,
-    dt_carga <span class="sql-type">TIMESTAMP WITH TIME ZONE</span> <span class="sql-keyword">DEFAULT</span> CURRENT_TIMESTAMP,
-    <span class="sql-keyword">PRIMARY KEY</span> (lancamento_sk),
-    <span class="sql-keyword">FOREIGN KEY</span> (contrato_sk) <span class="sql-keyword">REFERENCES</span> dim_contrato(contrato_sk),
-    <span class="sql-keyword">FOREIGN KEY</span> (conta_cosif_sk) <span class="sql-keyword">REFERENCES</span> dim_conta_cosif(conta_cosif_sk)
+    <span class="sql-comment">-- ── Surrogate & Natural Keys ──────────────────────────────────</span>
+    contrato_sk           <span class="sql-type">BIGINT</span>         <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- PK: Surrogate Key (gerado por sequence)</span>,
+    contrato_id           <span class="sql-type">VARCHAR(64)</span>    <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- UK: ID Natural (ex: CT-2026-9912)</span>,
+    versao_sk             <span class="sql-type">INT</span>            <span class="sql-keyword">NOT NULL DEFAULT</span> 1 <span class="sql-comment">-- SCD2: versão do registro</span>,
+
+    <span class="sql-comment">-- ── Atributos do Cliente ──────────────────────────────────────</span>
+    cliente_id            <span class="sql-type">VARCHAR(64)</span>    <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Hash SHA-256 (LGPD Compliance)</span>,
+    dominio_produto       <span class="sql-type">VARCHAR(32)</span>    <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- CONSIGNADO | GIRO_FLEX | CREDIT_CARD | FGI</span>,
+    produto_codigo        <span class="sql-type">VARCHAR(32)</span>    <span class="sql-keyword">NOT NULL</span>,
+
+    <span class="sql-comment">-- ── Datas do Contrato ─────────────────────────────────────────</span>
+    data_originacao       <span class="sql-type">DATE</span>           <span class="sql-keyword">NOT NULL</span>,
+    data_vencimento_final <span class="sql-type">DATE</span>           <span class="sql-keyword">NOT NULL</span>,
+    prazo_meses           <span class="sql-type">INT</span>            <span class="sql-keyword">NOT NULL</span>,
+
+    <span class="sql-comment">-- ── Valores & Taxas (CMN 4.966 / EIR) ────────────────────────</span>
+    valor_principal_nominal   <span class="sql-type">DECIMAL(18,2)</span> <span class="sql-keyword">NOT NULL</span>,
+    custo_transacao_inicial   <span class="sql-type">DECIMAL(12,2)</span> <span class="sql-keyword">NOT NULL DEFAULT</span> 0.00 <span class="sql-comment">-- Custos de Originação Diferidos (IFRS 9)</span>,
+    taxa_juros_anual_nom      <span class="sql-type">DECIMAL(8,6)</span>  <span class="sql-keyword">NOT NULL</span>,
+    taxa_interna_retorno_tir  <span class="sql-type">DECIMAL(8,6)</span>  <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- EIR = TIR ajustada por custos (CMN 4.966 Art.8)</span>,
+    sistema_amortizacao       <span class="sql-type">VARCHAR(16)</span>   <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- PRICE | SAC | SAM | BULLET</span>,
+
+    <span class="sql-comment">-- ── Estado & Staging IFRS 9 ──────────────────────────────────</span>
+    estagio_cmn_4966      <span class="sql-type">TINYINT</span>        <span class="sql-keyword">NOT NULL DEFAULT</span> 1  <span class="sql-comment">-- 1=12m ECL | 2=Lifetime | 3=Default</span>,
+    status_contrato       <span class="sql-type">VARCHAR(32)</span>    <span class="sql-keyword">NOT NULL DEFAULT</span> <span class="sql-string">'ATIVO'</span> <span class="sql-comment">-- ATIVO|ATRASO|WRITTEN_OFF|LIQUIDADO|RENEGOCIADO</span>,
+    dias_atraso_atual     <span class="sql-type">INT</span>            <span class="sql-keyword">NOT NULL DEFAULT</span> 0,
+    is_written_off        <span class="sql-type">BOOLEAN</span>        <span class="sql-keyword">NOT NULL DEFAULT</span> FALSE,
+    data_write_off        <span class="sql-type">DATE</span>,
+    data_liquidacao       <span class="sql-type">DATE</span>,
+
+    <span class="sql-comment">-- ── SCD2 Audit Columns ───────────────────────────────────────</span>
+    dt_inicio_vigencia    <span class="sql-type">TIMESTAMP</span>      <span class="sql-keyword">NOT NULL DEFAULT</span> CURRENT_TIMESTAMP,
+    dt_fim_vigencia       <span class="sql-type">TIMESTAMP</span>      <span class="sql-comment">-- NULL = registro ativo atual</span>,
+    is_current            <span class="sql-type">BOOLEAN</span>        <span class="sql-keyword">NOT NULL DEFAULT</span> TRUE,
+    dt_insercao           <span class="sql-type">TIMESTAMP</span>      <span class="sql-keyword">NOT NULL DEFAULT</span> CURRENT_TIMESTAMP,
+    dt_atualizacao        <span class="sql-type">TIMESTAMP</span>      <span class="sql-keyword">NOT NULL DEFAULT</span> CURRENT_TIMESTAMP,
+    batch_run_id          <span class="sql-type">VARCHAR(64)</span>    <span class="sql-comment">-- ID do pipeline de carga</span>
 )
-<span class="sql-keyword">PARTITIONED BY</span> (data_competencia); <span class="sql-comment">-- Particionamento diário no Apache Iceberg</span>
+<span class="sql-keyword">USING</span> iceberg
+<span class="sql-keyword">PARTITIONED BY</span> (dominio_produto, <span class="sql-keyword">year</span>(data_originacao))
+<span class="sql-keyword">TBLPROPERTIES</span> (
+    <span class="sql-string">'format-version'</span>             = <span class="sql-string">'2'</span>,
+    <span class="sql-string">'write.delete.mode'</span>          = <span class="sql-string">'merge-on-read'</span>,
+    <span class="sql-string">'write.update.mode'</span>          = <span class="sql-string">'merge-on-read'</span>,
+    <span class="sql-string">'write.merge.mode'</span>           = <span class="sql-string">'merge-on-read'</span>,
+    <span class="sql-string">'write.target-file-size-bytes'</span> = <span class="sql-string">'134217728'</span>,   <span class="sql-comment">-- 128 MB</span>
+    <span class="sql-string">'history.expire.min-snapshots-to-keep'</span> = <span class="sql-string">'5'</span>,
+    <span class="sql-string">'write.parquet.compression-codec'</span> = <span class="sql-string">'zstd'</span>
+);
+        </div>
+
+        <!-- MERGE INTO: dim_contrato -->
+        <div style="margin:16px 0 8px; display:flex; align-items:center; gap:8px;">
+          <span style="background:rgba(168,85,247,0.15);color:#c084fc;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:12px;">MERGE INTO · UPSERT IDEMPOTENTE</span>
+          <span style="font-size:0.8rem;color:#94a3b8;">Atualização de Staging e Status do Contrato (SCD2)</span>
+        </div>
+        <div class="sql-code-block">
+<span class="sql-comment">-- Upsert diário: atualiza staging ECL, dias de atraso e status do contrato
+-- Fonte: staging.stg_contrato_updates (gerada pelo motor ECL + core bancário)
+-- Idempotência: ON matched por contrato_id + is_current = TRUE</span>
+
+<span class="sql-keyword">MERGE INTO</span> glue_catalog.accounting.dim_contrato <span class="sql-keyword">AS</span> target
+<span class="sql-keyword">USING</span> (
+    <span class="sql-keyword">SELECT</span>
+        s.contrato_id,
+        s.estagio_cmn_4966,
+        s.status_contrato,
+        s.dias_atraso_atual,
+        s.is_written_off,
+        s.data_write_off,
+        s.data_liquidacao,
+        CURRENT_TIMESTAMP <span class="sql-keyword">AS</span> dt_atualizacao,
+        <span class="sql-string">'ECL-JOB-2024-01-31'</span> <span class="sql-keyword">AS</span> batch_run_id
+    <span class="sql-keyword">FROM</span> glue_catalog.staging.stg_contrato_updates s
+    <span class="sql-keyword">WHERE</span> s.data_referencia = CURRENT_DATE
+) <span class="sql-keyword">AS</span> source
+<span class="sql-keyword">ON</span> target.contrato_id = source.contrato_id
+   <span class="sql-keyword">AND</span> target.is_current = TRUE
+
+<span class="sql-comment">-- Caso o staging mudou de 1→2 ou 2→3: fecha o registro atual (SCD2)</span>
+<span class="sql-keyword">WHEN MATCHED AND</span> target.estagio_cmn_4966 != source.estagio_cmn_4966 <span class="sql-keyword">THEN UPDATE SET</span>
+    target.dt_fim_vigencia  = CURRENT_TIMESTAMP,
+    target.is_current       = FALSE
+
+<span class="sql-comment">-- Caso apenas atributos operacionais mudaram (dias_atraso, status)</span>
+<span class="sql-keyword">WHEN MATCHED AND</span> target.estagio_cmn_4966 = source.estagio_cmn_4966 <span class="sql-keyword">THEN UPDATE SET</span>
+    target.status_contrato   = source.status_contrato,
+    target.dias_atraso_atual = source.dias_atraso_atual,
+    target.is_written_off    = source.is_written_off,
+    target.data_write_off    = source.data_write_off,
+    target.data_liquidacao   = source.data_liquidacao,
+    target.dt_atualizacao    = source.dt_atualizacao,
+    target.batch_run_id      = source.batch_run_id
+
+<span class="sql-comment">-- Novo contrato originado hoje</span>
+<span class="sql-keyword">WHEN NOT MATCHED THEN INSERT</span> *;
+        </div>
+
+        <!-- ── 2. dim_conta_cosif ── -->
+        <div style="margin:28px 0 10px; display:flex; align-items:center; gap:10px;">
+          <span style="background:rgba(20,184,166,0.15);color:#2dd4bf;font-size:0.7rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:0.08em;">ICEBERG · SCD TYPE 1 · PLANO COSIF BACEN</span>
+          <h4 style="margin:0;">2. Schema Apache Iceberg — <code>dim_conta_cosif</code></h4>
+        </div>
+        <div class="sql-code-block">
+<span class="sql-comment">-- ══════════════════════════════════════════════════════════════════
+-- dim_conta_cosif  |  Dimensão Plano de Contas COSIF (BACEN)
+-- Engine: Apache Iceberg v2  |  Atualização: mensal (publicação BACEN)
+-- Hierarquia: Classe > Grupo > Subgrupo > Título > Subtítulo (5 níveis)
+-- SCD Type 1: sobrescreve descrições quando BACEN publica nova versão
+-- ══════════════════════════════════════════════════════════════════</span>
+<span class="sql-keyword">CREATE TABLE</span> glue_catalog.accounting.dim_conta_cosif (
+
+    <span class="sql-comment">-- ── Chaves ───────────────────────────────────────────────────</span>
+    conta_cosif_sk          <span class="sql-type">BIGINT</span>       <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- PK Surrogate</span>,
+    codigo_cosif_15         <span class="sql-type">VARCHAR(20)</span>  <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- UK: 1.6.1.10.00.00-00-1 (formato BACEN)</span>,
+    codigo_cosif_raw        <span class="sql-type">VARCHAR(15)</span>  <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- UK: 161100000000001 (somente dígitos)</span>,
+    conta_pai_codigo        <span class="sql-type">VARCHAR(20)</span>              <span class="sql-comment">-- FK: código da conta sintética pai</span>,
+
+    <span class="sql-comment">-- ── Classificação Hierárquica ────────────────────────────────</span>
+    nivel_hierarquico       <span class="sql-type">TINYINT</span>      <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- 1=Classe 2=Grupo 3=Subgrupo 4=Título 5=Subtítulo</span>,
+    titulo_conta            <span class="sql-type">VARCHAR(120)</span> <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Descrição oficial BACEN</span>,
+
+    <span class="sql-comment">-- ── Classificação Patrimonial / DRE ──────────────────────────</span>
+    classificacao_patrimonial  <span class="sql-type">VARCHAR(32)</span>  <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- ATIVO|PASSIVO|PL|DRE_RECEITA|DRE_DESPESA|COMPENSACAO</span>,
+    natureza_saldo_dc          <span class="sql-type">CHAR(1)</span>      <span class="sql-keyword">NOT NULL</span> <span class="sql-comment">-- 'D'=Débito aumenta | 'C'=Crédito aumenta</span>,
+    indicador_redutora         <span class="sql-type">BOOLEAN</span>      <span class="sql-keyword">NOT NULL DEFAULT</span> FALSE <span class="sql-comment">-- TRUE p/ PDD e Juros Vincendos</span>,
+    indicador_offbalance       <span class="sql-type">BOOLEAN</span>      <span class="sql-keyword">NOT NULL DEFAULT</span> FALSE <span class="sql-comment">-- TRUE p/ contas 1.9/2.9 (Compensação)</span>,
+
+    <span class="sql-comment">-- ── Mapeamento IFRS 9 / CMN 4.966 ───────────────────────────</span>
+    estagio_operacional_cmn4966  <span class="sql-type">VARCHAR(32)</span>  <span class="sql-comment">-- ESTAGIO_1|ESTAGIO_2|ESTAGIO_3|OFF_BALANCE|N/A</span>,
+    tipo_movimento_contabil      <span class="sql-type">VARCHAR(32)</span>  <span class="sql-comment">-- ORIGINACAO|ACCRUAL|PECLD|AMORTIZACAO|WRITE_OFF|RECUPERACAO</span>,
+
+    <span class="sql-comment">-- ── Vigência e Auditoria ─────────────────────────────────────</span>
+    ativo_indicador         <span class="sql-type">BOOLEAN</span>      <span class="sql-keyword">NOT NULL DEFAULT</span> TRUE,
+    dt_inicio_vigencia      <span class="sql-type">DATE</span>         <span class="sql-keyword">NOT NULL</span>,
+    dt_fim_vigencia         <span class="sql-type">DATE</span>,
+    dt_carga                <span class="sql-type">TIMESTAMP</span>    <span class="sql-keyword">NOT NULL DEFAULT</span> CURRENT_TIMESTAMP
+)
+<span class="sql-keyword">USING</span> iceberg
+<span class="sql-keyword">PARTITIONED BY</span> (classificacao_patrimonial)
+<span class="sql-keyword">TBLPROPERTIES</span> (
+    <span class="sql-string">'format-version'</span>               = <span class="sql-string">'2'</span>,
+    <span class="sql-string">'write.delete.mode'</span>            = <span class="sql-string">'copy-on-write'</span>,  <span class="sql-comment">-- Dimensão pequena: COW é eficiente</span>
+    <span class="sql-string">'write.parquet.compression-codec'</span> = <span class="sql-string">'snappy'</span>
+);
+        </div>
+
+        <!-- MERGE INTO: dim_conta_cosif -->
+        <div style="margin:16px 0 8px; display:flex; align-items:center; gap:8px;">
+          <span style="background:rgba(168,85,247,0.15);color:#c084fc;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:12px;">MERGE INTO · SYNC BACEN COSIF</span>
+          <span style="font-size:0.8rem;color:#94a3b8;">Sincronização mensal com nova publicação do BACEN</span>
+        </div>
+        <div class="sql-code-block">
+<span class="sql-comment">-- Sincronização mensal do Plano COSIF com a publicação oficial BACEN
+-- Fonte: staging.stg_cosif_bacen (carregada via Lambda após download do XML BACEN)
+-- SCD Type 1: atualiza títulos e vigências sem versionar</span>
+
+<span class="sql-keyword">MERGE INTO</span> glue_catalog.accounting.dim_conta_cosif <span class="sql-keyword">AS</span> target
+<span class="sql-keyword">USING</span> glue_catalog.staging.stg_cosif_bacen <span class="sql-keyword">AS</span> source
+<span class="sql-keyword">ON</span> target.codigo_cosif_raw = source.codigo_cosif_raw
+
+<span class="sql-keyword">WHEN MATCHED AND</span> (
+    target.titulo_conta         != source.titulo_conta
+    <span class="sql-keyword">OR</span> target.ativo_indicador   != source.ativo_indicador
+    <span class="sql-keyword">OR</span> target.dt_fim_vigencia   != source.dt_fim_vigencia
+) <span class="sql-keyword">THEN UPDATE SET</span>
+    target.titulo_conta     = source.titulo_conta,
+    target.ativo_indicador  = source.ativo_indicador,
+    target.dt_fim_vigencia  = source.dt_fim_vigencia,
+    target.dt_carga         = CURRENT_TIMESTAMP
+
+<span class="sql-keyword">WHEN NOT MATCHED THEN INSERT</span> (
+    conta_cosif_sk, codigo_cosif_15, codigo_cosif_raw, conta_pai_codigo,
+    nivel_hierarquico, titulo_conta, classificacao_patrimonial,
+    natureza_saldo_dc, indicador_redutora, indicador_offbalance,
+    estagio_operacional_cmn4966, tipo_movimento_contabil,
+    ativo_indicador, dt_inicio_vigencia, dt_fim_vigencia, dt_carga
+) <span class="sql-keyword">VALUES</span> (
+    source.conta_cosif_sk, source.codigo_cosif_15, source.codigo_cosif_raw,
+    source.conta_pai_codigo, source.nivel_hierarquico, source.titulo_conta,
+    source.classificacao_patrimonial, source.natureza_saldo_dc,
+    source.indicador_redutora, source.indicador_offbalance,
+    source.estagio_operacional_cmn4966, source.tipo_movimento_contabil,
+    TRUE, source.dt_inicio_vigencia, NULL, CURRENT_TIMESTAMP
+);
+        </div>
+
+        <!-- ── 3. fato_lancamento ── -->
+        <div style="margin:28px 0 10px; display:flex; align-items:center; gap:10px;">
+          <span style="background:rgba(139,92,246,0.15);color:#a78bfa;font-size:0.7rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:0.08em;">ICEBERG v2 · APPEND + MERGE · PARTITIONED · FATO CENTRAL</span>
+          <h4 style="margin:0;">3. Schema Apache Iceberg — <code>fato_lancamento</code></h4>
+        </div>
+        <div class="sql-code-block">
+<span class="sql-comment">-- ══════════════════════════════════════════════════════════════════
+-- fato_lancamento  |  Ledger Analítico de Partidas Dobradas
+-- Engine: Apache Iceberg v2  |  Catalog: AWS Glue
+-- Storage: s3://lakehouse-gold/accounting/fato_lancamento/
+-- Partição: data_competencia (diária) + dominio_origem
+-- Ordenação: (contrato_sk, conta_cosif_sk, data_competencia) → Z-order
+-- Idempotência: MERGE INTO por chave_idempotencia (SHA-256)
+-- ══════════════════════════════════════════════════════════════════</span>
+<span class="sql-keyword">CREATE TABLE</span> glue_catalog.accounting.fato_lancamento (
+
+    <span class="sql-comment">-- ── Chaves de Identidade & Idempotência ──────────────────────</span>
+    lancamento_sk          <span class="sql-type">BIGINT</span>                   <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- PK Surrogate</span>,
+    event_uuid             <span class="sql-type">VARCHAR(36)</span>              <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- UUID Kafka do evento de origem</span>,
+    chave_idempotencia     <span class="sql-type">VARCHAR(128)</span>             <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- SHA-256(contrato_id+conta+data+tipo+valor) para MERGE dedup</span>,
+
+    <span class="sql-comment">-- ── Foreign Keys ─────────────────────────────────────────────</span>
+    contrato_sk            <span class="sql-type">BIGINT</span>                   <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- FK → dim_contrato</span>,
+    conta_cosif_sk         <span class="sql-type">BIGINT</span>                   <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- FK → dim_conta_cosif</span>,
+
+    <span class="sql-comment">-- ── Temporalidade Contábil ────────────────────────────────────</span>
+    data_competencia       <span class="sql-type">DATE</span>                     <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Data do fechamento contábil D-0 (PARTITION KEY)</span>,
+    data_hora_evento       <span class="sql-type">TIMESTAMP</span>                <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Timestamp real do evento no domínio</span>,
+    data_hora_processamento <span class="sql-type">TIMESTAMP</span>               <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Timestamp de ingestão pelo Accounting Engine</span>,
+
+    <span class="sql-comment">-- ── Classificação do Evento Contábil ─────────────────────────</span>
+    tipo_evento_contabil   <span class="sql-type">VARCHAR(48)</span>              <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- ORIGINACAO|ACCRUAL|AMORTIZACAO|STOP_ACCRUAL|PECLD|WRITE_OFF|RECUPERACAO</span>,
+    subtipo_evento         <span class="sql-type">VARCHAR(64)</span>                        <span class="sql-comment">-- ex: PECLD_STAGE1_CONSTITUICAO, ACCRUAL_EIR</span>,
+
+    <span class="sql-comment">-- ── Valores do Lançamento ────────────────────────────────────</span>
+    valor_lancamento       <span class="sql-type">DECIMAL(18,2)</span>            <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Valor absoluto do movimento</span>,
+    natureza_lancamento_dc <span class="sql-type">CHAR(1)</span>                  <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- 'D'=Débito | 'C'=Crédito</span>,
+    valor_saldo_pos_lancamento <span class="sql-type">DECIMAL(18,2)</span>                  <span class="sql-comment">-- Saldo devedor/credor após lançamento</span>,
+
+    <span class="sql-comment">-- ── Rastreabilidade Contábil COSIF ───────────────────────────</span>
+    codigo_historico_contabil  <span class="sql-type">INT</span>                  <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Histórico padronizado COSIF (tabela interna banco)</span>,
+    descricao_historico        <span class="sql-type">VARCHAR(255)</span>         <span class="sql-keyword">NOT NULL</span>,
+    codigo_cosif_15_conta      <span class="sql-type">VARCHAR(20)</span>          <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Denormalizado: código COSIF 15 dígitos para auditoria</span>,
+    estagio_contrato_na_data   <span class="sql-type">TINYINT</span>              <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- Stage 1|2|3 vigente na data da competência</span>,
+
+    <span class="sql-comment">-- ── Contexto do Domínio Produtor (Data Mesh) ─────────────────</span>
+    dominio_origem         <span class="sql-type">VARCHAR(32)</span>              <span class="sql-keyword">NOT NULL</span>  <span class="sql-comment">-- CONSIGNADO|CARTAO|PIX|GIRO|FGI (PARTITION KEY)</span>,
+    nome_servico_origem    <span class="sql-type">VARCHAR(64)</span>                        <span class="sql-comment">-- Microserviço produtor do evento</span>,
+    correlacao_id          <span class="sql-type">VARCHAR(64)</span>                        <span class="sql-comment">-- ID de correlação distributed tracing</span>,
+
+    <span class="sql-comment">-- ── Auditoria de Pipeline ────────────────────────────────────</span>
+    batch_run_id           <span class="sql-type">VARCHAR(64)</span>                        <span class="sql-comment">-- ID do job Glue / Spark que gerou o lançamento</span>,
+    versao_motor_ecl       <span class="sql-type">VARCHAR(16)</span>                        <span class="sql-comment">-- Versão do Accounting Engine (para rollback)</span>,
+    dt_carga               <span class="sql-type">TIMESTAMP</span>                <span class="sql-keyword">NOT NULL DEFAULT</span> CURRENT_TIMESTAMP,
+    is_estorno             <span class="sql-type">BOOLEAN</span>                  <span class="sql-keyword">NOT NULL DEFAULT</span> FALSE <span class="sql-comment">-- TRUE para lançamentos de estorno</span>,
+    lancamento_original_sk <span class="sql-type">BIGINT</span>                             <span class="sql-comment">-- FK → fato_lancamento (para estornos)</span>
+)
+<span class="sql-keyword">USING</span> iceberg
+<span class="sql-keyword">PARTITIONED BY</span> (data_competencia, dominio_origem)
+<span class="sql-keyword">TBLPROPERTIES</span> (
+    <span class="sql-string">'format-version'</span>              = <span class="sql-string">'2'</span>,
+    <span class="sql-string">'write.delete.mode'</span>           = <span class="sql-string">'merge-on-read'</span>,
+    <span class="sql-string">'write.update.mode'</span>           = <span class="sql-string">'merge-on-read'</span>,
+    <span class="sql-string">'write.merge.mode'</span>            = <span class="sql-string">'merge-on-read'</span>,
+    <span class="sql-string">'write.target-file-size-bytes'</span>= <span class="sql-string">'268435456'</span>,    <span class="sql-comment">-- 256 MB por arquivo</span>
+    <span class="sql-string">'write.sort-order'</span>            = <span class="sql-string">'contrato_sk ASC NULLS LAST, conta_cosif_sk ASC, data_competencia ASC'</span>,
+    <span class="sql-string">'commit.retry.num-retries'</span>    = <span class="sql-string">'4'</span>,
+    <span class="sql-string">'history.expire.min-snapshots-to-keep'</span> = <span class="sql-string">'10'</span>,
+    <span class="sql-string">'write.parquet.compression-codec'</span> = <span class="sql-string">'zstd'</span>,
+    <span class="sql-string">'read.split.target-size'</span>      = <span class="sql-string">'134217728'</span>     <span class="sql-comment">-- 128 MB por split de leitura (Athena / Trino)</span>
+);
+
+<span class="sql-comment">-- Z-Order otimization: reorganiza arquivos para leituras analíticas eficientes
+-- Executar semanalmente via AWS Glue Job (compactação automática)</span>
+<span class="sql-keyword">CALL</span> system.rewrite_data_files(
+    table => <span class="sql-string">'glue_catalog.accounting.fato_lancamento'</span>,
+    strategy => <span class="sql-string">'sort'</span>,
+    sort_order => <span class="sql-string">'zorder(contrato_sk, conta_cosif_sk, data_competencia)'</span>,
+    options => map(
+        <span class="sql-string">'min-input-files'</span>, <span class="sql-string">'5'</span>,
+        <span class="sql-string">'target-file-size-bytes'</span>, <span class="sql-string">'268435456'</span>
+    )
+);
+        </div>
+
+        <!-- MERGE INTO: fato_lancamento -->
+        <div style="margin:16px 0 8px; display:flex; align-items:center; gap:8px;">
+          <span style="background:rgba(168,85,247,0.15);color:#c084fc;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:12px;">MERGE INTO · IDEMPOTÊNCIA TOTAL</span>
+          <span style="font-size:0.8rem;color:#94a3b8;">Ingestão diária do Accounting Engine com deduplicação por SHA-256</span>
+        </div>
+        <div class="sql-code-block">
+<span class="sql-comment">-- Ingestão idempotente do Ledger: garante que reprocessamentos não duplicam lançamentos
+-- Fonte: staging.stg_lancamentos_novos (Spark Streaming / Glue Kafka consumer)
+-- Chave: chave_idempotencia = SHA256(event_uuid + conta_cosif_sk + natureza_dc)
+-- Resultado: APPEND se novo, IGNORE se já existe (sem UPDATE: ledger é imutável)</span>
+
+<span class="sql-keyword">MERGE INTO</span> glue_catalog.accounting.fato_lancamento <span class="sql-keyword">AS</span> target
+<span class="sql-keyword">USING</span> (
+    <span class="sql-comment">-- CTE: deduplica na própria staging antes do MERGE</span>
+    <span class="sql-keyword">WITH</span> staged <span class="sql-keyword">AS</span> (
+        <span class="sql-keyword">SELECT</span> *,
+            SHA2(<span class="sql-keyword">CONCAT</span>(event_uuid, CAST(conta_cosif_sk <span class="sql-keyword">AS</span> <span class="sql-type">STRING</span>),
+                        natureza_lancamento_dc, CAST(data_competencia <span class="sql-keyword">AS</span> <span class="sql-type">STRING</span>)), 256)
+            <span class="sql-keyword">AS</span> chave_idempotencia_calc,
+            ROW_NUMBER() OVER (<span class="sql-keyword">PARTITION BY</span> event_uuid, conta_cosif_sk, natureza_lancamento_dc
+                               <span class="sql-keyword">ORDER BY</span> data_hora_processamento <span class="sql-keyword">DESC</span>) <span class="sql-keyword">AS</span> rn
+        <span class="sql-keyword">FROM</span> glue_catalog.staging.stg_lancamentos_novos
+        <span class="sql-keyword">WHERE</span> data_competencia = CURRENT_DATE
+    )
+    <span class="sql-keyword">SELECT</span> * <span class="sql-keyword">FROM</span> staged <span class="sql-keyword">WHERE</span> rn = 1
+) <span class="sql-keyword">AS</span> source
+<span class="sql-keyword">ON</span> target.chave_idempotencia = source.chave_idempotencia_calc
+
+<span class="sql-comment">-- Ledger contábil é IMUTÁVEL: lançamento já existente nunca é alterado</span>
+<span class="sql-keyword">WHEN MATCHED THEN</span>
+    DO NOTHING  <span class="sql-comment">-- idempotente: ignora duplicata</span>
+
+<span class="sql-comment">-- Novo lançamento gerado pelo Accounting Engine: persiste no Ledger</span>
+<span class="sql-keyword">WHEN NOT MATCHED THEN INSERT</span> (
+    lancamento_sk, event_uuid, chave_idempotencia,
+    contrato_sk, conta_cosif_sk,
+    data_competencia, data_hora_evento, data_hora_processamento,
+    tipo_evento_contabil, subtipo_evento,
+    valor_lancamento, natureza_lancamento_dc, valor_saldo_pos_lancamento,
+    codigo_historico_contabil, descricao_historico,
+    codigo_cosif_15_conta, estagio_contrato_na_data,
+    dominio_origem, nome_servico_origem, correlacao_id,
+    batch_run_id, versao_motor_ecl, dt_carga, is_estorno
+) <span class="sql-keyword">VALUES</span> (
+    source.lancamento_sk, source.event_uuid, source.chave_idempotencia_calc,
+    source.contrato_sk, source.conta_cosif_sk,
+    source.data_competencia, source.data_hora_evento, CURRENT_TIMESTAMP,
+    source.tipo_evento_contabil, source.subtipo_evento,
+    source.valor_lancamento, source.natureza_lancamento_dc, source.valor_saldo_pos_lancamento,
+    source.codigo_historico_contabil, source.descricao_historico,
+    source.codigo_cosif_15_conta, source.estagio_contrato_na_data,
+    source.dominio_origem, source.nome_servico_origem, source.correlacao_id,
+    source.batch_run_id, source.versao_motor_ecl, CURRENT_TIMESTAMP, FALSE
+);
+
+<span class="sql-comment">-- ── Validação pós-MERGE: verifica balanceamento D = C (regra das partidas dobradas)</span>
+<span class="sql-keyword">SELECT</span>
+    data_competencia,
+    dominio_origem,
+    tipo_evento_contabil,
+    <span class="sql-keyword">SUM</span>(<span class="sql-keyword">CASE WHEN</span> natureza_lancamento_dc = <span class="sql-string">'D'</span> <span class="sql-keyword">THEN</span> valor_lancamento <span class="sql-keyword">ELSE</span> 0 <span class="sql-keyword">END</span>) <span class="sql-keyword">AS</span> total_debito,
+    <span class="sql-keyword">SUM</span>(<span class="sql-keyword">CASE WHEN</span> natureza_lancamento_dc = <span class="sql-string">'C'</span> <span class="sql-keyword">THEN</span> valor_lancamento <span class="sql-keyword">ELSE</span> 0 <span class="sql-keyword">END</span>) <span class="sql-keyword">AS</span> total_credito,
+    <span class="sql-keyword">SUM</span>(<span class="sql-keyword">CASE WHEN</span> natureza_lancamento_dc = <span class="sql-string">'D'</span> <span class="sql-keyword">THEN</span> valor_lancamento <span class="sql-keyword">ELSE</span> -valor_lancamento <span class="sql-keyword">END</span>) <span class="sql-keyword">AS</span> saldo_liquido <span class="sql-comment">-- DEVE SER 0</span>
+<span class="sql-keyword">FROM</span> glue_catalog.accounting.fato_lancamento
+<span class="sql-keyword">WHERE</span> data_competencia = CURRENT_DATE
+<span class="sql-keyword">GROUP BY</span> 1, 2, 3
+<span class="sql-keyword">HAVING</span> ABS(saldo_liquido) > 0.01 <span class="sql-comment">-- Alerta: desbalanceamento detectado!</span>
+<span class="sql-keyword">ORDER BY</span> ABS(saldo_liquido) <span class="sql-keyword">DESC</span>;
         </div>
       </section>
 
@@ -2324,6 +2610,314 @@
             <text x="792" y="127" fill="#94a3b8" font-size="10" text-anchor="middle">S3 Data Lakehouse Gold</text>
             <text x="792" y="143" fill="#94a3b8" font-size="10" text-anchor="middle">Consultas Athena / Trino</text>
           </svg>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             DIAGRAMA AWS 2026: Accounting Engine Translator
+             Arquitetura Completa em Data Mesh
+        ══════════════════════════════════════════════════════ -->
+        <h3 style="margin-top:48px; text-align:center;">☁️ Arquitetura AWS 2026 — Accounting Engine Translator & Ledger Iceberg Data Mesh</h3>
+        <p style="text-align:center; color:var(--text-dim); font-size:0.88rem; margin-bottom:24px;">Fluxo completo: dos domínios produtores (MSK) ao Ledger Analítico (Iceberg S3), passando pelo motor de tradução contábil, validação e reporte ao BACEN.</p>
+
+        <div style="overflow-x:auto; margin:0 0 40px;">
+        <svg width="1200" height="760" viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg"
+          style="font-family:'DM Sans',sans-serif; background:#060d1a; border-radius:16px; border:1px solid #1e293b; display:block; min-width:1100px;">
+
+          <defs>
+            <!-- Gradients -->
+            <linearGradient id="grdBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0b1120"/><stop offset="100%" stop-color="#060d1a"/>
+            </linearGradient>
+            <linearGradient id="grdMSK"  x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7c2d12"/><stop offset="100%" stop-color="#ea580c"/></linearGradient>
+            <linearGradient id="grdLmb"  x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d4ed8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient>
+            <linearGradient id="grdDyn"  x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f766e"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient>
+            <linearGradient id="grdGlue" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#a855f7"/></linearGradient>
+            <linearGradient id="grdS3"   x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#10b981"/></linearGradient>
+            <linearGradient id="grdAth"  x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient>
+            <linearGradient id="grdSNS"  x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7f1d1d"/><stop offset="100%" stop-color="#ef4444"/></linearGradient>
+            <linearGradient id="grdCW"   x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <linearGradient id="grdSR"   x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4c1d95"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient>
+            <!-- Arrow markers -->
+            <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#475569"/>
+            </marker>
+            <marker id="arrGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+            </marker>
+            <marker id="arrOrange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#f97316"/>
+            </marker>
+            <marker id="arrPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#a855f7"/>
+            </marker>
+            <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+
+          <!-- ── Background panel ── -->
+          <rect width="1200" height="760" fill="url(#grdBg)" rx="16"/>
+
+          <!-- ── TITLE ── -->
+          <text x="600" y="36" fill="#f8fafc" font-size="15" font-weight="bold" text-anchor="middle" letter-spacing="0.5">ACCOUNTING ENGINE TRANSLATOR — ARQUITETURA AWS 2026 / DATA MESH</text>
+          <line x1="80" y1="48" x2="1120" y2="48" stroke="#1e293b" stroke-width="1"/>
+
+          <!-- ══ LAYER 1: Domain Producers (left) ══ -->
+          <text x="60" y="80" fill="#475569" font-size="9" font-weight="800" letter-spacing="1.5">LAYER 1 — DOMAIN PRODUCERS (DATA MESH)</text>
+
+          <!-- Domínio Consignado -->
+          <rect x="30" y="90" width="130" height="56" rx="8" fill="#1e293b" stroke="#f97316" stroke-width="1.5"/>
+          <text x="95" y="112" fill="#fb923c" font-size="9" font-weight="bold" text-anchor="middle">🏦 Consignado</text>
+          <text x="95" y="127" fill="#94a3b8" font-size="8" text-anchor="middle">Microserviço</text>
+          <text x="95" y="140" fill="#64748b" font-size="7.5" text-anchor="middle">Evento: ORIGINACAO</text>
+
+          <!-- Domínio Cartão -->
+          <rect x="30" y="162" width="130" height="56" rx="8" fill="#1e293b" stroke="#f97316" stroke-width="1.5"/>
+          <text x="95" y="184" fill="#fb923c" font-size="9" font-weight="bold" text-anchor="middle">💳 Cartão Crédito</text>
+          <text x="95" y="199" fill="#94a3b8" font-size="8" text-anchor="middle">Microserviço</text>
+          <text x="95" y="212" fill="#64748b" font-size="7.5" text-anchor="middle">Evento: FATURA</text>
+
+          <!-- Domínio PIX -->
+          <rect x="30" y="234" width="130" height="56" rx="8" fill="#1e293b" stroke="#f97316" stroke-width="1.5"/>
+          <text x="95" y="256" fill="#fb923c" font-size="9" font-weight="bold" text-anchor="middle">⚡ PIX / Gateway</text>
+          <text x="95" y="271" fill="#94a3b8" font-size="8" text-anchor="middle">Microserviço</text>
+          <text x="95" y="284" fill="#64748b" font-size="7.5" text-anchor="middle">Evento: LIQUIDACAO</text>
+
+          <!-- ECL Engine -->
+          <rect x="30" y="306" width="130" height="56" rx="8" fill="#1e293b" stroke="#f97316" stroke-width="1.5"/>
+          <text x="95" y="328" fill="#fb923c" font-size="9" font-weight="bold" text-anchor="middle">📊 ECL Engine</text>
+          <text x="95" y="343" fill="#94a3b8" font-size="8" text-anchor="middle">Spark / SageMaker</text>
+          <text x="95" y="356" fill="#64748b" font-size="7.5" text-anchor="middle">Evento: PECLD_STAGE</text>
+
+          <!-- ══ LAYER 2: Amazon MSK ══ -->
+          <rect x="200" y="88" width="120" height="280" rx="10" fill="#0f172a" stroke="#ea580c" stroke-width="1.5"/>
+          <text x="260" y="108" fill="#ea580c" font-size="9" font-weight="bold" text-anchor="middle">Amazon MSK</text>
+          <text x="260" y="120" fill="#64748b" font-size="7.5" text-anchor="middle">(Apache Kafka)</text>
+
+          <!-- Topics -->
+          <rect x="210" y="130" width="100" height="26" rx="4" fill="#1c1515" stroke="#ea580c" stroke-width="1"/>
+          <text x="260" y="147" fill="#fb923c" font-size="8" text-anchor="middle">credit.events.raw</text>
+
+          <rect x="210" y="163" width="100" height="26" rx="4" fill="#1c1515" stroke="#ea580c" stroke-width="1"/>
+          <text x="260" y="180" fill="#fb923c" font-size="8" text-anchor="middle">ecl.staging.events</text>
+
+          <rect x="210" y="196" width="100" height="26" rx="4" fill="#1c1515" stroke="#ea580c" stroke-width="1"/>
+          <text x="260" y="213" fill="#fb923c" font-size="8" text-anchor="middle">accounting.ledger.dlq</text>
+
+          <rect x="210" y="229" width="100" height="26" rx="4" fill="#1c1515" stroke="#ea580c" stroke-width="1"/>
+          <text x="260" y="246" fill="#fb923c" font-size="8" text-anchor="middle">accounting.out</text>
+
+          <!-- Schema Registry -->
+          <rect x="210" y="300" width="100" height="56" rx="6" fill="url(#grdSR)" opacity="0.85"/>
+          <text x="260" y="322" fill="#fff" font-size="9" font-weight="bold" text-anchor="middle">Confluent</text>
+          <text x="260" y="334" fill="#fff" font-size="8" text-anchor="middle">Schema Registry</text>
+          <text x="260" y="348" fill="#ede9fe" font-size="7.5" text-anchor="middle">Avro / Protobuf</text>
+
+          <!-- ══ LAYER 3: Accounting Engine (Lambda + Step Functions) ══ -->
+          <rect x="370" y="60" width="200" height="380" rx="12" fill="#0b0f1a" stroke="#a855f7" stroke-width="2" stroke-dasharray="6,3"/>
+          <text x="470" y="80" fill="#a855f7" font-size="9" font-weight="800" text-anchor="middle" letter-spacing="1">ACCOUNTING ENGINE TRANSLATOR</text>
+
+          <!-- Lambda Consumer -->
+          <rect x="385" y="90" width="170" height="60" rx="8" fill="url(#grdLmb)"/>
+          <text x="470" y="112" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">⚡ AWS Lambda</text>
+          <text x="470" y="126" fill="#bfdbfe" font-size="8" text-anchor="middle">Consumer MSK (Trigger)</text>
+          <text x="470" y="140" fill="#bfdbfe" font-size="7.5" text-anchor="middle">Valida Schema + Dedup</text>
+
+          <!-- Step Functions -->
+          <rect x="385" y="165" width="170" height="60" rx="8" fill="#1e1040" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="470" y="187" fill="#c084fc" font-size="10" font-weight="bold" text-anchor="middle">⚙️ Step Functions</text>
+          <text x="470" y="201" fill="#94a3b8" font-size="8" text-anchor="middle">Workflow: validar →</text>
+          <text x="470" y="214" fill="#94a3b8" font-size="8" text-anchor="middle">traduzir → persistir</text>
+
+          <!-- DynamoDB Rules -->
+          <rect x="385" y="240" width="170" height="60" rx="8" fill="url(#grdDyn)"/>
+          <text x="470" y="262" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">🗄️ DynamoDB</text>
+          <text x="470" y="276" fill="#ccfbf1" font-size="8" text-anchor="middle">Regras COSIF</text>
+          <text x="470" y="290" fill="#ccfbf1" font-size="7.5" text-anchor="middle">event_type → (D/C conta)</text>
+
+          <!-- Lambda Translator -->
+          <rect x="385" y="315" width="170" height="60" rx="8" fill="url(#grdLmb)" opacity="0.9"/>
+          <text x="470" y="337" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">⚡ Lambda Translator</text>
+          <text x="470" y="351" fill="#bfdbfe" font-size="8" text-anchor="middle">Gera partidas D/C</text>
+          <text x="470" y="365" fill="#bfdbfe" font-size="7.5" text-anchor="middle">Valida Σ D = Σ C</text>
+
+          <!-- Validation label -->
+          <rect x="393" y="390" width="154" height="38" rx="6" fill="#0a0a1a" stroke="#f43f5e" stroke-width="1"/>
+          <text x="470" y="406" fill="#fb7185" font-size="8.5" font-weight="bold" text-anchor="middle">🔐 Validação Contábil</text>
+          <text x="470" y="420" fill="#64748b" font-size="7.5" text-anchor="middle">Σ Débitos = Σ Créditos</text>
+
+          <!-- ══ LAYER 4: S3 Lakehouse ══ -->
+          <text x="650" y="80" fill="#475569" font-size="9" font-weight="800" letter-spacing="1.5">LAYER 4 — S3 DATA LAKEHOUSE (APACHE ICEBERG)</text>
+
+          <!-- S3 Bronze -->
+          <rect x="630" y="90" width="150" height="70" rx="8" fill="url(#grdS3)" opacity="0.7"/>
+          <text x="705" y="114" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">🪣 S3 Bronze</text>
+          <text x="705" y="128" fill="#d1fae5" font-size="8" text-anchor="middle">Raw Events (Parquet)</text>
+          <text x="705" y="143" fill="#86efac" font-size="7.5" text-anchor="middle">s3://lakehouse-bronze/</text>
+          <text x="705" y="155" fill="#86efac" font-size="7.5" text-anchor="middle">accounting/raw/</text>
+
+          <!-- S3 Silver -->
+          <rect x="630" y="178" width="150" height="70" rx="8" fill="url(#grdS3)" opacity="0.85"/>
+          <text x="705" y="202" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">🪣 S3 Silver</text>
+          <text x="705" y="216" fill="#d1fae5" font-size="8" text-anchor="middle">Staging Validado</text>
+          <text x="705" y="231" fill="#86efac" font-size="7.5" text-anchor="middle">s3://lakehouse-silver/</text>
+          <text x="705" y="243" fill="#86efac" font-size="7.5" text-anchor="middle">accounting/staging/</text>
+
+          <!-- S3 Gold (Iceberg) -->
+          <rect x="630" y="266" width="150" height="90" rx="8" fill="url(#grdS3)"/>
+          <text x="705" y="290" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">🏆 S3 Gold (Iceberg)</text>
+          <text x="705" y="304" fill="#d1fae5" font-size="8" text-anchor="middle">Ledger Analítico</text>
+          <text x="705" y="316" fill="#86efac" font-size="7.5" text-anchor="middle">fato_lancamento</text>
+          <text x="705" y="328" fill="#86efac" font-size="7.5" text-anchor="middle">dim_contrato</text>
+          <text x="705" y="340" fill="#86efac" font-size="7.5" text-anchor="middle">dim_conta_cosif</text>
+          <text x="705" y="352" fill="#6ee7b7" font-size="7" text-anchor="middle">PARTITIONED · Z-ORDER · MERGE-ON-READ</text>
+
+          <!-- AWS Glue -->
+          <rect x="630" y="370" width="150" height="60" rx="8" fill="url(#grdGlue)"/>
+          <text x="705" y="394" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">⚙️ AWS Glue 4.0</text>
+          <text x="705" y="408" fill="#ede9fe" font-size="8" text-anchor="middle">ETL + Compactação</text>
+          <text x="705" y="422" fill="#c4b5fd" font-size="7.5" text-anchor="middle">MERGE INTO + Z-Order</text>
+
+          <!-- ══ LAYER 5: Consumption ══ -->
+          <text x="860" y="80" fill="#475569" font-size="9" font-weight="800" letter-spacing="1.5">LAYER 5 — CONSUMPTION & REPORTING</text>
+
+          <!-- Athena -->
+          <rect x="840" y="90" width="140" height="60" rx="8" fill="url(#grdAth)"/>
+          <text x="910" y="114" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">🔍 Amazon Athena</text>
+          <text x="910" y="128" fill="#bfdbfe" font-size="8" text-anchor="middle">SQL Analítico</text>
+          <text x="910" y="141" fill="#93c5fd" font-size="7.5" text-anchor="middle">Iceberg Time Travel</text>
+
+          <!-- QuickSight -->
+          <rect x="840" y="165" width="140" height="60" rx="8" fill="#1a1040" stroke="#8b5cf6" stroke-width="1.5"/>
+          <text x="910" y="189" fill="#c084fc" font-size="10" font-weight="bold" text-anchor="middle">📊 QuickSight</text>
+          <text x="910" y="203" fill="#94a3b8" font-size="8" text-anchor="middle">Dashboards COSIF</text>
+          <text x="910" y="216" fill="#64748b" font-size="7.5" text-anchor="middle">DRE · Balanço · PDD</text>
+
+          <!-- BACEN DOC 3040 -->
+          <rect x="840" y="240" width="140" height="60" rx="8" fill="#1c0a00" stroke="#f97316" stroke-width="1.5"/>
+          <text x="910" y="264" fill="#fb923c" font-size="10" font-weight="bold" text-anchor="middle">🏛️ BACEN DOC 3040</text>
+          <text x="910" y="278" fill="#94a3b8" font-size="8" text-anchor="middle">Reporte Regulatório</text>
+          <text x="910" y="291" fill="#64748b" font-size="7.5" text-anchor="middle">Automático via Athena</text>
+
+          <!-- CloudWatch -->
+          <rect x="840" y="315" width="140" height="60" rx="8" fill="url(#grdCW)"/>
+          <text x="910" y="339" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">📡 CloudWatch</text>
+          <text x="910" y="353" fill="#c7d2fe" font-size="8" text-anchor="middle">Alertas Contábeis</text>
+          <text x="910" y="366" fill="#a5b4fc" font-size="7.5" text-anchor="middle">Σ D ≠ Σ C → SNS</text>
+
+          <!-- SNS Alert -->
+          <rect x="840" y="390" width="140" height="44" rx="8" fill="url(#grdSNS)" opacity="0.85"/>
+          <text x="910" y="410" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">🔔 Amazon SNS</text>
+          <text x="910" y="424" fill="#fecaca" font-size="7.5" text-anchor="middle">Alerta Time → Contabilidade</text>
+
+          <!-- ══ LAYER 6: Governance ══ -->
+          <text x="1060" y="80" fill="#475569" font-size="9" font-weight="800" letter-spacing="1.5">GOVERNANCE</text>
+
+          <!-- Lake Formation -->
+          <rect x="1020" y="90" width="150" height="56" rx="8" fill="#0f1a35" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="1095" y="114" fill="#60a5fa" font-size="9" font-weight="bold" text-anchor="middle">🛡️ Lake Formation</text>
+          <text x="1095" y="128" fill="#94a3b8" font-size="8" text-anchor="middle">RBAC · Column Masking</text>
+          <text x="1095" y="141" fill="#64748b" font-size="7.5" text-anchor="middle">LGPD Compliance</text>
+
+          <!-- Glue Data Catalog -->
+          <rect x="1020" y="160" width="150" height="56" rx="8" fill="#1a0f35" stroke="#a855f7" stroke-width="1.5"/>
+          <text x="1095" y="184" fill="#c084fc" font-size="9" font-weight="bold" text-anchor="middle">📚 Glue Catalog</text>
+          <text x="1095" y="198" fill="#94a3b8" font-size="8" text-anchor="middle">Iceberg Table Catalog</text>
+          <text x="1095" y="211" fill="#64748b" font-size="7.5" text-anchor="middle">Schema Evolution</text>
+
+          <!-- Macie / Data Quality -->
+          <rect x="1020" y="230" width="150" height="56" rx="8" fill="#0f1a35" stroke="#10b981" stroke-width="1.5"/>
+          <text x="1095" y="254" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">✅ Glue Data Quality</text>
+          <text x="1095" y="268" fill="#94a3b8" font-size="8" text-anchor="middle">DQDL Rules</text>
+          <text x="1095" y="281" fill="#64748b" font-size="7.5" text-anchor="middle">Lineage + Anomalias</text>
+
+          <!-- Nessie / Catalog -->
+          <rect x="1020" y="300" width="150" height="56" rx="8" fill="#1a1215" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="1095" y="324" fill="#fb7185" font-size="9" font-weight="bold" text-anchor="middle">🔀 Nessie Catalog</text>
+          <text x="1095" y="338" fill="#94a3b8" font-size="8" text-anchor="middle">Git-like Branching</text>
+          <text x="1095" y="351" fill="#64748b" font-size="7.5" text-anchor="middle">Isolamento por período</text>
+
+          <!-- ── FLOW ARROWS ── -->
+          <!-- Domain → MSK -->
+          <line x1="160" y1="118" x2="198" y2="145" stroke="#f97316" stroke-width="1.5" marker-end="url(#arrOrange)"/>
+          <line x1="160" y1="190" x2="198" y2="178" stroke="#f97316" stroke-width="1.5" marker-end="url(#arrOrange)"/>
+          <line x1="160" y1="262" x2="198" y2="213" stroke="#f97316" stroke-width="1.5" marker-end="url(#arrOrange)"/>
+          <line x1="160" y1="334" x2="198" y2="245" stroke="#f97316" stroke-width="1.5" marker-end="url(#arrOrange)"/>
+
+          <!-- MSK → Accounting Engine (Lambda) -->
+          <line x1="320" y1="156" x2="382" y2="120" stroke="#ea580c" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+          <text x="351" y="132" fill="#64748b" font-size="7.5">consume</text>
+
+          <!-- Lambda → Step Functions -->
+          <line x1="470" y1="150" x2="470" y2="163" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <!-- Step Func → DynamoDB -->
+          <line x1="470" y1="225" x2="470" y2="238" stroke="#14b8a6" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <!-- DynamoDB → Lambda Translator -->
+          <line x1="470" y1="300" x2="470" y2="313" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrPurple)"/>
+
+          <!-- Lambda Translator → S3 Bronze -->
+          <line x1="555" y1="345" x2="628" y2="125" stroke="#10b981" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrGreen)"/>
+          <text x="575" y="222" fill="#10b981" font-size="7.5">persist</text>
+
+          <!-- S3 Bronze → Glue → S3 Silver → S3 Gold -->
+          <line x1="705" y1="160" x2="705" y2="176" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrGreen)"/>
+          <line x1="705" y1="248" x2="705" y2="264" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrGreen)"/>
+
+          <!-- Glue → S3 Gold -->
+          <line x1="705" y1="430" x2="705" y2="355" stroke="#a855f7" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrPurple)"/>
+          <text x="714" y="400" fill="#a855f7" font-size="7.5">MERGE</text>
+
+          <!-- S3 Gold → Athena / QuickSight / BACEN -->
+          <line x1="780" y1="310" x2="838" y2="120" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+          <line x1="780" y1="315" x2="838" y2="195" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+          <line x1="780" y1="320" x2="838" y2="268" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+
+          <!-- CloudWatch → SNS -->
+          <line x1="910" y1="375" x2="910" y2="388" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <!-- Catalog ↔ S3 Gold -->
+          <line x1="1018" y1="188" x2="782" y2="310" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="3,3"/>
+
+          <!-- ══ LEGEND ══ -->
+          <rect x="30" y="460" width="1140" height="120" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1"/>
+          <text x="60" y="480" fill="#94a3b8" font-size="9" font-weight="800">LEGENDA DE COMPONENTES</text>
+
+          <rect x="60" y="490" width="12" height="12" rx="2" fill="#ea580c"/>
+          <text x="78" y="501" fill="#e2e8f0" font-size="8">Amazon MSK (Kafka)</text>
+
+          <rect x="200" y="490" width="12" height="12" rx="2" fill="#3b82f6"/>
+          <text x="218" y="501" fill="#e2e8f0" font-size="8">AWS Lambda</text>
+
+          <rect x="310" y="490" width="12" height="12" rx="2" fill="#14b8a6"/>
+          <text x="328" y="501" fill="#e2e8f0" font-size="8">Amazon DynamoDB</text>
+
+          <rect x="450" y="490" width="12" height="12" rx="2" fill="#a855f7"/>
+          <text x="468" y="501" fill="#e2e8f0" font-size="8">AWS Glue 4.0</text>
+
+          <rect x="560" y="490" width="12" height="12" rx="2" fill="#10b981"/>
+          <text x="578" y="501" fill="#e2e8f0" font-size="8">Amazon S3 (Iceberg)</text>
+
+          <rect x="700" y="490" width="12" height="12" rx="2" fill="#6366f1"/>
+          <text x="718" y="501" fill="#e2e8f0" font-size="8">Amazon Athena</text>
+
+          <rect x="830" y="490" width="12" height="12" rx="2" fill="#ef4444"/>
+          <text x="848" y="501" fill="#e2e8f0" font-size="8">Amazon SNS</text>
+
+          <rect x="940" y="490" width="12" height="12" rx="2" fill="#6366f1"/>
+          <text x="958" y="501" fill="#e2e8f0" font-size="8">CloudWatch Alarms</text>
+
+          <rect x="1070" y="490" width="12" height="12" rx="2" fill="#8b5cf6"/>
+          <text x="1088" y="501" fill="#e2e8f0" font-size="8">Nessie / Lake Formation</text>
+
+          <text x="60" y="525" fill="#f97316" font-size="8">──▶ Fluxo de Eventos (Kafka consume)</text>
+          <text x="260" y="525" fill="#10b981" font-size="8">──▶ Persistência Iceberg</text>
+          <text x="420" y="525" fill="#a855f7" font-size="8">──▶ MERGE INTO / Z-Order</text>
+          <text x="590" y="525" fill="#3b82f6" font-size="8">──▶ Consulta Analítica</text>
+
+          <text x="60" y="548" fill="#475569" font-size="8">Garantias: Idempotência por SHA-256 · Σ Débitos = Σ Créditos · Schema Registry obrigatório · LGPD Column Masking via Lake Formation · Time Travel Iceberg</text>
+          <text x="60" y="563" fill="#475569" font-size="8">Reporte BACEN DOC 3040 automatizado via Athena → Step Functions → S3 → transferência SFTP · Alertas CloudWatch → SNS → Slack / PagerDuty</text>
+
+        </svg>
         </div>
       </section>
 
