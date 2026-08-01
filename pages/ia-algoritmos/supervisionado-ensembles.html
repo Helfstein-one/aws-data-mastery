@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Machine Learning Supervisionado & Ensembles: Random Forest, Gradient Boosting, XGBoost, Support Vector Machines (SVM). Intuição matemática em KaTeX, trade-offs de produção, diagramas Draw.io com AWS icons e código Python MLOps - AWS Data Mastery"/>
+  <title>Algoritmos Supervisionados & Ensembles | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/ia-algoritmos/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Algoritmos Supervisionados & Ensembles | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Machine Learning: Random Forest, Gradient Boosting, XGBoost e SVM. Intuição matemática KaTeX, MLOps AWS e código Python executável."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <div id="sidebar"></div>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Inteligência Artificial & Machine Learning</div>
+      <h1>Algoritmos Supervisionados &amp; <em>Ensemble Learning</em></h1>
+      <p class="hero-d">Engenharia e intuição matemática dos pilares do aprendizado supervisionado: Random Forest, Gradient Boosting, XGBoost e Support Vector Machines (SVM). Análise formal em KaTeX, arquiteturas MLOps na AWS com Draw.io, implementação em Python com scikit-learn/XGBoost, trade-offs em produção e bibliografia acadêmica.</p>
+      <div class="pills">
+        <span class="pill">Random Forest & Bagging</span>
+        <span class="pill">Gradient Boosting (GBM)</span>
+        <span class="pill">XGBoost & Taylor Expansion</span>
+        <span class="pill">SVM & Kernel Trick</span>
+        <span class="pill">Formulação em KaTeX</span>
+        <span class="pill">AWS SageMaker & Feature Store</span>
+        <span class="pill">Código Python Executável</span>
+        <span class="pill">Bibliografia Acadêmica</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 01: RANDOM FOREST -->
+      <!-- ========================================== -->
+      <section class="section" id="random-forest">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ok)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Bagging, Subamostragem & Estimativa OOB</div>
+            <h2>Random Forest (Florestas Aleatórias)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O algoritmo <strong>Random Forest</strong> (Breiman, 2001) é um método de aprendizado ensemble baseado em árvores de decisão que constrói uma coleção de estimadores descorrelacionados usando duas técnicas fundamentais: <strong>Bagging</strong> (Bootstrap Aggregating) e <strong>Subamostragem de Atributos</strong> (Random Subspace Method). Essa combinação reduz drasticamente a variância sem aumentar significativamente o viés individual dos modelos componentes.
+        </p>
+
+        <h3 style="margin-top: 28px; color: var(--ink);">1.1 Intuição Matemática & Formulações Formalizadas</h3>
+        <p>
+          Considere um conjunto de treinamento \(D = \{(x_1, y_1), (x_2, y_2), \dots, (x_N, y_N)\}\) com \(p\) atributos. O Random Forest gera \(B\) amostras de bootstrap \(D_1, D_2, \dots, D_B\), onde cada \(D_b\) contém \(N\) observações sorteadas com reposição a partir de \(D\).
+        </p>
+
+        <div class="concept-grid" style="margin: 20px 0;">
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>Redução de Variância por Bagging</h4>
+            <p>Seja \(\bar{X} = \frac{1}{B}\sum_{b=1}^B T_b(x)\) a média de \(B\) árvores idênticamente distribuídas com variância \(\sigma^2\) e correlação par a par \(\rho\). A variância do ensemble é dada por:</p>
+            \[\text{Var}(\bar{X}) = \rho \sigma^2 + \frac{1-\rho}{B}\sigma^2\]
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 8px;">Conforme \(B \to \infty\), o segundo termo tende a zero, restando \(\rho \sigma^2\). A subamostragem de atributos reduz a correlação \(\rho\), diminuindo o piso de variância.</p>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--accent);">
+            <h4>Subamostragem de Atributos (Random Subspace)</h4>
+            <p>Em cada nó de divisão da árvore, seleciona-se aleatoriamente um subconjunto de \(m\) variáveis dentre as \(p\) totais:</p>
+            \[m \approx \sqrt{p} \quad (\text{Classificação}) \qquad \text{ou} \qquad m \approx \frac{p}{3} \quad (\text{Regressão})\]
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 8px;">Impede que atributos muito dominantes apareçam na raiz de todas as árvores, descorrelacionando os estimadores.</p>
+          </div>
+        </div>
+
+        <p><strong>Critérios de Divisão (Impureza de Gini & Entropia):</strong></p>
+        <p>A qualidade de uma divisão no nó \(S\) é avaliada minimizando a impureza dos nós filhos:</p>
+        \[G(S) = 1 - \sum_{k=1}^K p_k^2 \qquad \text{e} \qquad H(S) = -\sum_{k=1}^K p_k \log_2(p_k)\]
+        <p>O Ganho de Informação \(IG(S, A)\) para o atributo selecionado \(A\) é calculado por:</p>
+        \[IG(S, A) = H(S) - \sum_{v \in \text{Valores}(A)} \frac{|S_v|}{|S|} H(S_v)\]
+
+        <p><strong>Erro Out-of-Bag (OOB):</strong></p>
+        <p>
+          Em cada sorteio por bootstrap com reposição, a probabilidade de uma determinada observação ser excluída da amostra \(D_b\) é de aproximadamente:
+        </p>
+        \[\lim_{N \to \infty} \left(1 - \frac{1}{N}\right)^N = \frac{1}{e} \approx 36.8\%\]
+        <p>
+          Estas observações "fora da bolsa" (Out-of-Bag) servem como um conjunto de validação cruzada implícito. O erro OOB é a taxa de erro calculada sobre cada observação \(x_i\) considerando apenas as árvores onde \(x_i\) não esteve presente no treino:
+        </p>
+        \[\text{Erro}_{\text{OOB}} = \frac{1}{N} \sum_{i=1}^N L\left(y_i, \, \frac{1}{|B_{(i)}|} \sum_{b \in B_{(i)}} T_b(x_i)\right)\]
+
+        <h3 style="margin-top: 32px; color: var(--ink);">1.2 Quando Usar vs Quando NÃO Usar (Trade-offs de Produção)</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+          <div style="background: var(--paper); border: 1px solid var(--ok); border-radius: 8px; padding: 20px;">
+            <h4 style="color: var(--ok); margin-bottom: 12px;">✅ Quando Usar (Vantagens)</h4>
+            <ul style="padding-left: 20px; line-height: 1.6; color: var(--ink2);">
+              <li><strong>Baseline Robustíssimo:</strong> Funciona muito bem "out-of-the-box" sem necessidade extrema de ajuste fino de hiperparâmetros.</li>
+              <li><strong>Resistência a Overfitting:</strong> O aumento do número de árvores \(B\) reduz a variância sem superajustar.</li>
+              <li><strong>Robustez a Outliers e Escalas:</strong> Não exige normalização nem padronização de variáveis numéricas.</li>
+              <li><strong>Validação Gratuita via OOB:</strong> Avalia capacidade de generalização sem necessidade de conjunto de validação separado.</li>
+              <li><strong>Paralelizável:</strong> O treinamento das árvores é perfeitamente independente (Embarrassingly Parallel).</li>
+            </ul>
+          </div>
+          <div style="background: var(--paper); border: 1px solid var(--warn); border-radius: 8px; padding: 20px;">
+            <h4 style="color: var(--warn); margin-bottom: 12px;">❌ Quando NÃO Usar (Desvantagens)</h4>
+            <ul style="padding-left: 20px; line-height: 1.6; color: var(--ink2);">
+              <li><strong>Impossibilidade de Extrapolação:</strong> Não consegue prever valores fora do intervalo mínimo/máximo dos dados de treino em regressão.</li>
+              <li><strong>Pegada de Memória & Latência de Inferência:</strong> Ensemble com centenas de árvores profundas exige armazenamento elevado e aumenta a latência de predição real-time (\(> 10\text{ ms}\)).</li>
+              <li><strong>Dados Esparsos / Texto:</strong> Inferior ao SVM ou modelos lineares para dados com matrizes esparsas de altíssima dimensão (ex: Bag of Words, TF-IDF).</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">1.3 Arquitetura de Produção na AWS (Diagrama Technical Draw.io)</h3>
+        <p>A arquitetura abaixo demonstra a ingestão de dados em larga escala via Amazon EMR Serverless, salvamento no data lakehouse S3 com formato Apache Iceberg, registro no SageMaker Feature Store e treinamento distribuído de Random Forest no AWS SageMaker:</p>
+
+        <div class="drawio-wrap" style="margin-top: 24px; margin-bottom: 24px;">
+          <div class="drawio-label"><span class="dot"></span>Random Forest — Arquitetura MLOps na AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;rf_0\&quot;/&gt;&lt;mxCell id=\&quot;rf_1\&quot; parent=\&quot;rf_0\&quot;/&gt;&lt;mxCell id=\&quot;rf_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;rf_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;rf_title\&quot; value=\&quot;RANDOM FOREST — PIPELINE DE ENGENHARIA DE DADOS E MLOPS NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;rf_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;rf_emr\&quot; value=\&quot;EMR Serverless\n(Feature Processing)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;rf_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;rf_s3\&quot; value=\&quot;S3 Iceberg\n(Bronze/Silver Lakehouse)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;rf_1\&quot;&gt;&lt;mxGeometry x=\"200\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"rf_fs\" value=\"SageMaker Feature Store\n(Offline &amp;amp; Online Store)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"rf_1\"&gt;&lt;mxGeometry x=\"380\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"rf_train\" value=\"SageMaker Training\n(RandomForest parallel)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"rf_1\"&gt;&lt;mxGeometry x=\"560\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"rf_ep\" value=\"SageMaker Endpoint\n(Real-Time Batch Scoring)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#10b981;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"rf_1\"&gt;&lt;mxGeometry x=\"740\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"rf_e1\" value=\"PySpark Job\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"rf_emr\" target=\"rf_s3\" parent=\"rf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"rf_e2\" value=\"Ingest Features\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"rf_s3\" target=\"rf_fs\" parent=\"rf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"rf_e3\" value=\"Export Dataset\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"rf_fs\" target=\"rf_train\" parent=\"rf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"rf_e4\" value=\"Deploy Model\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"rf_train\" target=\"rf_ep\" parent=\"rf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        </div>
+        <div class="diagram-legend" style="font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 12px 16px; background: var(--paper); border-radius: 6px; margin-bottom: 24px;">
+          <strong style="color: var(--accent);">Fluxo MLOps AWS:</strong> Os dados brutos processados via EMR Serverless são persistidos na camada Silver em formato S3 Iceberg, catalogados no SageMaker Feature Store e servidos em jobs de treinamento paralelo. O modelo gerado é disponibilizado em endpoints gerenciados com monitoramento continuo OOB.
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">1.4 Código Executável em Python (Scikit-Learn & Best Practices MLOps)</h3>
+        <p>Abaixo apresenta-se o script completo em Python com geração de dados sintéticos, controle de semente aleatória, Grid Search com cross-validation, estimativa OOB e extração de importância de variáveis:</p>
+
+<pre style="background:var(--code); color:var(--codetxt); padding: 18px; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.85rem; line-height: 1.5;"><code>import numpy as np
+import pandas as pd
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
+
+# 1. Reproducebilidade e Controle de Semente (MLOps Rule #1)
+SEED = 42
+np.random.seed(SEED)
+
+# 2. Geração de Dataset Sintético de Risco de Crédito (10.000 amostras, 15 features)
+X_raw, y_raw = make_classification(
+    n_samples=10000,
+    n_features=15,
+    n_informative=10,
+    n_redundant=3,
+    n_clusters_per_class=2,
+    weights=[0.8, 0.2],  # Desbalanceamento moderado
+    random_state=SEED
+)
+
+feature_names = [f"feature_{i:02d}" for i in range(15)]
+df_features = pd.DataFrame(X_raw, columns=feature_names)
+
+# 3. Divisão de Treino e Teste
+X_train, X_test, y_train, y_test = train_test_split(
+    df_features, y_raw, test_size=0.20, stratify=y_raw, random_state=SEED
+)
+
+# 4. Configuração do Modelo Base com Score Out-of-Bag (OOB) Ativado
+rf_base = RandomForestClassifier(
+    oob_score=True,
+    random_state=SEED,
+    n_jobs=-1  # Paralelização total em CPU
+)
+
+# 5. Otmização de Hiperparâmetros via GridSearch CV
+param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [10, 15, None],
+    'max_features': ['sqrt', 'log2'],
+    'min_samples_split': [2, 5]
+}
+
+grid_search = GridSearchCV(
+    estimator=rf_base,
+    param_grid=param_grid,
+    cv=5,
+    scoring='roc_auc',
+    n_jobs=-1,
+    verbose=1
+)
+
+print("Iniciando treinamento e otimização do Random Forest...")
+grid_search.fit(X_train, y_train)
+
+best_rf = grid_search.best_estimator_
+print(f"Melhores Hiperparâmetros: {grid_search.best_params_}")
+
+# 6. Avaliação do Desempenho OOB e Teste Invariante
+print(f"Score OOB (Treino): {best_rf.oob_score_:.4f}")
+
+y_pred_prob = best_rf.predict_proba(X_test)[:, 1]
+y_pred = best_rf.predict(X_test)
+
+test_auc = roc_auc_score(y_test, y_pred_prob)
+print(f"ROC-AUC em Teste: {test_auc:.4f}")
+print("\nRelatório de Classificação:\n", classification_report(y_test, y_pred))
+
+# 7. Extração e Ordenação da Importância dos Atributos
+importances = best_rf.feature_importances_
+df_importance = pd.DataFrame({
+    'Feature': feature_names,
+    'Importance': importances
+}).sort_values(by='Importance', ascending=False)
+
+print("\nTop 5 Atributos Mais Relevantes:")
+print(df_importance.head(5).to_string(index=False))
+</code></pre>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">1.5 Casos de Uso na Indústria & Bibliografia Acadêmica</h3>
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 16px;">
+          <h4 style="color: var(--navy); margin-bottom: 8px;">Aplicações Enterprise</h4>
+          <p style="color: var(--ink2); line-height: 1.6;">
+            <strong>Credit Risk & Underwriting:</strong> Modelo baseline definitivo em bancos e fintechs para concessão de empréstimos e análise de score de crédito inicial.<br/>
+            <strong>Churn Prediction:</strong> Identificação proativa de cancelamento de clientes em serviços de telecomunicações e plataformas SaaS.
+          </p>
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border);"/>
+          <h4 style="color: var(--navy); margin-bottom: 8px;">Referência Bibliográfica Acadêmica</h4>
+          <ul style="padding-left: 20px; color: var(--muted); font-size: 0.9rem; line-height: 1.6;">
+            <li>Breiman, L. (2001). <em>Random Forests</em>. Machine Learning, 45(1), 5-32.</li>
+            <li>Hastie, T., Tibshirani, R., &amp; Friedman, J. (2009). <em>The Elements of Statistical Learning: Data Mining, Inference, and Prediction</em>. 2nd Edition, Springer.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 02: GRADIENT BOOSTING -->
+      <!-- ========================================== -->
+      <section class="section" id="gradient-boosting" style="margin-top: 60px;">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--emr)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Aprendizado Seqüencial & Otimização de Perda</div>
+            <h2>Gradient Boosting (GBM)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Ao contrário do Random Forest (onde árvores são treinadas de forma paralela e independente), o <strong>Gradient Boosting</strong> (Friedman, 2001) constrói estimadores de forma <strong>seqüencial</strong>. Cada nova árvore de decisão é treinada para corrigir os erros (resíduos) cometidos pelo conjunto de árvores anteriores, interpretando o aprendizado como uma descida de gradiente em espaço funcional.
+        </p>
+
+        <h3 style="margin-top: 28px; color: var(--ink);">2.1 Intuição Matemática & Descida de Gradiente Funcional</h3>
+        <p>
+          Dado um dataset \(D = \{(x_i, y_i)\}_{i=1}^N\) e uma função de perda diferenciável \(L(y, f(x))\), o objetivo é encontrar uma função \(f(x)\) que minimize o risco empírico:
+        </p>
+        \[f^* = \arg\min_f \sum_{i=1}^N L(y_i, f(x_i))\]
+
+        <p>O algoritmo inicializa a função de predição com um valor constante \(f_0(x)\):</p>
+        \[f_0(x) = \arg\min_{\gamma} \sum_{i=1}^N L(y_i, \gamma)\]
+
+        <p>Para cada iteração \(m = 1, 2, \dots, M\):</p>
+        <ol style="padding-left: 24px; line-height: 1.8; color: var(--ink2);">
+          <li>
+            Calculam-se os <strong>pseudo-resíduos</strong> \(r_{im}\), que correspondem ao gradiente negativo da função de perda avaliado no modelo corrente \(f_{m-1}(x_i)\):
+            \[r_{im} = -\left[ \frac{\partial L(y_i, f(x_i))}{\partial f(x_i)} \right]_{f(x) = f_{m-1}(x)}\]
+          </li>
+          <li>
+            Ajusta-se uma árvore de decisão de regressão \(h_m(x)\) aos pseudo-resíduos \(r_{im}\), criando regiões folha \(R_{jm}\) para \(j = 1, \dots, J_m\).
+          </li>
+          <li>
+            Para cada região folha \(R_{jm}\), calcula-se o valor terminal ótimo \(\gamma_{jm}\):
+            \[\gamma_{jm} = \arg\min_{\gamma} \sum_{x_i \in R_{jm}} L(y_i, \, f_{m-1}(x_i) + \gamma)\]
+          </li>
+          <li>
+            Atualiza-se o modelo aplicando a <strong>Taxa de Aprendizado (Shrinkage \(\nu\))</strong>, onde \(0 < \nu \le 1\):
+            \[f_m(x) = f_{m-1}(x) + \nu \sum_{j=1}^{J_m} \gamma_{jm} I(x \in R_{jm})\]
+          </li>
+        </ol>
+
+        <div class="concept-card" style="border-top: 4px solid var(--emr); margin: 20px 0;">
+          <h4>Perda Logística (Log-Loss para Classificação Binária)</h4>
+          <p>Quando a perda é dada por \(L(y, f) = \log(1 + e^{-y f})\) onde \(y \in \{-1, +1\}\), o pseudo-resíduo toma a forma intuitiva do erro de probabilidade:</p>
+          \[r_{im} = y_i - p_i = y_i - \frac{1}{1 + e^{-f_{m-1}(x_i)}}\]
+          <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 8px;">A árvore ajusta diretamente a diferença entre a classe real e a probabilidade estimada na iteração anterior.</p>
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">2.2 Quando Usar vs Quando NÃO Usar (Trade-offs de Produção)</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+          <div style="background: var(--paper); border: 1px solid var(--ok); border-radius: 8px; padding: 20px;">
+            <h4 style="color: var(--ok); margin-bottom: 12px;">✅ Quando Usar (Vantagens)</h4>
+            <ul style="padding-left: 20px; line-height: 1.6; color: var(--ink2);">
+              <li><strong>Acurácia Competitiva Excepcional:</strong> Frequentemente atinge desempenho superior ao Random Forest em dados tabulares complexos.</li>
+              <li><strong>Flexibilidade de Perda:</strong> Suporta qualquer função de perda diferenciável (Huber, Quantile Loss, Deviance, Custom Losses).</li>
+              <li><strong>Árvores Raras (Shallow Trees):</strong> Funciona extremamente bem com árvores rasas (\(\text{max\_depth} \in [3, 6]\)), reduzindo overfitting individual.</li>
+            </ul>
+          </div>
+          <div style="background: var(--paper); border: 1px solid var(--warn); border-radius: 8px; padding: 20px;">
+            <h4 style="color: var(--warn); margin-bottom: 12px;">❌ Quando NÃO Usar (Desvantagens)</h4>
+            <ul style="padding-left: 20px; line-height: 1.6; color: var(--ink2);">
+              <li><strong>Treinamento Seqüencial Lento:</strong> Como a árvore \(m\) depende dos resíduos da árvore \(m-1\), o treino básico em CPU não é paralelizável entre iterações.</li>
+              <li><strong>Sensibilidade a Ruído/Outliers:</strong> Pode focar excessivamente em observações errôneas ou ruidosas ao longo das iterações.</li>
+              <li><strong>Complexidade de Ajuste:</strong> Exige sintonia simultânea fina de \(\nu\) (learning rate), número de estimadores e profundidade.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">2.3 Arquitetura de Produção na AWS (Diagrama Technical Draw.io)</h3>
+        <p>Arquitetura integrando AWS SageMaker Feature Store, Jobs de Treinamento com otimização de perda em lote, SageMaker Model Registry e Deploy com Auto-scaling:</p>
+
+        <div class="drawio-wrap" style="margin-top: 24px; margin-bottom: 24px;">
+          <div class="drawio-label"><span class="dot"></span>Gradient Boosting — Pipeline de Treinamento & Servimento AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;gbm_0\&quot;/&gt;&lt;mxCell id=\&quot;gbm_1\&quot; parent=\&quot;gbm_0\&quot;/&gt;&lt;mxCell id=\&quot;gbm_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;gbm_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;gbm_title\&quot; value=\&quot;GRADIENT BOOSTING — FLUXO COMPLETO DE MLOPS NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;gbm_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;gbm_fs\&quot; value=\&quot;SageMaker Feature Store\n(Online &amp;amp; Offline)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;gbm_1\&quot;&gt;&lt;mxGeometry x=\&quot;50\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;gbm_train\&quot; value=\&quot;SageMaker Training Job\n(Sequential GBM Fit)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;gbm_1\&quot;&gt;&lt;mxGeometry x=\&quot;260\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;gbm_reg\&quot; value=\&quot;SageMaker Model Registry\n(Version Control &amp;amp; Approval)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;gbm_1\&quot;&gt;&lt;mxGeometry x=\"470\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"gbm_ep\" value=\"Real-Time Endpoint\n(Auto-scaled Inference)\" style=\"labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#10b981;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"gbm_1\"&gt;&lt;mxGeometry x=\"680\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"gbm_e1\" value=\"Fetch Features\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"gbm_fs\" target=\"gbm_train\" parent=\"gbm_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"gbm_e2\" value=\"Register Model\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"gbm_train\" target=\"gbm_reg\" parent=\"gbm_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"gbm_e3\" value=\"Deploy Approved\" style=\"labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\" edge=\"1\" source=\"gbm_reg\" target=\"gbm_ep\" parent=\"gbm_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        </div>
+        <div class="diagram-legend" style="font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--emr); padding: 12px 16px; background: var(--paper); border-radius: 6px; margin-bottom: 24px;">
+          <strong style="color: var(--emr);">Ciclo de Vida MLOps:</strong> O Feature Store extrai dados atualizados em tempo de treino. Após a otimização de perda e aprovação no SageMaker Model Registry, a implantação ocorre no Endpoint com Auto-scaling acoplado ao CloudWatch.
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">2.4 Código Executável em Python (Scikit-Learn GradientBoostingClassifier)</h3>
+        <p>Exemplo de treinamento com acompanhamento do resíduo (deviance), validação de deviance estagiada (`staged_predict`) e sintonia de aprendizado:</p>
+
+<pre style="background:var(--code); color:var(--codetxt); padding: 18px; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.85rem; line-height: 1.5;"><code>import numpy as np
+import pandas as pd
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import roc_auc_score, log_loss
+
+# 1. Configuração de Semente
+SEED = 42
+np.random.seed(SEED)
+
+# 2. Dados de Sinistro de Seguros (Sintético)
+X, y = make_classification(
+    n_samples=8000,
+    n_features=12,
+    n_informative=8,
+    n_redundant=2,
+    weights=[0.85, 0.15],
+    random_state=SEED
+)
+
+X_train, X_val, y_train, y_val = train_test_split(
+    X, y, test_size=0.25, stratify=y, random_state=SEED
+)
+
+# 3. Inicialização e Treinamento do Gradient Boosting
+gbm = GradientBoostingClassifier(
+    n_estimators=150,
+    learning_rate=0.05,     # Shrinkage
+    max_depth=4,            # Árvores rasas
+    subsample=0.8,          # Stochastic Gradient Boosting
+    min_samples_split=10,
+    random_state=SEED
+)
+
+print("Treinando GradientBoostingClassifier...")
+gbm.fit(X_train, y_train)
+
+# 4. Avaliação de Perda Estagiada (Staged Loss / staged_predict)
+val_losses = []
+for y_pred_staged in gbm.staged_predict_proba(X_val):
+    val_losses.append(log_loss(y_val, y_pred_staged))
+
+best_iteration = np.argmin(val_losses) + 1
+print(f"Melhor iteração (Mínima Perda de Validação): {best_iteration} com Log-Loss: {min(val_losses):.4f}")
+
+# 5. Métricas Finais no Conjunto de Validação
+y_val_prob = gbm.predict_proba(X_val)[:, 1]
+auc_score = roc_auc_score(y_val, y_val_prob)
+print(f"ROC-AUC em Validação: {auc_score:.4f}")
+</code></pre>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">2.5 Casos de Uso na Indústria & Bibliografia Acadêmica</h3>
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 16px;">
+          <h4 style="color: var(--navy); margin-bottom: 8px;">Aplicações Enterprise</h4>
+          <p style="color: var(--ink2); line-height: 1.6;">
+            <strong>Precificação de Seguros:</strong> Estimativa de severidade e frequência de sinistros em apólices automotivas e de saúde.<br/>
+            <strong>Sistemas de Subscrição (Underwriting):</strong> Modelos de avaliação de capacidade financeira corporativa baseados em perda logística customizada.
+          </p>
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border);"/>
+          <h4 style="color: var(--navy); margin-bottom: 8px;">Referência Bibliográfica Acadêmica</h4>
+          <ul style="padding-left: 20px; color: var(--muted); font-size: 0.9rem; line-height: 1.6;">
+            <li>Friedman, J. H. (2001). <em>Greedy function approximation: A gradient boosting machine</em>. Annals of Statistics, 29(5), 1189-1232.</li>
+            <li>Mason, L., Baxter, J., Bartlett, P. L., &amp; Frean, M. (2000). <em>Boosting algorithms as gradient descent</em>. Advances in Neural Information Processing Systems (NIPS 12), 512-518.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 03: XGBOOST -->
+      <!-- ========================================== -->
+      <section class="section" id="xgboost" style="margin-top: 60px;">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Expansão de Taylor de 2ª Ordem & Regularização L1/L2</div>
+            <h2>XGBoost (Extreme Gradient Boosting)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O <strong>XGBoost</strong> (Chen &amp; Guestrin, 2016) é uma implementação escalável e extremamente otimizada de Gradient Boosting. Ele se destaca por incorporar a <strong>expansão de Taylor de 2ª ordem</strong> sobre a função de perda, incluir penalidades explícitas de <strong>regularização \(L_1\) e \(L_2\)</strong> na função objetivo e aplicar suporte nativo a dados esparsos e execução paralela em GPU.
+        </p>
+
+        <h3 style="margin-top: 28px; color: var(--ink);">3.1 Formulando a Expansão de Taylor de 2ª Ordem &amp; Função Objetivo</h3>
+        <p>A função objetivo na iteração \(t\) para prever \(\hat{y}_i^{(t)} = \hat{y}_i^{(t-1)} + f_t(x_i)\) é definida por:</p>
+        \[\mathcal{L}^{(t)} = \sum_{i=1}^N L\left(y_i, \, \hat{y}_i^{(t-1)} + f_t(x_i)\right) + \Omega(f_t)\]
+
+        <p>Onde o termo de regularização da complexidade da árvore \(\Omega(f_t)\) com \(T\) folhas e pesos \(w\) é dado por:</p>
+        \[\Omega(f_t) = \gamma T + \frac{1}{2} \lambda \sum_{j=1}^T w_j^2 + \alpha \sum_{j=1}^T |w_j|\]
+
+        <p>Aplicando a <strong>Expansão de Taylor de 2ª Ordem</strong> em torno de \(\hat{y}_i^{(t-1)}\):</p>
+        \[\mathcal{L}^{(t)} \approx \sum_{i=1}^N \left[ L(y_i, \hat{y}_i^{(t-1)}) + g_i f_t(x_i) + \frac{1}{2} h_i f_t^2(x_i) \right] + \Omega(f_t)\]
+
+        <p>Onde os gradientes de 1ª ordem (\(g_i\)) e Hessianos de 2ª ordem (\(h_i\)) são definidos por:</p>
+        \[g_i = \frac{\partial L(y_i, \hat{y}_i^{(t-1)})}{\partial \hat{y}_i^{(t-1)}} \qquad \text{e} \qquad h_i = \frac{\partial^2 L(y_i, \hat{y}_i^{(t-1)})}{\partial (\hat{y}_i^{(t-1)})^2}\]
+
+        <p>Removendo os termos constantes independentes de \(f_t\) e agrupando por folha \(j \in \{1, \dots, T\}\), a perda simplificada \(\tilde{\mathcal{L}}^{(t)}\) torna-se:</p>
+        \[\tilde{\mathcal{L}}^{(t)} = \sum_{j=1}^T \left[ \left(\sum_{i \in I_j} g_i\right) w_j + \frac{1}{2} \left(\sum_{i \in I_j} h_i + \lambda\right) w_j^2 \right] + \gamma T\]
+
+        <div class="concept-grid" style="margin: 20px 0;">
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>Peso Ótimo de Cada Folha (\(w_j^*\))</h4>
+            <p>Derivando \(\tilde{\mathcal{L}}^{(t)}\) em relação a \(w_j\) e igualando a zero, obtém-se a fórmula fechada do peso ótimo da folha \(j\):</p>
+            \[w_j^* = -\frac{\sum_{i \in I_j} g_i}{\sum_{i \in I_j} h_i + \lambda}\]
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--genai);">
+            <h4>Fórmula do Ganho de Divisão (Split Gain)</h4>
+            <p>A avaliação de ganho ao dividir um nó em filho esquerdo (\(L\)) e direito (\(R\)) determina se a divisão compensa a penalidade \(\gamma\):</p>
+            \[\text{Gain} = \frac{1}{2} \left[ \frac{\left(\sum_{i \in I_L} g_i\right)^2}{\sum_{i \in I_L} h_i + \lambda} + \frac{\left(\sum_{i \in I_R} g_i\right)^2}{\sum_{i \in I_R} h_i + \lambda} - \frac{\left(\sum_{i \in I} g_i\right)^2}{\sum_{i \in I} h_i + \lambda} \right] - \gamma\]
+          </div>
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">3.2 Quando Usar vs Quando NÃO Usar (Trade-offs de Produção)</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+          <div style="background: var(--paper); border: 1px solid var(--ok); border-radius: 8px; padding: 20px;">
+            <h4 style="color: var(--ok); margin-bottom: 12px;">✅ Quando Usar (Vantagens)</h4>
+            <ul style="padding-left: 20px; line-height: 1.6; color: var(--ink2);">
+              <li><strong>Padrão Ouro para Dados Tabulares:</strong> Vencedor esmagador em competições e benchmarks de dados estruturados.</li>
+              <li><strong>Regularização Nativa:</strong> Regularizações \(L_1\) (`reg_alpha`) e \(L_2\) (`reg_lambda`) embutidas previnem overfitting rigorosamente.</li>
+              <li><strong>Tratamento Automático de Valores Ausentes:</strong> Aprende a direção padrão de ramificação para valores `NaN` automaticamente.</li>
+              <li><strong>Aceleração por GPU:</strong> Algoritmo de histograma acelerado por GPU (`tree_method='hist'`) reduz o tempo de treino em 10x+.</li>
+            </ul>
+          </div>
+          <div style="background: var(--paper); border: 1px solid var(--warn); border-radius: 8px; padding: 20px;">
+            <h4 style="color: var(--warn); margin-bottom: 12px;">❌ Quando NÃO Usar (Desvantagens)</h4>
+            <ul style="padding-left: 20px; line-height: 1.6; color: var(--ink2);">
+              <li><strong>Dados Não Estruturados:</strong> Redes Neurais Profundas (CNNs, Transformers) superam amplamente o XGBoost em imagens, áudio e linguagem natural.</li>
+              <li><strong>Hiperparâmetros em Excesso:</strong> Exige monitoramento simultâneo de `max_depth`, `learning_rate`, `subsample`, `colsample_bytree`, `gamma`, `alpha`, `lambda`.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">3.3 Arquitetura de Produção na AWS (Diagrama Technical Draw.io)</h3>
+        <p>Topologia distribuída usando EMR Serverless, S3 Iceberg, Feature Store e Treinamento em Cluster GPU com XGBoost no SageMaker:</p>
+
+        <div class="drawio-wrap" style="margin-top: 24px; margin-bottom: 24px;">
+          <div class="drawio-label"><span class="dot"></span>XGBoost — Arquitetura de Treinamento Distribuído em GPU na AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;xgb_0\&quot;/&gt;&lt;mxCell id=\&quot;xgb_1\&quot; parent=\&quot;xgb_0\&quot;/&gt;&lt;mxCell id=\&quot;xgb_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_title\&quot; value=\&quot;XGBOOST — ARQUITETURA DE ALTO DESEMPENHO DISTRIBUÍDA NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_emr\&quot; value=\&quot;EMR Serverless\n(Pre-processing Spark)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_s3\&quot; value=\&quot;S3 Iceberg\n(Data Lakehouse)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry x=\&quot;200\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_fs\&quot; value=\&quot;SageMaker Feature Store\n(Online Real-Time)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_gpu\&quot; value=\&quot;SageMaker GPU Training\n(XGBoost ml.g4dn.xlarge)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry x=\&quot;560\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_ep\&quot; value=\&quot;SageMaker Endpoint\n(Model Monitor Drift)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#10b981;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry x=\&quot;740\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_e1\&quot; value=\&quot;ETL Spark\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;xgb_emr\&quot; target=\&quot;xgb_s3\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_e2\&quot; value=\&quot;Sync Store\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;xgb_s3\&quot; target=\&quot;xgb_fs\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_e3\&quot; value=\&quot;Stream Fit\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;xgb_fs\&quot; target=\&quot;xgb_gpu\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;xgb_e4\&quot; value=\&quot;Real-Time Ingestion\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;xgb_gpu\&quot; target=\&quot;xgb_ep\&quot; parent=\&quot;xgb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        </div>
+        <div class="diagram-legend" style="font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--spark); padding: 12px 16px; background: var(--paper); border-radius: 6px; margin-bottom: 24px;">
+          <strong style="color: var(--spark);">Infraestrutura de Alta Performance:</strong> Os dados processados no EMR Serverless alimentam o Feature Store. Instâncias GPU SageMaker executam o algoritmo histogram-based do XGBoost, implementando detecção de drift contínua no Endpoint.
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">3.4 Código Executável em Python (XGBoost com Early Stopping &amp; Regularização)</h3>
+        <p>Exemplo com `xgboost.XGBClassifier`, parada precoce (`early_stopping_rounds`), regularização L1/L2 e log de métricas de ganho:</p>
+
+<pre style="background:var(--code); color:var(--codetxt); padding: 18px; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.85rem; line-height: 1.5;"><code>import numpy as np
+import pandas as pd
+import xgboost as xgb
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score, average_precision_score
+
+# 1. Fixação de Semente
+SEED = 42
+np.random.seed(SEED)
+
+# 2. Dataset Sintético de Detecção de Fraude (15.000 transações, 20 atributos)
+X_data, y_data = make_classification(
+    n_samples=15000,
+    n_features=20,
+    n_informative=14,
+    n_redundant=4,
+    weights=[0.95, 0.05],  # Fortemente desbalanceado (5% fraudes)
+    random_state=SEED
+)
+
+X_train, X_temp, y_train, y_temp = train_test_split(
+    X_data, y_data, test_size=0.30, stratify=y_data, random_state=SEED
+)
+X_val, X_test, y_val, y_test = train_test_split(
+    X_temp, y_temp, test_size=0.50, stratify=y_temp, random_state=SEED
+)
+
+# 3. Ajuste de Peso de Escala para Desbalanceamento (scale_pos_weight = neg / pos)
+ratio = float(np.sum(y_train == 0)) / np.sum(y_train == 1)
+
+# 4. Instanciação do XGBClassifier com Regularização L1/L2
+model_xgb = xgb.XGBClassifier(
+    n_estimators=300,
+    learning_rate=0.03,
+    max_depth=5,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    scale_pos_weight=ratio,
+    reg_alpha=0.1,    # Regularização L1
+    reg_lambda=1.5,   # Regularização L2
+    tree_method='hist',
+    random_state=SEED,
+    eval_metric='aucpr'
+)
+
+# 5. Treinamento com Early Stopping
+print("Treinando modelo XGBoost com Parada Precoce...")
+model_xgb.fit(
+    X_train, y_train,
+    eval_set=[(X_val, y_val)],
+    verbose=50
+)
+
+# 6. Avaliação nos Dados de Teste
+y_prob_test = model_xgb.predict_proba(X_test)[:, 1]
+pr_auc = average_precision_score(y_test, y_prob_test)
+roc_auc = roc_auc_score(y_test, y_prob_test)
+
+print(f"\nResultados no Conjunto de Teste:")
+print(f"PR-AUC (Precision-Recall AUC): {pr_auc:.4f}")
+print(f"ROC-AUC: {roc_auc:.4f}")
+
+# 7. Importância de Atributos por Ganho (Gain)
+booster = model_xgb.get_booster()
+importance_gain = booster.get_score(importance_type='gain')
+df_gain = pd.DataFrame(
+    list(importance_gain.items()), columns=['Feature', 'Gain']
+).sort_values(by='Gain', ascending=False)
+
+print("\nTop 5 Features por Ganho (Gain):")
+print(df_gain.head(5).to_string(index=False))
+</code></pre>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">3.5 Casos de Uso na Indústria & Bibliografia Acadêmica</h3>
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 16px;">
+          <h4 style="color: var(--navy); margin-bottom: 8px;">Aplicações Enterprise</h4>
+          <p style="color: var(--ink2); line-height: 1.6;">
+            <strong>Anti-Money Laundering (AML) & Fraud:</strong> Detecção transacional em milissegundos em adquirentes de meios de pagamento.<br/>
+            <strong>AdTech & E-Commerce:</strong> Previsão de Taxa de Clique (CTR) e motor de recomendação personalizada em grande escala.
+          </p>
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border);"/>
+          <h4 style="color: var(--navy); margin-bottom: 8px;">Referência Bibliográfica Acadêmica</h4>
+          <ul style="padding-left: 20px; color: var(--muted); font-size: 0.9rem; line-height: 1.6;">
+            <li>Chen, T., &amp; Guestrin, C. (2016). <em>XGBoost: A Scalable Tree Boosting System</em>. Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, 785-794.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SEÇÃO 04: SUPPORT VECTOR MACHINE (SVM) -->
+      <!-- ========================================== -->
+      <section class="section" id="svm" style="margin-top: 60px;">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ext)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Maximização de Margem, Dualidade & Truque do Kernel</div>
+            <h2>Support Vector Machine (SVM)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O <strong>Support Vector Machine (SVM)</strong> (Cortes &amp; Vapnik, 1995) é um algoritmo fundamentado na teoria de aprendizado estatístico. Ele busca determinar o hiperplano ótimo que separa classes maximizando a <strong>margem geométrica</strong> entre as fronteiras de decisão e os pontos mais próximos (vetores de suporte). Através da <strong>formulação dual</strong> e do <strong>Truque do Kernel (Kernel Trick)</strong>, o SVM projeta os dados para espaços de alta dimensão sem computar explicitamente as transformações.
+        </p>
+
+        <h3 style="margin-top: 28px; color: var(--ink);">4.1 Formulando o Problema Primal, Dual &amp; Kernels</h3>
+        <p>Dado um conjunto de dados separável \(D = \{(x_i, y_i)\}_{i=1}^N\) onde \(y_i \in \{-1, +1\}\), o problema primal de <strong>Margem Suave (Soft Margin)</strong> com penalidade de erro \(C\) e variáveis de folga \(\xi_i \ge 0\) é:</p>
+
+        \[\min_{w, b, \xi} \, \frac{1}{2} \|w\|^2 + C \sum_{i=1}^N \xi_i \qquad \text{sujeito a} \qquad y_i (w^T x_i + b) \ge 1 - \xi_i, \quad \xi_i \ge 0\]
+
+        <p>Aplicando os multiplicadores de Lagrange \(\alpha_i \ge 0\), obtém-se o <strong>Problema Dual de Programação Quadrática (QP)</strong>:</p>
+        \[\max_{\alpha} \, \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j K(x_i, x_j) \qquad \text{sujeito a} \qquad 0 \le \alpha_i \le C, \quad \sum_{i=1}^N \alpha_i y_i = 0\]
+
+        <p>As observações com \(\alpha_i > 0\) são os <strong>Vetores de Suporte</strong> que definem exclusivamente a posição do hiperplano.</p>
+
+        <div class="concept-grid" style="margin: 20px 0;">
+          <div class="concept-card" style="border-top: 4px solid var(--ext);">
+            <h4>Kernel RBF (Radial Basis Function / Gaussiano)</h4>
+            <p>Mapeia os dados para um espaço de dimensão infinita baseado na distância euclidiana:</p>
+            \[K(x_i, x_j) = \exp\left( -\gamma \|x_i - x_j\|^2 \right)\]
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 8px;">O parâmetro \(\gamma\) controla a escala de influência de um único vetor de suporte.</p>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--accent);">
+            <h4>Kernel Polinomial</h4>
+            <p>Calcula combinações de atributos até o grau \(d\):</p>
+            \[K(x_i, x_j) = \left( \gamma \, x_i^T x_j + r \right)^d\]
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 8px;">Permite construir fronteiras não-lineares em espaços com interações polinomiais explícitas.</p>
+          </div>
+        </div>
+
+        <p><strong>Função de Decisão Final:</strong></p>
+        \[f(x) = \text{sinal}\left( \sum_{i \in \text{SV}} \alpha_i y_i K(x_i, x) + b \right)\]
+
+        <h3 style="margin-top: 32px; color: var(--ink);">4.2 Quando Usar vs Quando NÃO Usar (Trade-offs de Produção)</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+          <div style="background: var(--paper); border: 1px solid var(--ok); border-radius: 8px; padding: 20px;">
+            <h4 style="color: var(--ok); margin-bottom: 12px;">✅ Quando Usar (Vantagens)</h4>
+            <ul style="padding-left: 20px; line-height: 1.6; color: var(--ink2);">
+              <li><strong>Alta Dimensão (\(p \gg N\)):</strong> Altamente eficaz em problemas com muitas variáveis (ex: genômica, matrizes TF-IDF de texto).</li>
+              <li><strong>Margens Teóricas Sólidas:</strong> Garantia matemática de maximização da margem geométrica, prevenindo overfitting em amostras menores.</li>
+              <li><strong>Eficiência de Memória:</strong> Depende apenas do subconjunto de pontos de treino correspondente aos Vetores de Suporte.</li>
+            </ul>
+          </div>
+          <div style="background: var(--paper); border: 1px solid var(--warn); border-radius: 8px; padding: 20px;">
+            <h4 style="color: var(--warn); margin-bottom: 12px;">❌ Quando NÃO Usar (Desvantagens)</h4>
+            <ul style="padding-left: 20px; line-height: 1.6; color: var(--ink2);">
+              <li><strong>Inviável em Big Data (\(N > 100.000\)):</strong> A complexidade computacional para resolver a Programação Quadrática varia entre \(O(N^2)\) e \(O(N^3)\).</li>
+              <li><strong>Necessidade Extrema de Normalização:</strong> Altamente sensível à escala das variáveis; exige padronização rigorosa (`StandardScaler`).</li>
+              <li><strong>Ausência de Probabilidades Nativas:</strong> Exige calibração cara por validação cruzada (Platt Scaling) para gerar probabilidades.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">4.3 Arquitetura de Produção na AWS (Diagrama Technical Draw.io)</h3>
+        <p>Topologia de inferência serverless em tempo real para classificação com SVM utilizando Amazon API Gateway, Lambda e SageMaker Endpoint:</p>
+
+        <div class="drawio-wrap" style="margin-top: 24px; margin-bottom: 24px;">
+          <div class="drawio-label"><span class="dot"></span>SVM — Arquitetura de Classificação e Inferência Serverless na AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;svm_0\&quot;/&gt;&lt;mxCell id=\&quot;svm_1\&quot; parent=\&quot;svm_0\&quot;/&gt;&lt;mxCell id=\&quot;svm_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_title\&quot; value=\&quot;SUPPORT VECTOR MACHINE — SERVIMENTO EM TEMPO REAL NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;900\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_s3\&quot; value=\&quot;S3 Iceberg\n(Audit &amp;amp; Features)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_fs\&quot; value=\&quot;SageMaker Feature Store\n(Normalized Vectors)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_train\&quot; value=\&quot;SageMaker Training\n(SVC RBF Kernel Fit)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#7c3aed;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry x=\&quot;400\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_ep\&quot; value=\&quot;SageMaker Endpoint\n(Platt Scaled Probabilities)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#10b981;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry x=\&quot;580\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_api\&quot; value=\&quot;API Gateway + Lambda\n(Low Latency Client)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry x=\&quot;760\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_e1\&quot; value=\&quot;Sync Vectors\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;svm_s3\&quot; target=\&quot;svm_fs\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_e2\&quot; value=\&quot;Train Input\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;svm_fs\&quot; target=\&quot;svm_train\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_e3\&quot; value=\&quot;Deploy Endpoint\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;svm_train\&quot; target=\&quot;svm_ep\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;svm_e4\&quot; value=\&quot;HTTPS Predict\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;svm_api\&quot; target=\&quot;svm_ep\&quot; parent=\&quot;svm_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        </div>
+        <div class="diagram-legend" style="font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--ext); padding: 12px 16px; background: var(--paper); border-radius: 6px; margin-bottom: 24px;">
+          <strong style="color: var(--ext);">Pipeline de Inferência SVM:</strong> O pré-processamento de padronização é persistido no Feature Store. As requisições HTTPS são recebidas pelo API Gateway + Lambda e encaminhadas ao SageMaker Endpoint configurado com Platt Scaling.
+        </div>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">4.4 Código Executável em Python (Scikit-Learn SVC com Pipeline de Padronização)</h3>
+        <p>Exemplo com `sklearn.svm.SVC`, `StandardScaler`, busca por validação cruzada (`GridSearchCV`), extração de vetores de suporte e calibração de probabilidade:</p>
+
+<pre style="background:var(--code); color:var(--codetxt); padding: 18px; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.85rem; line-height: 1.5;"><code>import numpy as np
+import pandas as pd
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report, roc_auc_score
+
+# 1. Controle de Semente
+SEED = 42
+np.random.seed(SEED)
+
+# 2. Dataset Sintético em Alta Dimensão (2.000 amostras, 50 atributos)
+X_svm, y_svm = make_classification(
+    n_samples=2000,
+    n_features=50,
+    n_informative=35,
+    n_redundant=10,
+    random_state=SEED
+)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X_svm, y_svm, test_size=0.25, stratify=y_svm, random_state=SEED
+)
+
+# 3. Construção do Pipeline MLOps (StandardScaler + SVC)
+# A padronização é OBRIGATÓRIA para o correto funcionamento do SVM!
+pipe_svm = Pipeline([
+    ('scaler', StandardScaler()),
+    ('svc', SVC(probability=True, random_state=SEED))
+])
+
+# 4. Grade de Hiperparâmetros (C, gamma e kernels)
+param_grid_svm = {
+    'svc__C': [0.1, 1.0, 10.0],
+    'svc__gamma': ['scale', 'auto'],
+    'svc__kernel': ['rbf', 'linear']
+}
+
+grid_svm = GridSearchCV(
+    estimator=pipe_svm,
+    param_grid=param_grid_svm,
+    cv=5,
+    scoring='roc_auc',
+    n_jobs=-1
+)
+
+print("Treinando e otimizando SVM com Pipeline de Padronização...")
+grid_svm.fit(X_train, y_train)
+
+best_model_svm = grid_svm.best_estimator_
+print(f"Melhores Parâmetros SVM: {grid_svm.best_params_}")
+
+# 5. Avaliação dos Vetores de Suporte Escolhidos
+svc_fitted = best_model_svm.named_steps['svc']
+num_support_vectors = len(svc_fitted.support_)
+print(f"Número Total de Vetores de Suporte: {num_support_vectors} ({num_support_vectors / len(X_train):.1%} do dataset de treino)")
+
+# 6. Avaliação de Desempenho no Conjunto de Teste
+y_pred_svm_prob = best_model_svm.predict_proba(X_test)[:, 1]
+y_pred_svm = best_model_svm.predict(X_test)
+
+auc_svm = roc_auc_score(y_test, y_pred_svm_prob)
+print(f"\nROC-AUC em Teste (SVM): {auc_svm:.4f}")
+print("\nRelatório de Classificação:\n", classification_report(y_test, y_pred_svm))
+</code></pre>
+
+        <h3 style="margin-top: 32px; color: var(--ink);">4.5 Casos de Uso na Indústria & Bibliografia Acadêmica</h3>
+        <div style="background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 16px;">
+          <h4 style="color: var(--navy); margin-bottom: 8px;">Aplicações Enterprise</h4>
+          <p style="color: var(--ink2); line-height: 1.6;">
+            <strong>Classificação de Documentos Jurídicos e Contratos:</strong> Processamento de linguagem natural com vetorização TF-IDF de alta dimensão.<br/>
+            <strong>Detecção de Anomalias de Segurança da Informação:</strong> Uso de One-Class SVM para identificação de intrusão em redes corporativas.
+          </p>
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border);"/>
+          <h4 style="color: var(--navy); margin-bottom: 8px;">Referência Bibliográfica Acadêmica</h4>
+          <ul style="padding-left: 20px; color: var(--muted); font-size: 0.9rem; line-height: 1.6;">
+            <li>Cortes, C., &amp; Vapnik, V. (1995). <em>Support-vector networks</em>. Machine Learning, 20(3), 273-297.</li>
+            <li>Schölkopf, B., &amp; Smola, A. J. (2002). <em>Learning with Kernels: Support Vector Machines, Regularization, Optimization, and Beyond</em>. MIT Press.</li>
+          </ul>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scripts antes do fechamento do body (Conforme requisitos da plataforma) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

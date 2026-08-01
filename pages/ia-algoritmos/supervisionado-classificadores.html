@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Classificadores Supervisionados em Machine Learning: k-Nearest Neighbors (k-NN), métricas de distância, KD-Tree/Ball-Tree, Naive Bayes (Gaussiano, Multinomial, Bernoulli), Suavização de Laplace, pipelines scikit-learn e arquiteturas MLOps na AWS - AWS Data Mastery"/>
+  <title>Classificadores Supervisionados: k-NN & Naive Bayes | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/ia-algoritmos/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Classificadores Supervisionados: k-NN & Naive Bayes | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Machine Learning: k-NN, Naive Bayes, KD-Tree, Ball-Tree, Suavização de Laplace, Scikit-Learn Pipelines e Arquiteturas MLOps AWS"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation (Populated dynamically by sidebar-loader.js) -->
+  <div id="sidebar"></div>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Inteligência Artificial &amp; Algoritmos Supervisionados</div>
+      <h1>Classificadores Supervisionados: <em>k-NN &amp; Naive Bayes</em></h1>
+      <p class="hero-d">Engenharia matemática e arquitetural de classificadores não-paramétricos e probabilísticos: métricas de distância geométrica (Euclidiana, Manhattan, Minkowski e Cosseno), combate à maldição da dimensionalidade, indexação espacial em árvores KD-Tree e Ball-Tree, Teorema de Bayes com suposição de independência condicional, variantes Gaussiana, Multinomial e Bernoulli, suavização aditiva de Laplace, pipelines vetorizadas no scikit-learn e padrões MLOps em produção na AWS.</p>
+      <div class="pills">
+        <span class="pill">k-Nearest Neighbors (k-NN)</span>
+        <span class="pill">Distâncias Euclidiana &amp; Manhattan</span>
+        <span class="pill">Minkowski &amp; Cosseno</span>
+        <span class="pill">Maldição da Dimensionalidade</span>
+        <span class="pill">KD-Tree &amp; Ball-Tree</span>
+        <span class="pill">Teorema de Bayes</span>
+        <span class="pill">Independência Condicional</span>
+        <span class="pill">Gaussian &amp; Multinomial NB</span>
+        <span class="pill">Bernoulli Naive Bayes</span>
+        <span class="pill">Suavização de Laplace</span>
+        <span class="pill">Scikit-Learn Pipelines</span>
+        <span class="pill">AWS SageMaker &amp; Feature Store</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: k-NEAREST NEIGHBORS (k-NN) -->
+      <section class="section" id="knn-algoritmo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ok)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Fundamentos Geométricos &amp; Indexação Espacial</div>
+            <h2>Algoritmo k-Nearest Neighbors (k-NN): Métricas de Distância, Maldição da Dimensionalidade &amp; Árvores KD/Ball</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O <strong>k-Nearest Neighbors (k-NN)</strong> é um algoritmo não-paramétrico de aprendizado supervisionado baseado em instâncias (<em>lazy learning</em>). Ao contrário de modelos paramétricos que estimam pesos fixos durante o treinamento, o k-NN memoriza integralmente o conjunto de dados de treino e posterga o processamento computacional para a fase de inferência, classificando novos pontos com base na proximidade geométrica de seus \(k\) vizinhos mais próximos no espaço vetorial \(\mathbb{R}^d\) <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Cover &amp; Hart, 1967; Hastie et al., 2009]</span>.
+        </p>
+
+        <!-- SUBSEÇÃO: INTUIÇÃO MATEMÁTICA E FÓRMULAS DA KATEX -->
+        <h3 style="margin-top: 28px; margin-bottom: 16px; color: var(--text);">1.1 Intuição Matemática &amp; Métricas de Distância Geométrica</h3>
+        <p style="margin-bottom: 20px;">
+          Dado um ponto de consulta \(x \in \mathbb{R}^d\) e um conjunto de dados de treino \(\mathcal{D} = \{(x_1, y_1), (x_2, y_2), \dots, (x_N, y_N)\}\), a distância entre \(x\) e qualquer ponto de treino \(x_i\) é mensurada por uma função métrica \(d(x, x_i)\).
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>Distância Euclidiana (\(L_2\) Norm)</h4>
+            <p>Representa a menor distância em linha reta entre dois pontos no espaço euclidiano \(d\)-dimensional:</p>
+            \[d_2(x, y) = \sqrt{\sum_{j=1}^d (x_j - y_j)^2} = \|x - y\|_2\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Sensível a variações de escala. Requer obrigatoriamente padronização prévia dos dados (\(z\)-score).</p>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>Distância Manhattan (\(L_1\) Norm)</h4>
+            <p>Soma das diferenças absolutas das coordenadas ("geometria de quarteirão"):</p>
+            \[d_1(x, y) = \sum_{j=1}^d |x_j - y_j| = \|x - y\|_1\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Mais robusta a valores discrepantes (outliers) em dimensões moderadas do que a norma euclidiana.</p>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--aws);">
+            <h4>Distância Minkowski (\(L_p\) Norm)</h4>
+            <p>Generalização matemática para qualquer parâmetro de ordem \(p \ge 1\):</p>
+            \[d_p(x, y) = \left( \sum_{j=1}^d |x_j - y_j|^p \right)^{1/p}\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Para \(p=1\) equivale à Manhattan; para \(p=2\) à Euclidiana; para \(p \to \infty\) à Distância de Chebyshev (\(\max_j |x_j - y_j|\)).</p>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--accent);">
+            <h4>Distância Angular de Cosseno</h4>
+            <p>Mede a orientação angular entre vetores, ignorando suas magnitudes absolutas:</p>
+            \[d_{\text{cos}}(x, y) = 1 - \frac{x \cdot y}{\|x\|_2 \|y\|_2} = 1 - \frac{\sum_{j=1}^d x_j y_j}{\sqrt{\sum_{j=1}^d x_j^2} \sqrt{\sum_{j=1}^d y_j^2}}\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Métrica essencial para dados esparsos de altíssima dimensão, como embeddings de texto e TF-IDF.</p>
+          </div>
+        </div>
+
+        <div class="abox info" style="margin-top: 24px; border-left-color: var(--ok);">
+          <div class="abox-hdr" style="background: var(--ok); color: #0f172a;">Regra de Decisão &amp; Votação Ponderada pelo Inverso da Distância</div>
+          <div class="abox-body">
+            <p style="margin-bottom: 12px;">
+              Seja \(\mathcal{N}_k(x)\) o conjunto dos \(k\) vizinhos mais próximos de \(x\). Na <strong>Votação Majoritária Simples</strong>, a classe predita é:
+            </p>
+            \[\hat{y} = \arg\max_{c \in C} \sum_{i \in \mathcal{N}_k(x)} \mathbb{I}(y_i = c)\]
+            <p style="margin-top: 12px; margin-bottom: 12px;">
+              Na <strong>Votação Ponderada (Distance-Weighted k-NN)</strong>, evita-se empates e pondera-se a contribuição de cada vizinho pelo inverso de seu quadrado de distância, dando maior relevância a vizinhos mais próximos:
+            </p>
+            \[w_i = \frac{1}{d(x, x_i)^2 + \epsilon} \quad \implies \quad \hat{P}(Y=c \mid X=x) = \frac{\sum_{i \in \mathcal{N}_k(x)} w_i \cdot \mathbb{I}(y_i = c)}{\sum_{i \in \mathcal{N}_k(x)} w_i}\]
+          </div>
+        </div>
+
+        <!-- SUBSEÇÃO: MALDIÇÃO DA DIMENSIONALIDADE -->
+        <h3 style="margin-top: 32px; margin-bottom: 16px; color: var(--text);">1.2 A Maldição da Dimensionalidade (Curse of Dimensionality)</h3>
+        <p style="margin-bottom: 16px;">
+          À medida que a dimensão \(d\) do espaço de características cresce, o volume do hiperespaço cresce exponencialmente. Isso acarreta duas consequências devastadoras para algoritmos baseados em métricas de distância espacial <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Beyer et al., 1999]</span>:
+        </p>
+
+        <div class="grid-2" style="margin-bottom: 24px;">
+          <div class="card" style="border-left: 3px solid var(--warn);">
+            <div class="card-lbl" style="color: var(--warn);">1. Esparsidade Volumétrica Exponencial</div>
+            <p style="font-size: 13px; line-height: 1.6;">
+              O volume de um hipercubo de aresta \(2r\) em \(\mathbb{R}^d\) é \(V_{\text{cube}} = (2r)^d\), enquanto o volume da hiperesfera inscrita de raio \(r\) é:
+            </p>
+            \[V_{\text{sphere}}(r) = \frac{\pi^{d/2}}{\Gamma\left(\frac{d}{2} + 1\right)} r^d \quad \implies \quad \lim_{d \to \infty} \frac{V_{\text{sphere}}}{V_{\text{cube}}} = 0\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">
+              Quase todo o volume do hiperespaço se concentra nos "cantos" do hipercubo. Os dados tornam-se extremamente esparsos, exigindo um número exponencial de amostras (\(O(2^d)\)) para manter a mesma densidade amostral.
+            </p>
+          </div>
+
+          <div class="card" style="border-left: 3px solid var(--warn);">
+            <div class="card-lbl" style="color: var(--warn);">2. Fenômeno de Concentração de Distâncias</div>
+            <p style="font-size: 13px; line-height: 1.6;">
+              Em dimensões elevadas, a razão entre a variação das distâncias máxima e mínima para qualquer ponto de referência tende a zero:
+            </p>
+            \[\lim_{d \to \infty} \frac{d_{\max} - d_{\min}}{d_{\min}} = 0\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">
+              Todos os pontos tornam-se virtualmente equidistantes entre si. O conceito de "vizinho mais próximo" perde sentido geométrico, degradando severamente a acurácia do k-NN a menos que redução de dimensionalidade (ex: PCA, UMAP) seja aplicada.
+            </p>
+          </div>
+        </div>
+
+        <!-- SUBSEÇÃO: INDEXAÇÃO ESPACIAL KD-TREE E BALL-TREE -->
+        <h3 style="margin-top: 32px; margin-bottom: 16px; color: var(--text);">1.3 Indexação Espacial: KD-Tree vs. Ball-Tree</h3>
+        <p style="margin-bottom: 16px;">
+          A busca força-bruta (<em>brute-force</em>) exige calcular a distância entre o ponto de teste e todas as \(N\) amostras de treino, resultando em complexidade de inferência \(O(N \cdot d)\). Para acelerar as consultas em produção, utilizam-se estruturas de dados em árvore para particionamento espacial:
+        </p>
+
+        <div class="table-responsive">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Estrutura de Indexação</th>
+                <th>Mecanismo de Particionamento</th>
+                <th>Complexidade de Consulta (Médio)</th>
+                <th>Dimensão Ideal (\(d\))</th>
+                <th>Limitações em Produção</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Brute-Force</strong></td>
+                <td>Nenhum (Compara com todas as \(N\) amostras)</td>
+                <td>\(O(N \cdot d)\)</td>
+                <td>Qualquer \(d\) (se \(N\) for pequeno)</td>
+                <td>Inviável para grandes volumes de dados (\(N > 10^5\)).</td>
+              </tr>
+              <tr>
+                <td><strong>KD-Tree (k-d Tree)</strong></td>
+                <td>Hiperplanos perpendiculares aos eixos coordenados alternados</td>
+                <td>\(O(d \log N)\)</td>
+                <td>Baixa dimensão (\(d \le 20\))</td>
+                <td>Degrada para busca exaustiva \(O(N \cdot d)\) quando \(d > 20\) devido ao backtracking extenso.</td>
+              </tr>
+              <tr>
+                <td><strong>Ball-Tree</strong></td>
+                <td>Hiperesferas aninhadas ("balls") no espaço métrico</td>
+                <td>\(O(d \log N)\)</td>
+                <td>Dimensão moderada/alta (\(d > 20\))</td>
+                <td>Custo computacional de construção elevado \(O(d \cdot N \log N)\), mas eficiente para métricas não-euclidianas.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SUBSEÇÃO: QUANDO USAR VS QUANDO NÃO USAR -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px; color: var(--text);">1.4 Quando Usar vs. Quando NÃO Usar (Trade-offs de Produção)</h3>
+        <div class="grid-2" style="margin-bottom: 24px;">
+          <div class="card" style="border-top: 4px solid var(--ok);">
+            <div class="card-lbl" style="color: var(--ok);">✅ Quando USAR k-NN</div>
+            <ul style="font-size: 13px; line-height: 1.7; margin-left: 18px; color: var(--text-dim);">
+              <td><strong>Bases de Dados Pequenas a Moderadas (\(N < 100.000\)):</strong> Excelente para cenários onde a latência de treinamento precisa ser zero (\(O(1)\)).</td>
+              <td><strong>Fronteiras de Decisão Complexas e Não-Lineares:</strong> Adapta-se organicamente a topologias irregulares sem assumir distribuições prévias.</td>
+              <td><strong>Sistemas de Recomendação / Busca por Similaridade:</strong> Ideal como baseline de vizinhança ou para vetores pré-reduzidos (embeddings de baixa dimensão).</td>
+              <td><strong>Interpretabilidade Local:</strong> Permite justificar a predição exibindo exatamente as amostras históricas mais próximas do cliente.</td>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--warn);">
+            <div class="card-lbl" style="color: var(--warn);">❌ Quando NÃO USAR k-NN</div>
+            <ul style="font-size: 13px; line-height: 1.7; margin-left: 18px; color: var(--text-dim);">
+              <td><strong>Baixa Latência em Alta Escala (SLA &lt; 10ms):</strong> Guardar e percorrer terabytes de dados no momento da inferência estoura orçamentos de CPU e RAM.</td>
+              <td><strong>Alta Dimensionalidade sem Redução (\(d > 100\)):</strong> A maldição da dimensionalidade invalida métricas de distância tradicionais. Utilize soluções indexadas como HNSW / FAISS.</td>
+              <td><strong>Dados Não Escalonados ou com Ruído Alto:</strong> Atributos com escalas discrepantes dominam a distância sem contribuir com sinal real. Requer pipeline rigorosa de padronização.</td>
+              <td><strong>Ambientes Restritos de Memória (Edge/IoT):</strong> O modelo carrega todo o dataset na memória operacional da aplicação.</td>
+            </ul>
+          </div>
+        </div>
+
+        <!-- SUBSEÇÃO: DIAGRAMA DRAW.IO ENGENHARIA DA AWS -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px; color: var(--text);">1.5 Arquitetura de Inferência k-NN em Tempo Real na AWS</h3>
+        <p style="margin-bottom: 20px;">
+          O diagrama a seguir ilustra a arquitetura MLOps para inferência de baixa latência utilizando o algoritmo k-NN com Amazon SageMaker Endpoint, integração com Amazon SageMaker Feature Store para busca vetorial padronizada e Amazon DynamoDB para armazenamento em cache de vizinhos calculados.
+        </p>
+
+        <div class="drawio-wrap" style="margin-top: 24px; margin-bottom: 32px;">
+          <div class="drawio-label"><span class="dot"></span>ARQUITETURA MLOPS — INFERÊNCIA LOW-LATENCY DE K-NN NA AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;880\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;knn_0\&quot;/&gt;&lt;mxCell id=\&quot;knn_1\&quot; parent=\&quot;knn_0\&quot;/&gt;&lt;mxCell id=\&quot;knn_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;880\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_title\&quot; value=\&quot;ARQUITETURA MLOPS — INFERÊNCIA LOW-LATENCY DE K-NN COM SAGEMAKER &amp;amp; FEATURE STORE\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;880\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_app\&quot; value=\&quot;Aplicação Cliente&amp;#10;(Real-time Request)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;140\&quot; width=\&quot;110\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_apigw\&quot; value=\&quot;Amazon&amp;#10;API Gateway\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=#a855f7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry x=\&quot;190\&quot; y=\&quot;135\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_lambda\&quot; value=\&quot;AWS Lambda&amp;#10;(Inference Proxy)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry x=\&quot;350\&quot; y=\&quot;135\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_fs\&quot; value=\&quot;SageMaker&amp;#10;Feature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry x=\&quot;520\&quot; y=\&quot;60\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_sm\&quot; value=\&quot;SageMaker Endpoint&amp;#10;(k-NN / HNSW Search)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry x=\&quot;520\&quot; y=\&quot;210\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_ddb\&quot; value=\&quot;Amazon DynamoDB&amp;#10;(Neighbor Cache &amp;amp; Logs)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry x=\&quot;720\&quot; y=\&quot;135\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_e1\&quot; value=\&quot;1. POST /predict\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a855f7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;knn_app\&quot; target=\&quot;knn_apigw\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_e2\&quot; value=\&quot;2. Event Trigger\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f97316;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;knn_apigw\&quot; target=\&quot;knn_lambda\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_e3\&quot; value=\&quot;3. Fetch Scaled Vector\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;knn_lambda\&quot; target=\&quot;knn_fs\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_e4\&quot; value=\&quot;4. k-NN Query (KD/Ball-Tree)\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;knn_lambda\&quot; target=\&quot;knn_sm\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;knn_e5\&quot; value=\&quot;5. Cache Results\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;knn_sm\&quot; target=\&quot;knn_ddb\&quot; parent=\&quot;knn_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        </div>
+
+        <!-- SUBSEÇÃO: CÓDIGO PYTHON EXECUTÁVEL COM SCIKIT-LEARN -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px; color: var(--text);">1.6 Código Python Executável: Pipeline Scikit-Learn com Otimização de Hiperparâmetros</h3>
+        <p style="margin-bottom: 16px;">
+          O script abaixo demonstra as melhores práticas de MLOps para construir uma pipeline completa com padronização de recursos (`StandardScaler`), otimização em grade (`GridSearchCV`) dos algoritmos de indexação (`kd_tree`, `ball_tree`) e validação de métricas de desempenho.
+        </p>
+
+        <div class="code-block" style="background: #090d16; border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-x: auto; margin-bottom: 28px;">
+          <pre style="margin:0; font-family: 'DM Mono', monospace; font-size: 13px; color: #e2e8f0;"><code class="language-python">import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+
+# 1. Gerar Dataset Sintético de Classificação de Risco Financeiro
+X, y = make_classification(
+    n_samples=1000,
+    n_features=10,
+    n_informative=6,
+    n_redundant=2,
+    n_classes=2,
+    weights=[0.7, 0.3],
+    random_state=42
+)
+
+# 2. Divisão Estratificada entre Treino e Teste (80/20)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42, stratify=y
+)
+
+# 3. Construção da Pipeline MLOps (Padronização + KNeighborsClassifier)
+knn_pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier())
+])
+
+# 4. Grade de Hiperparâmetros (Valores de k, Métricas & Algoritmos de Indexação)
+param_grid = {
+    'knn__n_neighbors': [3, 5, 7, 9, 11],
+    'knn__weights': ['uniform', 'distance'],
+    'knn__metric': ['euclidean', 'manhattan'],
+    'knn__algorithm': ['kd_tree', 'ball_tree']
+}
+
+# 5. Execução do GridSearchCV com Validação Cruzada (5-Fold Stratified)
+grid_search = GridSearchCV(
+    estimator=knn_pipeline,
+    param_grid=param_grid,
+    cv=5,
+    scoring='roc_auc',
+    n_jobs=-1
+)
+
+grid_search.fit(X_train, y_train)
+
+# 6. Avaliação do Modelo Otimizado
+best_knn = grid_search.best_estimator_
+y_pred = best_knn.predict(X_test)
+y_proba = best_knn.predict_proba(X_test)[:, 1]
+
+print(f"Melhores Hiperparâmetros k-NN: {grid_search.best_params_}")
+print("\n--- Matriz de Confusão ---")
+print(confusion_matrix(y_test, y_pred))
+print("\n--- Relatório de Classificação ---")
+print(classification_report(y_test, y_pred))
+print(f"ROC-AUC Score: {roc_auc_score(y_test, y_proba):.4f}")
+</code></pre>
+        </div>
+
+        <!-- SUBSEÇÃO: EXEMPLOS CORPORATIVOS & BIBLIOGRAFIA -->
+        <h3 style="margin-top: 32px; margin-bottom: 16px; color: var(--text);">1.7 Casos de Uso Corporativos &amp; Bibliografia Acadêmica</h3>
+        <div class="grid-2" style="margin-bottom: 24px;">
+          <div class="card" style="border-top: 4px solid var(--aws);">
+            <div class="card-lbl" style="color: var(--aws);">Casos de Uso Corporativos</div>
+            <ul style="font-size: 13px; line-height: 1.6; margin-left: 16px; color: var(--text-dim);">
+              <td><strong>Detecção de Anomalias Financeiras:</strong> Identificação de transações suspeitas com base no histórico de proximidade com padrões de comportamento conhecidos.</td>
+              <td><strong>Credit Underwriting (Vizinhança de Risco):</strong> Avaliação de crédito comparando o perfil financeiro do proponente com clientes similares historicamente inadimplentes.</td>
+              <td><strong>Filtragem Colaborativa de Recomendações:</strong> Agrupamento de usuários similares (User-based k-NN) para personalização de vitrines no e-commerce.</td>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--spark);">
+            <div class="card-lbl" style="color: var(--spark);">Referências Acadêmicas Principais</div>
+            <ul style="font-size: 13px; line-height: 1.6; margin-left: 16px; color: var(--text-dim);">
+              <td><strong>Cover, T., &amp; Hart, P. (1967).</strong> <em>Nearest neighbor pattern classification.</em> IEEE Transactions on Information Theory, 13(1), 21-27.</td>
+              <td><strong>Bentley, J. L. (1975).</strong> <em>Multidimensional binary search trees used for associative searching.</em> Communications of the ACM, 18(9), 509-517.</td>
+              <td><strong>Omohundro, S. M. (1989).</strong> <em>Five balltree construction algorithms.</em> International Computer Science Institute Technical Report.</td>
+              <td><strong>Beyer, K., et al. (1999).</strong> <em>When is "nearest neighbor" meaningful?</em> International Conference on Database Theory (ICDT), 217-235.</td>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: NAIVE BAYES -->
+      <section class="section" id="naive-bayes">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Probabilidade Bayesiana &amp; Suavização</div>
+            <h2>Algoritmo Naive Bayes: Teorema de Bayes, Suposição de Independência Condicional &amp; Suavização de Laplace</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O <strong>Naive Bayes</strong> é uma família de classificadores probabilísticos supervisionados fundamentados no <strong>Teorema de Bayes</strong>, combinados com a premissa "ingênua" (<em>naive</em>) de que todas as características (features) do vetor preditor são mutuamente independentes dada a classe alvo. Apesar dessa simplificação teórica estrita, o algoritmo apresenta desempenho excepcional em produção, baixo consumo de memória e velocidade de inferência imbatível em problemas de alta dimensão <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Bayes, 1763; Domingos &amp; Pazzani, 1997]</span>.
+        </p>
+
+        <!-- SUBSEÇÃO: TEOREMA DE BAYES E INDEPENDÊNCIA CONDICIONAL -->
+        <h3 style="margin-top: 28px; margin-bottom: 16px; color: var(--text);">2.1 Teorema de Bayes &amp; A Suposição de Independência Condicional</h3>
+        <p style="margin-bottom: 20px;">
+          Para um vetor de atributos \(X = (x_1, x_2, \dots, x_d)\) e uma classe alvo \(y \in C\), a probabilidade a posteriori de pertencimento à classe \(c\) é dada pela regra de Bayes:
+        </p>
+        \[P(Y=c \mid X) = \frac{P(X \mid Y=c) \cdot P(Y=c)}{P(X)} = \frac{P(x_1, x_2, \dots, x_d \mid Y=c) \cdot P(Y=c)}{P(x_1, x_2, \dots, x_d)}\]
+
+        <div class="abox info" style="margin-top: 24px; border-left-color: var(--aws);">
+          <div class="abox-hdr" style="background: var(--aws); color: #0f172a;">A Hipótese Ingênua de Independência &amp; Regra de Decisão Log-Posterior</div>
+          <div class="abox-body">
+            <p style="margin-bottom: 12px;">
+              Calcular a verossimilhança conjunta \(P(x_1, \dots, x_d \mid Y=c)\) exige amostras combinatórias proibitivas. Assumindo <strong>independência condicional</strong>:
+            </p>
+            \[P(x_1, x_2, \dots, x_d \mid Y=c) = \prod_{j=1}^d P(x_j \mid Y=c)\]
+            <p style="margin-top: 12px; margin-bottom: 12px;">
+              Como a evidência \(P(X)\) é constante para todas as classes durante a inferência de um mesmo ponto, a regra MAP (<em>Maximum A Posteriori</em>) reduz-se a:
+            </p>
+            \[\hat{y} = \arg\max_{c \in C} \left[ P(Y=c) \cdot \prod_{j=1}^d P(x_j \mid Y=c) \right]\]
+            <p style="margin-top: 14px; margin-bottom: 12px;">
+              <strong>Estabilidade Numérica (Log-Posterior):</strong> Para evitar subfluxo numérico (<em>underflow</em> ao multiplicar probabilidades pequenas perto de zero), aplica-se o logaritmo natural transformando o produto em soma:
+            </p>
+            \[\hat{y} = \arg\max_{c \in C} \left[ \ln P(Y=c) + \sum_{j=1}^d \ln P(x_j \mid Y=c) \right]\]
+          </div>
+        </div>
+
+        <!-- SUBSEÇÃO: VARIANTES GAUSSIANA, MULTINOMIAL E BERNOULLI -->
+        <h3 style="margin-top: 32px; margin-bottom: 16px; color: var(--text);">2.2 Variantes do Naive Bayes: Gaussian, Multinomial &amp; Bernoulli</h3>
+        <p style="margin-bottom: 20px;">
+          A modelagem da verossimilhança \(P(x_j \mid Y=c)\) depende da natureza matemática das variáveis preditoras:
+        </p>
+
+        <div class="concept-grid">
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>Gaussian Naive Bayes</h4>
+            <p>Utilizado quando as variáveis preditoras são <strong>contínuas</strong> e seguem distribuição Normal:</p>
+            \[P(x_j \mid Y=c) = \frac{1}{\sqrt{2\pi \sigma_{c,j}^2}} \exp\left( -\frac{(x_j - \mu_{c,j})^2}{2\sigma_{c,j}^2} \right)\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Estima apenas a média \(\mu_{c,j}\) e a variância \(\sigma_{c,j}^2\) de cada feature por classe.</p>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>Multinomial Naive Bayes</h4>
+            <p>Utilizado para <strong>contagens discretas</strong> de termos ou frequências de palavras (ex: TF-IDF, bag-of-words):</p>
+            \[P(x_j \mid Y=c) = \frac{N_{c,j} + \alpha}{N_c + \alpha \cdot d}\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Mapeia a frequência do termo \(j\) no corpus da classe \(c\) ponderado pela Suavização de Laplace.</p>
+          </div>
+
+          <div class="concept-card" style="border-top: 4px solid var(--aws);">
+            <h4>Bernoulli Naive Bayes</h4>
+            <p>Utilizado para variáveis <strong>binárias / booleanas</strong> de presença ou ausência (\(x_j \in \{0, 1\}\)):</p>
+            \[P(x_j \mid Y=c) = P_{c,j}^{x_j} \cdot (1 - P_{c,j})^{(1 - x_j)}\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Avalia explicitamente tanto a presença quanto a ausência de determinados atributos.</p>
+          </div>
+        </div>
+
+        <!-- SUBSEÇÃO: SUAVIZAÇÃO DE LAPLACE -->
+        <h3 style="margin-top: 32px; margin-bottom: 16px; color: var(--text);">2.3 Problema da Frequência Zero &amp; Suavização Aditiva de Laplace</h3>
+        <p style="margin-bottom: 16px;">
+          Se um termo ou atributo \(x_k\) nunca apareceu no conjunto de treino associado à classe \(c\), a probabilidade empírica simples resultará em \(P(x_k \mid Y=c) = 0\). Devido ao produto da verossimilhança, isso anula toda a probabilidade a posteriori (\(P(Y=c \mid X) = 0\)), ignorando todas as demais evidências fortes.
+        </p>
+
+        <div class="card" style="border-left: 3px solid var(--spark); margin-bottom: 24px;">
+          <div class="card-lbl" style="color: var(--spark);">Fórmula da Suavização Aditiva de Laplace (Laplace / Lidstone Smoothing)</div>
+          <p style="font-size: 13px; line-height: 1.6;">
+            Adiciona-se uma pseudocontagem \(\alpha > 0\) a cada atributo para garantir probabilidades não-nulas:
+          </p>
+          \[P_{\text{smoothed}}(x_j \mid Y=c) = \frac{N_{c,j} + \alpha}{N_c + \alpha \cdot d}\]
+          <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">
+            Onde \(\alpha = 1\) corresponde à <strong>Suavização de Laplace</strong> e \(0 < \alpha < 1\) corresponde à <strong>Suavização de Lidstone</strong>. O parâmetro \(d\) representa o número total de características (tamanho do vocabulário).
+          </p>
+        </div>
+
+        <!-- SUBSEÇÃO: QUANDO USAR VS QUANDO NÃO USAR -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px; color: var(--text);">2.4 Quando Usar vs. Quando NÃO Usar (Trade-offs de Produção)</h3>
+        <div class="grid-2" style="margin-bottom: 24px;">
+          <div class="card" style="border-top: 4px solid var(--ok);">
+            <div class="card-lbl" style="color: var(--ok);">✅ Quando USAR Naive Bayes</div>
+            <ul style="font-size: 13px; line-height: 1.7; margin-left: 18px; color: var(--text-dim);">
+              <td><strong>Processamento de Linguagem Natural &amp; Texto:</strong> Excelente para classificação de documentos, filtros de spam e análise de sentimento em matrizes esparsas de altíssima dimensão (\(d > 50.000\)).</td>
+              <td><strong>Treinamento e Inferência Ultra-Rápidos (\(O(N \cdot d)\)):</strong> Exige apenas uma única passagem pelos dados de treino para acumular contagens e médias estatísticas.</td>
+              <td><strong>Treinamento Incremental (Online Learning):</strong> Suporta a API `partial_fit` do scikit-learn para atualizar parâmetros em streams contínuos de dados.</td>
+              <td><strong>Pegada de Memória Mínima (\(O(C \cdot d)\)):</strong> Armazena apenas vetores de estatísticas por classe, ideal para sistemas embarcados e microserviços.</td>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--warn);">
+            <div class="card-lbl" style="color: var(--warn);">❌ Quando NÃO USAR Naive Bayes</div>
+            <ul style="font-size: 13px; line-height: 1.7; margin-left: 18px; color: var(--text-dim);">
+              <td><strong>Atributos Altamente Correlacionados:</strong> Violadores severos da independência condicional (ex: `idade` e `tempo_de_trabalho`). Atributos redundantes serão "duplo-contados", distorcendo as probabilidades.</td>
+              <td><strong>Calibração Precisa de Probabilidade Necessária:</strong> As probabilidades estimadas tendem a ser extremas (próximas de 0 ou 1). Exige calibração prévia via Regressão Isotônica ou Calibração de Platt (`CalibratedClassifierCV`).</td>
+              <td><strong>Problemas Complexos de Regressão ou Fronteiras Altamente Não-Lineares:</strong> Limitado por suposições de distribuições unimodais simples.</td>
+            </ul>
+          </div>
+        </div>
+
+        <!-- SUBSEÇÃO: DIAGRAMA DRAW.IO ENGENHARIA DA AWS -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px; color: var(--text);">2.5 Engine de Classificação Naive Bayes em Tempo Real na AWS</h3>
+        <p style="margin-bottom: 20px;">
+          O diagrama abaixo demonstra a integração de um pipeline de streaming com Amazon Kinesis, extração de vetor em AWS Lambda, inferência serverless em Amazon SageMaker Endpoint e persistência de probabilidades no Amazon DynamoDB.
+        </p>
+
+        <div class="drawio-wrap" style="margin-top: 24px; margin-bottom: 32px;">
+          <div class="drawio-label"><span class="dot"></span>ARQUITETURA MLOPS — ENGINE DE CLASSIFICAÇÃO NAIVE BAYES EM TEMPO REAL</div>
+          <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;880\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;nb_0\&quot;/&gt;&lt;mxCell id=\&quot;nb_1\&quot; parent=\&quot;nb_0\&quot;/&gt;&lt;mxCell id=\&quot;nb_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;880\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_title\&quot; value=\&quot;ARQUITETURA MLOPS — ENGINE DE CLASSIFICAÇÃO NAIVE BAYES EM TEMPO REAL\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;880\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_source\&quot; value=\&quot;Ingestão de Dados&amp;#10;(Eventos / Documentos)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;140\&quot; width=\&quot;110\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_kinesis\&quot; value=\&quot;Amazon Kinesis&amp;#10;Data Streams\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis_data_streams;fillColor=#a855f7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry x=\&quot;190\&quot; y=\&quot;135\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_lambda\&quot; value=\&quot;AWS Lambda&amp;#10;(Feature Extraction &amp;amp; Tokenizer)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry x=\&quot;350\&quot; y=\&quot;135\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_fs\&quot; value=\&quot;SageMaker&amp;#10;Feature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry x=\&quot;520\&quot; y=\&quot;60\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_sm\&quot; value=\&quot;SageMaker Endpoint&amp;#10;(Multinomial / Gaussian NB)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry x=\&quot;520\&quot; y=\&quot;210\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_ddb\&quot; value=\&quot;Amazon DynamoDB&amp;#10;(Vocab Stats &amp;amp; Class Priors)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry x=\&quot;720\&quot; y=\&quot;135\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_e1\&quot; value=\&quot;1. Push Event\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#a855f7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;nb_source\&quot; target=\&quot;nb_kinesis\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_e2\&quot; value=\&quot;2. Micro-batch Poll\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f97316;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;nb_kinesis\&quot; target=\&quot;nb_lambda\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_e3\&quot; value=\&quot;3. Read TF-IDF Vectors\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;nb_lambda\&quot; target=\&quot;nb_fs\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_e4\&quot; value=\&quot;4. Log-Posterior Inference\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;nb_lambda\&quot; target=\&quot;nb_sm\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;nb_e5\&quot; value=\&quot;5. Store Priors &amp;amp; Logs\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;nb_sm\&quot; target=\&quot;nb_ddb\&quot; parent=\&quot;nb_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        </div>
+
+        <!-- SUBSEÇÃO: CÓDIGO PYTHON EXECUTÁVEL COM SCIKIT-LEARN -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px; color: var(--text);">2.6 Código Python Executável: Pipeline de Texto com MultinomialNB &amp; Suavização de Laplace</h3>
+        <p style="margin-bottom: 16px;">
+          O exemplo a seguir ilustra o treinamento de um classificador de spam/fraude usando `CountVectorizer`, `MultinomialNB`, validação cruzada para ajuste do parâmetro de suavização de Laplace \(\alpha\) e cálculo de métricas MLOps.
+        </p>
+
+        <div class="code-block" style="background: #090d16; border: 1px solid var(--border); border-radius: 8px; padding: 20px; overflow-x: auto; margin-bottom: 28px;">
+          <pre style="margin:0; font-family: 'DM Mono', monospace; font-size: 13px; color: #e2e8f0;"><code class="language-python">import numpy as np
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+
+# 1. Dataset Sintético para Classificação de Texto (Detecção de Spam / Fraude)
+corpus = [
+    "transferencia urgente conta bloqueada verifique agora",
+    "saldo atualizado extrato bancario mensal disponivel",
+    "premio acumulado clique no link para resgatar bonus",
+    "comprovante de pix realizado com sucesso banco",
+    "alerta de seguranca senha expirada recadastre",
+    "agendamento de pagamento efetuado com sucesso",
+    "ganhou cartao de credito sem anuidade solicite",
+    "fatura do cartao de credito consolidada fechamento",
+    "atualizacao cadastral necessaria para evitar bloqueio",
+    "relatorio de rendimentos financeiro anual disponivel"
+]
+labels = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0]  # 1: Spam/Phishing, 0: Legítimo
+
+# 2. Divisão Estratificada entre Treino e Teste
+X_train, X_test, y_train, y_test = train_test_split(
+    corpus, labels, test_size=0.30, random_state=42, stratify=labels
+)
+
+# 3. Pipeline MLOps (Vetorização N-Gramas + Multinomial Naive Bayes)
+nb_pipeline = Pipeline([
+    ('vectorizer', CountVectorizer(ngram_range=(1, 2))),
+    ('nb', MultinomialNB())
+])
+
+# 4. Grade de Hiperparâmetros (Suavização de Laplace alpha & Priors)
+param_grid = {
+    'nb__alpha': [0.01, 0.1, 0.5, 1.0, 2.0],
+    'nb__fit_prior': [True, False]
+}
+
+# 5. Otimização por Validação Cruzada
+grid_search = GridSearchCV(
+    estimator=nb_pipeline,
+    param_grid=param_grid,
+    cv=2,
+    scoring='f1',
+    n_jobs=-1
+)
+
+grid_search.fit(X_train, y_train)
+
+# 6. Avaliação das Métricas MLOps
+best_nb = grid_search.best_estimator_
+y_pred = best_nb.predict(X_test)
+y_proba = best_nb.predict_proba(X_test)[:, 1]
+
+print(f"Melhores Hiperparâmetros Naive Bayes: {grid_search.best_params_}")
+print("\n--- Matriz de Confusão ---")
+print(confusion_matrix(y_test, y_pred))
+print("\n--- Relatório de Classificação ---")
+print(classification_report(y_test, y_pred))
+print(f"ROC-AUC Score: {roc_auc_score(y_test, y_proba):.4f}")
+</code></pre>
+        </div>
+
+        <!-- SUBSEÇÃO: EXEMPLOS CORPORATIVOS & BIBLIOGRAFIA -->
+        <h3 style="margin-top: 32px; margin-bottom: 16px; color: var(--text);">2.7 Casos de Uso Corporativos &amp; Bibliografia Acadêmica</h3>
+        <div class="grid-2" style="margin-bottom: 24px;">
+          <div class="card" style="border-top: 4px solid var(--aws);">
+            <div class="card-lbl" style="color: var(--aws);">Casos de Uso Corporativos</div>
+            <ul style="font-size: 13px; line-height: 1.6; margin-left: 16px; color: var(--text-dim);">
+              <td><strong>Filtragem de Spam e Phishing em Tempo Real:</strong> Análise instantânea do conteúdo de emails e mensagens de transações financeiras.</td>
+              <td><strong>Categorização de Chamados de Suporte:</strong> Roteamento automatizado de tickets de atendimento ao cliente com base em termos chave.</td>
+              <td><strong>Análise Rápida de Sentimento:</strong> Triagem em tempo real de opiniões de clientes em redes sociais e avaliações de produtos.</td>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--spark);">
+            <div class="card-lbl" style="color: var(--spark);">Referências Acadêmicas Principais</div>
+            <ul style="font-size: 13px; line-height: 1.6; margin-left: 16px; color: var(--text-dim);">
+              <td><strong>Bayes, T. (1763).</strong> <em>An essay towards solving a problem in the doctrine of chances.</em> Philosophical Transactions of the Royal Society, 53, 370-418.</td>
+              <td><strong>Domingos, P., &amp; Pazzani, M. (1997).</strong> <em>On the optimality of the simple Bayesian classifier under zero-one loss.</em> Machine Learning, 29(2), 103-130.</td>
+              <td><strong>McCallum, A., &amp; Nigam, K. (1998).</strong> <em>A comparison of event models for Naive Bayes text classification.</em> AAAI Workshop on Learning for Text Categorization, 752, 41-48.</td>
+              <td><strong>Zhang, H. (2004).</strong> <em>The optimality of Naive Bayes.</em> FLAIRS Conference, 1(2), 3.</td>
+            </ul>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- Footer Script Helpers -->
+    <script>
+      function toggleNav() {
+        var sb = document.getElementById('sidebar');
+        var hb = document.getElementById('hamburger');
+        var main = document.getElementById('main');
+        if (!sb) return;
+        
+        var isMobile = window.innerWidth <= 960;
+        if (isMobile) {
+          var isOpen = sb.classList.contains('open');
+          if (!isOpen) {
+            sb.classList.add('open');
+            if (hb) hb.innerHTML = '✕';
+          } else {
+            sb.classList.remove('open');
+            if (hb) hb.innerHTML = '☰';
+          }
+        } else {
+          var isClosed = sb.classList.contains('closed');
+          if (!isClosed) {
+            sb.classList.add('closed');
+            if (main) main.classList.add('sidebar-closed');
+            if (hb) hb.innerHTML = '☰';
+          } else {
+            sb.classList.remove('closed');
+            if (main) main.classList.remove('sidebar-closed');
+            if (hb) hb.innerHTML = '✕';
+          }
+        }
+      }
+      window.toggleNav = toggleNav;
+    </script>
+  </div>
+
+  <!-- Core Platform Scripts (Relative paths from pages/ia-algoritmos/ to root) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

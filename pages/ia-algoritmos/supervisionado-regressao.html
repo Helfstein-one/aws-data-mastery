@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Fundamentos de Aprendizado Supervisionado: Regressão Linear (OLS, Gradiente Descendente, Ridge, Lasso), Regressão Logística (Sigmoide, Log-Loss, Softmax) e Árvores de Decisão (CART, Gini, Entropia, Pruning) com Arquiteturas AWS SageMaker, EMR, Feature Store e Código Python MLOps - AWS Data Mastery"/>
+  <title>Aprendizado Supervisionado: Regressão &amp; Classificação | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\(', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/ia-algoritmos/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Aprendizado Supervisionado: Regressão &amp; Classificação | AWS Data Mastery"/>
+  <meta property="og:description" content="Guia completo de Algoritmos Supervisionados: Regressão Linear, Regressão Logística e Árvores de Decisão (CART). Formulações matemáticas em KaTeX, trade-offs de produção, diagramas de arquitetura AWS e código Python executável."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation (Populated dynamically by sidebar-loader.js) -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Inteligência Artificial &amp; Algoritmos</div>
+      <h1>Aprendizado Supervisionado: <em>Regressão e Classificação Fundamental</em></h1>
+      <p class="hero-d">Exploração matemática, estatística e arquitetural dos três pilares fundamentais do aprendizado supervisionado: Regressão Linear (OLS, Equação Normal, Gradiente Descendente e Regularizações Ridge/Lasso), Regressão Logística (Sigmoide, Entropia Cruzada Binária, Fronteiras de Decisão e Softmax) e Árvores de Decisão (Algoritmo CART, Impureza de Gini, Entropia/Ganho de Informação, Regressão por Redução de Variância e Cost-Complexity Pruning). Inclui diagramas técnicos de produção na AWS (SageMaker, EMR, Feature Store, DynamoDB e S3 Iceberg), trade-offs de inferência em escala e scripts executáveis em Python com boas práticas de MLOps.</p>
+      <div class="pills">
+        <span class="pill">Regressão Linear</span>
+        <span class="pill">Regressão Logística</span>
+        <span class="pill">Árvores de Decisão (CART)</span>
+        <span class="pill">OLS &amp; Equação Normal</span>
+        <span class="pill">Gradiente Descendente</span>
+        <span class="pill">Ridge &amp; Lasso (L1/L2)</span>
+        <span class="pill">Sigmoide &amp; Log-Loss</span>
+        <span class="pill">Softmax &amp; Probit</span>
+        <span class="pill">Impureza de Gini &amp; Entropia</span>
+        <span class="pill">Cost-Complexity Pruning</span>
+        <span class="pill">AWS SageMaker &amp; Feature Store</span>
+        <span class="pill">Scikit-Learn MLOps</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- =================================================================== -->
+      <!-- SEÇÃO 01: REGRESSÃO LINEAR -->
+      <!-- =================================================================== -->
+      <section class="section" id="regressao-linear">
+        <div class="section-header">
+          <h2>Seção 1: Regressão Linear (Linear Regression)</h2>
+          <p class="section-description">Modelagem paramétrica contínua baseada na minimização dos resíduos quadráticos, soluções analíticas fechadas vs numéricas iterativas e estabilização de coeficientes via regularização L1/L2.</p>
+        </div>
+
+        <h3>1.1 Intuição Matemática e Hipótese de Linearidade</h3>
+        <p>A <strong>Regressão Linear</strong> assume uma relação linear entre o vetor de atributos preditores \(\mathbf{x} = [x_1, x_2, \dots, x_p]^T \in \mathbb{R}^p\) e a variável resposta contínua \(y \in \mathbb{R}\). Formalmente, a hipótese do modelo é expressa por:</p>
+
+        \[ y = h_eta(\mathbf{x}) + arepsilon = eta_0 + eta_1 x_1 + eta_2 x_2 + \dots + eta_p x_p + arepsilon = \mathbf{x}^T eta + arepsilon \]
+
+        <p>Onde \(\mathbf{x} = [1, x_1, x_2, \dots, x_p]^T\) inclui o termo de ajuste (bias/intercepto), \(eta = [eta_0, eta_1, \dots, eta_p]^T \in \mathbb{R}^{p+1}\) é o vetor de parâmetros a ser estimado, e \(arepsilon\) representa o termo de erro estocástico irredutível.</p>
+
+        <div class="callout callout-info" style="margin: 20px 0;">
+          <strong>Pressupostos Estatísticos do Modelo Linear Clássico (Gauss-Markov):</strong>
+          <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px; line-height: 1.6;">
+            <li><strong>Linearidade nos Parâmetros:</strong> A esperança condicional da variável resposta é linear nos coeficientes \(eta\): \(E[y|\mathbf{X}] = \mathbf{X}eta\).</li>
+            <li><strong>Exogeneidade Estrita:</strong> O valor esperado do termo de erro condicional aos atributos é zero: \(E[arepsilon|\mathbf{X}] = 0\).</li>
+            <li><strong>Homocedasticidade:</strong> A variância do erro é constante para todas as observações: \(	ext{Var}(arepsilon_i|\mathbf{X}) = \sigma^2, orall i\).</li>
+            <li><strong>Ausência de Autocorrelação:</strong> Os erros de observações distintas são não correlacionados: \(	ext{Cov}(arepsilon_i, arepsilon_j|\mathbf{X}) = 0, orall i 
+eq j\).</li>
+            <li><strong>Ausência de Multicolinearidade Perfeita:</strong> A matriz de atributos \(\mathbf{X} \in \mathbb{R}^{n 	imes (p+1)}\) possui posto pleno de coluna (\(	ext{rank}(\mathbf{X}) = p + 1 \le n\)).</li>
+          </ul>
+        </div>
+
+        <h3>1.2 Função de Custo OLS (Ordinary Least Squares)</h3>
+        <p>A estimativa dos parâmetros \(eta\) via Mínimos Quadrados Ordinários (OLS) busca minimizar a soma dos quadrados dos resíduos (Residual Sum of Squares - RSS) entre os valores reais \(y^{(i)}\) e as predições \(\hat{y}^{(i)} = h_eta(\mathbf{x}^{(i)})\). A função de custo de erro médio quadrático (Mean Squared Error - MSE) é formalizada por:</p>
+
+        \[ J(eta) = rac{1}{2n} \sum_{i=1}^{n} \left( h_eta(\mathbf{x}^{(i)}) - y^{(i)} ight)^2 = rac{1}{2n} (\mathbf{X}eta - \mathbf{y})^T (\mathbf{X}eta - \mathbf{y}) \]
+
+        <p>Onde \(\mathbf{X} \in \mathbb{R}^{n 	imes (p+1)}\) é a matriz de design contendo as \(n\) amostras e \(\mathbf{y} \in \mathbb{R}^n\) é o vetor de rótulos observados. O fator \(rac{1}{2n}\) facilita as derivações analíticas do gradiente.</p>
+
+        <h3>1.3 Resolução Analítica: Equação Normal</h3>
+        <p>Para encontrar o vetor de parâmetros ideal \(\hat{eta}\) que minimiza a função convexa \(J(eta)\), calculamos a derivada parcial em relação a \(eta\) e igualamos ao vetor nulo:</p>
+
+        \[ 
+abla_eta J(eta) = rac{\partial}{\partial eta} \left[ rac{1}{2n} (\mathbf{X}eta - \mathbf{y})^T (\mathbf{X}eta - \mathbf{y}) ight] = rac{1}{n} \mathbf{X}^T (\mathbf{X}eta - \mathbf{y}) = 0 \]
+
+        \[ \mathbf{X}^T \mathbf{X} eta = \mathbf{X}^T \mathbf{y} \]
+
+        <p>Isolando \(eta\), obtemos a <strong>Equação Normal</strong> (Closed-form Analytical Solution):</p>
+
+        \[ \hat{eta}_{OLS} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{y} \]
+
+        <div class="callout callout-warning" style="margin: 20px 0;">
+          <strong>Limitações Computacionais da Equação Normal em Produção:</strong>
+          <p style="margin-top: 6px; margin-bottom: 0;">A inversão da matriz \(\mathbf{X}^T \mathbf{X} \in \mathbb{R}^{(p+1) 	imes (p+1)}\) possui complexidade computacional de <strong>\(\mathcal{O}(p^3)\)</strong>. Quando o número de atributos \(p\) é grande (ex: \(p > 10.000\)), a inversão torna-se impraticável em termos de memória e tempo de CPU. Além disso, se houver alta multicolinearidade entre variáveis, \(\mathbf{X}^T \mathbf{X}\) torna-se quase-singular (determinante próximo de zero), resultando em alta instabilidade numérica e variância extrema dos coeficientes.</p>
+        </div>
+
+        <h3>1.4 Otimização Iterativa: Gradiente Descendente</h3>
+        <p>Quando a inversão analítica é inviável devido a Big Data (\(n \gg 1.000.000\)) ou alta dimensionalidade (\(p \gg 1.000\)), utiliza-se o algoritmo de <strong>Gradiente Descendente (Gradient Descent)</strong>. A cada iteração \(k\), os coeficientes são atualizados na direção oposta ao gradiente da função de custo:</p>
+
+        \[ eta^{(k+1)} := eta^{(k)} - lpha 
+abla_eta J(eta^{(k)}) = eta^{(k)} - lpha rac{1}{n} \mathbf{X}^T (\mathbf{X}eta^{(k)} - \mathbf{y}) \]
+
+        <p>Onde \(lpha > 0\) representa a taxa de aprendizado (learning rate). As três variantes principais de otimização em engenharia de IA são:</p>
+
+        <ul style="line-height: 1.7;">
+          <li><strong>Batch Gradient Descent (BGD):</strong> Utiliza todas as \(n\) amostras para calcular o gradiente exato a cada iteração. Estável, mas lento para grandes volumes armazenados em S3.</li>
+          <li><strong>Stochastic Gradient Descent (SGD):</strong> Atualiza os parâmetros a cada amostra individual. Extremamente rápido, mas apresenta alta variância na convergência.</li>
+          <li><strong>Mini-Batch Gradient Descent (MBGD):</strong> Computa o gradiente sobre um subconjunto de amostras (ex: batch size = 64, 256, 512). Combina aceleração via GPU/VPU com vetorização em memória.</li>
+        </ul>
+
+        <h3>1.5 Regularização: Ridge (L2), Lasso (L1) e ElasticNet</h3>
+        <p>A regularização adiciona uma penalidade à função de custo OLS para conter a magnitude dos coeficientes, evitando overfitting e contornando a multicolinearidade.</p>
+
+        <h4>Regressão Ridge (Regularização L2)</h4>
+        <p>Adiciona a norma L2 dos coeficientes ao erro quadrático:</p>
+
+        \[ J_{Ridge}(eta) = rac{1}{2n} \|\mathbf{X}eta - \mathbf{y}\|_2^2 + \lambda \|eta\|_2^2 = rac{1}{2n} (\mathbf{X}eta - \mathbf{y})^T (\mathbf{X}eta - \mathbf{y}) + \lambda \sum_{j=1}^{p} eta_j^2 \]
+
+        <p>A solução analítica da Regressão Ridge garante invertibilidade mesmo com multicolinearidade perfeita:</p>
+
+        \[ \hat{eta}_{Ridge} = (\mathbf{X}^T \mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^T \mathbf{y} \]
+
+        <p>Onde \(\lambda \ge 0\) é o hiperparâmetro de regularização. A adição de \(\lambda \mathbf{I}\) adiciona um valor positivo à diagonal principal de \(\mathbf{X}^T \mathbf{X}\), garantindo que a matriz resultante seja estritamente positiva definida e inversível.</p>
+
+        <h4>Regressão Lasso (Regularização L1)</h4>
+        <p>Adiciona a norma L1 dos coeficientes, promovendo esparsidade (Feature Selection automática):</p>
+
+        \[ J_{Lasso}(eta) = rac{1}{2n} \|\mathbf{X}eta - \mathbf{y}\|_2^2 + \lambda \|eta\|_1 = rac{1}{2n} (\mathbf{X}eta - \mathbf{y})^T (\mathbf{X}eta - \mathbf{y}) + \lambda \sum_{j=1}^{p} |eta_j| \]
+
+        <p>Devido à não-diferenciabilidade da norma L1 na origem (\(eta_j = 0\)), o Lasso utiliza otimização por <strong>Gradiente Subordinado (Subgradient Descent)</strong> ou <strong>Coordinate Descent</strong>, zerando coeficientes de variáveis irrelevantes.</p>
+
+        <h4>ElasticNet</h4>
+        <p>Combina as penalidades L1 e L2 balanceadas pelo hiperparâmetro \(ho \in [0, 1]\):</p>
+
+        \[ J_{ElasticNet}(eta) = J_{OLS}(eta) + \lambda \left[ ho \|eta\|_1 + rac{1 - ho}{2} \|eta\|_2^2 ight] \]
+
+        <h3>1.6 Quando Usar vs Quando NÃO Usar (Trade-offs de Produção)</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0;">
+          <div style="background: #0f172a; padding: 20px; border-radius: 8px; border: 1px solid #1e293b;">
+            <h4 style="color: #10b981; margin-top: 0;">✓ Quando Usar (Vantagens)</h4>
+            <ul style="font-size: 0.92em; line-height: 1.6; padding-left: 18px; margin-bottom: 0;">
+              <li><strong>Alta Interpretabilidade:</strong> Coeficientes \(eta_j\) representam o efeito marginal exato de cada variável no resultado final. Requisito em precificação e regulação bancária.</li>
+              <li><strong>Incerteza Probabilística:</strong> Fornece intervalos de confiança e p-valores para testes de hipóteses sobre a significância das variáveis.</li>
+              <li><strong>Inferência Sub-Milissegundo:</strong> A predição requer apenas um produto escalar \(\mathbf{x}^T eta\), resultando em latência \(\mathcal{O}(p) < 0.1	ext{ ms}\) em CPUs leves.</li>
+              <li><strong>Eficiência em Baixa Dimensionalidade:</strong> Treinamento instantâneo via Equação Normal para datasets com poucas colunas (\(p < 1.000\)).</li>
+            </ul>
+          </div>
+          <div style="background: #0f172a; padding: 20px; border-radius: 8px; border: 1px solid #1e293b;">
+            <h4 style="color: #ef4444; margin-top: 0;">✕ Quando NÃO Usar (Desvantagens)</h4>
+            <ul style="font-size: 0.92em; line-height: 1.6; padding-left: 18px; margin-bottom: 0;">
+              <li><strong>Relações Não-Lineares Complexas:</strong> Incapaz de capturar não-linearidades sem engenharia manual de atributos (polinômios, splines, interações).</li>
+              <li><strong>Sensibilidade a Outliers:</strong> A função de custo quadrática OLS eleva ao quadrado os erros, fazendo com que outliers distorçam drasticamente a reta ajustada.</li>
+              <li><strong>Complexidade de Treinamento OLS \(\mathcal{O}(p^3)\):</strong> A Equação Normal falha para tabelas muito largas. Exige uso de Gradiente Descendente ou Spark MLlib no AWS EMR.</li>
+              <li><strong>Multicolinearidade Sem Regularização:</strong> Coeficientes tornam-se voláteis se colunas tiverem correlação linear perfeita ou quase-perfeita.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>1.7 Arquitetura de Produção na AWS: Pipeline de Precificação com Ridge/OLS</h3>
+        <p>A arquitetura abaixo ilustra o pipeline enterprise de precificação dinâmica na AWS. Dados brutos de transações no Apache Iceberg são pré-processados via Spark no <strong>AWS EMR Serverless</strong>, registrando variáveis no <strong>Amazon SageMaker Feature Store</strong>. O treinamento e tuning do hiperparâmetro \(\lambda\) ocorrem no <strong>AWS SageMaker</strong>, serializando os coeficientes para inferência em tempo real com armazenamento de cache no <strong>Amazon DynamoDB</strong>.</p>
+
+        <!-- DIAGRAMA DRAW.IO: REGRESSÃO LINEAR -->
+        <div class="drawio-wrap" style="margin-top: 24px;">
+          <div class="drawio-label"><span class="dot"></span> Arquitetura Enterprise: Pipeline OLS &amp; Ridge na AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;<mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;><root><mxCell id=\&quot;lin_0\&quot;/><mxCell id=\&quot;lin_1\&quot; parent=\&quot;lin_0\&quot;/><mxCell id=\&quot;lin_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;lin_1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_title\&quot; value=\&quot;PIPELINE DE REGRESS\u00c3O LINEAR RIDGE \u2014 EMR \u00b7 SAGEMAKER \u00b7 DYNAMODB\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;lin_1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_s3\&quot; value=\&quot;Amazon S3\\nIceberg Data Lake\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;lin_1\&quot;><mxGeometry x=\&quot;50\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_emr\&quot; value=\&quot;Amazon EMR\\nSpark MLlib Prep\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;lin_1\&quot;><mxGeometry x=\&quot;210\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_fs\&quot; value=\&quot;SageMaker\\nFeature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;lin_1\&quot;><mxGeometry x=\&quot;390\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_sm\&quot; value=\&quot;SageMaker\\nRidge Training\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;lin_1\&quot;><mxGeometry x=\&quot;570\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_ddb\&quot; value=\&quot;Amazon DynamoDB\\nScore Cache\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#3b82f6;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;lin_1\&quot;><mxGeometry x=\&quot;770\&quot; y=\&quot;70\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_s3out\&quot; value=\&quot;Amazon S3\\nModel Audit Log\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;lin_1\&quot;><mxGeometry x=\&quot;770\&quot; y=\&quot;190\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_e1\&quot; value=\&quot;Raw Data\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;lin_s3\&quot; target=\&quot;lin_emr\&quot; parent=\&quot;lin_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_e2\&quot; value=\&quot;Z-Score Features\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;lin_emr\&quot; target=\&quot;lin_fs\&quot; parent=\&quot;lin_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_e3\&quot; value=\&quot;Train Matrix\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;lin_fs\&quot; target=\&quot;lin_sm\&quot; parent=\&quot;lin_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_e4\&quot; value=\&quot;Deploy Inference\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;lin_sm\&quot; target=\&quot;lin_ddb\&quot; parent=\&quot;lin_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;lin_e5\&quot; value=\&quot;Audit Log\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;lin_sm\&quot; target=\&quot;lin_s3out\&quot; parent=\&quot;lin_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell></root></mxGraphModel>&quot;}'></div>
+        </div>
+
+        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+          <strong style="color: var(--accent);">Detalhamento do Fluxo de Produção:</strong>
+          <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+            <li><strong>Data Ingestion &amp; Feature Prep:</strong> Dados de vendas e séries temporais são lidos do Amazon S3 (Apache Iceberg) pelo AWS EMR Serverless, aplicando padronização z-score e inserindo atributos atualizados no SageMaker Feature Store.</li>
+            <li><strong>Treinamento &amp; GridSearch Ridge:</strong> O SageMaker Training Job carrega o dataset do Feature Store, ajusta o modelo Ridge minimizando o erro quadrático OLS penalizado e salva o artefato serializado no S3.</li>
+            <li><strong>Servimento de Baixa Latência:</strong> O endpoint em tempo real do SageMaker realiza o produto matricial \(\mathbf{x}^T eta\), persistindo predições no DynamoDB para consulta das APIs de precificação.</li>
+          </ul>
+        </div>
+
+        <h3>1.8 Código Executável em Python: Treinamento MLOps com Scikit-Learn</h3>
+        <p>O script abaixo implementa o ciclo completo de desenvolvimento MLOps para Regressão Linear com Regularização Ridge CV, incluindo semente reprodutível, divisão treino-teste, padronização z-score, métricas de avaliação e persistência de modelo.</p>
+
+        <div class="code-block-container" style="margin: 20px 0;">
+          <pre style="background: #060d1a; color: #e2e8f0; padding: 20px; border-radius: 8px; border: 1px solid #1e293b; overflow-x: auto; font-family: 'DM Mono', monospace; font-size: 0.88em; line-height: 1.5;"><code>import numpy as np
+import pandas as pd
+from sklearn.datasets import make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import RidgeCV
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import joblib
+
+# 1. Configuração de Semente Reprodutível
+SEED = 42
+np.random.seed(SEED)
+
+# 2. Criação de Dataset Sintético de Precificação Financeira
+X_raw, y_raw = make_regression(
+    n_samples=1000,
+    n_features=10,
+    n_informative=6,
+    noise=12.5,
+    random_state=SEED
+)
+
+feature_cols = [f"feature_{i+1}" for i in range(10)]
+df = pd.DataFrame(X_raw, columns=feature_cols)
+df["target_price"] = y_raw
+
+# 3. Separação em Treino e Teste (80/20)
+X_train, X_test, y_train, y_test = train_test_split(
+    df[feature_cols], df["target_price"], test_size=0.20, random_state=SEED
+)
+
+# 4. Pré-processamento: Padronização Z-Score (StandardScaler)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 5. Treinamento do Modelo com Validação Cruzada Automática (RidgeCV)
+alphas = np.logspace(-3, 3, 100)
+ridge_model = RidgeCV(alphas=alphas, cv=5, scoring="neg_mean_squared_error")
+ridge_model.fit(X_train_scaled, y_train)
+
+# 6. Avaliação de Métricas de Desempenho no Teste
+y_pred = ridge_model.predict(X_test_scaled)
+mse = mean_squared_error(y_test, y_pred)
+rmse = np.sqrt(mse)
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"--- RESULTADOS REGRESSÃO LINEAR RIDGE ---")
+print(f"Alpha Ótimo Encontrado (λ): {ridge_model.alpha_:.4f}")
+print(f"RMSE (Root Mean Squared Error): {rmse:.4f}")
+print(f"MAE (Mean Absolute Error):     {mae:.4f}")
+print(f"R² Score (Coeficiente Det.):   {r2:.4f}")
+
+# 7. Persistência do Modelo e Scaler para MLOps
+artifact_payload = {
+    "model": ridge_model,
+    "scaler": scaler,
+    "feature_names": feature_cols,
+    "optimal_alpha": ridge_model.alpha_
+}
+joblib.dump(artifact_payload, "linear_ridge_model.joblib")
+print("Artefato MLOps salvo com sucesso em 'linear_ridge_model.joblib'.")</code></pre>
+        </div>
+
+        <h3>1.9 Casos de Uso Enterprise e Referências Acadêmicas</h3>
+        <p><strong>Casos Práticos em Produção:</strong> Estimativa do valor de vida do cliente (LTV - Lifetime Value) em bancos digitais, previsão de demanda de infraestrutura em nuvem (FinOps cost modeling) e precificação algorítmica de seguros baseada em perfil de risco.</p>
+
+        <p><strong>Bibliografia Acadêmica:</strong></p>
+        <ul style="font-size: 0.93em; line-height: 1.6;">
+          <li>HASTIE, Trevor; TIBSHIRANI, Robert; FRIEDMAN, Jerome. <em>The Elements of Statistical Learning: Data Mining, Inference, and Prediction</em>. 2. ed. Springer, 2009. (Capítulo 3: Linear Methods for Regression).</li>
+          <li>MONTGOMERY, Douglas C.; PECK, Elizabeth A.; VINING, G. Geoffrey. <em>Introduction to Linear Regression Analysis</em>. 6. ed. Wiley, 2021.</li>
+        </ul>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- SEÇÃO 02: REGRESSÃO LOGÍSTICA -->
+      <!-- =================================================================== -->
+      <section class="section" id="regressao-logistica">
+        <div class="section-header">
+          <h2>Seção 2: Regressão Logística (Logistic Regression)</h2>
+          <p class="section-description">Modelagem probabilística para classificação binária e multiclasse, função sigmoide, otimização de log-loss via Máxima Verossimilhança e extensão Softmax.</p>
+        </div>
+
+        <h3>2.1 Intuição Matemática e a Função Sigmoide</h3>
+        <p>A <strong>Regressão Logística</strong> é o algoritmo padrão para classificação binária probabilística. Em vez de prever diretamente o rótulo discreto \(y \in \{0, 1\}\), o modelo estima a probabilidade condicional de a observação pertencer à classe positiva: \(P(y=1|\mathbf{x}) = h_	heta(\mathbf{x})\).</p>
+
+        <p>Para mapear a combinação linear de atributos \(	heta^T \mathbf{x} \in (-\infty, +\infty)\) no intervalo válido de probabilidade \((0, 1)\), aplica-se a <strong>Função Sigmoide (Logística)</strong> \(\sigma(z)\):</p>
+
+        \[ h_	heta(\mathbf{x}) = \sigma(	heta^T \mathbf{x}) = rac{1}{1 + e^{-	heta^T \mathbf{x}}} = rac{e^{	heta^T \mathbf{x}}}{1 + e^{	heta^T \mathbf{x}}} \]
+
+        <div class="callout callout-info" style="margin: 20px 0;">
+          <strong>Propriedades Matemáticas Notáveis da Sigmoide:</strong>
+          <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px; line-height: 1.6;">
+            <li><strong>Limites Assimptóticos:</strong> \(\lim_{z 	o +\infty} \sigma(z) = 1\) e \(\lim_{z 	o -\infty} \sigma(z) = 0\).</li>
+            <li><strong>Ponto de Inflexão Central:</strong> \(\sigma(0) = 0,5\). Se \(	heta^T \mathbf{x} > 0 \implies P(y=1) > 0,5\).</li>
+            <li><strong>Derivada Elegante:</strong> A derivada de \(\sigma(z)\) em relação a \(z\) expressa-se em termos da própria função:
+              \[ \sigma'(z) = rac{d}{dz} \left( rac{1}{1 + e^{-z}} ight) = \sigma(z) (1 - \sigma(z)) \]
+              Essa propriedade simplifica imensamente o cálculo das atualizações por gradiente.</li>
+          </ul>
+        </div>
+
+        <h3>2.2 A Razão de Chances (Odds Ratio) e a Transformação Logit</h3>
+        <p>A probabilidade de sucesso \(p = P(y=1|\mathbf{x})\) em relação à probabilidade de falha \(1 - p\) define a <strong>Razão de Chances (Odds Ratio)</strong>:</p>
+
+        \[ 	ext{Odds} = rac{p}{1 - p} = rac{rac{1}{1 + e^{-	heta^T \mathbf{x}}}}{1 - rac{1}{1 + e^{-	heta^T \mathbf{x}}}} = e^{	heta^T \mathbf{x}} \]
+
+        <p>Aplicando o logaritmo natural à Razão de Chances, obtemos a <strong>Transformação Logit</strong>, demonstrando que o log-odds é uma combinação estritamente linear dos atributos:</p>
+
+        \[ 	ext{logit}(p) = \ln\left( rac{P(y=1|\mathbf{x})}{1 - P(y=1|\mathbf{x})} ight) = 	heta^T \mathbf{x} = 	heta_0 + 	heta_1 x_1 + \dots + 	heta_p x_p \]
+
+        <h3>2.3 Função de Custo: Log-Loss / Entropia Cruzada Binária</h3>
+        <p>O uso da função de erro quadrático médio (MSE) na Regressão Logística resultaria em uma superfície não-convexa com múltiplos mínimos locais devido à não-linearidade da sigmoide. Por isso, utiliza-se a <strong>Estimativa de Máxima Verossimilhança (MLE)</strong>.</p>
+
+        <p>A função de verossimilhança para \(n\) observações independentes de Bernoulli é dada por:</p>
+
+        \[ L(	heta) = \prod_{i=1}^{n} \left( h_	heta(\mathbf{x}^{(i)}) ight)^{y^{(i)}} \left( 1 - h_	heta(\mathbf{x}^{(i)}) ight)^{1 - y^{(i)}} \]
+
+        <p>Minimizar o negativo do logaritmo da verossimilhança (Negative Log-Likelihood) nos dá a função de custo <strong>Log-Loss / Entropia Cruzada Binária (Binary Cross-Entropy)</strong>:</p>
+
+        \[ J(	heta) = -rac{1}{n} \ln L(	heta) = -rac{1}{n} \sum_{i=1}^{n} \left[ y^{(i)} \ln\left(h_	heta(\mathbf{x}^{(i)})ight) + (1 - y^{(i)}) \ln\left(1 - h_	heta(\mathbf{x}^{(i)})ight) ight] \]
+
+        <p>O gradiente de \(J(	heta)\) em relação a \(	heta\) possui a mesma forma visual da regressão linear:</p>
+
+        \[ 
+abla_	heta J(	heta) = rac{1}{n} \mathbf{X}^T \left( \sigma(\mathbf{X}	heta) - \mathbf{y} ight) \]
+
+        <h3>2.4 Fronteira de Decisão e Extensões Multiclasse</h3>
+        <p>A <strong>Fronteira de Decisão (Decision Boundary)</strong> é o hiperplano geométrico que separa as classes. Para um limiar padrão \(	au = 0,5\):</p>
+
+        \[ \hat{y} = 1 \iff P(y=1|\mathbf{x}) \ge 0,5 \iff 	heta^T \mathbf{x} \ge 0 \]
+
+        <h4>Regressão Logística Multinomial (Softmax)</h4>
+        <p>Para problemas com \(K > 2\) classes mutuamente exclusivas, substitui-se a sigmoide pela função <strong>Softmax</strong>:</p>
+
+        \[ P(y = k | \mathbf{x}) = rac{e^{	heta_k^T \mathbf{x}}}{\sum_{j=1}^{K} e^{	heta_j^T \mathbf{x}}} \]
+
+        <h4>Modelo Probit</h4>
+        <p>Usa a distribuição acumulada normal padrão \(\Phi(z)\) em vez da função sigmoide: \(P(y=1|\mathbf{x}) = \Phi(	heta^T \mathbf{x})\), amplamente utilizada em econometria financeira.</p>
+
+        <h3>2.5 Quando Usar vs Quando NÃO Usar (Trade-offs de Produção)</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0;">
+          <div style="background: #0f172a; padding: 20px; border-radius: 8px; border: 1px solid #1e293b;">
+            <h4 style="color: #10b981; margin-top: 0;">✓ Quando Usar (Vantagens)</h4>
+            <ul style="font-size: 0.92em; line-height: 1.6; padding-left: 18px; margin-bottom: 0;">
+              <li><strong>Probabilidades Calibradas:</strong> Retorna probabilidades entre 0 e 1, permitindo ajustar limiares de decisão (\(	au\)) conforme a matriz de custos de negócio.</li>
+              <li><strong>Explicabilidade Regulatória (Scorecards):</strong> Os coeficientes exp(\(	heta_j\)) medem a variação exata nas chances de inadimplência (regulação BACEN/Basileia).</li>
+              <li><strong>Extrema Velocidade em Tempo Real:</strong> Inferência requer apenas cálculo sigmoidal simples (\(< 0,5	ext{ ms}\) por chamada de API).</li>
+              <li><strong>Resistência ao Overfitting:</strong> Regularizações L1/L2 integradas contêm modelos com muitos atributos.</li>
+            </ul>
+          </div>
+          <div style="background: #0f172a; padding: 20px; border-radius: 8px; border: 1px solid #1e293b;">
+            <h4 style="color: #ef4444; margin-top: 0;">✕ Quando NÃO Usar (Desvantagens)</h4>
+            <ul style="font-size: 0.92em; line-height: 1.6; padding-left: 18px; margin-bottom: 0;">
+              <li><strong>Fronteiras Linearmente Separáveis:</strong> Falha se os dados exigirem separação não-linear complexa em forma de espiral ou círculos concêntricos.</li>
+              <li><strong>Vulnerabilidade a Desbalanceamento Extremo:</strong> Em cenários de fraude onde a classe positiva é 0,01%, requer calibração de pesos de classe (`class_weight='balanced'`) ou Oversampling (SMOTE).</li>
+              <li><strong>Sensibilidade a Outliers Extremos:</strong> Observações muito distantes podem distorcer o alinhamento da fronteira de decisão.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>2.6 Arquitetura de Produção na AWS: Motor de Score de Crédito</h3>
+        <p>A arquitetura a seguir descreve um pipeline de decisão de crédito bancário operando em tempo real. Requisições via <strong>Amazon API Gateway</strong> disparam uma função <strong>AWS Lambda</strong> que busca features online no <strong>SageMaker Feature Store</strong>, consulta o modelo Logístico no <strong>SageMaker Real-Time Endpoint</strong> e salva o log de decisão auditável no <strong>Amazon S3 (Apache Iceberg)</strong>.</p>
+
+        <!-- DIAGRAMA DRAW.IO: REGRESSÃO LOGÍSTICA -->
+        <div class="drawio-wrap" style="margin-top: 24px;">
+          <div class="drawio-label"><span class="dot"></span> Arquitetura Enterprise: Credit Scorecard com Regressão Logística</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;<mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;><root><mxCell id=\&quot;log_0\&quot;/><mxCell id=\&quot;log_1\&quot; parent=\&quot;log_0\&quot;/><mxCell id=\&quot;log_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;log_1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_title\&quot; value=\&quot;MOTOR DE SCORECARD DE CR\u00c9DITO EM TEMPO REAL \u2014 SAGEMAKER \u00b7 DYNAMODB \u00b7 ICEBERG\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;log_1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_gw\&quot; value=\&quot;API Gateway\\nCredit Request\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#a855f7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;log_1\&quot;><mxGeometry x=\&quot;50\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_fs\&quot; value=\&quot;SageMaker\\nFeature Store Online\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;log_1\&quot;><mxGeometry x=\&quot;220\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_ep\&quot; value=\&quot;SageMaker Endpoint\\nLogistic Scorecard\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;log_1\&quot;><mxGeometry x=\&quot;420\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_ddb\&quot; value=\&quot;Amazon DynamoDB\\nRisk Score Cache\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#3b82f6;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;log_1\&quot;><mxGeometry x=\&quot;640\&quot; y=\&quot;70\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_s3\&quot; value=\&quot;Amazon S3 Iceberg\\nAudit Risk Log\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;log_1\&quot;><mxGeometry x=\&quot;640\&quot; y=\&quot;190\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_e1\&quot; value=\&quot;Request Payload\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#a855f7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;log_gw\&quot; target=\&quot;log_fs\&quot; parent=\&quot;log_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_e2\&quot; value=\&quot;Fetch Features\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;log_fs\&quot; target=\&quot;log_ep\&quot; parent=\&quot;log_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_e3\&quot; value=\&quot;Predict PD Prob\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;log_ep\&quot; target=\&quot;log_ddb\&quot; parent=\&quot;log_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;log_e4\&quot; value=\&quot;Async Compliance\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;log_ep\&quot; target=\&quot;log_s3\&quot; parent=\&quot;log_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell></root></mxGraphModel>&quot;}'></div>
+        </div>
+
+        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+          <strong style="color: var(--accent);">Detalhamento da Solução:</strong>
+          <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+            <li><strong>Entrada API &amp; Features:</strong> O pedido de empréstimo chega via API Gateway. A Lambda recupera o perfil de risco histórico (renda, comprometimento de renda, atrasos) no Feature Store em tempo real (< 5 ms).</li>
+            <li><strong>Classificação Probabilística:</strong> O SageMaker Endpoint calcula a probabilidade de inadimplência (PD - Probability of Default) via Regressão Logística. Se \(P(	ext{Default}) < 0,15\), o crédito é pré-aprovado.</li>
+            <li><strong>Persistência &amp; Auditoria:</strong> O resultado é registrado com baixíssima latência no DynamoDB e assincronamente gravado no S3 Iceberg para relatórios regulatórios do Banco Central.</li>
+          </ul>
+        </div>
+
+        <h3>2.7 Código Executável em Python: Classificação de Crédito com Log-Loss</h3>
+        <p>O código Python a seguir gera um dataset sintético de risco de crédito, treina uma Regressão Logística com validação de hiperparâmetro \(C\), calcula ROC-AUC, matriz de confusão e serializa a solução.</p>
+
+        <div class="code-block-container" style="margin: 20px 0;">
+          <pre style="background: #060d1a; color: #e2e8f0; padding: 20px; border-radius: 8px; border: 1px solid #1e293b; overflow-x: auto; font-family: 'DM Mono', monospace; font-size: 0.88em; line-height: 1.5;"><code>import numpy as np
+import pandas as pd
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score, log_loss, confusion_matrix, classification_report
+import joblib
+
+# 1. Semente para Reprodutibilidade
+SEED = 42
+np.random.seed(SEED)
+
+# 2. Geração de Dataset Sintético de Scorecard de Crédito (Inadimplência)
+X_raw, y_raw = make_classification(
+    n_samples=1200,
+    n_features=8,
+    n_informative=5,
+    n_redundant=1,
+    weights=[0.80, 0.20],  # 20% Taxa de Inadimplência
+    random_state=SEED
+)
+
+features = [
+    "renda_mensal", "taxa_endividamento", "historico_atrasos",
+    "idade_score", "linhas_credito_ativas", "utilizacao_limite",
+    "saldo_investimento", "consultas_recentes"
+]
+
+df_credit = pd.DataFrame(X_raw, columns=features)
+df_credit["inadimplente"] = y_raw
+
+# 3. Divisão Treino e Teste Estratificada
+X_train, X_test, y_train, y_test = train_test_split(
+    df_credit[features], df_credit["inadimplente"], test_size=0.20, random_state=SEED, stratify=df_credit["inadimplente"]
+)
+
+# 4. Normalização dos Atributos
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 5. Treinamento da Regressão Logística L2
+model_logit = LogisticRegression(C=1.0, solver="lbfgs", max_iter=1000, random_state=SEED)
+model_logit.fit(X_train_scaled, y_train)
+
+# 6. Métricas de Avaliação Probabilística
+y_pred_proba = model_logit.predict_proba(X_test_scaled)[:, 1]
+y_pred_class = (y_pred_proba >= 0.50).astype(int)
+
+auc = roc_auc_score(y_test, y_pred_proba)
+loss = log_loss(y_test, y_pred_proba)
+cm = confusion_matrix(y_test, y_pred_class)
+
+print("--- RESULTADOS REGRESSÃO LOGÍSTICA ---")
+print(f"ROC-AUC Score: {auc:.4f}")
+print(f"Log-Loss (Binary Cross-Entropy): {loss:.4f}")
+print("Matriz de Confusão:")
+print(cm)
+print("\nRelatório de Classificação Detalhado:")
+print(classification_report(y_test, y_pred_class))
+
+# 7. Serialização do Modelo e Artefatos MLOps
+artifact = {
+    "model": model_logit,
+    "scaler": scaler,
+    "feature_list": features,
+    "threshold": 0.50
+}
+joblib.dump(artifact, "logistic_credit_model.joblib")
+print("Modelo de Regressão Logística salvo em 'logistic_credit_model.joblib'.")</code></pre>
+        </div>
+
+        <h3>2.8 Casos de Uso Enterprise e Referências Acadêmicas</h3>
+        <p><strong>Casos Práticos em Produção:</strong> Scorecard de Risco de Crédito (PD - Probability of Default) segundo os acordos de Basileia III/IV, detecção preliminar de transações suspeitas em cartões e modelos de propensão de cancelamento (Churn prediction).</p>
+
+        <p><strong>Bibliografia Acadêmica:</strong></p>
+        <ul style="font-size: 0.93em; line-height: 1.6;">
+          <li>HOSMER, David W.; LEMESHOW, Stanley; STURDIVANT, Rodney X. <em>Applied Logistic Regression</em>. 3. ed. Wiley, 2013.</li>
+          <li>JAMES, Gareth et al. <em>An Introduction to Statistical Learning: with Applications in R</em>. 2. ed. Springer, 2021. (Capítulo 4: Classification).</li>
+        </ul>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- SEÇÃO 03: ÁRVORES DE DECISÃO (CART) -->
+      <!-- =================================================================== -->
+      <section class="section" id="arvore-decisao">
+        <div class="section-header">
+          <h2>Seção 3: Árvore de Decisão (Decision Tree - CART Algorithm)</h2>
+          <p class="section-description">Modelagem não-paramétrica por particionamento recursivo do espaço de atributos, métricas de impureza (Gini, Entropia, MSE) e pós-poda por complexidade de custo (Cost-Complexity Pruning).</p>
+        </div>
+
+        <h3>3.1 O Algoritmo CART e Particionamento Recursivo do Espaço</h3>
+        <p>O algoritmo <strong>CART (Classification and Regression Trees)</strong> constrói árvores binárias através do particionamento guloso e recursivo do espaço de entrada \(\mathcal{X} \subset \mathbb{R}^p\) em regiões ortogonais disjuntas \(R_1, R_2, \dots, R_M\).</p>
+
+        <p>A cada nó de decisão, o algoritmo seleciona o par atributo-ponto de corte \((j, s)\) que maximiza a redução de impureza (ou variância), dividindo o espaço no meio-espaço esquerdo \(R_1(j, s) = \{\mathbf{x} | x_j \le s\}\) e direito \(R_2(j, s) = \{\mathbf{x} | x_j > s\}\).</p>
+
+        <h3>3.2 Métricas de Impureza: Gini vs Entropia vs MSE</h3>
+
+        <h4>1. Impureza de Gini (Gini Impurity - Classificação)</h4>
+        <p>Mede a probabilidade de um elemento selecionado aleatoriamente ser rotulado incorretamente se for classificado de acordo com a distribuição das classes no nó \(D\):</p>
+
+        \[ 	ext{Gini}(D) = 1 - \sum_{k=1}^{K} p_k^2 \]
+
+        <p>Onde \(p_k\) é a proporção de observações pertencentes à classe \(k\) no nó \(D\). Quando o nó é 100% puro (todas as observações pertencem a uma única classe), \(	ext{Gini}(D) = 0\).</p>
+
+        <h4>2. Entropia e Ganho de Informação (Information Gain - Classificação)</h4>
+        <p>Baseada na Teoria da Informação de Shannon, a <strong>Entropia</strong> mede a desordem ou incerteza no nó \(D\):</p>
+
+        \[ H(D) = -\sum_{k=1}^{K} p_k \log_2(p_k) \]
+
+        <p>O <strong>Ganho de Informação (Information Gain)</strong> ao dividir o nó \(D\) pelo atributo \(A\) é a diferença entre a entropia pai e a média ponderada das entropias dos filhos:</p>
+
+        \[ IG(D, A) = H(D) - \sum_{v \in 	ext{Filhos}} rac{|D_v|}{|D|} H(D_v) \]
+
+        <h4>3. Critério para Árvores de Regressão (Redução de Variância / MSE)</h4>
+        <p>Em problemas de regressão onde a variável resposta é contínua, o critério de partição é a minimização da variância residual (MSE):</p>
+
+        \[ 	ext{MSE}(D) = rac{1}{|D|} \sum_{i \in D} \left( y^{(i)} - ar{y}_D ight)^2 \]
+
+        <p>Onde \(ar{y}_D = rac{1}{|D|} \sum_{i \in D} y^{(i)}\) é o valor médio predito nas folhas do nó \(D\).</p>
+
+        <h3>3.3 Poda (Pruning) e Hiperparâmetros de Regularização</h3>
+        <p>Sem restrições, uma Árvore de Decisão continuará crescendo até que cada nó folha contenha apenas 1 amostra, resultando em <strong>overfitting severo</strong> (memorização de ruído).</p>
+
+        <p>A técnica principal para evitar o sobreajuste é a <strong>Poda por Complexidade de Custo (Cost-Complexity Pruning)</strong>, que minimiza a seguinte função de custo penalizada:</p>
+
+        \[ R_lpha(T) = R(T) + lpha |T| \]
+
+        <p>Onde \(R(T)\) é a impureza total das folhas da árvore \(T\), \(|T|\) é o número de nós folha terminais, e \(lpha \ge 0\) é o parâmetro de penalidade por complexidade. Ao aumentar \(lpha\), nós ramificados redundantes são podados.</p>
+
+        <div class="callout callout-info" style="margin: 20px 0;">
+          <strong>Principais Hiperparâmetros de Controle na Scikit-Learn:</strong>
+          <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px; line-height: 1.6;">
+            <li><code>max_depth</code>: Limita a profundidade máxima da árvore. Previne ramificações excessivamente profundas.</li>
+            <li><code>min_samples_split</code>: Número mínimo de amostras necessárias para autorizar a divisão de um nó interno.</li>
+            <li><code>min_samples_leaf</code>: Número mínimo de amostras que uma folha terminal deve conter.</li>
+            <li><code>ccp_alpha</code>: Hiperparâmetro da poda Cost-Complexity (\(lpha\)). Selecionado via validação cruzada.</li>
+          </ul>
+        </div>
+
+        <h3>3.4 Quando Usar vs Quando NÃO Usar (Trade-offs de Produção)</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0;">
+          <div style="background: #0f172a; padding: 20px; border-radius: 8px; border: 1px solid #1e293b;">
+            <h4 style="color: #10b981; margin-top: 0;">✓ Quando Usar (Vantagens)</h4>
+            <ul style="font-size: 0.92em; line-height: 1.6; padding-left: 18px; margin-bottom: 0;">
+              <li><strong>Sem Necessidade de Escalamento:</strong> É invariante a transformações monotônicas nos atributos. Não requer z-score nem MinMax scaling.</li>
+              <li><strong>Lida Nativa com Tipos Mistos:</strong> Aceita variáveis numéricas e categóricas sem necessidade prévia de codificação complexa.</li>
+              <li><strong>Extração de Regras Comerciais:</strong> Permite exportar a estrutura da árvore em formato `if-then-else` para sistemas legados de motor de regras.</li>
+              <li><strong>Captura Interações Não-Lineares:</strong> Descobre automaticamente interações complexas entre atributos sem especificação prévia.</li>
+            </ul>
+          </div>
+          <div style="background: #0f172a; padding: 20px; border-radius: 8px; border: 1px solid #1e293b;">
+            <h4 style="color: #ef4444; margin-top: 0;">✕ Quando NÃO Usar (Desvantagens)</h4>
+            <ul style="font-size: 0.92em; line-height: 1.6; padding-left: 18px; margin-bottom: 0;">
+              <li><strong>Alta Instabilidade (Alta Variância):</strong> Pequenas alterações no dataset de treino podem alterar completamente a estrutura da árvore.</li>
+              <li><strong>Divisões Apenas Ortogonais:</strong> Dificuldade para aproximar fronteiras diagonais ou funções suaves, criando passos escada.</li>
+              <li><strong>Incapacidade de Extrapolação:</strong> Em regressão, uma árvore nunca pode prever valores fora do intervalo observado no treino.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>3.5 Arquitetura de Produção na AWS: Motor de Subscrição de Apólices com CART</h3>
+        <p>A arquitetura abaixo detalha um pipeline de mesa de subscrição de seguros (Underwriting). O processamento distribuído ocorre em <strong>AWS EMR Serverless</strong>, enviando dados ao <strong>SageMaker Feature Store</strong>. O <strong>SageMaker Training Job</strong> executa o tuning do hiperparâmetro `ccp_alpha`, salvando a árvore no <strong>SageMaker Model Registry</strong> antes do deploy para inferência batch e em tempo real no <strong>Amazon S3 Iceberg</strong>.</p>
+
+        <!-- DIAGRAMA DRAW.IO: ÁRVORE DE DECISÃO -->
+        <div class="drawio-wrap" style="margin-top: 24px;">
+          <div class="drawio-label"><span class="dot"></span> Arquitetura Enterprise: Motor de Subscrição de Seguros com Árvores CART</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;<mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;><root><mxCell id=\&quot;tree_0\&quot;/><mxCell id=\&quot;tree_1\&quot; parent=\&quot;tree_0\&quot;/><mxCell id=\&quot;tree_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;tree_1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_title\&quot; value=\&quot;PIPELINE DE SUBSCRI\u00c7\u00c3O AUTOM\u00c1TICA \u2014 EMR \u00b7 SAGEMAKER MODEL REGISTRY \u00b7 DYNAMODB\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;tree_1\&quot;><mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_emr\&quot; value=\&quot;Amazon EMR\\nSpark Preprocessing\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#eab308;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;tree_1\&quot;><mxGeometry x=\&quot;50\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_fs\&quot; value=\&quot;SageMaker\\nFeature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;tree_1\&quot;><mxGeometry x=\&quot;220\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_sm\&quot; value=\&quot;SageMaker\\nCART Training Job\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;tree_1\&quot;><mxGeometry x=\&quot;420\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_ddb\&quot; value=\&quot;Amazon DynamoDB\\nPolicy Decisions\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#3b82f6;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;tree_1\&quot;><mxGeometry x=\&quot;640\&quot; y=\&quot;70\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_s3\&quot; value=\&quot;Amazon S3 Iceberg\\nModel Artifacts\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;tree_1\&quot;><mxGeometry x=\&quot;640\&quot; y=\&quot;190\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_e1\&quot; value=\&quot;Extract Features\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;tree_emr\&quot; target=\&quot;tree_fs\&quot; parent=\&quot;tree_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_e2\&quot; value=\&quot;Train & Prune\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;tree_fs\&quot; target=\&quot;tree_sm\&quot; parent=\&quot;tree_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_e3\&quot; value=\&quot;Serve Rules\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;tree_sm\&quot; target=\&quot;tree_ddb\&quot; parent=\&quot;tree_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell><mxCell id=\&quot;tree_e4\&quot; value=\&quot;Save Tree Rules\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;dashed=1;dashPattern=8 4;\&quot; edge=\&quot;1\&quot; source=\&quot;tree_sm\&quot; target=\&quot;tree_s3\&quot; parent=\&quot;tree_1\&quot;><mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/></mxCell></root></mxGraphModel>&quot;}'></div>
+        </div>
+
+        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+          <strong style="color: var(--accent);">Detalhamento da Solução:</strong>
+          <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+            <li><strong>Engenharia de Dados em Escala:</strong> O AWS EMR Serverless agrega o histórico de apólices e sinistros, salvando no Feature Store.</li>
+            <li><strong>Treinamento e Poda Cost-Complexity:</strong> O SageMaker avalia a malha de hiperparâmetros (`ccp_alpha`, `max_depth`), encontrando a menor árvore que maximiza a acurácia sem sobreajuste.</li>
+            <li><strong>Extração e Auditoria:</strong> As regras de decisão extraídas em formato texto/JSON são salvas no DynamoDB e no S3 Iceberg para conformidade em auditorias regulatórias.</li>
+          </ul>
+        </div>
+
+        <h3>3.6 Código Executável em Python: Treinamento e Extração de Regras CART</h3>
+        <p>O script Python abaixo realiza o treinamento de uma Árvore de Decisão CART (`DecisionTreeClassifier`), aplicando poda por complexidade de custo, calculando a importância dos atributos e exportando a estrutura de regras em formato legível.</p>
+
+        <div class="code-block-container" style="margin: 20px 0;">
+          <pre style="background: #060d1a; color: #e2e8f0; padding: 20px; border-radius: 8px; border: 1px solid #1e293b; overflow-x: auto; font-family: 'DM Mono', monospace; font-size: 0.88em; line-height: 1.5;"><code>import numpy as np
+import pandas as pd
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+import joblib
+
+# 1. Semente Aleatória Reprodutível
+SEED = 42
+np.random.seed(SEED)
+
+# 2. Dataset Sintético de Aprovacao de Subscrição de Seguro
+X_raw, y_raw = make_classification(
+    n_samples=1500,
+    n_features=6,
+    n_informative=4,
+    n_clusters_per_class=2,
+    random_state=SEED
+)
+
+features = [
+    "renda_mensal", "valor_apolice", "anos_emprego",
+    "divida_existente", "historico_sinistros", "valor_garantia"
+]
+
+df_underwriting = pd.DataFrame(X_raw, columns=features)
+df_underwriting["status_aprovacao"] = y_raw
+
+# 3. Divisão Treino e Teste
+X_train, X_test, y_train, y_test = train_test_split(
+    df_underwriting[features], df_underwriting["status_aprovacao"], test_size=0.20, random_state=SEED
+)
+
+# 4. Treinamento com Poda Cost-Complexity (ccp_alpha) e Limite de Profundidade
+dt_model = DecisionTreeClassifier(
+    criterion="gini",
+    max_depth=5,
+    min_samples_split=20,
+    min_samples_leaf=10,
+    ccp_alpha=0.005,
+    random_state=SEED
+)
+dt_model.fit(X_train, y_train)
+
+# 5. Avaliação do Modelo no Conjunto de Teste
+y_pred = dt_model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+prec = precision_score(y_test, y_pred)
+rec = recall_score(y_test, y_pred)
+
+print("--- RESULTADOS ÁRVORE DE DECISÃO (CART) ---")
+print(f"Acurácia no Teste:  {acc:.4f}")
+print(f"F1-Score:          {f1:.4f}")
+print(f"Precisão:          {prec:.4f}")
+print(f"Revocação (Recall): {rec:.4f}")
+
+# 6. Extração de Regras Textuais para Auditoria
+tree_rules = export_text(dt_model, feature_names=features)
+print("\n--- ESTRUTURA DE REGRAS EXTRAÍDAS DA ÁRVORE ---")
+print("\n".join(tree_rules.split("\n")[:10]))
+
+# 7. Importância dos Atributos (Feature Importances)
+importances = pd.Series(dt_model.feature_importances_, index=features).sort_values(ascending=False)
+print("\nImportância dos Atributos:")
+print(importances)
+
+# 8. Persistência do Modelo para MLOps
+artifact_dt = {
+    "model": dt_model,
+    "feature_names": features,
+    "feature_importances": importances.to_dict(),
+    "rules_text": tree_rules
+}
+joblib.dump(artifact_dt, "decision_tree_underwriting.joblib")
+print("\nModelo de Árvore de Decisão salvo com sucesso em 'decision_tree_underwriting.joblib'.")</code></pre>
+        </div>
+
+        <h3>3.7 Casos de Uso Enterprise e Referências Acadêmicas</h3>
+        <p><strong>Casos Práticos em Produção:</strong> Motores de regras de autorização de transações financeiras, triagem de diagnósticos médicos e baseline para ensembles avançados (Random Forest, XGBoost e LightGBM).</p>
+
+        <p><strong>Bibliografia Acadêmica:</strong></p>
+        <ul style="font-size: 0.93em; line-height: 1.6;">
+          <li>BREIMAN, Leo; FRIEDMAN, Jerome H.; OLSHEN, Richard A.; STONE, Charles J. <em>Classification and Regression Trees</em>. Wadsworth &amp; Brooks/Cole, 1984.</li>
+          <li>QUINLAN, J. Ross. <em>C4.5: Programs for Machine Learning</em>. Morgan Kaufmann Publishers, 1993.</li>
+        </ul>
+      </section>
+
+    </main>
+
+    <!-- Footer Page Controls -->
+    <div style="margin: 40px 0 20px 0; text-align: center;">
+      <button id="scrollTop" onclick="scrollToTop()" class="btn" style="background: var(--navy); border: 1px solid #1e293b; color: #94a3b8; padding: 10px 20px; border-radius: 8px; cursor: pointer;">↑ Voltar ao Topo</button>
+    </div>
+  </div>
+
+  <!-- Interactive Client-side Script -->
+  <script>
+    function toggleCategory(catId, element) {
+      const categoryContent = document.getElementById(catId);
+      if (categoryContent) {
+        categoryContent.classList.toggle('expanded');
+        categoryContent.classList.toggle('open');
+        if (element) {
+          element.classList.toggle('expanded');
+          element.classList.toggle('active');
+          const arrow = element.querySelector('.arrow');
+          if (arrow) {
+            const isOpen = categoryContent.classList.contains('expanded') || categoryContent.classList.contains('open');
+            arrow.innerHTML = isOpen ? '▼' : '▶';
+          }
+        }
+      }
+    }
+    window.toggleCategory = toggleCategory;
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.scrollToTop = scrollToTop;
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths for pages/ia-algoritmos/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>

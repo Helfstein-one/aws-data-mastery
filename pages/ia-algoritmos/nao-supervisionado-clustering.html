@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Aprendizado Não-Supervisionado & Clustering: k-Means, DBSCAN e Principal Component Analysis (PCA). Intuição matemática em KaTeX, trade-offs de produção, arquiteturas AWS (SageMaker, EMR, Feature Store, S3 Iceberg), código Python executável e bibliografia acadêmica."/>
+  <title>Algoritmos Não-Supervisionados & Clustering | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer.min.js" type="text/javascript"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative path to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Algoritmos Não-Supervisionados & Clustering | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Machine Learning: k-Means, DBSCAN e PCA com intuição matemática, arquiteturas de produção AWS e scikit-learn."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Inteligência Artificial & Engenharia de ML</div>
+      <h1>Algoritmos <em>Não-Supervisionados</em> &amp; Clustering</h1>
+      <p class="hero-d">Descobrindo estruturas ocultas em dados não rotulados: Otimização de centroides no k-Means (WCSS, Silhouette, k-means++), agrupamento por densidade espacial no DBSCAN (MinPts, \(\epsilon\), ruído), e redução de dimensionalidade por PCA / SVD (Autovalores, Autovetores e Variância Explicada).</p>
+      <div class="pills">
+        <span class="pill">k-Means & k-means++</span>
+        <span class="pill">WCSS & Silhouette</span>
+        <span class="pill">DBSCAN Spatial Density</span>
+        <span class="pill">Detecção de Ruído</span>
+        <span class="pill">PCA & SVD</span>
+        <span class="pill">Matriz de Covariância</span>
+        <span class="pill">AWS SageMaker & EMR</span>
+        <span class="pill">Python & scikit-learn</span>
+        <span class="pill">Bibliografia Acadêmica</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- SEÇÃO 01: K-MEANS CLUSTERING -->
+      <section class="section" id="kmeans-clustering">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ok)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Agrupamento Baseado em Centroides</div>
+            <h2>k-Means Clustering: Otimização, WCSS, Silhouette &amp; k-means++</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O <strong>k-Means</strong> é o algoritmo de agrupamento particional mais utilizado na indústria de dados. Seu objetivo é particionar um conjunto de \(N\) observações em \(K\) clusters distintos, onde cada observação pertence ao cluster cujo centroide (média geométrica) possui a menor distância euclidiana <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[MacQueen, 1967; Lloyd, 1982]</span>.
+        </p>
+
+        <!-- Intuição Matemática e Fórmulas -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">1.1 Intuição Matemática &amp; Formulação Formal</h3>
+        <p>
+          O algoritmo de Lloyd minimiza iterativamente a soma dos quadrados das distâncias intra-cluster (conhecida como <strong>Within-Cluster Sum of Squares - WCSS</strong> ou <strong>Inércia</strong> \(J\)):
+        </p>
+        \[J = \sum_{k=1}^{K} \sum_{\mathbf{x}_i \in C_k} \| \mathbf{x}_i - \boldsymbol{\mu}_k \|^2\]
+        <p>
+          onde \(C_k\) representa o conjunto de pontos atribuídos ao cluster \(k\), e \(\boldsymbol{\mu}_k\) é o centroide (vetor médio) do cluster:
+        </p>
+        \[\boldsymbol{\mu}_k = \frac{1}{|C_k|} \sum_{\mathbf{x}_i \in C_k} \mathbf{x}_i\]
+
+        <div class="concept-grid" style="margin-top: 24px;">
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>Algoritmo de Lloyd (Passo a Passo)</h4>
+            <p><strong>1. Expectação (Atribuição):</strong> Associa cada ponto ao centroide mais próximo:</p>
+            \[C_k^{(t)} = \{ \mathbf{x}_i : \| \mathbf{x}_i - \boldsymbol{\mu}_k^{(t)} \|^2 \le \| \mathbf{x}_i - \boldsymbol{\mu}_j^{(t)} \|^2 \quad \forall j \}\]
+            <p><strong>2. Maximização (Atualização):</strong> Recalcula o centroide como a média dos pontos no cluster:</p>
+            \[\boldsymbol{\mu}_k^{(t+1)} = \frac{1}{|C_k^{(t)}|} \sum_{\mathbf{x}_i \in C_k^{(t)}} \mathbf{x}_i\]
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>Inicialização k-means++</h4>
+            <p>Evita convergência para mínimos locais ruins inicializando centroides espaçados proporcionalmente à distância ao quadrado <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Arthur &amp; Vassilvitskii, 2007]</span>:</p>
+            \[P(\mathbf{x}_i) = \frac{D(\mathbf{x}_i)^2}{\sum_{j=1}^{N} D(\mathbf{x}_j)^2}\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Garante um limite logarítmico de erro \(O(\log K)\) em relação ao ótimo global.</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--aws);">
+            <h4>Métrica Silhouette Score</h4>
+            <p>Mede a coesão intra-cluster \(a(i)\) e separação inter-cluster \(b(i)\) para o ponto \(i\):</p>
+            \[s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}, \quad s(i) \in [-1, 1]\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Valores próximos de +1.0 indicam clusters perfeitamente bem separados.</p>
+          </div>
+        </div>
+
+        <div class="abox info" style="margin-top: 24px; border-left-color: var(--ok);">
+          <div class="abox-hdr" style="background: var(--ok); color: #0f172a;">Determinação do Número Ótimo de Clusters: Método do Cotovelo (Elbow Method) &amp; Coeficiente de Silhouette</div>
+          <div class="abox-body">
+            <p style="margin-bottom: 12px;">
+              Como o WCSS diminui monotonicamente à medida que \(K\) aumenta (atingindo 0 quando \(K = N\)), o <strong>Método do Cotovelo</strong> busca o ponto de inflexão na curva de inércia em função de \(K\), onde a taxa de variação da inércia \(\frac{\Delta J}{\Delta K}\) se estabiliza.
+            </p>
+            <p style="margin-bottom: 0;">
+              Em complemento, o <strong>Silhouette Score médio</strong> avalia a qualidade do agrupamento sem necessitar de rótulos externos. O valor ótimo de \(K\) maximiza o score de Silhouette e atende aos requisitos operacionais do negócio.
+            </p>
+          </div>
+        </div>
+
+        <!-- When to Use vs When NOT to Use -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.2 Trade-offs de Produção: Quando Usar vs. Quando NÃO Usar</h3>
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="card" style="border-top: 4px solid var(--ok);">
+            <div class="card-lbl" style="color: var(--ok);">Quando USAR o k-Means</div>
+            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
+              <li><strong>Clusters Isotrópicos e Convexos:</strong> Dados cujos agrupamentos possuem formato aproximadamente esférico e densidades homogêneas.</li>
+              <li><strong>Baixa a Média Dimensionalidade:</strong> Atributos numéricos contínuos previamente escalonados (\(d \le 50\)).</li>
+              <li><strong>Necessidade de Inferência em Tempo Real:</strong> Uma vez treinados os centroides, a inferência para novos pontos requer apenas o cálculo da distância euclidiana para \(K\) pontos (\(O(K \cdot d)\)).</li>
+              <li><strong>Grandes Volumes de Dados:</strong> Altamente escalável via algoritmo MiniBatchKMeans ou PySpark MLLib em clusters EMR.</li>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--accent);">
+            <div class="card-lbl" style="color: var(--accent);">Quando NÃO USAR o k-Means</div>
+            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
+              <li><strong>Geometrias Não-Convexas:</strong> Clusters em formatos de luas entrelaçadas, anéis concêntricos ou espirais (o k-Means falha ao assumir limites lineares).</li>
+              <li><strong>Presença Significativa de Ruído / Outliers:</strong> Como os centroides são calculados pela média, um único outlier extremo desloca fortemente o centroide.</li>
+              <li><strong>Densidades Desiguais:</strong> Clusters com variâncias muito distintas tendem a ser divididos incorretamente pelo algoritmo.</li>
+              <li><strong>Maltdição da Dimensionalidade:</strong> Em altíssima dimensão (\(d > 500\)), a distância euclidiana perde a capacidade discriminativa (todas as distâncias tornam-se similares).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Draw.io Diagram -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.3 Arquitetura de Produção AWS para k-Means</h3>
+        <p>O diagrama técnico a seguir ilustra um pipeline enterprise de segmentação de clientes batch e real-time integrando Amazon S3 Iceberg, EMR Serverless, SageMaker Feature Store e SageMaker Training:</p>
+        
+        <div class="drawio-wrap" style="margin-top: 24px;">
+          <div class="drawio-label"><span class="dot"></span>k-Means Clustering — Pipeline Enterprise na AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;km_0\&quot;/&gt;&lt;mxCell id=\&quot;km_1\&quot; parent=\&quot;km_0\&quot;/&gt;&lt;mxCell id=\&quot;km_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_title\&quot; value=\&quot;K-MEANS CLUSTERING — PIPELINE ENTERPRISE NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_s3\&quot; value=\&quot;S3 Iceberg\nData Lake\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_emr\&quot; value=\&quot;EMR Serverless\n(PySpark Scale)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_fs\&quot; value=\&quot;SageMaker\nFeature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;420\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_sm\&quot; value=\&quot;SageMaker\nk-Means Job\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;620\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_out\&quot; value=\&quot;Centroid Store /\nReal-Time Endpoint\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#1e293b;strokeColor=#FF6B00;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;800\&quot; y=\&quot;133\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_e1\&quot; value=\&quot;Parquet/Iceberg\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;km_s3\&quot; target=\&quot;km_emr\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_e2\&quot; value=\&quot;Normalized Features\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;km_emr\&quot; target=\&quot;km_fs\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_e3\&quot; value=\&quot;Online/Offline Vectors\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;km_fs\&quot; target=\&quot;km_sm\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_e4\&quot; value=\&quot;Cluster Labels\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;km_sm\&quot; target=\&quot;km_out\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+        </div>
+        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+          <strong style="color: var(--accent);">Fluxo Enterprise AWS:</strong> O EMR Serverless extrai transações do S3 Iceberg e aplica normalização Z-score. Os vetores padronizados alimentam o SageMaker Feature Store. O algoritmo SageMaker k-Means otimiza os centroides via k-means++ e publica os rótulos de cluster de volta ao Lakehouse e a um Endpoint de inferência de baixíssima latência.
+        </div>
+
+        <!-- Executable Python Code -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.4 Código Python Executável (scikit-learn &amp; MLOps Best Practices)</h3>
+        <p>Abaixo apresentamos uma implementação completa com dados sintéticos (`make_blobs`), escalonamento de variáveis, sweep de hiperparâmetros (Elbow &amp; Silhouette) e métricas formais:</p>
+
+        <pre style="background:#0b0f19; color:#f8fafc; padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.88rem; overflow-x: auto; border: 1px solid #1e293b;"><span style="color:#7c3aed;">import</span> numpy <span style="color:#7c3aed;">as</span> np
+<span style="color:#7c3aed;">from</span> sklearn.datasets <span style="color:#7c3aed;">import</span> make_blobs
+<span style="color:#7c3aed;">from</span> sklearn.preprocessing <span style="color:#7c3aed;">import</span> StandardScaler
+<span style="color:#7c3aed;">from</span> sklearn.cluster <span style="color:#7c3aed;">import</span> KMeans
+<span style="color:#7c3aed;">from</span> sklearn.metrics <span style="color:#7c3aed;">import</span> silhouette_score, calinski_harabasz_score, davies_bouldin_score
+
+<span style="color:#64748b;"># 1. Gerar Dataset Sintético com 4 clusters bem definidos em 5 dimensões</span>
+X_raw, y_true = make_blobs(
+    n_samples=1200,
+    n_features=5,
+    centers=4,
+    cluster_std=1.2,
+    random_state=42
+)
+
+<span style="color:#64748b;"># 2. MLOps Best Practice: Padronização Z-score (Essencial para Distância Euclidiana)</span>
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_raw)
+
+<span style="color:#64748b;"># 3. Avaliação de Hiperparâmetros (Sweep K=2 até K=8)</span>
+wcss = []
+silhouette_coefficients = []
+k_range = range(2, 9)
+
+<span style="color:#7c3aed;">for</span> k <span style="color:#7c3aed;">in</span> k_range:
+    kmeans_eval = KMeans(n_clusters=k, init=<span style="color:#16a34a;">'k-means++'</span>, n_init=10, max_iter=300, random_state=42)
+    kmeans_eval.fit(X_scaled)
+    wcss.append(kmeans_eval.inertia_)
+    score = silhouette_score(X_scaled, kmeans_eval.labels_)
+    silhouette_coefficients.append(score)
+
+<span style="color:#64748b;"># 4. Treinamento do Modelo Definitivo com K=4 (k-means++)</span>
+optimal_k = 4
+kmeans_final = KMeans(
+    n_clusters=optimal_k,
+    init=<span style="color:#16a34a;">'k-means++'</span>,
+    n_init=10,
+    max_iter=300,
+    random_state=42
+)
+cluster_labels = kmeans_final.fit_predict(X_scaled)
+centroids = kmeans_final.cluster_centers_
+
+<span style="color:#64748b;"># 5. Avaliação Multicritério do Agrupamento</span>
+sil_avg = silhouette_score(X_scaled, cluster_labels)
+ch_score = calinski_harabasz_score(X_scaled, cluster_labels)
+db_score = davies_bouldin_score(X_scaled, cluster_labels)
+
+print(f<span style="color:#16a34a;">"=== K-MEANS CLUSTERING METRICS (K={optimal_k}) ==="</span>)
+print(f<span style="color:#16a34a;">"Inertia (WCSS): {kmeans_final.inertia_:.2f}"</span>)
+print(f<span style="color:#16a34a;">"Silhouette Score: {sil_avg:.4f} (Ideal: próximo de +1.0)"</span>)
+print(f<span style="color:#16a34a;">"Calinski-Harabasz Index: {ch_score:.2f} (Ideal: maior valor)"</span>)
+print(f<span style="color:#16a34a;">"Davies-Bouldin Index: {db_score:.4f} (Ideal: menor valor)"</span>)
+print(f<span style="color:#16a34a;">"Centroides (5D Padronizados):\n{centroids.round(3)}"</span>)</pre>
+      </section>
+
+      <!-- SEÇÃO 02: DBSCAN -->
+      <section class="section" id="dbscan-clustering">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Agrupamento Espacial Baseado em Densidade</div>
+            <h2>DBSCAN: MinPts, \(\epsilon\)-Vizinhança &amp; Detecção Nativa de Ruído</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          O <strong>DBSCAN</strong> (Density-Based Spatial Clustering of Applications with Noise) conecta regiões contínuas de alta densidade de pontos separadas por regiões de baixa densidade. Ao contrário do k-Means, o DBSCAN não exige a definição prévia do número de clusters \(K\) e é capaz de identificar clusters de formatos geométricos arbitrários, isolando nativamente ruídos e outliers <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Ester et al., 1996]</span>.
+        </p>
+
+        <!-- Intuição Matemática e Fórmulas -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">2.1 Intuição Matemática &amp; Classificação de Pontos</h3>
+        <p>
+          O algoritmo é governado por dois hiperparâmetros fundamentais: a distância máxima \(\epsilon\) (Epsilon) e o número mínimo de pontos \(\text{MinPts}\).
+        </p>
+
+        <div class="concept-grid" style="margin-top: 24px;">
+          <div class="concept-card" style="border-top: 4px solid var(--aws);">
+            <h4>\(\epsilon\)-Vizinhança de um Ponto</h4>
+            <p>O conjunto de pontos dentro do raio \(\epsilon\) em relação a \(p\):</p>
+            \[N_\epsilon(p) = \{ q \in D \mid \text{dist}(p, q) \le \epsilon \}\]
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>Classificação Estrutural de Pontos</h4>
+            <p><strong>1. Ponto Core (Núcleo):</strong> \(|N_\epsilon(p)| \ge \text{MinPts}\)</p>
+            <p><strong>2. Ponto Borda (Border):</strong> \(|N_\epsilon(p)| < \text{MinPts}\), mas pertence à vizinhança de um Ponto Core.</p>
+            <p><strong>3. Ruído / Outlier:</strong> Não é Core nem Borda (\(\text{Rótulo} = -1\)).</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>Alcançabilidade &amp; Conectividade</h4>
+            <p><strong>Diretamente Atingível por Densidade:</strong> \(p \in N_\epsilon(q)\) com \(q\) sendo um Ponto Core.</p>
+            <p><strong>Conectado por Densidade:</strong> Existe uma cadeia de pontos conectando \(p\) e \(q\) a um ancestral Core comum \(o\).</p>
+          </div>
+        </div>
+
+        <div class="abox info" style="margin-top: 24px; border-left-color: var(--aws);">
+          <div class="abox-hdr" style="background: var(--aws); color: #0f172a;">Heurística de Calibração: O Gráfico k-Distance para Seleção do Epsilon (\(\epsilon\))</div>
+          <div class="abox-body">
+            <p style="margin-bottom: 8px;">
+              Para calibrar \(\epsilon\), calcula-se a distância de cada observação para seu \(k\)-ésimo vizinho mais próximo, onde \(k = \text{MinPts} - 1\). Ordenando essas distâncias em ordem crescente e plotando a curva resultante, o ponto de inflexão ("joelho" ou cotovelo) indica o valor ótimo de \(\epsilon\).
+            </p>
+          </div>
+        </div>
+
+        <!-- When to Use vs When NOT to Use -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.2 Trade-offs de Produção: Quando Usar vs. Quando NÃO Usar</h3>
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="card" style="border-top: 4px solid var(--ok);">
+            <div class="card-lbl" style="color: var(--ok);">Quando USAR o DBSCAN</div>
+            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
+              <li><strong>Formatos Geométricos Complexos:</strong> Clusters não-esféricos, em forma de U, espirais, filamentos ou superfícies não-lineares.</li>
+              <li><strong>Detecção Fina de Outliers / Fraudes:</strong> Identificação automática de dados ruidosos sem contaminar o agrupamento dos dados válidos.</li>
+              <li><strong>Número de Clusters Desconhecido:</strong> Quando não há conhecimento a priori da quantidade \(K\) de grupos na base.</li>
+              <li><strong>Dados Espaciais e Geoespaciais:</strong> Agrupamento de coordenadas GPS (Latitude, Longitude) via métrica Haversine.</li>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--accent);">
+            <div class="card-lbl" style="color: var(--accent);">Quando NÃO USAR o DBSCAN</div>
+            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
+              <li><strong>Clusters com Densidades Variadas:</strong> Um único par (\(\epsilon\), \text{MinPts}) não consegue capturar simultaneamente regiões muito densas e regiões esparsas (para isso, utilize <strong>HDBSCAN</strong>).</li>
+              <li><strong>Altíssima Dimensionalidade:</strong> Devido à maldição da dimensionalidade, em espaços de alta dimensão o conceito de vizinhança esférica se esvazia.</li>
+              <li><strong>Alta Complexidade de Inferência:</strong> Atribuir novos pontos em tempo real exige comparar contra toda a base treinada (\(O(N)\) sem árvore espacial).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Draw.io Diagram -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.3 Arquitetura de Produção AWS para DBSCAN</h3>
+        <p>O diagrama abaixo demonstra um fluxo de detecção de anomalias e agrupamento de ruídos em tempo real utilizando Amazon EMR Spark Streaming, SageMaker Feature Store e S3 Iceberg:</p>
+        
+        <div class="drawio-wrap" style="margin-top: 24px;">
+          <div class="drawio-label"><span class="dot"></span>DBSCAN Clustering — Fluxo de Detecção de Anomalias na AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;db_0\&quot;/&gt;&lt;mxCell id=\&quot;db_1\&quot; parent=\&quot;db_0\&quot;/&gt;&lt;mxCell id=\&quot;db_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_title\&quot; value=\&quot;DBSCAN CLUSTERING — FLUXO DE DETECÇÃO DE ANOMALIAS E RUÍDO NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_emr\&quot; value=\&quot;EMR Spark\nStreaming\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_fs\&quot; value=\&quot;SageMaker\nFeature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;240\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_sm\&quot; value=\&quot;SageMaker\nDBSCAN Engine\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;440\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_s3\&quot; value=\&quot;S3 Iceberg\nClean Clusters\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;680\&quot; y=\&quot;70\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_noise\&quot; value=\&quot;Outliers / Noise\n(Label = -1)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#451a03;strokeColor=#ea580c;fontColor=#ffedd5;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;650\&quot; y=\&quot;200\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_e1\&quot; value=\&quot;Spatial Features\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;db_emr\&quot; target=\&quot;db_fs\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_e2\&quot; value=\&quot;Eps/MinPts Scaling\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;db_fs\&quot; target=\&quot;db_sm\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_e3\&quot; value=\&quot;Core &amp; Border Points\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;db_sm\&quot; target=\&quot;db_s3\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_e4\&quot; value=\&quot;Density Noise\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;db_sm\&quot; target=\&quot;db_noise\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+        </div>
+        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+          <strong style="color: var(--accent);">Fluxo de Detecção de Ruído:</strong> Transações espaciais processadas no Spark Streaming alimentam o SageMaker DBSCAN Engine. O algoritmo divide a carga entre dados densos válidos (persistidos na camada Gold S3 Iceberg) e pontos isolados com rótulo \(-1\) (encaminhados para filas de inspeção de anomalias/fraudes).
+        </div>
+
+        <!-- Executable Python Code -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.4 Código Python Executável (scikit-learn com `make_moons`)</h3>
+        <p>Abaixo demonstramos a aplicação do DBSCAN em dados não-convexos com inclusão deliberada de ruído sintético:</p>
+
+        <pre style="background:#0b0f19; color:#f8fafc; padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.88rem; overflow-x: auto; border: 1px solid #1e293b;"><span style="color:#7c3aed;">import</span> numpy <span style="color:#7c3aed;">as</span> np
+<span style="color:#7c3aed;">from</span> sklearn.datasets <span style="color:#7c3aed;">import</span> make_moons
+<span style="color:#7c3aed;">from</span> sklearn.preprocessing <span style="color:#7c3aed;">import</span> StandardScaler
+<span style="color:#7c3aed;">from</span> sklearn.cluster <span style="color:#7c3aed;">import</span> DBSCAN
+<span style="color:#7c3aed;">from</span> sklearn.neighbors <span style="color:#7c3aed;">import</span> NearestNeighbors
+<span style="color:#7c3aed;">from</span> sklearn.metrics <span style="color:#7c3aed;">import</span> silhouette_score
+
+<span style="color:#64748b;"># 1. Gerar Dataset de Luas Entrelaçadas + Ruído Uniforme</span>
+X_moons, _ = make_moons(n_samples=850, noise=0.08, random_state=42)
+
+np.random.seed(42)
+noise_points = np.random.uniform(low=-1.5, high=2.5, size=(50, 2))
+X_raw = np.vstack([X_moons, noise_points])
+
+<span style="color:#64748b;"># 2. MLOps Best Practice: Escalonamento Z-score</span>
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_raw)
+
+<span style="color:#64748b;"># 3. Heurística k-distance para estimar Epsilon (k = MinPts - 1)</span>
+min_pts = 5
+neighbors = NearestNeighbors(n_neighbors=min_pts)
+neighbors_fit = neighbors.fit(X_scaled)
+distances, indices = neighbors_fit.kneighbors(X_scaled)
+sorted_k_distances = np.sort(distances[:, min_pts - 1])
+
+<span style="color:#64748b;"># 4. Ajuste do Modelo DBSCAN com Epsilon Otimizado</span>
+dbscan = DBSCAN(eps=0.22, min_samples=min_pts, metric=<span style="color:#16a34a;">'euclidean'</span>)
+labels = dbscan.fit_predict(X_scaled)
+
+<span style="color:#64748b;"># 5. Avaliação do Agrupamento e Filtragem de Outliers</span>
+core_samples_mask = np.zeros_like(labels, dtype=bool)
+core_samples_mask[dbscan.core_sample_indices_] = True
+
+n_clusters = len(set(labels)) - (1 <span style="color:#7c3aed;">if</span> -1 <span style="color:#7c3aed;">in</span> labels <span style="color:#7c3aed;">else</span> 0)
+n_noise = list(labels).count(-1)
+
+non_noise_mask = labels != -1
+sil_score = silhouette_score(X_scaled[non_noise_mask], labels[non_noise_mask]) <span style="color:#7c3aed;">if</span> n_clusters > 1 <span style="color:#7c3aed;">else</span> 0.0
+
+print(f<span style="color:#16a34a;">"=== DBSCAN CLUSTERING METRICS ==="</span>)
+print(f<span style="color:#16a34a;">"Clusters Encontrados: {n_clusters}"</span>)
+print(f<span style="color:#16a34a;">"Pontos de Ruído / Outliers (Label = -1): {n_noise} ({n_noise/len(labels):.1%})"</span>)
+print(f<span style="color:#16a34a;">"Pontos Núcleo (Core Points): {np.sum(core_samples_mask)}"</span>)
+print(f<span style="color:#16a34a;">"Silhouette Score (Somente Clusters Válidos): {sil_score:.4f}"</span>)</pre>
+      </section>
+
+      <!-- SEÇÃO 03: PCA -->
+      <section class="section" id="pca-dimensionality-reduction">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--spark)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Redução de Dimensionalidade &amp; Transformação Ortogonal</div>
+            <h2>Principal Component Analysis (PCA): Matriz de Covariância, SVD &amp; Variância Explicada</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A <strong>Análise de Componentes Principais (PCA)</strong> é a técnica não-supervisionada canônica para redução de dimensionalidade linear. O PCA projeta os dados originais em um novo sistema de coordenadas ortogonais de menor dimensão, maximizando a variância retida ou minimizando o erro quadrático médio de reconstrução <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Pearson, 1901; Jolliffe, 2002]</span>.
+        </p>
+
+        <!-- Intuição Matemática e Fórmulas -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">3.1 Intuição Matemática, Matriz de Covariância &amp; SVD</h3>
+        <p>
+          Dada uma matriz de dados \(\mathbf{X} \in \mathbb{R}^{N \times d}\), a primeira etapa consiste na centralização dos dados na média:
+        </p>
+        \[\mathbf{X}_{\text{centered}} = \mathbf{X} - \mathbf{1} \boldsymbol{\mu}^T, \quad \text{onde } \boldsymbol{\mu} = \frac{1}{N}\sum_{i=1}^{N} \mathbf{x}_i\]
+
+        <p style="margin-top: 16px;">
+          Em seguida, calcula-se a <strong>Matriz de Covariância Amostral</strong> \(\mathbf{\Sigma}\):
+        </p>
+        \[\mathbf{\Sigma} = \frac{1}{N-1} \mathbf{X}_{\text{centered}}^T \mathbf{X}_{\text{centered}} \in \mathbb{R}^{d \times d}\]
+
+        <div class="concept-grid" style="margin-top: 24px;">
+          <div class="concept-card" style="border-top: 4px solid var(--spark);">
+            <h4>Equação de Autovalores &amp; Autovetores</h4>
+            <p>Os autovetores \(\mathbf{v}_i\) determinam as direções dos componentes principais e os autovalores \(\lambda_i\) medem a variância:</p>
+            \[\mathbf{\Sigma} \mathbf{v}_i = \lambda_i \mathbf{v}_i, \quad \text{com } \|\mathbf{v}_i\| = 1\]
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--ok);">
+            <h4>Decomposição em Valores Singulares (SVD)</h4>
+            <p>Em vez de \(\mathbf{\Sigma}\), aplica-se SVD diretamente sobre a matriz centralizada <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Golub &amp; Reinsch, 1970]</span>:</p>
+            \[\mathbf{X}_{\text{centered}} = \mathbf{U} \mathbf{S} \mathbf{V}^T\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Onde \(\lambda_i = \frac{\sigma_i^2}{N-1}\), garantindo maior estabilidade numérica.</p>
+          </div>
+          <div class="concept-card" style="border-top: 4px solid var(--aws);">
+            <h4>Razão de Variância Explicada (EVR)</h4>
+            <p>A proporção de variância retida pelo \(i\)-ésimo componente principal é dada por:</p>
+            \[\text{EVR}_i = \frac{\lambda_i}{\sum_{j=1}^{d} \lambda_j}, \quad \text{Variância Acumulada}(k) = \frac{\sum_{i=1}^{k} \lambda_i}{\sum_{j=1}^{d} \lambda_j}\]
+          </div>
+        </div>
+
+        <div class="abox info" style="margin-top: 24px; border-left-color: var(--spark);">
+          <div class="abox-hdr" style="background: var(--spark); color: #ffffff;">Projeção Ortogonal &amp; Reconstrução com Erro Mínimo</div>
+          <div class="abox-body">
+            <p style="margin-bottom: 8px;">
+              Selecionando os \(k\) maiores autovetores \(\mathbf{W}_k = [\mathbf{v}_1, \mathbf{v}_2, \dots, \mathbf{v}_k] \in \mathbb{R}^{d \times k}\), a projeção reduzida é obtida por:
+            </p>
+            \[\mathbf{Z} = \mathbf{X}_{\text{centered}} \mathbf{W}_k \in \mathbb{R}^{N \times k}\]
+            <p style="margin-top: 8px; margin-bottom: 0;">
+              A reconstrução aproximada \(\hat{\mathbf{X}} = \mathbf{Z} \mathbf{W}_k^T + \mathbf{1}\boldsymbol{\mu}^T\) minimiza o Erro Quadrático Médio (MSE) de reconstrução para qualquer subespaço linear de dimensão \(k\).
+            </p>
+          </div>
+        </div>
+
+        <!-- When to Use vs When NOT to Use -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.2 Trade-offs de Produção: Quando Usar vs. Quando NÃO Usar</h3>
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="card" style="border-top: 4px solid var(--ok);">
+            <div class="card-lbl" style="color: var(--ok);">Quando USAR o PCA</div>
+            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
+              <li><strong>Compressão de Embeddings e Altíssima Dimensionalidade:</strong> Redução de vetores de features (\(d > 100\)) antes de aplicar classificadores ou agrupamentos.</li>
+              <li><strong>Eliminação de Multicolinearidade:</strong> Transforma atributos altamente correlacionados em componentes ortogonais (não-correlacionados).</li>
+              <li><strong>Visualização de Dados (2D/3D):</strong> Projeção em 2 ou 3 componentes principais para análise exploratória.</li>
+              <li><strong>Aceleração de Pipelines de ML:</strong> Reduz drasticamente a memória e o tempo de treinamento de modelos subsequentes.</li>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--accent);">
+            <div class="card-lbl" style="color: var(--accent);">Quando NÃO USAR o PCA</div>
+            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
+              <li><strong>Manifolds Não-Lineares:</strong> Se as relações entre os dados forem não-lineares (ex: Swiss Roll), utilize técnicas como t-SNE, UMAP ou Kernel PCA.</li>
+              <li><strong>Necessidade de Interpretabilidade Direta:</strong> Cada componente principal é uma combinação linear de todas as variáveis originais, perdendo o significado direto do domínio.</li>
+              <li><strong>Matrizes Esparsas Gigantes:</strong> A centralização da média remove a esparsidade do dado (para matrizes esparsas como TF-IDF, utilize <strong>TruncatedSVD</strong>).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Draw.io Diagram -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.3 Arquitetura de Produção AWS para PCA</h3>
+        <p>O diagrama abaixo descreve a integração de um job de redução de dimensionalidade PCA utilizando Amazon EMR, SageMaker Processing e SageMaker Feature Store:</p>
+        
+        <div class="drawio-wrap" style="margin-top: 24px;">
+          <div class="drawio-label"><span class="dot"></span>PCA Dimensionality Reduction — Pipeline AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;pca_0\&quot;/&gt;&lt;mxCell id=\&quot;pca_1\&quot; parent=\&quot;pca_0\&quot;/&gt;&lt;mxCell id=\&quot;pca_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_title\&quot; value=\&quot;PRINCIPAL COMPONENT ANALYSIS (PCA) — REDUÇÃO DE DIMENSIONALIDADE NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_s3_raw\&quot; value=\&quot;S3 Iceberg\nHigh-Dim Matrix\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_emr\&quot; value=\&quot;EMR Serverless\n(SVD / PCA Spark)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_sm\&quot; value=\&quot;SageMaker\nProcessing / Fit\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;420\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_fs\&quot; value=\&quot;SageMaker\nFeature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;620\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_out\&quot; value=\&quot;Downstream ML /\nVector Index\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#1e293b;strokeColor=#16a34a;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;800\&quot; y=\&quot;133\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_e1\&quot; value=\&quot;X (d &gt; 100 features)\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;pca_s3_raw\&quot; target=\&quot;pca_emr\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_e2\&quot; value=\&quot;Mean Centered / Cov\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;pca_emr\&quot; target=\&quot;pca_sm\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_e3\&quot; value=\&quot;Z (k principal components)\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;pca_sm\&quot; target=\&quot;pca_fs\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_e4\&quot; value=\&quot;Compressed Vector\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;pca_fs\&quot; target=\&quot;pca_out\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}'></div>
+        </div>
+        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+          <strong style="color: var(--accent);">Compressão de Atributos:</strong> Matrizes de altíssima dimensão lidas do S3 Iceberg sofrem decomposição SVD no EMR Spark. O modelo de projeção PCA reduz a dimensão conservando 95% da variância acumulada, registrando os vetores compactados no SageMaker Feature Store para consumo por modelos supervisados downstream.
+        </div>
+
+        <!-- Executable Python Code -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.4 Código Python Executável (NumPy SVD vs. scikit-learn PCA)</h3>
+        <p>Abaixo apresentamos a validação da equivalência matemática entre a decomposição SVD manual e a biblioteca `sklearn.decomposition.PCA`:</p>
+
+        <pre style="background:#0b0f19; color:#f8fafc; padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.88rem; overflow-x: auto; border: 1px solid #1e293b;"><span style="color:#7c3aed;">import</span> numpy <span style="color:#7c3aed;">as</span> np
+<span style="color:#7c3aed;">from</span> sklearn.datasets <span style="color:#7c3aed;">import</span> make_blobs
+<span style="color:#7c3aed;">from</span> sklearn.preprocessing <span style="color:#7c3aed;">import</span> StandardScaler
+<span style="color:#7c3aed;">from</span> sklearn.decomposition <span style="color:#7c3aed;">import</span> PCA
+
+<span style="color:#64748b;"># 1. Gerar Dataset Sintético de Alta Dimensionalidade (20 características)</span>
+X_raw, _ = make_blobs(n_samples=1000, n_features=20, centers=5, random_state=42)
+
+<span style="color:#64748b;"># Adicionar correlação linear sintética entre atributos</span>
+transformation_matrix = np.random.RandomState(42).randn(20, 20)
+X_correlated = np.dot(X_raw, transformation_matrix)
+
+<span style="color:#64748b;"># 2. MLOps Best Practice: Centralizar Média e Padronizar Variância (Z-Score)</span>
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_correlated)
+
+<span style="color:#64748b;"># 3. Implementação Manual do PCA via Decomposição SVD (X = U * S * Vt)</span>
+U, S, Vt = np.linalg.svd(X_scaled, full_matrices=False)
+eigenvalues_svd = (S ** 2) / (X_scaled.shape[0] - 1)
+evr_svd = eigenvalues_svd / np.sum(eigenvalues_svd)
+
+<span style="color:#64748b;"># 4. Scikit-Learn PCA Conservando 95% da Variância Explicada Acumulada</span>
+pca = PCA(n_components=0.95, svd_solver=<span style="color:#16a34a;">'full'</span>, random_state=42)
+X_pca = pca.fit_transform(X_scaled)
+
+<span style="color:#64748b;"># 5. Métricas de Compressão e Reconstrução da Matriz</span>
+n_components_retained = pca.n_components_
+explained_variance = pca.explained_variance_ratio_
+cumulative_variance = np.cumsum(explained_variance)
+
+<span style="color:#64748b;"># Reconstrução da matriz original a partir do subespaço reduzido</span>
+X_reconstructed = pca.inverse_transform(X_pca)
+reconstruction_mse = np.mean((X_scaled - X_reconstructed) ** 2)
+
+print(f<span style="color:#16a34a;">"=== PCA DIMENSIONALITY REDUCTION METRICS ==="</span>)
+print(f<span style="color:#16a34a;">"Dimensão Original: {X_scaled.shape[1]} atributos"</span>)
+print(f<span style="color:#16a34a;">"Componentes Retidos (>=95% Variância): {n_components_retained}"</span>)
+print(f<span style="color:#16a34a;">"Taxa de Compressão de Atributos: {(1 - n_components_retained / X_scaled.shape[1]):.1%}"</span>)
+print(f<span style="color:#16a34a;">"EVR por Componente (Scikit-Learn): {explained_variance[:5].round(4)}"</span>)
+print(f<span style="color:#16a34a;">"EVR por Componente (SVD Manual):   {evr_svd[:5].round(4)}"</span>)
+print(f<span style="color:#16a34a;">"Variância Acumulada Retida: {cumulative_variance[-1]:.4f}"</span>)
+print(f<span style="color:#16a34a;">"Erro Quadrático Médio (MSE) de Reconstrução: {reconstruction_mse:.6f}"</span>)</pre>
+      </section>
+
+      <!-- SEÇÃO 04: COMPARATIVO TÉCNICO & MATRIZ DE DECISÃO -->
+      <section class="section" id="comparativo-tecnico">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--ok)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Matriz de Decisão &amp; Engenharia de Produção</div>
+            <h2>Comparativo Técnico entre k-Means, DBSCAN e PCA</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          A escolha do algoritmo ideal em pipelines não-supervisionados depende dos requisitos de geometria de dados, tolerância a ruídos e escalabilidade computacional:
+        </p>
+
+        <div style="overflow-x: auto; margin-top: 20px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--aws); color: var(--text);">
+                <th style="padding: 12px; border: 1px solid #1e293b;">Dimensão de Comparação</th>
+                <th style="padding: 12px; border: 1px solid #1e293b; color: var(--ok);">k-Means Clustering</th>
+                <th style="padding: 12px; border: 1px solid #1e293b; color: var(--aws);">DBSCAN</th>
+                <th style="padding: 12px; border: 1px solid #1e293b; color: var(--spark);">PCA (SVD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #1e293b; font-weight: bold;">Categoria de Algoritmo</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Agrupamento Particional (Centroides)</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Agrupamento Baseado em Densidade Espacial</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Redução de Dimensionalidade / Projeção Linear</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #1e293b; font-weight: bold;">Premissa Geométrica</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Clusters Convexos e Esféricos (Hiperplano)</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Formatos Arbitrários / Não-Convexos (Luas, Espirais)</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Subespaço Hipersuperficial Linear Ortogonal</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #1e293b; font-weight: bold;">Tratamento de Ruído / Outliers</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Sensível (Outliers deslocam centroides)</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Nativo (Classifica outliers como \(\text{Label} = -1\))</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Sensível (Outliers distorcem a matriz de covariância)</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #1e293b; font-weight: bold;">Hiperparâmetros Críticos</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Número de Clusters \(K\), Inicialização</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Raio \(\epsilon\), Mínimo de Pontos \(\text{MinPts}\)</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Número de Componentes \(k\) ou % Variância (95%)</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #1e293b; font-weight: bold;">Complexidade de Treinamento</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">\(O(N \cdot K \cdot d \cdot I)\) (Altamente eficiente)</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">\(O(N \log N)\) com espacial tree; \(O(N^2)\) sem índice</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">\(O(N d^2 + d^3)\) (SVD em matrizes densas)</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #1e293b; font-weight: bold;">Escalabilidade Big Data AWS</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Excelente (MiniBatchKMeans / PySpark MLLib)</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Moderada (Requer particionamento espacial em Spark)</td>
+                <td style="padding: 12px; border: 1px solid #1e293b;">Excelente (TruncatedSVD / Spark RowMatrix PCA)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: BIBLIOGRAFIA ACADÊMICA -->
+      <section class="section" id="bibliografia-referencias">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Fundamentação Teórica &amp; Referências</div>
+            <h2>Bibliografia Acadêmica e Leitura Recomendada</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para aprofundamento nos fundamentos matemáticos e algorítmicos dos métodos não-supervisionados:
+        </p>
+
+        <ul style="line-height: 1.8; color: var(--text-dim); padding-left: 20px;">
+          <li><strong>Arthur, D., &amp; Vassilvitskii, S. (2007).</strong> <em>k-means++: The advantages of careful seeding.</em> Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 1027-1035.</li>
+          <li><strong>Ester, M., Kriegel, H. P., Sander, J., &amp; Xu, X. (1996).</strong> <em>A density-based algorithm for discovering clusters in large spatial databases with noise.</em> KDD-96 Proceedings, 226-231.</li>
+          <li><strong>Golub, G. H., &amp; Reinsch, C. (1970).</strong> <em>Singular value decomposition and least squares solutions.</em> Numerische Mathematik, 14(5), 403-420.</li>
+          <li><strong>Hastie, T., Tibshirani, R., &amp; Friedman, J. (2009).</strong> <em>The Elements of Statistical Learning: Data Mining, Inference, and Prediction.</em> Springer Series in Statistics (2nd ed.).</li>
+          <li><strong>Jolliffe, I. T. (2002).</strong> <em>Principal Component Analysis.</em> Springer Series in Statistics (2nd ed.).</li>
+          <li><strong>Lloyd, S. (1982).</strong> <em>Least squares quantization in PCM.</em> IEEE Transactions on Information Theory, 28(2), 129-137.</li>
+          <li><strong>MacQueen, J. (1967).</strong> <em>Some methods for classification and analysis of multivariate observations.</em> Proceedings of the 5th Berkeley Symposium on Mathematical Statistics and Probability, 1:281–297.</li>
+          <li><strong>Pearson, K. (1901).</strong> <em>On lines and planes of closest fit to systems of points in space.</em> Philosophical Magazine, 2(11), 559-572.</li>
+        </ul>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Page Logic Scripts & UI Event Handlers -->
+  <script>
+    function toggleCategory(id) {
+      const categoryContent = document.getElementById(id);
+      const element = event.currentTarget;
+      if (categoryContent) {
+        categoryContent.classList.toggle('open');
+        if (element) {
+          element.classList.toggle('expanded');
+          element.classList.toggle('active');
+          const arrow = element.querySelector('.arrow');
+          if (arrow) {
+            const isOpen = categoryContent.classList.contains('expanded') || categoryContent.classList.contains('open');
+            arrow.innerHTML = isOpen ? '▼' : '▶';
+          }
+        }
+      }
+    }
+    window.toggleCategory = toggleCategory;
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.scrollToTop = scrollToTop;
+
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      var btn = document.getElementById('scrollTop');
+      if (btn) {
+        if (scrollY > 400) btn.classList.add('show');
+        else btn.classList.remove('show');
+      }
+    }, { passive: true });
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var hb = document.getElementById('hamburger');
+      var sb = document.getElementById('sidebar');
+      if (hb && sb) {
+        if (window.innerWidth > 960) {
+          hb.innerHTML = sb.classList.contains('closed') ? '☰' : '✕';
+        } else {
+          hb.innerHTML = sb.classList.contains('open') ? '✕' : '☰';
+        }
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      var sb = document.getElementById('sidebar');
+      var hb = document.getElementById('hamburger');
+      if (window.innerWidth <= 960 && sb && hb && !sb.contains(e.target) && e.target !== hb && !hb.contains(e.target)) {
+        if (sb.classList.contains('open')) {
+          sb.classList.remove('open');
+          if (hb) hb.innerHTML = '☰';
+        }
+      }
+    });
+  </script>
+
+  <!-- Core Platform Scripts (Relative paths from pages/ia-algoritmos/*.html to root) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+</body>
+</html>
