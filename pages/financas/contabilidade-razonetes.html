@@ -1242,6 +1242,520 @@
         </div>
       </section>
 
+      <!-- ══════════════════════════════════════════════════════════
+           SEÇÃO 02-B: TERRAFORM — Provisionamento Iceberg na AWS
+      ══════════════════════════════════════════════════════════ -->
+      <section class="section" id="terraform-iceberg">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:#7c3aed">02B</div>
+          <div class="sec-title">
+            <h2>Modelagem Terraform — Provisionamento AWS Glue Iceberg</h2>
+            <p class="sec-sub">Infrastructure-as-Code completo: S3 Lakehouse · Glue Catalog · IAM · 3 tabelas Iceberg v2 com particionamento, Z-Order e TBLPROPERTIES</p>
+          </div>
+        </div>
+
+        <!-- Intro card -->
+        <div style="background:linear-gradient(135deg,#0b1120,#0f172a);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <span style="font-size:1.4rem;">🏗️</span>
+            <div>
+              <div style="font-size:0.7rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#7c3aed;">Infrastructure as Code</div>
+              <div style="font-size:0.95rem;font-weight:700;color:#e2e8f0;">Terraform HCL — Accounting Ledger Lakehouse</div>
+            </div>
+          </div>
+          <p style="color:#94a3b8;font-size:0.86rem;line-height:1.7;margin:0;">
+            O módulo abaixo provisiona toda a infraestrutura do <strong>Accounting Engine Ledger</strong> na AWS usando Terraform.
+            Cobre o bucket S3 com lifecycle, o Glue Catalog Database, as 3 tabelas Iceberg (com particionamento e TBLPROPERTIES nativos),
+            a IAM Role do Glue Job e as políticas de acesso granular via Lake Formation.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
+            <span style="background:rgba(124,58,237,0.15);color:#c084fc;font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:16px;">Terraform ≥ 1.7</span>
+            <span style="background:rgba(59,130,246,0.15);color:#60a5fa;font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:16px;">AWS Provider ~> 5.0</span>
+            <span style="background:rgba(16,185,129,0.15);color:#34d399;font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:16px;">Apache Iceberg v2</span>
+            <span style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:16px;">AWS Glue 4.0</span>
+            <span style="background:rgba(239,68,68,0.15);color:#f87171;font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:16px;">Lake Formation RBAC</span>
+          </div>
+        </div>
+
+        <!-- ── 0. providers.tf & variables.tf ── -->
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+          <span style="background:rgba(124,58,237,0.15);color:#c084fc;font-size:0.68rem;font-weight:800;padding:2px 10px;border-radius:14px;">providers.tf · variables.tf</span>
+          <span style="font-size:0.85rem;color:#94a3b8;font-weight:600;">Configuração Base do Módulo</span>
+        </div>
+        <div class="sql-code-block" style="border-left-color:#7c3aed;">
+<span class="sql-comment"># ── providers.tf ────────────────────────────────────────────────
+# Requer: terraform >= 1.7  |  AWS provider >= 5.0</span>
+terraform {
+  required_version = <span class="sql-string">">= 1.7"</span>
+  required_providers {
+    aws = {
+      source  = <span class="sql-string">"hashicorp/aws"</span>
+      version = <span class="sql-string">"~> 5.0"</span>
+    }
+  }
+  backend <span class="sql-string">"s3"</span> {
+    bucket         = <span class="sql-string">"tf-state-accounting-ledger"</span>
+    key            = <span class="sql-string">"accounting/iceberg/terraform.tfstate"</span>
+    region         = <span class="sql-string">"us-east-1"</span>
+    encrypt        = true
+    dynamodb_table = <span class="sql-string">"tf-lock-accounting"</span>
+  }
+}
+
+provider <span class="sql-string">"aws"</span> {
+  region = var.aws_region
+  default_tags {
+    tags = {
+      Project     = <span class="sql-string">"accounting-ledger"</span>
+      Environment = var.environment
+      ManagedBy   = <span class="sql-string">"terraform"</span>
+      Owner       = <span class="sql-string">"data-engineering"</span>
+      CostCenter  = <span class="sql-string">"finops-dados"</span>
+    }
+  }
+}
+
+<span class="sql-comment"># ── variables.tf ─────────────────────────────────────────────────</span>
+variable <span class="sql-string">"aws_region"</span>   { default = <span class="sql-string">"us-east-1"</span> }
+variable <span class="sql-string">"environment"</span>   { default = <span class="sql-string">"production"</span> }
+variable <span class="sql-string">"account_id"</span>    { description = <span class="sql-string">"AWS Account ID"</span> }
+variable <span class="sql-string">"lake_bucket"</span>   { default = <span class="sql-string">"lakehouse-gold-accounting"</span> }
+variable <span class="sql-string">"glue_db_name"</span>  { default = <span class="sql-string">"accounting"</span> }
+        </div>
+
+        <!-- ── 1. S3 + Glue Database ── -->
+        <div style="margin:22px 0 10px;display:flex;align-items:center;gap:10px;">
+          <span style="background:rgba(16,185,129,0.15);color:#34d399;font-size:0.68rem;font-weight:800;padding:2px 10px;border-radius:14px;">s3.tf · glue_catalog.tf</span>
+          <span style="font-size:0.85rem;color:#94a3b8;font-weight:600;">S3 Lakehouse + Glue Database</span>
+        </div>
+        <div class="sql-code-block" style="border-left-color:#10b981;">
+<span class="sql-comment"># ── s3.tf ────────────────────────────────────────────────────────</span>
+resource <span class="sql-string">"aws_s3_bucket"</span> <span class="sql-string">"lakehouse_gold"</span> {
+  bucket = var.lake_bucket
+}
+
+resource <span class="sql-string">"aws_s3_bucket_versioning"</span> <span class="sql-string">"lakehouse_gold"</span> {
+  bucket = aws_s3_bucket.lakehouse_gold.id
+  versioning_configuration { status = <span class="sql-string">"Enabled"</span> }
+}
+
+resource <span class="sql-string">"aws_s3_bucket_server_side_encryption_configuration"</span> <span class="sql-string">"lakehouse_gold"</span> {
+  bucket = aws_s3_bucket.lakehouse_gold.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = <span class="sql-string">"aws:kms"</span>
+      kms_master_key_id = aws_kms_key.lakehouse.arn
+    }
+  }
+}
+
+resource <span class="sql-string">"aws_s3_bucket_lifecycle_configuration"</span> <span class="sql-string">"lakehouse_gold"</span> {
+  bucket = aws_s3_bucket.lakehouse_gold.id
+  rule {
+    id     = <span class="sql-string">"iceberg-metadata-cleanup"</span>
+    status = <span class="sql-string">"Enabled"</span>
+    <span class="sql-comment"># Limpa snapshots Iceberg expirados após 30 dias</span>
+    filter { prefix = <span class="sql-string">"accounting/"</span> }
+    noncurrent_version_expiration { noncurrent_days = 30 }
+  }
+}
+
+resource <span class="sql-string">"aws_kms_key"</span> <span class="sql-string">"lakehouse"</span> {
+  description             = <span class="sql-string">"KMS Key for Accounting Lakehouse Gold"</span>
+  deletion_window_in_days = 14
+  enable_key_rotation     = true
+}
+
+<span class="sql-comment"># ── glue_catalog.tf ──────────────────────────────────────────────</span>
+resource <span class="sql-string">"aws_glue_catalog_database"</span> <span class="sql-string">"accounting"</span> {
+  name        = var.glue_db_name
+  description = <span class="sql-string">"Ledger Analítico Contábil — Apache Iceberg v2"</span>
+
+  target_database {
+    catalog_id    = var.account_id
+    database_name = var.glue_db_name
+  }
+}
+        </div>
+
+        <!-- ── 2. dim_contrato Terraform ── -->
+        <div style="margin:22px 0 10px;display:flex;align-items:center;gap:10px;">
+          <span style="background:rgba(59,130,246,0.15);color:#60a5fa;font-size:0.68rem;font-weight:800;padding:2px 10px;border-radius:14px;">dim_contrato.tf · SCD TYPE 2</span>
+          <span style="font-size:0.85rem;color:#94a3b8;font-weight:600;">Tabela Iceberg — Dimensão Contrato de Crédito</span>
+        </div>
+        <div class="sql-code-block" style="border-left-color:#3b82f6;">
+<span class="sql-comment"># ── dim_contrato.tf ──────────────────────────────────────────────
+# SCD Type 2 | Particionado por (dominio_produto, year(data_originacao))
+# Format: Apache Iceberg v2 | Write: merge-on-read | Compression: ZSTD</span>
+resource <span class="sql-string">"aws_glue_catalog_table"</span> <span class="sql-string">"dim_contrato"</span> {
+  database_name = aws_glue_catalog_database.accounting.name
+  name          = <span class="sql-string">"dim_contrato"</span>
+  description   = <span class="sql-string">"Dimensão Contrato de Crédito — SCD Type 2 — Apache Iceberg v2"</span>
+  table_type    = <span class="sql-string">"EXTERNAL_TABLE"</span>
+
+  open_table_format_input {
+    iceberg_input {
+      metadata_operation = <span class="sql-string">"CREATE"</span>
+      version            = <span class="sql-string">"2"</span>
+    }
+  }
+
+  storage_descriptor {
+    location      = <span class="sql-string">"s3://${var.lake_bucket}/accounting/dim_contrato/"</span>
+    input_format  = <span class="sql-string">"org.apache.iceberg.mr.mapred.IcebergInputFormat"</span>
+    output_format = <span class="sql-string">"org.apache.iceberg.mr.mapred.IcebergOutputFormat"</span>
+    ser_de_info {
+      serialization_library = <span class="sql-string">"org.apache.iceberg.mr.hive.HiveIcebergSerDe"</span>
+    }
+
+    <span class="sql-comment"># ── Colunas ──────────────────────────────────────────────────</span>
+    columns { name = <span class="sql-string">"contrato_sk"</span>            ; type = <span class="sql-string">"bigint"</span>  ; comment = <span class="sql-string">"PK Surrogate Key"</span> }
+    columns { name = <span class="sql-string">"contrato_id"</span>            ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"UK Natural ID ex: CT-2026-9912"</span> }
+    columns { name = <span class="sql-string">"versao_sk"</span>              ; type = <span class="sql-string">"int"</span>     ; comment = <span class="sql-string">"SCD2 versão do registro"</span> }
+    columns { name = <span class="sql-string">"cliente_id"</span>             ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"Hash SHA-256 LGPD"</span> }
+    columns { name = <span class="sql-string">"dominio_produto"</span>        ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"CONSIGNADO|GIRO_FLEX|CREDIT_CARD|FGI"</span> }
+    columns { name = <span class="sql-string">"produto_codigo"</span>         ; type = <span class="sql-string">"string"</span> }
+    columns { name = <span class="sql-string">"data_originacao"</span>        ; type = <span class="sql-string">"date"</span>    ; comment = <span class="sql-string">"Partition Source"</span> }
+    columns { name = <span class="sql-string">"data_vencimento_final"</span>  ; type = <span class="sql-string">"date"</span> }
+    columns { name = <span class="sql-string">"prazo_meses"</span>            ; type = <span class="sql-string">"int"</span> }
+    columns { name = <span class="sql-string">"valor_principal_nominal"</span>  ; type = <span class="sql-string">"decimal(18,2)"</span> }
+    columns { name = <span class="sql-string">"custo_transacao_inicial"</span>  ; type = <span class="sql-string">"decimal(12,2)"</span> ; comment = <span class="sql-string">"Custos diferidos IFRS 9"</span> }
+    columns { name = <span class="sql-string">"taxa_juros_anual_nom"</span>    ; type = <span class="sql-string">"decimal(8,6)"</span> }
+    columns { name = <span class="sql-string">"taxa_interna_retorno_tir"</span> ; type = <span class="sql-string">"decimal(8,6)"</span> ; comment = <span class="sql-string">"EIR — CMN 4.966 Art.8"</span> }
+    columns { name = <span class="sql-string">"sistema_amortizacao"</span>     ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"PRICE|SAC|SAM|BULLET"</span> }
+    columns { name = <span class="sql-string">"estagio_cmn_4966"</span>       ; type = <span class="sql-string">"tinyint"</span> ; comment = <span class="sql-string">"1=12m ECL|2=Lifetime|3=Default"</span> }
+    columns { name = <span class="sql-string">"status_contrato"</span>        ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"ATIVO|ATRASO|WRITTEN_OFF|LIQUIDADO|RENEGOCIADO"</span> }
+    columns { name = <span class="sql-string">"dias_atraso_atual"</span>      ; type = <span class="sql-string">"int"</span> }
+    columns { name = <span class="sql-string">"is_written_off"</span>         ; type = <span class="sql-string">"boolean"</span> }
+    columns { name = <span class="sql-string">"data_write_off"</span>         ; type = <span class="sql-string">"date"</span> }
+    columns { name = <span class="sql-string">"data_liquidacao"</span>        ; type = <span class="sql-string">"date"</span> }
+    columns { name = <span class="sql-string">"dt_inicio_vigencia"</span>     ; type = <span class="sql-string">"timestamp"</span> ; comment = <span class="sql-string">"SCD2 início"</span> }
+    columns { name = <span class="sql-string">"dt_fim_vigencia"</span>        ; type = <span class="sql-string">"timestamp"</span> ; comment = <span class="sql-string">"SCD2 fim — NULL = ativo"</span> }
+    columns { name = <span class="sql-string">"is_current"</span>             ; type = <span class="sql-string">"boolean"</span> }
+    columns { name = <span class="sql-string">"dt_insercao"</span>            ; type = <span class="sql-string">"timestamp"</span> }
+    columns { name = <span class="sql-string">"dt_atualizacao"</span>         ; type = <span class="sql-string">"timestamp"</span> }
+    columns { name = <span class="sql-string">"batch_run_id"</span>           ; type = <span class="sql-string">"string"</span> }
+  }
+
+  partition_keys {
+    name    = <span class="sql-string">"dominio_produto"</span>
+    type    = <span class="sql-string">"string"</span>
+    comment = <span class="sql-string">"Partição por domínio de produto"</span>
+  }
+
+  parameters = {
+    <span class="sql-string">"table_type"</span>                          = <span class="sql-string">"ICEBERG"</span>
+    <span class="sql-string">"format"</span>                              = <span class="sql-string">"parquet"</span>
+    <span class="sql-string">"format-version"</span>                      = <span class="sql-string">"2"</span>
+    <span class="sql-string">"write.delete.mode"</span>                   = <span class="sql-string">"merge-on-read"</span>
+    <span class="sql-string">"write.update.mode"</span>                   = <span class="sql-string">"merge-on-read"</span>
+    <span class="sql-string">"write.merge.mode"</span>                    = <span class="sql-string">"merge-on-read"</span>
+    <span class="sql-string">"write.parquet.compression-codec"</span>     = <span class="sql-string">"zstd"</span>
+    <span class="sql-string">"write.target-file-size-bytes"</span>        = <span class="sql-string">"134217728"</span>
+    <span class="sql-string">"history.expire.min-snapshots-to-keep"</span> = <span class="sql-string">"5"</span>
+    <span class="sql-string">"write.metadata.delete-after-commit.enabled"</span> = <span class="sql-string">"true"</span>
+    <span class="sql-string">"write.metadata.previous-versions-max"</span>       = <span class="sql-string">"10"</span>
+    <span class="sql-string">"classification"</span>                      = <span class="sql-string">"parquet"</span>
+  }
+}
+        </div>
+
+        <!-- ── 3. dim_conta_cosif Terraform ── -->
+        <div style="margin:22px 0 10px;display:flex;align-items:center;gap:10px;">
+          <span style="background:rgba(20,184,166,0.15);color:#2dd4bf;font-size:0.68rem;font-weight:800;padding:2px 10px;border-radius:14px;">dim_conta_cosif.tf · SCD TYPE 1</span>
+          <span style="font-size:0.85rem;color:#94a3b8;font-weight:600;">Tabela Iceberg — Plano COSIF BACEN</span>
+        </div>
+        <div class="sql-code-block" style="border-left-color:#14b8a6;">
+<span class="sql-comment"># ── dim_conta_cosif.tf ───────────────────────────────────────────
+# SCD Type 1 | Particionado por (classificacao_patrimonial)
+# Dimensão pequena — write.delete.mode = copy-on-write (eficiente)</span>
+resource <span class="sql-string">"aws_glue_catalog_table"</span> <span class="sql-string">"dim_conta_cosif"</span> {
+  database_name = aws_glue_catalog_database.accounting.name
+  name          = <span class="sql-string">"dim_conta_cosif"</span>
+  description   = <span class="sql-string">"Dimensão Plano COSIF BACEN — SCD Type 1 — Apache Iceberg v2"</span>
+  table_type    = <span class="sql-string">"EXTERNAL_TABLE"</span>
+
+  open_table_format_input {
+    iceberg_input {
+      metadata_operation = <span class="sql-string">"CREATE"</span>
+      version            = <span class="sql-string">"2"</span>
+    }
+  }
+
+  storage_descriptor {
+    location      = <span class="sql-string">"s3://${var.lake_bucket}/accounting/dim_conta_cosif/"</span>
+    input_format  = <span class="sql-string">"org.apache.iceberg.mr.mapred.IcebergInputFormat"</span>
+    output_format = <span class="sql-string">"org.apache.iceberg.mr.mapred.IcebergOutputFormat"</span>
+    ser_de_info {
+      serialization_library = <span class="sql-string">"org.apache.iceberg.mr.hive.HiveIcebergSerDe"</span>
+    }
+
+    columns { name = <span class="sql-string">"conta_cosif_sk"</span>               ; type = <span class="sql-string">"bigint"</span>  ; comment = <span class="sql-string">"PK Surrogate"</span> }
+    columns { name = <span class="sql-string">"codigo_cosif_15"</span>              ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"UK 1.6.1.10.00.00-00-1 (formato BACEN)"</span> }
+    columns { name = <span class="sql-string">"codigo_cosif_raw"</span>             ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"UK 161100000000001 (somente dígitos)"</span> }
+    columns { name = <span class="sql-string">"conta_pai_codigo"</span>             ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"FK conta sintética pai"</span> }
+    columns { name = <span class="sql-string">"nivel_hierarquico"</span>            ; type = <span class="sql-string">"tinyint"</span> ; comment = <span class="sql-string">"1=Classe 2=Grupo 3=Subgrupo 4=Título 5=Subtítulo"</span> }
+    columns { name = <span class="sql-string">"titulo_conta"</span>                 ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"Descrição oficial BACEN"</span> }
+    columns { name = <span class="sql-string">"classificacao_patrimonial"</span>    ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"ATIVO|PASSIVO|PL|DRE_RECEITA|DRE_DESPESA|COMPENSACAO — Partition"</span> }
+    columns { name = <span class="sql-string">"natureza_saldo_dc"</span>            ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"D=Débito aumenta | C=Crédito aumenta"</span> }
+    columns { name = <span class="sql-string">"indicador_redutora"</span>           ; type = <span class="sql-string">"boolean"</span> ; comment = <span class="sql-string">"TRUE p/ PDD e Juros Vincendos"</span> }
+    columns { name = <span class="sql-string">"indicador_offbalance"</span>         ; type = <span class="sql-string">"boolean"</span> ; comment = <span class="sql-string">"TRUE p/ contas 1.9/2.9 Compensação"</span> }
+    columns { name = <span class="sql-string">"estagio_operacional_cmn4966"</span>  ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"ESTAGIO_1|ESTAGIO_2|ESTAGIO_3|OFF_BALANCE|N/A"</span> }
+    columns { name = <span class="sql-string">"tipo_movimento_contabil"</span>      ; type = <span class="sql-string">"string"</span>  ; comment = <span class="sql-string">"ORIGINACAO|ACCRUAL|PECLD|WRITE_OFF|RECUPERACAO"</span> }
+    columns { name = <span class="sql-string">"ativo_indicador"</span>              ; type = <span class="sql-string">"boolean"</span> }
+    columns { name = <span class="sql-string">"dt_inicio_vigencia"</span>           ; type = <span class="sql-string">"date"</span> }
+    columns { name = <span class="sql-string">"dt_fim_vigencia"</span>              ; type = <span class="sql-string">"date"</span> }
+    columns { name = <span class="sql-string">"dt_carga"</span>                     ; type = <span class="sql-string">"timestamp"</span> }
+  }
+
+  partition_keys {
+    name    = <span class="sql-string">"classificacao_patrimonial"</span>
+    type    = <span class="sql-string">"string"</span>
+    comment = <span class="sql-string">"Partição por classe patrimonial COSIF"</span>
+  }
+
+  parameters = {
+    <span class="sql-string">"table_type"</span>                    = <span class="sql-string">"ICEBERG"</span>
+    <span class="sql-string">"format"</span>                        = <span class="sql-string">"parquet"</span>
+    <span class="sql-string">"format-version"</span>                = <span class="sql-string">"2"</span>
+    <span class="sql-string">"write.delete.mode"</span>             = <span class="sql-string">"copy-on-write"</span>
+    <span class="sql-string">"write.parquet.compression-codec"</span> = <span class="sql-string">"snappy"</span>
+    <span class="sql-string">"write.metadata.delete-after-commit.enabled"</span> = <span class="sql-string">"true"</span>
+    <span class="sql-string">"classification"</span>                = <span class="sql-string">"parquet"</span>
+  }
+}
+        </div>
+
+        <!-- ── 4. fato_lancamento Terraform ── -->
+        <div style="margin:22px 0 10px;display:flex;align-items:center;gap:10px;">
+          <span style="background:rgba(139,92,246,0.15);color:#a78bfa;font-size:0.68rem;font-weight:800;padding:2px 10px;border-radius:14px;">fato_lancamento.tf · LEDGER CENTRAL · Z-ORDER</span>
+          <span style="font-size:0.85rem;color:#94a3b8;font-weight:600;">Tabela Iceberg — Fato Lançamento Contábil (Ledger Imutável)</span>
+        </div>
+        <div class="sql-code-block" style="border-left-color:#8b5cf6;">
+<span class="sql-comment"># ── fato_lancamento.tf ───────────────────────────────────────────
+# Ledger imutável | Particionado por (data_competencia, dominio_origem)
+# Z-Order: (contrato_sk, conta_cosif_sk, data_competencia)
+# Idempotência: SHA-256(chave_idempotencia)</span>
+resource <span class="sql-string">"aws_glue_catalog_table"</span> <span class="sql-string">"fato_lancamento"</span> {
+  database_name = aws_glue_catalog_database.accounting.name
+  name          = <span class="sql-string">"fato_lancamento"</span>
+  description   = <span class="sql-string">"Ledger Analítico de Partidas Dobradas — Imutável — Apache Iceberg v2"</span>
+  table_type    = <span class="sql-string">"EXTERNAL_TABLE"</span>
+
+  open_table_format_input {
+    iceberg_input {
+      metadata_operation = <span class="sql-string">"CREATE"</span>
+      version            = <span class="sql-string">"2"</span>
+    }
+  }
+
+  storage_descriptor {
+    location      = <span class="sql-string">"s3://${var.lake_bucket}/accounting/fato_lancamento/"</span>
+    input_format  = <span class="sql-string">"org.apache.iceberg.mr.mapred.IcebergInputFormat"</span>
+    output_format = <span class="sql-string">"org.apache.iceberg.mr.mapred.IcebergOutputFormat"</span>
+    ser_de_info {
+      serialization_library = <span class="sql-string">"org.apache.iceberg.mr.hive.HiveIcebergSerDe"</span>
+    }
+
+    <span class="sql-comment"># ── Chaves ──────────────────────────────────────────────────</span>
+    columns { name = <span class="sql-string">"lancamento_sk"</span>            ; type = <span class="sql-string">"bigint"</span>        ; comment = <span class="sql-string">"PK Surrogate"</span> }
+    columns { name = <span class="sql-string">"event_uuid"</span>               ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"UUID Kafka do evento"</span> }
+    columns { name = <span class="sql-string">"chave_idempotencia"</span>       ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"SHA-256 para MERGE dedup"</span> }
+    <span class="sql-comment"># ── FKs ─────────────────────────────────────────────────────</span>
+    columns { name = <span class="sql-string">"contrato_sk"</span>              ; type = <span class="sql-string">"bigint"</span>        ; comment = <span class="sql-string">"FK → dim_contrato"</span> }
+    columns { name = <span class="sql-string">"conta_cosif_sk"</span>           ; type = <span class="sql-string">"bigint"</span>        ; comment = <span class="sql-string">"FK → dim_conta_cosif"</span> }
+    <span class="sql-comment"># ── Temporalidade ───────────────────────────────────────────</span>
+    columns { name = <span class="sql-string">"data_competencia"</span>         ; type = <span class="sql-string">"date"</span>          ; comment = <span class="sql-string">"Partition Key — fechamento D-0"</span> }
+    columns { name = <span class="sql-string">"data_hora_evento"</span>         ; type = <span class="sql-string">"timestamp"</span>     ; comment = <span class="sql-string">"Timestamp real do evento no domínio"</span> }
+    columns { name = <span class="sql-string">"data_hora_processamento"</span>  ; type = <span class="sql-string">"timestamp"</span>     ; comment = <span class="sql-string">"Timestamp ingestão Accounting Engine"</span> }
+    <span class="sql-comment"># ── Classificação ───────────────────────────────────────────</span>
+    columns { name = <span class="sql-string">"tipo_evento_contabil"</span>     ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"ORIGINACAO|ACCRUAL|AMORTIZACAO|STOP_ACCRUAL|PECLD|WRITE_OFF|RECUPERACAO"</span> }
+    columns { name = <span class="sql-string">"subtipo_evento"</span>           ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"ex: PECLD_STAGE1_CONSTITUICAO"</span> }
+    <span class="sql-comment"># ── Valores ─────────────────────────────────────────────────</span>
+    columns { name = <span class="sql-string">"valor_lancamento"</span>         ; type = <span class="sql-string">"decimal(18,2)"</span> ; comment = <span class="sql-string">"Valor absoluto"</span> }
+    columns { name = <span class="sql-string">"natureza_lancamento_dc"</span>   ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"D=Débito | C=Crédito"</span> }
+    columns { name = <span class="sql-string">"valor_saldo_pos_lancamento"</span> ; type = <span class="sql-string">"decimal(18,2)"</span> }
+    <span class="sql-comment"># ── Rastreabilidade COSIF ───────────────────────────────────</span>
+    columns { name = <span class="sql-string">"codigo_historico_contabil"</span>  ; type = <span class="sql-string">"int"</span>           ; comment = <span class="sql-string">"Histórico COSIF"</span> }
+    columns { name = <span class="sql-string">"descricao_historico"</span>       ; type = <span class="sql-string">"string"</span> }
+    columns { name = <span class="sql-string">"codigo_cosif_15_conta"</span>     ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"COSIF 15d denormalizado p/ auditoria"</span> }
+    columns { name = <span class="sql-string">"estagio_contrato_na_data"</span>  ; type = <span class="sql-string">"tinyint"</span>       ; comment = <span class="sql-string">"Stage 1|2|3 na data da competência"</span> }
+    <span class="sql-comment"># ── Data Mesh Context ───────────────────────────────────────</span>
+    columns { name = <span class="sql-string">"dominio_origem"</span>           ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"CONSIGNADO|CARTAO|PIX|GIRO|FGI — Partition"</span> }
+    columns { name = <span class="sql-string">"nome_servico_origem"</span>      ; type = <span class="sql-string">"string"</span> }
+    columns { name = <span class="sql-string">"correlacao_id"</span>            ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"distributed tracing"</span> }
+    <span class="sql-comment"># ── Auditoria ───────────────────────────────────────────────</span>
+    columns { name = <span class="sql-string">"batch_run_id"</span>             ; type = <span class="sql-string">"string"</span> }
+    columns { name = <span class="sql-string">"versao_motor_ecl"</span>         ; type = <span class="sql-string">"string"</span>        ; comment = <span class="sql-string">"Versão Accounting Engine p/ rollback"</span> }
+    columns { name = <span class="sql-string">"dt_carga"</span>                 ; type = <span class="sql-string">"timestamp"</span> }
+    columns { name = <span class="sql-string">"is_estorno"</span>               ; type = <span class="sql-string">"boolean"</span> }
+    columns { name = <span class="sql-string">"lancamento_original_sk"</span>   ; type = <span class="sql-string">"bigint"</span>        ; comment = <span class="sql-string">"FK → fato_lancamento (estornos)"</span> }
+  }
+
+  <span class="sql-comment"># Partição composta: data diária + domínio</span>
+  partition_keys {
+    name    = <span class="sql-string">"data_competencia"</span>
+    type    = <span class="sql-string">"date"</span>
+    comment = <span class="sql-string">"Partição diária contábil (D-0)"</span>
+  }
+  partition_keys {
+    name    = <span class="sql-string">"dominio_origem"</span>
+    type    = <span class="sql-string">"string"</span>
+    comment = <span class="sql-string">"Partição por domínio Data Mesh"</span>
+  }
+
+  parameters = {
+    <span class="sql-string">"table_type"</span>                          = <span class="sql-string">"ICEBERG"</span>
+    <span class="sql-string">"format"</span>                              = <span class="sql-string">"parquet"</span>
+    <span class="sql-string">"format-version"</span>                      = <span class="sql-string">"2"</span>
+    <span class="sql-string">"write.delete.mode"</span>                   = <span class="sql-string">"merge-on-read"</span>
+    <span class="sql-string">"write.update.mode"</span>                   = <span class="sql-string">"merge-on-read"</span>
+    <span class="sql-string">"write.merge.mode"</span>                    = <span class="sql-string">"merge-on-read"</span>
+    <span class="sql-string">"write.parquet.compression-codec"</span>     = <span class="sql-string">"zstd"</span>
+    <span class="sql-string">"write.target-file-size-bytes"</span>        = <span class="sql-string">"268435456"</span>
+    <span class="sql-string">"write.sort-order"</span>                    = <span class="sql-string">"contrato_sk ASC NULLS LAST, conta_cosif_sk ASC, data_competencia ASC"</span>
+    <span class="sql-string">"commit.retry.num-retries"</span>            = <span class="sql-string">"4"</span>
+    <span class="sql-string">"history.expire.min-snapshots-to-keep"</span> = <span class="sql-string">"10"</span>
+    <span class="sql-string">"read.split.target-size"</span>              = <span class="sql-string">"134217728"</span>
+    <span class="sql-string">"write.metadata.delete-after-commit.enabled"</span> = <span class="sql-string">"true"</span>
+    <span class="sql-string">"write.metadata.previous-versions-max"</span>       = <span class="sql-string">"10"</span>
+    <span class="sql-string">"classification"</span>                      = <span class="sql-string">"parquet"</span>
+  }
+}
+        </div>
+
+        <!-- ── 5. IAM + Lake Formation ── -->
+        <div style="margin:22px 0 10px;display:flex;align-items:center;gap:10px;">
+          <span style="background:rgba(239,68,68,0.15);color:#f87171;font-size:0.68rem;font-weight:800;padding:2px 10px;border-radius:14px;">iam.tf · lake_formation.tf</span>
+          <span style="font-size:0.85rem;color:#94a3b8;font-weight:600;">IAM Role Glue + Lake Formation RBAC</span>
+        </div>
+        <div class="sql-code-block" style="border-left-color:#ef4444;">
+<span class="sql-comment"># ── iam.tf ───────────────────────────────────────────────────────</span>
+resource <span class="sql-string">"aws_iam_role"</span> <span class="sql-string">"glue_accounting"</span> {
+  name = <span class="sql-string">"glue-accounting-ledger-role"</span>
+  assume_role_policy = jsonencode({
+    Version   = <span class="sql-string">"2012-10-17"</span>
+    Statement = [{
+      Effect    = <span class="sql-string">"Allow"</span>
+      Principal = { Service = <span class="sql-string">"glue.amazonaws.com"</span> }
+      Action    = <span class="sql-string">"sts:AssumeRole"</span>
+    }]
+  })
+}
+
+resource <span class="sql-string">"aws_iam_role_policy"</span> <span class="sql-string">"glue_accounting_policy"</span> {
+  name = <span class="sql-string">"glue-accounting-ledger-policy"</span>
+  role = aws_iam_role.glue_accounting.id
+  policy = jsonencode({
+    Version = <span class="sql-string">"2012-10-17"</span>
+    Statement = [
+      {
+        Sid    = <span class="sql-string">"S3LakehouseAccess"</span>
+        Effect = <span class="sql-string">"Allow"</span>
+        Action = [<span class="sql-string">"s3:GetObject"</span>, <span class="sql-string">"s3:PutObject"</span>, <span class="sql-string">"s3:DeleteObject"</span>, <span class="sql-string">"s3:ListBucket"</span>]
+        Resource = [
+          <span class="sql-string">"arn:aws:s3:::${var.lake_bucket}"</span>,
+          <span class="sql-string">"arn:aws:s3:::${var.lake_bucket}/accounting/*"</span>
+        ]
+      },
+      {
+        Sid    = <span class="sql-string">"GlueCatalogAccess"</span>
+        Effect = <span class="sql-string">"Allow"</span>
+        Action = [<span class="sql-string">"glue:*"</span>]
+        Resource = [
+          <span class="sql-string">"arn:aws:glue:${var.aws_region}:${var.account_id}:catalog"</span>,
+          <span class="sql-string">"arn:aws:glue:${var.aws_region}:${var.account_id}:database/${var.glue_db_name}"</span>,
+          <span class="sql-string">"arn:aws:glue:${var.aws_region}:${var.account_id}:table/${var.glue_db_name}/*"</span>
+        ]
+      },
+      {
+        Sid    = <span class="sql-string">"KMSDecryptEncrypt"</span>
+        Effect = <span class="sql-string">"Allow"</span>
+        Action = [<span class="sql-string">"kms:Decrypt"</span>, <span class="sql-string">"kms:GenerateDataKey"</span>]
+        Resource = [aws_kms_key.lakehouse.arn]
+      }
+    ]
+  })
+}
+
+<span class="sql-comment"># ── lake_formation.tf ────────────────────────────────────────────
+# RBAC granular: Column-level security (cliente_id mascarado p/ analistas)</span>
+resource <span class="sql-string">"aws_lakeformation_permissions"</span> <span class="sql-string">"glue_role_db"</span> {
+  principal   = aws_iam_role.glue_accounting.arn
+  permissions = [<span class="sql-string">"ALL"</span>]
+  database { name = aws_glue_catalog_database.accounting.name }
+}
+
+resource <span class="sql-string">"aws_lakeformation_permissions"</span> <span class="sql-string">"analyst_fato"</span> {
+  principal   = <span class="sql-string">"arn:aws:iam::${var.account_id}:role/data-analyst-role"</span>
+  permissions = [<span class="sql-string">"SELECT"</span>]
+  table_with_columns {
+    database_name = aws_glue_catalog_database.accounting.name
+    name          = aws_glue_catalog_table.fato_lancamento.name
+    <span class="sql-comment"># Bloqueia cliente_id — LGPD: analistas não veem PII</span>
+    excluded_column_names = [<span class="sql-string">"cliente_id"</span>]
+  }
+}
+        </div>
+
+        <!-- ── 6. outputs.tf ── -->
+        <div style="margin:22px 0 10px;display:flex;align-items:center;gap:10px;">
+          <span style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:0.68rem;font-weight:800;padding:2px 10px;border-radius:14px;">outputs.tf</span>
+          <span style="font-size:0.85rem;color:#94a3b8;font-weight:600;">Outputs do Módulo Terraform</span>
+        </div>
+        <div class="sql-code-block" style="border-left-color:#f59e0b;">
+<span class="sql-comment"># ── outputs.tf ───────────────────────────────────────────────────</span>
+output <span class="sql-string">"glue_database_name"</span> {
+  description = <span class="sql-string">"Nome do Glue Catalog Database"</span>
+  value       = aws_glue_catalog_database.accounting.name
+}
+
+output <span class="sql-string">"dim_contrato_table_name"</span> {
+  description = <span class="sql-string">"Nome da tabela Iceberg dim_contrato"</span>
+  value       = aws_glue_catalog_table.dim_contrato.name
+}
+
+output <span class="sql-string">"dim_conta_cosif_table_name"</span> {
+  description = <span class="sql-string">"Nome da tabela Iceberg dim_conta_cosif"</span>
+  value       = aws_glue_catalog_table.dim_conta_cosif.name
+}
+
+output <span class="sql-string">"fato_lancamento_table_name"</span> {
+  description = <span class="sql-string">"Nome da tabela Iceberg fato_lancamento"</span>
+  value       = aws_glue_catalog_table.fato_lancamento.name
+}
+
+output <span class="sql-string">"lakehouse_bucket_arn"</span> {
+  description = <span class="sql-string">"ARN do S3 Bucket Lakehouse Gold"</span>
+  value       = aws_s3_bucket.lakehouse_gold.arn
+}
+
+output <span class="sql-string">"glue_iam_role_arn"</span> {
+  description = <span class="sql-string">"ARN da IAM Role do Glue Job"</span>
+  value       = aws_iam_role.glue_accounting.arn
+}
+        </div>
+
+        <!-- Apply commands box -->
+        <div style="background:linear-gradient(135deg,#0b1120,#0f172a);border:1px solid rgba(16,185,129,0.25);border-radius:12px;padding:20px 24px;margin-top:24px;">
+          <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#10b981;margin-bottom:12px;">⚡ Deploy do Módulo</div>
+          <div class="sql-code-block" style="margin:0;border-left-color:#10b981;font-size:0.8rem;">
+<span class="sql-comment"># Inicializar e aplicar</span>
+terraform init
+terraform workspace new production
+terraform plan -var=<span class="sql-string">"account_id=123456789012"</span> -out=tfplan
+terraform apply tfplan
+
+<span class="sql-comment"># Verificar tabelas criadas no Glue</span>
+aws glue get-tables --database-name accounting --region us-east-1   --query <span class="sql-string">"TableList[].{Name:Name,Format:Parameters.table_type}"</span>
+
+<span class="sql-comment"># Validar via Athena (Time Travel Iceberg)</span>
+aws athena start-query-execution   --query-string <span class="sql-string">"SELECT * FROM accounting.fato_lancamento FOR SYSTEM_TIME AS OF TIMESTAMP '2024-01-31 23:59:59' LIMIT 10"</span>   --result-configuration <span class="sql-string">"OutputLocation=s3://lakehouse-gold-accounting/athena-results/"</span>
+          </div>
+        </div>
+
+      </section>
+
       <!-- SEÇÃO 03: PLANO DE CONTAS COSIF & RAZONETES T-ACCOUNT -->
       <section class="section" id="plano-cosif">
         <div class="sec-hdr">
