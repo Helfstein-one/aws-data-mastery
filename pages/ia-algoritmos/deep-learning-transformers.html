@@ -8,13 +8,13 @@
   <title>Deep Learning &amp; Transformers | AWS Data Mastery</title>
 
   <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
     onload="renderMathInElement(document.body, {
       delimiters: [
-        {left: '\(', right: '\)', display: false},
-        {left: '\[', right: '\]', display: true}
+        {left: '\\(', right: '\\)', display: false},
+        {left: '\\[', right: '\\]', display: true}
       ],
       throwOnError: false
     });"></script>
@@ -37,11 +37,12 @@
   <button id="hamburger" onclick="toggleNav()" aria-label="Alternar navegação">☰</button>
 
   <!-- Sidebar Component Navigation -->
-  <div id="sidebar"></div>
+  <nav id="sidebar" aria-label="Menu principal"></nav>
 
   <!-- Main Content Container -->
   <div id="main">
     <div class="hero" style="background-color: var(--navy)">
+      <nav class="breadcrumb" aria-label="Navegação estrutural"><a href="../../index.html">Início</a> &gt; <a href="../index.html">IA &amp; Algoritmos</a> &gt; Deep Learning &amp; Transformers</nav>
       <div class="hero-ey">Trilha de Inteligência Artificial &amp; Algoritmos</div>
       <h1>Deep Learning &amp; <em>Transformers</em></h1>
       <p class="hero-d">Engenharia de modelos de Aprendizado Profundo: Redes Neurais Artificiais (MLP, Backpropagation, AdamW), Redes Convolucionais 2D (Feature Maps, Receptive Field, ResNet) e Arquiteturas Transformer (Self-Attention \(Q, K, V\), Multi-Head Attention, Encoder-Decoder e GenAI na AWS Bedrock &amp; SageMaker).</p>
@@ -71,11 +72,14 @@
           </div>
         </div>
 
-        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+        <!-- 1.1 Introdução -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">1.1 Introdução</h3>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 12px 0 18px 0;">
           A <strong>Rede Neural Artificial (ANN)</strong> na forma de <strong>Multilayer Perceptron (MLP)</strong> é a estrutura fundamental do aprendizado profundo. Composta por uma camada de entrada, uma ou mais camadas ocultas e uma camada de saída, a MLP aprende aproximações de funções não-lineares complexas através da combinação de transformações afins e funções de ativação <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Goodfellow et al., 2016]</span>.
         </p>
 
-        <h3 style="margin-top: 28px; margin-bottom: 16px;">Intuição Matemática &amp; Formulação Teórica</h3>
+        <!-- 1.2 Conceitos Fundamentais -->
+        <h3 style="margin-top: 28px; margin-bottom: 16px;">1.2 Conceitos Fundamentais</h3>
         <p>Dado um vetor de entrada \(x \in \mathbb{R}^{d_{in}}\), a propagação direta (<strong>Forward Propagation</strong>) em uma camada \(l\) é definida por uma combinação linear ponderada seguida por uma transformação não-linear:</p>
 
         \[z^{(l)} = W^{(l)} a^{(l-1)} + b^{(l)}\]
@@ -84,67 +88,196 @@
         <p>Onde \(W^{(l)} \in \mathbb{R}^{n_l \times n_{l-1}}\) representa a matriz de pesos, \(b^{(l)} \in \mathbb{R}^{n_l}\) é o vetor de viés (bias), e \(\sigma(\cdot)\) é a função de ativação. Para a camada inicial, \(a^{(0)} = x\), e para a camada final de saída \(L\), \(a^{(L)} = \hat{y}\).</p>
 
         <div class="abox info" style="margin-top: 24px; border-left-color: var(--ok);">
-          <div class="abox-hdr" style="background: var(--ok); color: #0f172a;">Funções de Ativação Fundamentais</div>
+          <div class="abox-hdr" style="background: var(--ok); color: #0f172a;">Funções de Ativação &amp; Prova Formal do Backpropagation</div>
           <div class="abox-body">
-            <p style="margin-bottom: 12px;">As funções de ativação introduzem não-linearidade à rede neural, permitindo o aprendizado de fronteiras de decisão não-planas:</p>
+            <p style="margin-bottom: 12px;"><strong>Funções de Ativação Fundamentais:</strong></p>
             <ul style="margin-left: 20px; line-height: 1.8;">
-              <li><strong>Sigmoid:</strong> \(\sigma(z) = \frac{1}{1 + e^{-z}}\). Comprime os valores no intervalo \((0, 1)\). Utilizada em classificação binária, contudo sofre com <em>vanishing gradient</em> para valores grandes de \(|z|\).</li>
-              <li><strong>ReLU (Rectified Linear Unit):</strong> \(f(z) = \max(0, z)\). Eficiente computacionalmente com derivada \(f'(z) = 1\) para \(z > 0\). Resolve o gradiente desvanecente em partes positivas, mas pode ocasionar neurônios inativos (<em>dying ReLU</em>).</li>
-              <li><strong>GELU (Gaussian Error Linear Unit):</strong> \(f(z) = z \cdot \Phi(z) = z \cdot \frac{1}{2} \left[1 + \text{erf}\left(\frac{z}{\sqrt{2}}\right)\right]\). Padrão em arquiteturas modernas como BERT, GPT e LLaMA. Suaviza a transição próximo a zero via distribuição gaussiana acumulada.</li>
-              <li><strong>Softmax:</strong> \(p_i = \frac{e^{z_i}}{\sum_{j=1}^C e^{z_j}}\). Converte o vetor de logits \(z\) em uma distribuição de probabilidade válida sobre \(C\) classes multinomiais.</li>
+              <li><strong>Sigmoid:</strong> \(\sigma(z) = \frac{1}{1 + e^{-z}}\). Comprime valores no intervalo \((0, 1)\), com derivada \(\sigma'(z) = \sigma(z)(1 - \sigma(z))\).</li>
+              <li><strong>ReLU (Rectified Linear Unit):</strong> \(f(z) = \max(0, z)\). Eficiente computacionalmente com derivada \(f'(z) = 1\) para \(z > 0\).</li>
+              <li><strong>GELU (Gaussian Error Linear Unit):</strong> \(f(z) = z \cdot \Phi(z) = z \cdot \frac{1}{2} \left[1 + \text{erf}\left(\frac{z}{\sqrt{2}}\right)\right]\). Padrão em redes modernas (BERT, GPT, LLaMA).</li>
+              <li><strong>Softmax:</strong> \(p_i = \frac{e^{z_i}}{\sum_{j=1}^C e^{z_j}}\). Converte logits \(z\) em uma distribuição multinomial de probabilidade.</li>
             </ul>
+            <p style="margin-top: 14px; margin-bottom: 8px;"><strong>Prova Formal: Regra da Cadeia no Backpropagation</strong></p>
+            <p>Seja \(L\) a função de perda. Define-se o sinal de erro da camada \(l\) como \(\delta^{(l)} = \frac{\partial L}{\partial z^{(l)}}\). Pela regra da cadeia:</p>
+            \[\delta^{(L)} = \nabla_{a^{(L)}} L \odot \sigma'(z^{(L)})\]
+            \[\delta^{(l)} = \left( (W^{(l+1)})^T \delta^{(l+1)} \right) \odot \sigma'(z^{(l)})\]
+            \[\frac{\partial L}{\partial W^{(l)}} = \delta^{(l)} (a^{(l-1)})^T, \quad \frac{\partial L}{\partial b^{(l)}} = \delta^{(l)}\]
           </div>
         </div>
 
-        <h4 style="margin-top: 28px; margin-bottom: 14px;">Backpropagation &amp; Diferenciação Automática</h4>
-        <p>A otimização dos pesos é realizada minimizando uma função de perda \(L(y, \hat{y})\) através do algoritmo de <strong>Backpropagation</strong> (retropropagação do erro), que aplica iterativamente a regra da cadeia do cálculo diferencial:</p>
+        <!-- 1.3 Fórmulas KaTeX & Legenda de Símbolos -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.3 Fórmulas KaTeX &amp; Legenda de Símbolos</h3>
+        <p>A tabela abaixo apresenta a consolidação das funções de perda, regra de atualização e diferenciação do algoritmo MLP:</p>
 
-        \[\delta^{(L)} = \nabla_{a^{(L)}} L \odot \sigma'(z^{(L)})\]
-        \[\delta^{(l)} = \left( (W^{(l+1)})^T \delta^{(l+1)} \right) \odot \sigma'(z^{(l)})\]
-        \[\frac{\partial L}{\partial W^{(l)}} = \delta^{(l)} (a^{(l-1)})^T, \quad \frac{\partial L}{\partial b^{(l)}} = \delta^{(l)}\]
-
-        <p>Em frameworks modernos (como PyTorch Autograd), a diferenciação automática em modo reverso constrói um Grafo Acíclico Dirigido (DAG) de operações dinâmicas para calcular os gradientes de forma exata e otimizada.</p>
-
-        <h4 style="margin-top: 24px; margin-bottom: 14px;">Algoritmos de Otimização: SGD Momentum &amp; AdamW</h4>
-        <p>Os gradientes calculados são utilizados pelos otimizadores para atualizar os parâmetros \(\theta = \{W, b\}\):</p>
-
-        \[\text{SGD com Momentum: } v_t = \gamma v_{t-1} + \eta \nabla_\theta L(\theta_t), \quad \theta_{t+1} = \theta_t - v_t\]
-
-        <p>O <strong>AdamW (Adaptive Moment Estimation com Decoupled Weight Decay)</strong> calcula os momentos de primeira (\(m_t\)) e segunda ordem (\(v_t\)) dos gradientes e desacopla o decaimento de peso da atualização gradiente:</p>
-
-        \[m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t, \quad v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2\]
-        \[\hat{m}_t = \frac{m_t}{1-\beta_1^t}, \quad \hat{v}_t = \frac{v_t}{1-\beta_2^t}\]
-        \[\theta_{t+1} = \theta_t - \eta \left( \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_t \right)\]
-
-        <div class="grid-2" style="margin-top: 28px;">
-          <div class="card" style="border-top: 4px solid var(--ok);">
-            <div class="card-lbl" style="color: var(--ok);">Quando Usar ANN / MLP</div>
-            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
-              <li>Dados tabulares de alta dimensão com interações não-lineares complexas.</li>
-              <li>Camadas finais de classificação/regressão no topo de representações latentes.</li>
-              <li>Aplicações com latência estrita de inferência (sub-5ms) onde GPU/CPU reduzidas são suficientes.</li>
-              <li>Mapeamento direto de atributos estruturados extraídos via Feature Store.</li>
-            </ul>
-          </div>
-          <div class="card" style="border-top: 4px solid var(--spark);">
-            <div class="card-lbl" style="color: var(--spark);">Quando NÃO Usar ANN / MLP</div>
-            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
-              <li>Dados de imagens/vídeos brutos (alta redundância espacial — utilize CNNs).</li>
-              <li>Sequências textuais ou temporais com dependências de longo alcance (utilize Transformers).</li>
-              <li>Datasets tabulares pequenos/médios onde modelos Tree-Based (XGBoost, LightGBM) superam MLPs com menor custo.</li>
-              <li>Cenários onde explicabilidade direta de coeficientes seja pré-requisito regulatório estrito.</li>
-            </ul>
-          </div>
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--ok); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Conceito</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Equação Formal (KaTeX)</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Descrição Operacional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Mean Squared Error (MSE)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[L_{\text{MSE}} = \frac{1}{N}\sum_{i=1}^{N} (y_i - \hat{y}_i)^2\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Perda de regressão para saídas contínuas.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Binary Cross-Entropy (BCE)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[L_{\text{BCE}} = -\frac{1}{N}\sum_{i=1}^{N} [y_i \log \hat{y}_i + (1-y_i)\log(1-\hat{y}_i)]\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Perda para classificação binária baseada na divergência KL.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Categorical Cross-Entropy (CCE)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[L_{\text{CCE}} = -\sum_{c=1}^{C} y_c \log p_c\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Perda multiclasse combinada com ativação Softmax.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Otimizador AdamW</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[\theta_{t+1} = \theta_t - \eta \left( \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} + \lambda \theta_t \right)\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Momento adaptativo de 1ª/2ª ordem com decaimento de peso desacoplado.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Diagrama Draw.io Section 1 -->
-        <h3 style="margin-top: 36px; margin-bottom: 16px;">Arquitetura Enterprise de Treinamento e Inferência ANN na AWS</h3>
-        <div class="drawio-wrap" style="margin-top: 20px;">
-          <div class="drawio-label"><span class="dot"></span>ANN / MLP PIPELINE — SAGEMAKER &amp; FEATURE STORE</div>
-          <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"320\" math=\"0\" shadow=\"0\"&gt;&lt;root&gt;&lt;mxCell id=\"ann_0\"/&gt;&lt;mxCell id=\"ann_1\" parent=\"ann_0\"/&gt;&lt;mxCell id=\"ann_bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"ann_1\"&gt;&lt;mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"320\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_title\" value=\"PIPELINE EMPRESARIAL DE ANN / MLP — SAGEMAKER &amp;amp; FEATURE STORE\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"ann_1\"&gt;&lt;mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_s3\" value=\"Amazon S3 Iceberg&amp;#10;(Feature Lakehouse)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ann_1\"&gt;&lt;mxGeometry x=\"40\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_emr\" value=\"Amazon EMR&amp;#10;(Batch Processing)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ann_1\"&gt;&lt;mxGeometry x=\"200\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_fs\" value=\"SageMaker Feature Store&amp;#10;(Online / Offline)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#a21caf;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ann_1\"&gt;&lt;mxGeometry x=\"370\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_train\" value=\"SageMaker Training&amp;#10;(PyTorch MLP Job)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ann_1\"&gt;&lt;mxGeometry x=\"540\" y=\"70\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_ep\" value=\"SageMaker Endpoint&amp;#10;(Real-Time MLP)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ann_1\"&gt;&lt;mxGeometry x=\"540\" y=\"190\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_bedrock\" value=\"Amazon Bedrock&amp;#10;(Orchestrator Agent)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"ann_1\"&gt;&lt;mxGeometry x=\"740\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_e1\" value=\"Raw Features\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"ann_s3\" target=\"ann_emr\" parent=\"ann_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_e2\" value=\"Ingest Vectors\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"ann_emr\" target=\"ann_fs\" parent=\"ann_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_e3\" value=\"Batch Dataset\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#a21caf;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"ann_fs\" target=\"ann_train\" parent=\"ann_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_e4\" value=\"Low-Latency Fetch\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#a21caf;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"ann_fs\" target=\"ann_ep\" parent=\"ann_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_e5\" value=\"Deploy Model\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"ann_train\" target=\"ann_ep\" parent=\"ann_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"ann_e6\" value=\"Inference API\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"ann_ep\" target=\"ann_bedrock\" parent=\"ann_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        <!-- 1.4 Diagrama SVG Inline -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.4 Diagrama SVG Inline: Multilayer Perceptron</h3>
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" aria-label="Multilayer Perceptron Architecture Diagram">
+            <defs>
+              <linearGradient id="mlp-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f172a"/>
+                <stop offset="100%" stop-color="#090d16"/>
+              </linearGradient>
+              <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+              </marker>
+              <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#a78bfa"/>
+              </marker>
+              <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444"/>
+              </marker>
+              <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
+              </marker>
+            </defs>
+
+            <rect width="800" height="400" rx="10" fill="url(#mlp-bg)"/>
+            <text x="400" y="28" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="14" font-weight="700" letter-spacing="1">
+              ARQUITETURA MULTILAYER PERCEPTRON (MLP): FORWARD &amp; BACKPROPAGATION
+            </text>
+            <line x1="40" y1="42" x2="760" y2="42" stroke="#1e293b" stroke-width="1"/>
+
+            <text x="90" y="65" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Entrada (X)</text>
+            <text x="270" y="65" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Oculta 1 (GELU/ReLU)</text>
+            <text x="450" y="65" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Oculta 2 (GELU/ReLU)</text>
+            <text x="610" y="65" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Saída (ŷ)</text>
+            <text x="730" y="65" text-anchor="middle" fill="#ef4444" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Perda L(y, ŷ)</text>
+
+            <text x="180" y="82" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="11">Pesos W⁽¹⁾</text>
+            <text x="360" y="82" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="11">Pesos W⁽²⁾</text>
+            <text x="530" y="82" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="11">Pesos W⁽³⁾</text>
+
+            <g stroke="#38bdf8" stroke-width="1" opacity="0.35">
+              <line x1="90" y1="110" x2="270" y2="95"/>
+              <line x1="90" y1="110" x2="270" y2="145"/>
+              <line x1="90" y1="110" x2="270" y2="195"/>
+              <line x1="90" y1="160" x2="270" y2="145"/>
+              <line x1="90" y1="160" x2="270" y2="195"/>
+              <line x1="90" y1="160" x2="270" y2="245"/>
+              <line x1="90" y1="210" x2="270" y2="195"/>
+              <line x1="90" y1="210" x2="270" y2="245"/>
+              <line x1="90" y1="210" x2="270" y2="295"/>
+              <line x1="90" y1="260" x2="270" y2="245"/>
+              <line x1="90" y1="260" x2="270" y2="295"/>
+            </g>
+
+            <g stroke="#a78bfa" stroke-width="1" opacity="0.35">
+              <line x1="270" y1="95" x2="450" y2="110"/>
+              <line x1="270" y1="145" x2="450" y2="110"/>
+              <line x1="270" y1="145" x2="450" y2="160"/>
+              <line x1="270" y1="195" x2="450" y2="160"/>
+              <line x1="270" y1="195" x2="450" y2="210"/>
+              <line x1="270" y1="245" x2="450" y2="210"/>
+              <line x1="270" y1="245" x2="450" y2="260"/>
+              <line x1="270" y1="295" x2="450" y2="260"/>
+            </g>
+
+            <g stroke="#10b981" stroke-width="1.2" opacity="0.5">
+              <line x1="450" y1="110" x2="610" y2="185"/>
+              <line x1="450" y1="160" x2="610" y2="185"/>
+              <line x1="450" y1="210" x2="610" y2="185"/>
+              <line x1="450" y1="260" x2="610" y2="185"/>
+            </g>
+
+            <circle cx="90" cy="110" r="18" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="90" y="114" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="12" font-weight="600">x₁</text>
+            <circle cx="90" cy="160" r="18" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="90" y="164" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="12" font-weight="600">x₂</text>
+            <circle cx="90" cy="210" r="18" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="90" y="214" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="12" font-weight="600">x₃</text>
+            <circle cx="90" cy="260" r="18" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="90" y="264" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="12" font-weight="600">x₄</text>
+
+            <circle cx="270" cy="95" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="270" y="99" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">h₁</text>
+            <circle cx="270" cy="145" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="270" y="149" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">h₂</text>
+            <circle cx="270" cy="195" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="270" y="199" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">h₃</text>
+            <circle cx="270" cy="245" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="270" y="249" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">h₄</text>
+            <circle cx="270" cy="295" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="270" y="299" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">h₅</text>
+
+            <circle cx="450" cy="110" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="450" y="114" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">a₁</text>
+            <circle cx="450" cy="160" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="450" y="164" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">a₂</text>
+            <circle cx="450" cy="210" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="450" y="214" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">a₃</text>
+            <circle cx="450" cy="260" r="16" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="450" y="264" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">a₄</text>
+
+            <circle cx="610" cy="185" r="20" fill="#1e293b" stroke="#10b981" stroke-width="2.5"/>
+            <text x="610" y="190" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="13" font-weight="700">ŷ</text>
+
+            <line x1="630" y1="185" x2="685" y2="185" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-blue)"/>
+
+            <line x1="730" y1="120" x2="730" y2="160" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-amber)"/>
+            <text x="730" y="112" text-anchor="middle" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="11" font-weight="600">Target (y)</text>
+
+            <rect x="685" y="160" width="90" height="50" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="2"/>
+            <text x="730" y="182" text-anchor="middle" fill="#ef4444" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Loss</text>
+            <text x="730" y="197" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="10">L(y, ŷ)</text>
+
+            <path d="M 700 215 C 650 340, 480 340, 450 285" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow-red)"/>
+            <text x="575" y="325" text-anchor="middle" fill="#ef4444" font-family="DM Mono, monospace" font-size="11" font-weight="600">Gradiente ∂L/∂W⁽³⁾</text>
+
+            <path d="M 430 280 C 370 340, 300 340, 270 320" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow-amber)"/>
+            <text x="360" y="340" text-anchor="middle" fill="#f59e0b" font-family="DM Mono, monospace" font-size="11" font-weight="600">Backprop ∂L/∂W⁽²⁾</text>
+
+            <path d="M 250 315 C 190 345, 120 330, 90 285" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow-amber)"/>
+            <text x="170" y="350" text-anchor="middle" fill="#f59e0b" font-family="DM Mono, monospace" font-size="11" font-weight="600">Backprop ∂L/∂W⁽¹⁾</text>
+
+            <g transform="translate(140, 372)">
+              <rect x="0" y="0" width="520" height="22" rx="4" fill="#1e293b" stroke="#334155"/>
+              <line x1="20" y1="11" x2="50" y2="11" stroke="#38bdf8" stroke-width="2"/>
+              <text x="56" y="15" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="10">Forward Pass</text>
+              <line x1="160" y1="11" x2="190" y2="11" stroke="#a78bfa" stroke-width="2"/>
+              <text x="196" y="15" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="10">Ativação GELU/ReLU</text>
+              <line x1="330" y1="11" x2="360" y2="11" stroke="#ef4444" stroke-width="2" stroke-dasharray="4 3"/>
+              <text x="366" y="15" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="10">Backprop Gradients (∂L/∂W)</text>
+            </g>
+          </svg>
         </div>
 
-        <h3 style="margin-top: 36px; margin-bottom: 16px;">Código Executável em PyTorch (MLP com AdamW)</h3>
+        <!-- 1.5 Código Python Executável -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">1.5 Código Executável em PyTorch (MLP com AdamW)</h3>
         <pre><code class="language-python">import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -193,6 +326,94 @@ loss.backward()
 optimizer.step()
 
 print(f"Perda ANN/MLP calculada com sucesso: {loss.item():.4f}")</code></pre>
+
+        <!-- 1.6 Quando Usar vs Não Usar -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">1.6 Quando Usar vs Não Usar</h3>
+        <div class="grid-2" style="margin-top: 20px;">
+          <div class="card" style="border-top: 4px solid var(--ok);">
+            <div class="card-lbl" style="color: var(--ok);">Quando Usar ANN / MLP</div>
+            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
+              <li>Dados tabulares de alta dimensão com interações não-lineares complexas.</li>
+              <li>Camadas finais de classificação/regressão no topo de representações latentes.</li>
+              <li>Aplicações com latência estrita de inferência (sub-5ms) onde GPU/CPU reduzidas são suficientes.</li>
+              <li>Mapeamento direto de atributos estruturados extraídos via Feature Store.</li>
+            </ul>
+          </div>
+          <div class="card" style="border-top: 4px solid var(--spark);">
+            <div class="card-lbl" style="color: var(--spark);">Quando NÃO Usar ANN / MLP</div>
+            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
+              <li>Dados de imagens/vídeos brutos (alta redundância espacial — utilize CNNs).</li>
+              <li>Sequências textuais ou temporais com dependências de longo alcance (utilize Transformers).</li>
+              <li>Datasets tabulares pequenos/médios onde modelos Tree-Based (XGBoost, LightGBM) superam MLPs.</li>
+              <li>Cenários onde explicabilidade direta de coeficientes seja pré-requisito regulatório estrito.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 1.7 Pontos Relevantes -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">1.7 Arquitetura Enterprise de Treinamento e Inferência ANN na AWS</h3>
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 860 220" xmlns="http://www.w3.org/2000/svg" aria-label="Pipeline ANN MLP AWS SageMaker Feature Store">
+            <defs>
+              <marker id="ann-pipe-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker>
+            </defs>
+            <rect width="860" height="220" rx="10" fill="#0f172a"/>
+            <text x="430" y="22" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5">PIPELINE ANN/MLP — SAGEMAKER &amp; FEATURE STORE</text>
+            <line x1="30" y1="34" x2="830" y2="34" stroke="#1e293b" stroke-width="1"/>
+            <!-- S3 -->
+            <rect x="30" y="65" width="110" height="80" rx="8" fill="#1e293b" stroke="#16a34a" stroke-width="2"/>
+            <text x="85" y="95" text-anchor="middle" fill="#16a34a" font-family="DM Sans, sans-serif" font-size="22">🪣</text>
+            <text x="85" y="115" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon S3</text>
+            <text x="85" y="128" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Feature Lakehouse</text>
+            <!-- Arrow -->
+            <line x1="142" y1="105" x2="178" y2="105" stroke="#475569" stroke-width="1.5" marker-end="url(#ann-pipe-arrow)"/>
+            <text x="160" y="99" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Raw Features</text>
+            <!-- EMR -->
+            <rect x="180" y="65" width="110" height="80" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+            <text x="235" y="95" text-anchor="middle" fill="#eab308" font-family="DM Sans, sans-serif" font-size="22">⚙️</text>
+            <text x="235" y="115" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon EMR</text>
+            <text x="235" y="128" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Batch Processing</text>
+            <!-- Arrow -->
+            <line x1="292" y1="105" x2="328" y2="105" stroke="#475569" stroke-width="1.5" marker-end="url(#ann-pipe-arrow)"/>
+            <text x="310" y="99" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Ingest Vectors</text>
+            <!-- Feature Store -->
+            <rect x="330" y="65" width="120" height="80" rx="8" fill="#1e293b" stroke="#a21caf" stroke-width="2"/>
+            <text x="390" y="95" text-anchor="middle" fill="#c026d3" font-family="DM Sans, sans-serif" font-size="22">🗃️</text>
+            <text x="390" y="115" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Feature Store</text>
+            <text x="390" y="128" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Online / Offline</text>
+            <!-- Arrow up -->
+            <line x1="452" y1="90" x2="498" y2="80" stroke="#475569" stroke-width="1.5" marker-end="url(#ann-pipe-arrow)"/>
+            <text x="475" y="78" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Batch Dataset</text>
+            <!-- Arrow down -->
+            <line x1="452" y1="120" x2="498" y2="135" stroke="#475569" stroke-width="1.5" marker-end="url(#ann-pipe-arrow)"/>
+            <text x="475" y="148" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Low-Latency Fetch</text>
+            <!-- SM Training -->
+            <rect x="500" y="45" width="120" height="65" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="2"/>
+            <text x="560" y="72" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="22">🏋️</text>
+            <text x="560" y="90" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM Training</text>
+            <text x="560" y="103" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">PyTorch MLP Job</text>
+            <!-- SM Endpoint -->
+            <rect x="500" y="130" width="120" height="65" rx="8" fill="#1e293b" stroke="#FF6B00" stroke-width="2"/>
+            <text x="560" y="156" text-anchor="middle" fill="#FF6B00" font-family="DM Sans, sans-serif" font-size="22">🚀</text>
+            <text x="560" y="175" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM Endpoint</text>
+            <text x="560" y="188" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Real-Time MLP</text>
+            <!-- Deploy arrow -->
+            <line x1="560" y1="110" x2="560" y2="128" stroke="#0284c7" stroke-width="1.5" marker-end="url(#ann-pipe-arrow)"/>
+            <text x="575" y="122" fill="#0284c7" font-family="DM Sans, sans-serif" font-size="9">Deploy</text>
+            <!-- Arrow to Bedrock -->
+            <line x1="622" y1="163" x2="658" y2="163" stroke="#475569" stroke-width="1.5" marker-end="url(#ann-pipe-arrow)"/>
+            <text x="640" y="157" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Inference API</text>
+            <!-- Bedrock -->
+            <rect x="660" y="120" width="120" height="80" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
+            <text x="720" y="150" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="22">🤖</text>
+            <text x="720" y="170" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon Bedrock</text>
+            <text x="720" y="183" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Orchestrator Agent</text>
+          </svg>
+        </div>
+
+        <!-- 1.8 Referências Bibliográficas -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">1.8 Referências Bibliográficas</h3>
+        <p> Goodfellow, I., Bengio, Y., &amp; Courville, A. (2016). <em>Deep Learning</em>. MIT Press. | Rumelhart, D. E., Hinton, G. E., &amp; Williams, R. J. (1986). <em>Learning representations by back-propagating errors</em>. Nature, 323, 533–536. | Loshchilov, I., &amp; Hutter, F. (2017). <em>Decoupled Weight Decay Regularization (AdamW)</em>. ICLR.</p>
       </section>
 
       <!-- SEÇÃO 02: CONVOLUTIONAL NEURAL NETWORK (CNN) -->
@@ -205,11 +426,14 @@ print(f"Perda ANN/MLP calculada com sucesso: {loss.item():.4f}")</code></pre>
           </div>
         </div>
 
-        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+        <!-- 2.1 Introdução -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">2.1 Introdução</h3>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 12px 0 18px 0;">
           As <strong>Redes Neurais Convolucionais (CNNs)</strong> revolucionaram o processamento de sinais e imagens ao substituir multiplicações matriciais densas por operações de convolução local. Baseadas no princípio da <em>invariância por translação</em> e <em>compartilhamento de pesos</em>, as CNNs extraem hierarquias visuais desde bordas simples até padrões semânticos complexos <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[LeCun et al., 1998]</span>.
         </p>
 
-        <h3 style="margin-top: 28px; margin-bottom: 16px;">Convolução 2D, Feature Maps &amp; Campo Receptivo</h3>
+        <!-- 2.2 Conceitos Fundamentais -->
+        <h3 style="margin-top: 28px; margin-bottom: 16px;">2.2 Conceitos Fundamentais</h3>
         <p>A operação de Convolução 2D sobre uma imagem ou mapa de características de entrada \(I\) com um kernel/filtro \(K\) de tamanho \(k_h \times k_w\) é definida por:</p>
 
         \[(I * K)(i, j) = \sum_{m=0}^{k_h-1} \sum_{n=0}^{k_w-1} I(i + m, j + n) \cdot K(m, n)\]
@@ -219,53 +443,186 @@ print(f"Perda ANN/MLP calculada com sucesso: {loss.item():.4f}")</code></pre>
         \[H_{out} = \left\lfloor \frac{H_{in} + 2P - K}{S} \right\rfloor + 1, \quad W_{out} = \left\lfloor \frac{W_{in} + 2P - K}{S} \right\rfloor + 1\]
 
         <div class="abox info" style="margin-top: 24px; border-left-color: var(--aws);">
-          <div class="abox-hdr" style="background: var(--aws); color: #0f172a;">Campo Receptivo &amp; Operações de Pooling</div>
+          <div class="abox-hdr" style="background: var(--aws); color: #0f172a;">Campo Receptivo &amp; Prova da Conexão Residual ResNet</div>
           <div class="abox-body">
-            <p style="margin-bottom: 12px;"><strong>Campo Receptivo (Receptive Field):</strong> Refere-se à região da imagem de entrada original que afeta o valor de uma unidade em uma camada profunda. O campo receptivo expande-se recursivamente com o aprofundamento da rede:</p>
+            <p style="margin-bottom: 12px;"><strong>Campo Receptivo (Receptive Field):</strong> Expande-se recursivamente com a profundidade da rede:</p>
             \[RF_l = RF_{l-1} + (K_l - 1) \cdot \prod_{i=1}^{l-1} S_i\]
-            <p style="margin-top: 12px; margin-bottom: 12px;"><strong>Pooling (Agrupamento Espacial):</strong> Reduz a dimensionalidade espacial mantendo a invariância local:</p>
-            <ul style="margin-left: 20px; line-height: 1.8;">
-              <li><strong>Max Pooling:</strong> Seleciona o valor máximo na janela espacial: \(y_{i,j} = \max_{(m,n) \in \Omega} x_{i+m, j+n}\). Destaca características proeminentes (bordas, texturas).</li>
-              <li><strong>Average Pooling / Global Average Pooling (GAP):</strong> Calcula a média dos valores: \(y_{i,j} = \frac{1}{|\Omega|} \sum_{(m,n) \in \Omega} x_{i+m, j+n}\). O GAP reduz o tensor de dimensão \((B, C, H, W)\) para \((B, C, 1, 1)\), substituindo camadas totalmente conectadas e prevenindo <em>overfitting</em>.</li>
-            </ul>
+            <p style="margin-top: 12px; margin-bottom: 12px;"><strong>Pooling (Agrupamento Espacial):</strong> Max Pooling seleto o valor máximo; Global Average Pooling (GAP) reduz \((B, C, H, W)\) para \((B, C, 1, 1)\).</p>
+
+            <p style="margin-top: 14px; margin-bottom: 8px;"><strong>Prova Formal: Fluxo Desimpedido de Gradientes na ResNet</strong></p>
+            <p>Seja o bloco residual \(y = \mathcal{F}(x, \{W_i\}) + x\). Durante o backpropagation, o gradiente da perda \(L\) em relação à entrada \(x\) é dado por:</p>
+            \[\frac{\partial L}{\partial x} = \frac{\partial L}{\partial y} \frac{\partial y}{\partial x} = \frac{\partial L}{\partial y} \left( \frac{\partial \mathcal{F}}{\partial x} + 1 \right)\]
+            <p style="margin-top: 8px;">Mesmo se o gradiente da transformação \(\frac{\partial \mathcal{F}}{\partial x}\) se aproxime de zero, o termo adicional \(+1\) garante que o gradiente \(\frac{\partial L}{\partial y}\) flua diretamente para camadas anteriores sem desvanecimento!</p>
           </div>
         </div>
 
-        <h4 style="margin-top: 28px; margin-bottom: 14px;">Arquiteturas de Referência: VGG &amp; ResNet (Conexões Residuais)</h4>
-        <p>Enquanto a arquitetura <strong>VGG</strong> provou a eficácia do empilhamento de filtros pequenos \(3 \times 3\), redes muito profundas enfrentam a degradação da acurácia. A <strong>ResNet (Residual Network)</strong> resolveu este obstáculo introduzindo blocos com conexões residuais de atalho (<em>Skip Connections</em>):</p>
+        <!-- 2.3 Fórmulas KaTeX & Legenda de Símbolos -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.3 Fórmulas KaTeX &amp; Legenda de Símbolos</h3>
+        <p>A tabela abaixo descreve as equações fundamentais do processamento convolucional 2D:</p>
 
-        \[y = \mathcal{F}(x, \{W_i\}) + x\]
-
-        <p>A formulação residual força a camada a aprender o resíduo \(\mathcal{F}(x) = y - x\). Caso a transformação seja redundante, os pesos desacoplam-se para zero e a identidade \(y = x\) é preservada, garantindo o fluxo desimpedido de gradientes durante o <em>backpropagation</em> em redes de mais de 150 camadas.</p>
-
-        <div class="grid-2" style="margin-top: 28px;">
-          <div class="card" style="border-top: 4px solid var(--aws);">
-            <div class="card-lbl" style="color: var(--aws);">Quando Usar CNN</div>
-            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
-              <li>Visão Computacional: Classificação, Detecção de Objetos (YOLO, Faster R-CNN) e Segmentação Semântica.</li>
-              <li>Sinais bidimensionais e espectrogramas de áudio.</li>
-              <li>Extração de vetores de características (Visual Embeddings) para busca por similaridade.</li>
-              <li>Inferência em borda (Edge Devices) via quantização e filtros convolucionais separáveis em profundidade.</li>
-            </ul>
-          </div>
-          <div class="card" style="border-top: 4px solid var(--spark);">
-            <div class="card-lbl" style="color: var(--spark);">Quando NÃO Usar CNN</div>
-            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
-              <li>Processamento de Linguagem Natural sem estrutura em grade 2D espacial.</li>
-              <li>Dados de grafos ou tabelas relacionais onde a ordenação dos vizinhos é arbitrária.</li>
-              <li>Sequências textuais de longo alcance onde o mecanismo de atenção captura dependências sem gargalo de campo receptivo.</li>
-            </ul>
-          </div>
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--aws); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Conceito</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Equação Formal (KaTeX)</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Descrição Operacional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Convolução 2D Discreta</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[Z(i,j) = \sum_{m} \sum_{n} X(i+m, j+n) K(m,n)\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Soma ponderada do produto elemento a elemento entre imagem e kernel.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Dimensão de Saída Spatial</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[H_{out} = \left\lfloor \frac{H + 2P - K}{S} \right\rfloor + 1\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Cálculo do tamanho do Feature Map resultante considerando Stride e Padding.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Campo Receptivo Acumulado</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[RF_l = RF_{l-1} + (K_l - 1) \prod_{i=1}^{l-1} S_i\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Área total da imagem de entrada vista por um neurônio da camada \(l\).</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Bloco Residual ResNet</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[y = \mathcal{F}(x, \{W_i\}) + x\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Atalho aditivo que viabiliza o treinamento de redes com 150+ camadas.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Diagrama Draw.io Section 2 -->
-        <h3 style="margin-top: 36px; margin-bottom: 16px;">Pipeline de Visão Computacional e Extração de Embeddings na AWS</h3>
-        <div class="drawio-wrap" style="margin-top: 20px;">
-          <div class="drawio-label"><span class="dot"></span>CNN ENTERPRISE ARCHITECTURE — SAGEMAKER &amp; BEDROCK</div>
-          <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"320\" math=\"0\" shadow=\"0\"&gt;&lt;root&gt;&lt;mxCell id=\"cnn_0\"/&gt;&lt;mxCell id=\"cnn_1\" parent=\"cnn_0\"/&gt;&lt;mxCell id=\"cnn_bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"cnn_1\"&gt;&lt;mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"320\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_title\" value=\"PIPELINE DE VISÃO COMPUTACIONAL E EMBEDDINGS CNN — AWS\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"cnn_1\"&gt;&lt;mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_s3\" value=\"Amazon S3 Iceberg&amp;#10;(Image Dataset Lake)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"cnn_1\"&gt;&lt;mxGeometry x=\"40\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_emr\" value=\"Amazon EMR&amp;#10;(Image Normalization)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"cnn_1\"&gt;&lt;mxGeometry x=\"200\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_train\" value=\"SageMaker Training&amp;#10;(ResNet50 / ConvNeXt)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"cnn_1\"&gt;&lt;mxGeometry x=\"370\" y=\"70\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_fs\" value=\"SageMaker Feature Store&amp;#10;(CNN Visual Vector Catalog)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#a21caf;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"cnn_1\"&gt;&lt;mxGeometry x=\"370\" y=\"190\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_ep\" value=\"SageMaker Endpoint&amp;#10;(CNN Real-Time Servicing)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#FF6B00;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"cnn_1\"&gt;&lt;mxGeometry x=\"560\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_bedrock\" value=\"Amazon Bedrock&amp;#10;(Multimodal GenAI Agent)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"cnn_1\"&gt;&lt;mxGeometry x=\"740\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_e1\" value=\"Pre-process\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"cnn_s3\" target=\"cnn_emr\" parent=\"cnn_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_e2\" value=\"Tensor Batches\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"cnn_emr\" target=\"cnn_train\" parent=\"cnn_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_e3\" value=\"Extract Maps\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"cnn_train\" target=\"cnn_fs\" parent=\"cnn_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_e4\" value=\"Deploy Weights\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"cnn_train\" target=\"cnn_ep\" parent=\"cnn_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_e5\" value=\"Vector Context\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#a21caf;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"cnn_fs\" target=\"cnn_ep\" parent=\"cnn_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"cnn_e6\" value=\"Feature Fusion\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#FF6B00;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"cnn_ep\" target=\"cnn_bedrock\" parent=\"cnn_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        <!-- 2.4 Diagrama SVG Inline -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.4 Diagrama SVG Inline: 2D Convolution &amp; ResNet</h3>
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" aria-label="2D Convolution Feature Map and ResNet Residual Architecture Diagram">
+            <defs>
+              <linearGradient id="cnn-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f172a"/>
+                <stop offset="100%" stop-color="#090d16"/>
+              </linearGradient>
+              <marker id="arrow-cnn-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+              </marker>
+              <marker id="arrow-cnn-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/>
+              </marker>
+              <marker id="arrow-cnn-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
+              </marker>
+            </defs>
+
+            <rect width="800" height="400" rx="10" fill="url(#cnn-bg)"/>
+            <text x="400" y="28" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="14" font-weight="700" letter-spacing="1">
+              CONVOLUÇÃO 2D, FEATURE MAPS, MAX POOLING E CONEXÃO RESIDUAL (RESNET)
+            </text>
+            <line x1="40" y1="42" x2="760" y2="42" stroke="#1e293b" stroke-width="1"/>
+
+            <g transform="translate(40, 70)">
+              <text x="50" y="16" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Imagem X ∈ ℝᴴ×ᵂ×ᶜ</text>
+              <rect x="20" y="30" width="70" height="70" rx="4" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5" opacity="0.6"/>
+              <rect x="10" y="40" width="70" height="70" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="1.5" opacity="0.8"/>
+              <rect x="0" y="50" width="70" height="70" rx="4" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+              <line x1="14" y1="50" x2="14" y2="120" stroke="#1e293b" stroke-width="1"/>
+              <line x1="28" y1="50" x2="28" y2="120" stroke="#1e293b" stroke-width="1"/>
+              <line x1="42" y1="50" x2="42" y2="120" stroke="#1e293b" stroke-width="1"/>
+              <line x1="56" y1="50" x2="56" y2="120" stroke="#1e293b" stroke-width="1"/>
+              <line x1="0" y1="64" x2="70" y2="64" stroke="#1e293b" stroke-width="1"/>
+              <line x1="0" y1="78" x2="70" y2="78" stroke="#1e293b" stroke-width="1"/>
+              <line x1="0" y1="92" x2="70" y2="92" stroke="#1e293b" stroke-width="1"/>
+              <line x1="0" y1="106" x2="70" y2="106" stroke="#1e293b" stroke-width="1"/>
+              <rect x="14" y="64" width="42" height="42" fill="#f59e0b" fill-opacity="0.25" stroke="#f59e0b" stroke-width="2"/>
+            </g>
+
+            <text x="175" y="155" text-anchor="middle" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="22" font-weight="700">⁕</text>
+
+            <g transform="translate(195, 95)">
+              <text x="25" y="-10" text-anchor="middle" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Kernel K (3×3)</text>
+              <rect x="0" y="0" width="50" height="50" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+              <line x1="16.6" y1="0" x2="16.6" y2="50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2 2"/>
+              <line x1="33.3" y1="0" x2="33.3" y2="50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2 2"/>
+              <line x1="0" y1="16.6" x2="50" y2="16.6" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2 2"/>
+              <line x1="0" y1="33.3" x2="50" y2="33.3" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2 2"/>
+              <text x="25" y="30" text-anchor="middle" fill="#f59e0b" font-family="DM Mono, monospace" font-size="10">w</text>
+            </g>
+
+            <line x1="255" y1="120" x2="285" y2="120" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-cnn-blue)"/>
+
+            <g transform="translate(295, 90)">
+              <text x="30" y="-8" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Feature Map Z</text>
+              <rect x="0" y="0" width="60" height="60" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="2"/>
+              <line x1="20" y1="0" x2="20" y2="60" stroke="#1e293b" stroke-width="1"/>
+              <line x1="40" y1="0" x2="40" y2="60" stroke="#1e293b" stroke-width="1"/>
+              <line x1="0" y1="20" x2="60" y2="20" stroke="#1e293b" stroke-width="1"/>
+              <line x1="0" y1="40" x2="60" y2="40" stroke="#1e293b" stroke-width="1"/>
+              <rect x="20" y="20" width="20" height="20" fill="#a78bfa" fill-opacity="0.4" stroke="#a78bfa" stroke-width="1.5"/>
+              <text x="30" y="34" text-anchor="middle" fill="#f8fafc" font-family="DM Mono, monospace" font-size="9">zᵢⱼ</text>
+            </g>
+
+            <line x1="365" y1="120" x2="395" y2="120" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-cnn-green)"/>
+
+            <g transform="translate(405, 95)">
+              <text x="25" y="-13" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="11" font-weight="700">Max Pooling</text>
+              <rect x="0" y="0" width="50" height="50" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+              <text x="25" y="23" text-anchor="middle" fill="#10b981" font-family="DM Mono, monospace" font-size="10">2×2</text>
+              <text x="25" y="38" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">max(z)</text>
+            </g>
+
+            <text x="260" y="190" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="11">
+              Equação: Z(i,j) = ∑ ∑ X(i+m, j+n) · K(m,n)
+            </text>
+
+            <line x1="480" y1="55" x2="480" y2="350" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="4 4"/>
+
+            <g transform="translate(500, 60)">
+              <text x="135" y="20" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="13" font-weight="700">
+                ResNet Residual Skip Connection
+              </text>
+              <circle cx="135" cy="50" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+              <text x="135" y="54" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">x</text>
+
+              <line x1="135" y1="64" x2="135" y2="95" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-cnn-blue)"/>
+
+              <rect x="85" y="95" width="100" height="34" rx="6" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+              <text x="135" y="116" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">Conv2D 3×3 + BN</text>
+
+              <line x1="135" y1="129" x2="135" y2="155" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-cnn-blue)"/>
+
+              <rect x="95" y="155" width="80" height="26" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+              <text x="135" y="172" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="11">ReLU</text>
+
+              <line x1="135" y1="181" x2="135" y2="205" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-cnn-blue)"/>
+
+              <rect x="85" y="205" width="100" height="34" rx="6" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+              <text x="135" y="226" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11">Conv2D 3×3 + BN</text>
+
+              <line x1="135" y1="239" x2="135" y2="270" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-cnn-blue)"/>
+              <text x="110" y="258" text-anchor="middle" fill="#a78bfa" font-family="DM Mono, monospace" font-size="10">F(x)</text>
+
+              <path d="M 149 50 C 235 50, 235 270, 155 270" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5 3" marker-end="url(#arrow-cnn-amber)"/>
+              <text x="235" y="160" text-anchor="middle" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="11" font-weight="700">Atalho x (Skip Connection)</text>
+
+              <circle cx="135" cy="270" r="14" fill="#1e293b" stroke="#10b981" stroke-width="2.5"/>
+              <text x="135" y="275" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="16" font-weight="700">+</text>
+
+              <line x1="135" y1="284" x2="135" y2="310" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-cnn-green)"/>
+              <rect x="80" y="310" width="110" height="28" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+              <text x="135" y="328" text-anchor="middle" fill="#10b981" font-family="DM Mono, monospace" font-size="11" font-weight="700">y = F(x) + x</text>
+            </g>
+
+            <g transform="translate(40, 365)">
+              <rect x="0" y="0" width="720" height="24" rx="4" fill="#1e293b" stroke="#334155"/>
+              <text x="360" y="16" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11">
+                Vantagem ResNet: Preserva o fluxo de gradientes ∂L/∂x = ∂L/∂y · (∂F/∂x + 1), prevenindo o desvanecimento (Vanishing Gradient).
+              </text>
+            </g>
+          </svg>
         </div>
 
-        <h3 style="margin-top: 36px; margin-bottom: 16px;">Código Executável em PyTorch (Bloco Residual ResNet)</h3>
+        <!-- 2.5 Código Python Executável -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">2.5 Código Executável em PyTorch (Bloco Residual ResNet)</h3>
         <pre><code class="language-python">import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -337,6 +694,93 @@ loss_cnn.backward()
 optimizer_cnn.step()
 
 print(f"Perda CNN ResNet calculada com sucesso: {loss_cnn.item():.4f}")</code></pre>
+
+        <!-- 2.6 Quando Usar vs Não Usar -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">2.6 Quando Usar vs Não Usar</h3>
+        <div class="grid-2" style="margin-top: 20px;">
+          <div class="card" style="border-top: 4px solid var(--aws);">
+            <div class="card-lbl" style="color: var(--aws);">Quando Usar CNN</div>
+            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
+              <li>Visão Computacional: Classificação, Detecção de Objetos (YOLO, Faster R-CNN) e Segmentação.</li>
+              <li>Sinais bidimensionais e espectrogramas de áudio.</li>
+              <li>Extração de vetores de características (Visual Embeddings) para busca por similaridade.</li>
+              <li>Inferência em borda (Edge Devices) via quantização e filtros separáveis.</li>
+            </ul>
+          </div>
+          <div class="card" style="border-top: 4px solid var(--spark);">
+            <div class="card-lbl" style="color: var(--spark);">Quando NÃO Usar CNN</div>
+            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
+              <li>Processamento de Linguagem Natural sem estrutura em grade 2D espacial.</li>
+              <li>Dados de grafos ou tabelas relacionais onde a ordenação dos vizinhos é arbitrária.</li>
+              <li>Sequências textuais de longo alcance onde o mecanismo de atenção captura dependências globais.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 2.7 Pontos Relevantes -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">2.7 Pipeline de Visão Computacional e Extração de Embeddings na AWS</h3>
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 860 220" xmlns="http://www.w3.org/2000/svg" aria-label="Pipeline CNN Vision Computacional AWS SageMaker Bedrock">
+            <defs>
+              <marker id="cnn-pipe-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker>
+              <marker id="cnn-pipe-arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#0284c7"/></marker>
+            </defs>
+            <rect width="860" height="220" rx="10" fill="#0f172a"/>
+            <text x="430" y="22" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5">PIPELINE CNN — VISÃO COMPUTACIONAL &amp; EMBEDDINGS AWS</text>
+            <line x1="30" y1="34" x2="830" y2="34" stroke="#1e293b" stroke-width="1"/>
+            <!-- S3 -->
+            <rect x="30" y="65" width="110" height="80" rx="8" fill="#1e293b" stroke="#16a34a" stroke-width="2"/>
+            <text x="85" y="95" text-anchor="middle" fill="#16a34a" font-family="DM Sans, sans-serif" font-size="22">🖼️</text>
+            <text x="85" y="115" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon S3</text>
+            <text x="85" y="128" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Image Dataset Lake</text>
+            <line x1="142" y1="105" x2="178" y2="105" stroke="#475569" stroke-width="1.5" marker-end="url(#cnn-pipe-arrow)"/>
+            <text x="160" y="99" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Pre-process</text>
+            <!-- EMR -->
+            <rect x="180" y="65" width="110" height="80" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+            <text x="235" y="95" text-anchor="middle" fill="#eab308" font-family="DM Sans, sans-serif" font-size="22">🔄</text>
+            <text x="235" y="115" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon EMR</text>
+            <text x="235" y="128" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Image Normalization</text>
+            <line x1="292" y1="105" x2="328" y2="105" stroke="#475569" stroke-width="1.5" marker-end="url(#cnn-pipe-arrow)"/>
+            <text x="310" y="99" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Tensor Batches</text>
+            <!-- SM Training -->
+            <rect x="330" y="65" width="120" height="80" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="2"/>
+            <text x="390" y="95" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="22">🏋️</text>
+            <text x="390" y="115" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM Training</text>
+            <text x="390" y="128" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">ResNet50 / ConvNeXt</text>
+            <!-- Arrow up to Feature Store -->
+            <line x1="452" y1="90" x2="498" y2="80" stroke="#475569" stroke-width="1.5" marker-end="url(#cnn-pipe-arrow)"/>
+            <text x="475" y="76" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Extract Maps</text>
+            <!-- Arrow down to Endpoint -->
+            <line x1="452" y1="120" x2="498" y2="135" stroke="#0284c7" stroke-width="1.5" marker-end="url(#cnn-pipe-arrow-blue)"/>
+            <text x="475" y="149" text-anchor="middle" fill="#0284c7" font-family="DM Sans, sans-serif" font-size="9">Deploy Weights</text>
+            <!-- Feature Store -->
+            <rect x="500" y="45" width="120" height="65" rx="8" fill="#1e293b" stroke="#a21caf" stroke-width="2"/>
+            <text x="560" y="72" text-anchor="middle" fill="#c026d3" font-family="DM Sans, sans-serif" font-size="22">🗃️</text>
+            <text x="560" y="90" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Feature Store</text>
+            <text x="560" y="103" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">CNN Visual Vectors</text>
+            <!-- SM Endpoint -->
+            <rect x="500" y="130" width="120" height="65" rx="8" fill="#1e293b" stroke="#FF6B00" stroke-width="2"/>
+            <text x="560" y="156" text-anchor="middle" fill="#FF6B00" font-family="DM Sans, sans-serif" font-size="22">🚀</text>
+            <text x="560" y="175" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM Endpoint</text>
+            <text x="560" y="188" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">CNN Real-Time Serving</text>
+            <!-- Feature Store to Endpoint -->
+            <line x1="560" y1="110" x2="560" y2="128" stroke="#a21caf" stroke-width="1.5" marker-end="url(#cnn-pipe-arrow)"/>
+            <text x="575" y="122" fill="#a21caf" font-family="DM Sans, sans-serif" font-size="9">Vector Context</text>
+            <!-- Arrow to Bedrock -->
+            <line x1="622" y1="163" x2="658" y2="163" stroke="#475569" stroke-width="1.5" marker-end="url(#cnn-pipe-arrow)"/>
+            <text x="640" y="157" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Feature Fusion</text>
+            <!-- Bedrock -->
+            <rect x="660" y="120" width="120" height="80" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
+            <text x="720" y="150" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="22">🤖</text>
+            <text x="720" y="170" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon Bedrock</text>
+            <text x="720" y="183" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Multimodal GenAI Agent</text>
+          </svg>
+        </div>
+        </div>
+
+        <!-- 2.8 Referências Bibliográficas -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">2.8 Referências Bibliográficas</h3>
+        <p> LeCun, Y. et al. (1998). <em>Gradient-based learning applied to document recognition</em>. Proc. IEEE. | He, K. et al. (2016). <em>Deep Residual Learning for Image Recognition (ResNet)</em>. CVPR. | Simonyan, K. &amp; Zisserman, A. (2014). <em>Very Deep Convolutional Networks (VGG)</em>. ICLR.</p>
       </section>
 
       <!-- SEÇÃO 03: TRANSFORMER ARCHITECTURE & GENAI -->
@@ -349,35 +793,37 @@ print(f"Perda CNN ResNet calculada com sucesso: {loss_cnn.item():.4f}")</code></
           </div>
         </div>
 
-        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+        <!-- 3.1 Introdução -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">3.1 Introdução</h3>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 12px 0 18px 0;">
           A arquitetura <strong>Transformer</strong> é o pilar fundamental dos Large Language Models (LLMs) modernos e da IA Generativa. Ao abandonar a recorrência sequencial das RNNs em favor do mecanismo de <strong>Self-Attention (Auto-Atenção)</strong>, o Transformer viabiliza o processamento massivamente paralelo de sequências longas e a captura de contextos globais <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Vaswani et al., 2017]</span>.
         </p>
 
-        <h3 style="margin-top: 28px; margin-bottom: 16px;">Scaled Dot-Product Attention: Formulação de \(Q, K, V\)</h3>
+        <!-- 3.2 Conceitos Fundamentais -->
+        <h3 style="margin-top: 28px; margin-bottom: 16px;">3.2 Conceitos Fundamentais</h3>
         <p>Dado um conjunto de embeddings de entrada \(X \in \mathbb{R}^{N \times d_{model}}\), calculam-se as matrizes de <strong>Query (\(Q\))</strong>, <strong>Key (\(K\))</strong> e <strong>Value (\(V\))</strong> através de projeções lineares aprendidas:</p>
 
         \[Q = X W_Q, \quad K = X W_K, \quad V = X W_V\]
 
-        <p>Onde \(W_Q, W_K, W_V \in \mathbb{R}^{d_{model} \times d_k}\). A equação da <strong>Scaled Dot-Product Attention</strong> realiza a pontuação de relevância semântica entre pares de tokens:</p>
+        <p>A equação da <strong>Scaled Dot-Product Attention</strong> realiza a pontuação de relevância semântica entre pares de tokens:</p>
 
         \[\text{Attention}(Q, K, V) = \text{softmax}\left( \frac{Q K^T}{\sqrt{d_k}} \right) V\]
 
         <div class="abox info" style="margin-top: 24px; border-left-color: var(--genai);">
-          <div class="abox-hdr" style="background: var(--genai); color: #ffffff;">Por que o Fator de Escala \(\sqrt{d_k}\) é Matematicamente Vital?</div>
+          <div class="abox-hdr" style="background: var(--genai); color: #ffffff;">Prova Matemática do Fator de Escala \(\sqrt{d_k}\) &amp; Multi-Head Attention</div>
           <div class="abox-body">
-            <p>Para dimensões elevadas de \(d_k\) (ex: \(d_k = 64\) ou \(128\)), o produto escalar \(Q K^T\) cresce em magnitude proporcional a \(d_k\). Sem a divisão por \(\sqrt{d_k}\), o produto escalar assume valores extremamente elevados, empurrando a função Softmax para regiões com gradientes quase nulos (<em>saturação da Softmax</em>), travando o aprendizado por <em>gradient vanishing</em> durante o treinamento.</p>
+            <p style="margin-bottom: 8px;"><strong>Prova da Variância do Produto Escalar:</strong></p>
+            <p>Assuma que os componentes dos vetores \(q, k \in \mathbb{R}^{d_k}\) sejam variáveis aleatórias independentes com média 0 e variância 1: \(\mathbb{E}[q_i] = \mathbb{E}[k_i] = 0\) e \(\text{Var}(q_i) = \text{Var}(k_i) = 1\). O produto escalar é \(q \cdot k = \sum_{i=1}^{d_k} q_i k_i\).</p>
+            <p style="margin-top: 6px;">A média do produto é \(\mathbb{E}[q_i k_i] = \mathbb{E}[q_i] \mathbb{E}[k_i] = 0\). A variância de cada termo é:</p>
+            \[\text{Var}(q_i k_i) = \mathbb{E}[q_i^2 k_i^2] - (\mathbb{E}[q_i k_i])^2 = \mathbb{E}[q_i^2] \mathbb{E}[k_i^2] - 0 = 1 \times 1 = 1\]
+            <p style="margin-top: 6px;">Como os termos são independentes, a variância da soma é a soma das variâncias:</p>
+            \[\text{Var}(q \cdot k) = \sum_{i=1}^{d_k} \text{Var}(q_i k_i) = d_k\]
+            <p style="margin-top: 6px;">Portanto, o desvio padrão do produto escalar é \(\sqrt{d_k}\). Ao dividir por \(\sqrt{d_k}\), a variância de \(\frac{q \cdot k}{\sqrt{d_k}}\) é reescalada para exatos 1, prevenindo que a função Softmax sature em regiões com gradientes nulos!</p>
+
+            <p style="margin-top: 14px; margin-bottom: 8px;"><strong>Multi-Head Attention (MHA):</strong> Concatenam-se \(h\) cabeças de atenção independentes para capturar subespaços de representação simultâneos:</p>
+            \[\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \dots, \text{head}_h) W^O\]
           </div>
         </div>
-
-        <h4 style="margin-top: 28px; margin-bottom: 14px;">Multi-Head Attention &amp; Codificação Posicional</h4>
-        <p>O <strong>Multi-Head Attention (MHA)</strong> permite que o modelo atente simultaneamente a informações vindas de diferentes subespaços de representação em diferentes posições:</p>
-
-        \[\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \dots, \text{head}_h) W^O\]
-        \[\text{head}_i = \text{Attention}(Q W_i^Q, K W_i^K, V W_i^V)\]
-
-        <p>Como as operações de atenção são invariantes à permutação (sem noção intrínseca da ordem das palavras), injetam-se vetores de <strong>Positional Encoding (PE)</strong> senoidais ou <strong>Rotary Position Embeddings (RoPE)</strong> aos embeddings de entrada:</p>
-
-        \[PE_{(pos, 2i)} = \sin\left( \frac{pos}{10000^{2i/d_{model}}} \right), \quad PE_{(pos, 2i+1)} = \cos\left( \frac{pos}{10000^{2i/d_{model}}} \right)\]
 
         <h4 style="margin-top: 28px; margin-bottom: 14px;">Variantes de Arquitetura: Encoder-Decoder, Encoder-Only e Decoder-Only</h4>
         <div class="concept-grid">
@@ -395,34 +841,163 @@ print(f"Perda CNN ResNet calculada com sucesso: {loss_cnn.item():.4f}")</code></
           </div>
         </div>
 
-        <div class="grid-2" style="margin-top: 28px;">
-          <div class="card" style="border-top: 4px solid var(--genai);">
-            <div class="card-lbl" style="color: var(--genai);">Quando Usar Transformers</div>
-            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
-              <li>Processamento de Linguagem Natural avançado, geração de texto, código e raciocínio multi-passo.</li>
-              <li>Sistemas RAG (Retrieval-Augmented Generation) e Agentes Autônomos.</li>
-              <li>Processamento Multimodal unificado (Texto + Imagem + Áudio).</li>
-              <li>Captura de relações contextuais complexas em sequências extensas (janelas de atenções de até 128k+ tokens).</li>
-            </ul>
-          </div>
-          <div class="card" style="border-top: 4px solid var(--spark);">
-            <div class="card-lbl" style="color: var(--spark);">Quando NÃO Usar Transformers</div>
-            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
-              <li>Hardware com restrição extrema de memória VRAM e SLA de inferência microsecondária (\(&lt; 1\text{ms}\)).</li>
-              <li>Datasets tabulares pequenos onde a complexidade quadrática de atenção \(\mathcal{O}(N^2)\) não compensa o custo computacional em relação a árvores de decisão.</li>
-              <li>Aplicações onde o gerenciamento de KV-Cache inviabilize o custo operacional sem infraestrutura distribuída na AWS.</li>
-            </ul>
-          </div>
+        <!-- 3.3 Fórmulas KaTeX & Legenda de Símbolos -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.3 Fórmulas KaTeX &amp; Legenda de Símbolos</h3>
+        <p>A tabela abaixo consolida as equações chave da arquitetura Transformer:</p>
+
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--genai); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Conceito</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Equação Formal (KaTeX)</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Descrição Operacional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Projeções Lineares Q, K, V</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[Q = X W_Q, \quad K = X W_K, \quad V = X W_V\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Mapeamento das entradas para subespaços de Query, Key e Value.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Scaled Dot-Product Attention</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[\text{Attention}(Q, K, V) = \text{softmax}\left( \frac{Q K^T}{\sqrt{d_k}} \right) V\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Auto-atenção dimensionada com reescalonamento por \(\sqrt{d_k}\).</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Multi-Head Concatenation</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[\text{MultiHead} = \text{Concat}(\text{head}_1, \dots, \text{head}_h) W^O\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Fusão linear das representações paralelas extraídas por cada cabeça.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Positional Encoding Senoidal</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\[PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d}}\right)\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Injeção de informação de posição relativa e absoluta nos embeddings.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Diagrama Draw.io Section 3 -->
-        <h3 style="margin-top: 36px; margin-bottom: 16px;">Arquitetura de GenAI e LLMs em Produção na AWS (Bedrock &amp; SageMaker JumpStart)</h3>
-        <div class="drawio-wrap" style="margin-top: 20px;">
-          <div class="drawio-label"><span class="dot"></span>TRANSFORMER &amp; GENAI PIPELINE — AWS BEDROCK &amp; SAGEMAKER JUMPSTART</div>
-          <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph='{"highlight": "#FF6B00", "lightbox": false, "nav": false, "resize": true, "toolbar": "zoom", "page": 0, "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"0\" gridSize=\"10\" guides=\"0\" tooltips=\"1\" connect=\"0\" arrows=\"0\" fold=\"0\" page=\"0\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"320\" math=\"0\" shadow=\"0\"&gt;&lt;root&gt;&lt;mxCell id=\"tf_0\"/&gt;&lt;mxCell id=\"tf_1\" parent=\"tf_0\"/&gt;&lt;mxCell id=\"tf_bg\" value=\"\" style=\"rounded=0;fillColor=#080f1e;strokeColor=none;\" vertex=\"1\" parent=\"tf_1\"&gt;&lt;mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"320\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_title\" value=\"ARQUITETURA DE TRANSFORMERS &amp;amp; GENAI — AWS BEDROCK &amp;amp; SAGEMAKER JUMPSTART\" style=\"text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\" vertex=\"1\" parent=\"tf_1\"&gt;&lt;mxGeometry x=\"0\" y=\"8\" width=\"900\" height=\"24\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_s3\" value=\"Amazon S3 Iceberg&amp;#10;(Text Corpora &amp;amp; Fine-tuning)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"tf_1\"&gt;&lt;mxGeometry x=\"40\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_emr\" value=\"Amazon EMR&amp;#10;(Distributed BPE Tokenizer)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"tf_1\"&gt;&lt;mxGeometry x=\"200\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_sm\" value=\"SageMaker JumpStart&amp;#10;(LLM / LoRA Fine-Tuning)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"tf_1\"&gt;&lt;mxGeometry x=\"370\" y=\"130\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_fs\" value=\"SageMaker Feature Store&amp;#10;(Prompt &amp;amp; KV Cache Store)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#a21caf;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"tf_1\"&gt;&lt;mxGeometry x=\"550\" y=\"210\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_bedrock\" value=\"Amazon Bedrock&amp;#10;(FM Foundation Models &amp;amp; RAG)\" style=\"shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\" vertex=\"1\" parent=\"tf_1\"&gt;&lt;mxGeometry x=\"550\" y=\"70\" width=\"56\" height=\"56\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_app\" value=\"Enterprise App&amp;#10;(GenAI Client Interface)\" style=\"rounded=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;\" vertex=\"1\" parent=\"tf_1\"&gt;&lt;mxGeometry x=\"730\" y=\"130\" width=\"110\" height=\"50\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_e1\" value=\"Token Ingestion\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"tf_s3\" target=\"tf_emr\" parent=\"tf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_e2\" value=\"Dataset Tensors\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"tf_emr\" target=\"tf_sm\" parent=\"tf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_e3\" value=\"Deploy Custom LLM\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"tf_sm\" target=\"tf_bedrock\" parent=\"tf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_e4\" value=\"Cache Prompt Context\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"tf_sm\" target=\"tf_fs\" parent=\"tf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_e5\" value=\"Low-Latency Attention KV\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#a21caf;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"tf_fs\" target=\"tf_bedrock\" parent=\"tf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;mxCell id=\"tf_e6\" value=\"Autoregressive Response\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;\" edge=\"1\" source=\"tf_bedrock\" target=\"tf_app\" parent=\"tf_1\"&gt;&lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}'></div>
+        <!-- 3.4 Diagrama SVG Inline -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.4 Diagrama SVG Inline: Self-Attention &amp; Multi-Head Concatenation</h3>
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" aria-label="Self-Attention Mechanism and Multi-Head Concatenation Diagram">
+            <defs>
+              <linearGradient id="tf-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f172a"/>
+                <stop offset="100%" stop-color="#090d16"/>
+              </linearGradient>
+              <marker id="arrow-tf-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+              </marker>
+              <marker id="arrow-tf-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#a78bfa"/>
+              </marker>
+              <marker id="arrow-tf-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/>
+              </marker>
+              <marker id="arrow-tf-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
+              </marker>
+            </defs>
+
+            <rect width="800" height="400" rx="10" fill="url(#tf-bg)"/>
+            <text x="400" y="28" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="14" font-weight="700" letter-spacing="1">
+              MECANISMO DE SELF-ATTENTION (Q, K, V) E MULTI-HEAD CONCATENATION
+            </text>
+            <line x1="40" y1="42" x2="760" y2="42" stroke="#1e293b" stroke-width="1"/>
+
+            <g transform="translate(30, 160)">
+              <text x="40" y="-12" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Input X</text>
+              <rect x="0" y="0" width="80" height="50" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+              <text x="40" y="22" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="11">X ∈ ℝⁿˣᵈ</text>
+              <text x="40" y="38" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">+ Positional Enc</text>
+            </g>
+
+            <path d="M 110 185 L 145 105" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-tf-blue)"/>
+            <path d="M 110 185 L 145 185" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-tf-purple)"/>
+            <path d="M 110 185 L 145 265" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-tf-green)"/>
+
+            <g transform="translate(145, 80)">
+              <rect x="0" y="0" width="85" height="48" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+              <text x="42" y="20" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Query (Q)</text>
+              <text x="42" y="36" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="10">Q = X · W Q</text>
+            </g>
+
+            <g transform="translate(145, 160)">
+              <rect x="0" y="0" width="85" height="48" rx="6" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+              <text x="42" y="20" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Key (K)</text>
+              <text x="42" y="36" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="10">K = X · W K</text>
+            </g>
+
+            <g transform="translate(145, 240)">
+              <rect x="0" y="0" width="85" height="48" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+              <text x="42" y="20" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">Value (V)</text>
+              <text x="42" y="36" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="10">V = X · W V</text>
+            </g>
+
+            <path d="M 230 104 L 270 104 L 270 135 L 290 135" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-tf-blue)"/>
+            <path d="M 230 184 L 270 184 L 270 155 L 290 155" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-tf-purple)"/>
+
+            <g transform="translate(290, 125)">
+              <rect x="0" y="0" width="75" height="40" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+              <text x="37" y="18" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="11" font-weight="700">MatMul</text>
+              <text x="37" y="32" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="10">Q · Kᵀ</text>
+            </g>
+
+            <line x1="365" y1="145" x2="395" y2="145" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-tf-amber)"/>
+
+            <g transform="translate(395, 125)">
+              <rect x="0" y="0" width="75" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+              <text x="37" y="18" text-anchor="middle" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="11" font-weight="700">Scale</text>
+              <text x="37" y="32" text-anchor="middle" fill="#f59e0b" font-family="DM Mono, monospace" font-size="10">÷ √dₖ</text>
+            </g>
+
+            <line x1="470" y1="145" x2="500" y2="145" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-tf-purple)"/>
+
+            <g transform="translate(500, 120)">
+              <rect x="0" y="0" width="85" height="50" rx="6" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+              <text x="42" y="20" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11" font-weight="700">Softmax</text>
+              <text x="42" y="38" text-anchor="middle" fill="#a78bfa" font-family="DM Mono, monospace" font-size="10">Matriz A</text>
+            </g>
+
+            <path d="M 585 145 L 610 145 L 610 185 L 625 185" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-tf-purple)"/>
+            <path d="M 230 264 L 600 264 L 600 205 L 625 205" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-tf-green)"/>
+
+            <g transform="translate(625, 175)">
+              <rect x="0" y="0" width="75" height="40" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+              <text x="37" y="18" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="11" font-weight="700">MatMul</text>
+              <text x="37" y="32" text-anchor="middle" fill="#10b981" font-family="DM Mono, monospace" font-size="10">Headᵢ = A·V</text>
+            </g>
+
+            <line x1="700" y1="195" x2="725" y2="195" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrow-tf-purple)"/>
+
+            <g transform="translate(725, 150)">
+              <rect x="10" y="-10" width="60" height="90" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1" opacity="0.5"/>
+              <rect x="5" y="-5" width="60" height="90" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="1" opacity="0.7"/>
+              <rect x="0" y="0" width="60" height="90" rx="6" fill="#0f172a" stroke="#a78bfa" stroke-width="2"/>
+              <text x="30" y="24" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Concat</text>
+              <text x="30" y="38" text-anchor="middle" fill="#94a3b8" font-family="DM Mono, monospace" font-size="9">head₁..h</text>
+              <line x1="5" y1="46" x2="55" y2="46" stroke="#1e293b" stroke-width="1"/>
+              <text x="30" y="62" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Linear</text>
+              <text x="30" y="76" text-anchor="middle" fill="#38bdf8" font-family="DM Mono, monospace" font-size="9">Wᴼ</text>
+            </g>
+
+            <g transform="translate(100, 325)">
+              <rect x="0" y="0" width="600" height="50" rx="8" fill="#1e293b" stroke="#334155"/>
+              <text x="300" y="22" text-anchor="middle" fill="#f8fafc" font-family="DM Mono, monospace" font-size="12" font-weight="700">
+                Attention(Q, K, V) = softmax( (Q · Kᵀ) / √dₖ ) · V
+              </text>
+              <text x="300" y="40" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11">
+                MultiHead(Q, K, V) = Concat(head₁, head₂, ..., headₕ) · Wᴼ
+              </text>
+            </g>
+          </svg>
         </div>
 
-        <h3 style="margin-top: 36px; margin-bottom: 16px;">Código Executável em PyTorch &amp; HuggingFace (Self-Attention &amp; LLM Pipeline)</h3>
+        <!-- 3.5 Código Python Executável -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">3.5 Código Executável em PyTorch &amp; HuggingFace (Self-Attention &amp; LLM Pipeline)</h3>
         <pre><code class="language-python">import math
 import torch
 import torch.nn as nn
@@ -472,16 +1047,94 @@ attn_module = ScaledDotProductSelfAttention(d_model=128, n_heads=4).to(device)
 tokens_synthetic = torch.randn(4, 16, 128, device=device)
 
 attn_output = attn_module(tokens_synthetic)
-print(f"Formato do Tensor de Saída da Atenção: {attn_output.shape}")
+print(f"Formato do Tensor de Saída da Atenção: {attn_output.shape}")</code></pre>
 
-# Exemplo de Integração HuggingFace Transformers (Pipeline Inference)
-"""
-from transformers import pipeline
-generator = pipeline('text-generation', model='gpt2', device=0 if torch.cuda.is_available() else -1)
-prompt = 'A arquitetura Transformer revolucionou a IA porque'
-res = generator(prompt, max_length=50, num_return_sequences=1)
-print(res[0]['generated_text'])
-"""</code></pre>
+        <!-- 3.6 Quando Usar vs Não Usar -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">3.6 Quando Usar vs Não Usar</h3>
+        <div class="grid-2" style="margin-top: 20px;">
+          <div class="card" style="border-top: 4px solid var(--genai);">
+            <div class="card-lbl" style="color: var(--genai);">Quando Usar Transformers</div>
+            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
+              <li>Processamento de Linguagem Natural avançado, geração de texto e código.</li>
+              <li>Sistemas RAG (Retrieval-Augmented Generation) e Agentes Autônomos.</li>
+              <li>Processamento Multimodal unificado (Texto + Imagem + Áudio).</li>
+              <li>Captura de relações contextuais em sequências extensas (128k+ tokens).</li>
+            </ul>
+          </div>
+          <div class="card" style="border-top: 4px solid var(--spark);">
+            <div class="card-lbl" style="color: var(--spark);">Quando NÃO Usar Transformers</div>
+            <ul style="margin-left: 18px; font-size: 0.9rem; line-height: 1.7;">
+              <li>Hardware com restrição extrema de VRAM e SLA microsecondário (&lt; 1ms).</li>
+              <li>Datasets tabulares pequenos onde a complexidade quadrática \(\mathcal{O}(N^2)\) não compensa o custo.</li>
+              <li>Aplicações sem infraestrutura distribuída para gerenciamento de KV-Cache na AWS.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 3.7 Pontos Relevantes -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">3.7 Arquitetura de GenAI e LLMs em Produção na AWS (Bedrock &amp; SageMaker JumpStart)</h3>
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 860 240" xmlns="http://www.w3.org/2000/svg" aria-label="Pipeline Transformer GenAI LLM AWS Bedrock SageMaker JumpStart">
+            <defs>
+              <marker id="tf-pipe-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker>
+              <marker id="tf-pipe-arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#7c3aed"/></marker>
+            </defs>
+            <rect width="860" height="240" rx="10" fill="#0f172a"/>
+            <text x="430" y="22" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5">TRANSFORMER &amp; GENAI — AWS BEDROCK &amp; SAGEMAKER JUMPSTART</text>
+            <line x1="30" y1="34" x2="830" y2="34" stroke="#1e293b" stroke-width="1"/>
+            <!-- S3 -->
+            <rect x="30" y="80" width="110" height="80" rx="8" fill="#1e293b" stroke="#16a34a" stroke-width="2"/>
+            <text x="85" y="110" text-anchor="middle" fill="#16a34a" font-family="DM Sans, sans-serif" font-size="22">📚</text>
+            <text x="85" y="130" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon S3</text>
+            <text x="85" y="143" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Text Corpora</text>
+            <line x1="142" y1="120" x2="178" y2="120" stroke="#475569" stroke-width="1.5" marker-end="url(#tf-pipe-arrow)"/>
+            <text x="160" y="114" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Token Ingestion</text>
+            <!-- EMR -->
+            <rect x="180" y="80" width="115" height="80" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+            <text x="237" y="110" text-anchor="middle" fill="#eab308" font-family="DM Sans, sans-serif" font-size="22">✂️</text>
+            <text x="237" y="130" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon EMR</text>
+            <text x="237" y="143" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Distributed BPE Tokenizer</text>
+            <line x1="297" y1="120" x2="333" y2="120" stroke="#475569" stroke-width="1.5" marker-end="url(#tf-pipe-arrow)"/>
+            <text x="315" y="114" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Dataset Tensors</text>
+            <!-- SageMaker JumpStart -->
+            <rect x="335" y="80" width="120" height="80" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="2"/>
+            <text x="395" y="110" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="22">⚡</text>
+            <text x="395" y="130" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM JumpStart</text>
+            <text x="395" y="143" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">LLM / LoRA Fine-Tuning</text>
+            <!-- Arrow up to Bedrock -->
+            <line x1="457" y1="100" x2="503" y2="85" stroke="#7c3aed" stroke-width="2" marker-end="url(#tf-pipe-arrow-purple)"/>
+            <text x="480" y="82" text-anchor="middle" fill="#7c3aed" font-family="DM Sans, sans-serif" font-size="9">Deploy Custom LLM</text>
+            <!-- Arrow down to Feature Store -->
+            <line x1="457" y1="140" x2="503" y2="158" stroke="#475569" stroke-width="1.5" marker-end="url(#tf-pipe-arrow)"/>
+            <text x="480" y="171" text-anchor="middle" fill="#64748b" font-family="DM Sans, sans-serif" font-size="9">Cache Prompt Context</text>
+            <!-- Bedrock -->
+            <rect x="505" y="50" width="130" height="75" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2.5"/>
+            <text x="570" y="78" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="26">🤖</text>
+            <text x="570" y="100" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon Bedrock</text>
+            <text x="570" y="114" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">FM Foundation Models &amp; RAG</text>
+            <!-- Feature Store -->
+            <rect x="505" y="155" width="130" height="65" rx="8" fill="#1e293b" stroke="#a21caf" stroke-width="2"/>
+            <text x="570" y="180" text-anchor="middle" fill="#c026d3" font-family="DM Sans, sans-serif" font-size="22">🗃️</text>
+            <text x="570" y="198" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Feature Store</text>
+            <text x="570" y="211" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Prompt &amp; KV Cache Store</text>
+            <!-- Feature Store to Bedrock -->
+            <line x1="570" y1="155" x2="570" y2="127" stroke="#a21caf" stroke-width="1.5" marker-end="url(#tf-pipe-arrow)"/>
+            <text x="590" y="143" fill="#a21caf" font-family="DM Sans, sans-serif" font-size="9">KV-Cache</text>
+            <!-- Bedrock to App -->
+            <line x1="637" y1="87" x2="673" y2="87" stroke="#7c3aed" stroke-width="2" marker-end="url(#tf-pipe-arrow-purple)"/>
+            <text x="655" y="81" text-anchor="middle" fill="#7c3aed" font-family="DM Sans, sans-serif" font-size="9">Autoregressive</text>
+            <!-- Enterprise App -->
+            <rect x="675" y="55" width="130" height="65" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+            <text x="740" y="80" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="22">🏢</text>
+            <text x="740" y="100" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Enterprise App</text>
+            <text x="740" y="113" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">GenAI Client Interface</text>
+          </svg>
+        </div>
+
+
+        <!-- 3.8 Referências Bibliográficas -->
+        <h3 style="margin-top: 36px; margin-bottom: 16px;">3.8 Referências Bibliográficas</h3>
+        <p> Vaswani, A. et al. (2017). <em>Attention is All You Need</em>. NeurIPS. | Devlin, J. et al. (2018). <em>BERT: Pre-training of Deep Bidirectional Transformers</em>. NAACL. | Su, J. et al. (2024). <em>RoFormer: Enhanced Transformer with Rotary Position Embedding</em>. Neurocomputing.</p>
       </section>
 
       <!-- SEÇÃO 04: BIBLIOGRAFIA ACADÊMICA -->
@@ -504,6 +1157,9 @@ print(res[0]['generated_text'])
             </li>
             <li style="margin-bottom: 12px;">
               <strong>[Vaswani et al., 2017]</strong> Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., &amp; Polosukhin, I. (2017). <em>Attention is all you need</em>. Advances in Neural Information Processing Systems (NeurIPS 30), 5998-6008.
+            </li>
+            <li style="margin-bottom: 12px;">
+              <strong>[He et al., 2016]</strong> He, K., Zhang, X., Ren, S., &amp; Sun, J. (2016). <em>Deep residual learning for image recognition</em>. IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 770-778.
             </li>
           </ul>
         </div>
@@ -601,20 +1257,7 @@ print(res[0]['generated_text'])
   <script src="../../js/progress.js"></script>
   <script src="../../js/sidebar-loader.js"></script>
   <script src="../../js/a11y.js"></script>
-  <script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
-  <script>
-    // Force drawio diagrams to render after viewer-static is loaded
-    (function() {
-      function initDrawio() {
-        if (window.GraphViewer) {
-          try { GraphViewer.processPage(); } catch(e) {}
-        } else {
-          setTimeout(initDrawio, 200);
-        }
-      }
-      if (document.readyState === 'complete') { initDrawio(); }
-      else { window.addEventListener('load', initDrawio); }
-    })();
-  </script>
+
+
 </body>
 </html>

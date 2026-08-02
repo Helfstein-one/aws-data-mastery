@@ -8,13 +8,13 @@
   <title>Algoritmos Não-Supervisionados & Clustering | AWS Data Mastery</title>
 
   <!-- KaTeX for Math Formulas (Strictly \( \) and \[ \] delimiters - NO DOLLAR SIGNS) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
     onload="renderMathInElement(document.body, {
       delimiters: [
-        {left: '\(', right: '\)', display: false},
-        {left: '\[', right: '\]', display: true}
+        {left: '\\\\(', right: '\\\\)', display: false},
+        {left: '\\\\[', right: '\\\\]', display: true}
       ],
       throwOnError: false
     });"></script>
@@ -34,33 +34,40 @@
 </head>
 <body>
   <!-- Hamburger Button for Responsive Navigation -->
-  <button id="hamburger" onclick="toggleNav()">☰</button>
+  <button id="hamburger" onclick="toggleNav()" aria-label="Alternar menu" aria-expanded="false">☰</button>
 
   <!-- Sidebar Component Navigation -->
-  <nav id="sidebar"></nav>
+  <nav id="sidebar" aria-label="Menu principal"></nav>
 
   <!-- Main Content Container -->
   <div id="main">
     <div class="hero" style="background-color: var(--navy)">
-      <div class="hero-ey">Trilha de Inteligência Artificial & Engenharia de ML</div>
+      <nav class="breadcrumb" aria-label="Navegação estrutural" style="margin-bottom: 16px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem;">
+        <a href="../../index.html" style="color: #94a3b8; text-decoration: none;">Home</a> &gt;
+        <a href="#" style="color: #94a3b8; text-decoration: none;">IA, MLOps &amp; Algoritmos</a> &gt;
+        <span style="color: #f8fafc; font-weight: 600;">Algoritmos Não-Supervisionados &amp; Clustering</span>
+      </nav>
+      <div class="hero-ey">Trilha de Inteligência Artificial &amp; Engenharia de ML</div>
       <h1>Algoritmos <em>Não-Supervisionados</em> &amp; Clustering</h1>
       <p class="hero-d">Descobrindo estruturas ocultas em dados não rotulados: Otimização de centroides no k-Means (WCSS, Silhouette, k-means++), agrupamento por densidade espacial no DBSCAN (MinPts, \(\epsilon\), ruído), e redução de dimensionalidade por PCA / SVD (Autovalores, Autovetores e Variância Explicada).</p>
       <div class="pills">
-        <span class="pill">k-Means & k-means++</span>
-        <span class="pill">WCSS & Silhouette</span>
+        <span class="pill">k-Means &amp; k-means++</span>
+        <span class="pill">WCSS &amp; Silhouette</span>
         <span class="pill">DBSCAN Spatial Density</span>
         <span class="pill">Detecção de Ruído</span>
-        <span class="pill">PCA & SVD</span>
+        <span class="pill">PCA &amp; SVD</span>
         <span class="pill">Matriz de Covariância</span>
-        <span class="pill">AWS SageMaker & EMR</span>
-        <span class="pill">Python & scikit-learn</span>
+        <span class="pill">AWS SageMaker &amp; EMR</span>
+        <span class="pill">Python &amp; scikit-learn</span>
         <span class="pill">Bibliografia Acadêmica</span>
       </div>
     </div>
 
     <main class="main-content">
 
-      <!-- SEÇÃO 01: K-MEANS CLUSTERING -->
+      <!-- ==================================================================== -->
+      <!-- SEÇÃO 01: K-MEANS CLUSTERING                                         -->
+      <!-- ==================================================================== -->
       <section class="section" id="kmeans-clustering">
         <div class="sec-hdr">
           <div class="sec-num" style="color:var(--ok)">01</div>
@@ -69,102 +76,363 @@
             <h2>k-Means Clustering: Otimização, WCSS, Silhouette &amp; k-means++</h2>
           </div>
         </div>
-        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          O <strong>k-Means</strong> é o algoritmo de agrupamento particional mais utilizado na indústria de dados. Seu objetivo é particionar um conjunto de \(N\) observações em \(K\) clusters distintos, onde cada observação pertence ao cluster cujo centroide (média geométrica) possui a menor distância euclidiana <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[MacQueen, 1967; Lloyd, 1982]</span>.
+
+        <!-- 1.1 Introdução -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">1.1 Introdução</h3>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 12px 0 18px 0;">
+          O <strong>k-Means</strong> é o algoritmo de agrupamento particional mais consagrado na ciência de dados e engenharia de Machine Learning. Proposto conceitualmente por Steinhaus (1956), popularizado por MacQueen (1967) e formalizado por Lloyd (1957/1982), o k-Means visa particionar um conjunto de \(N\) observações não rotuladas em \(K\) clusters disjuntos, onde cada observação é associada ao centroide (vetor médio geometricamente representativo) de menor distância euclidiana.
         </p>
 
-        <!-- Intuição Matemática e Fórmulas -->
-        <h3 style="margin-top: 30px; font-size: 1.3rem;">1.1 Intuição Matemática &amp; Formulação Formal</h3>
+        <!-- 1.2 Conceitos Fundamentais -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">1.2 Conceitos Fundamentais</h3>
         <p>
-          O algoritmo de Lloyd minimiza iterativamente a soma dos quadrados das distâncias intra-cluster (conhecida como <strong>Within-Cluster Sum of Squares - WCSS</strong> ou <strong>Inércia</strong> \(J\)):
+          O objetivo central do k-Means é minimizar a variância interna de cada agrupamento através da minimização da função custo <strong>Within-Cluster Sum of Squares (WCSS)</strong>, também chamada de Inércia \(J\):
         </p>
-        \[J = \sum_{k=1}^{K} \sum_{\mathbf{x}_i \in C_k} \| \mathbf{x}_i - \boldsymbol{\mu}_k \|^2\]
+        \[J(C, \boldsymbol{\mu}) = \sum_{k=1}^{K} \sum_{\mathbf{x}_i \in C_k} \|\mathbf{x}_i - \boldsymbol{\mu}_k\|^2\]
         <p>
-          onde \(C_k\) representa o conjunto de pontos atribuídos ao cluster \(k\), e \(\boldsymbol{\mu}_k\) é o centroide (vetor médio) do cluster:
+          onde \(C_k\) representa o conjunto de observações pertencentes ao cluster \(k\), e \(\boldsymbol{\mu}_k \in \mathbb{R}^d\) representa o centroide (vetor médio das características) do cluster:
         </p>
         \[\boldsymbol{\mu}_k = \frac{1}{|C_k|} \sum_{\mathbf{x}_i \in C_k} \mathbf{x}_i\]
 
         <div class="concept-grid" style="margin-top: 24px;">
           <div class="concept-card" style="border-top: 4px solid var(--ok);">
-            <h4>Algoritmo de Lloyd (Passo a Passo)</h4>
-            <p><strong>1. Expectação (Atribuição):</strong> Associa cada ponto ao centroide mais próximo:</p>
-            \[C_k^{(t)} = \{ \mathbf{x}_i : \| \mathbf{x}_i - \boldsymbol{\mu}_k^{(t)} \|^2 \le \| \mathbf{x}_i - \boldsymbol{\mu}_j^{(t)} \|^2 \quad \forall j \}\]
-            <p><strong>2. Maximização (Atualização):</strong> Recalcula o centroide como a média dos pontos no cluster:</p>
+            <h4>Algoritmo de Lloyd (Passos E &amp; M)</h4>
+            <p><strong>1. Passo E (Expectação / Atribuição):</strong> Com centroides fixos \(\boldsymbol{\mu}^{(t)}\), atribui-se cada observação \(\mathbf{x}_i\) ao centroide mais próximo:</p>
+            \[C_k^{(t)} = \left\{ \mathbf{x}_i : \|\mathbf{x}_i - \boldsymbol{\mu}_k^{(t)}\|^2 \le \|\mathbf{x}_i - \boldsymbol{\mu}_j^{(t)}\|^2 \quad \forall j \right\}\]
+            <p><strong>2. Passo M (Maximização / Atualização):</strong> Com as partições fixadas \(C^{(t)}\), atualiza-se cada centroide recalculando a média dos pontos:</p>
             \[\boldsymbol{\mu}_k^{(t+1)} = \frac{1}{|C_k^{(t)}|} \sum_{\mathbf{x}_i \in C_k^{(t)}} \mathbf{x}_i\]
           </div>
           <div class="concept-card" style="border-top: 4px solid var(--spark);">
             <h4>Inicialização k-means++</h4>
-            <p>Evita convergência para mínimos locais ruins inicializando centroides espaçados proporcionalmente à distância ao quadrado <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Arthur &amp; Vassilvitskii, 2007]</span>:</p>
+            <p>Substitui a seleção aleatória uniforme de centroides por um amostragem probabilística proporcional à distância ao quadrado \(\text{[Arthur \& Vassilvitskii, 2007]}\):</p>
             \[P(\mathbf{x}_i) = \frac{D(\mathbf{x}_i)^2}{\sum_{j=1}^{N} D(\mathbf{x}_j)^2}\]
-            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Garante um limite logarítmico de erro \(O(\log K)\) em relação ao ótimo global.</p>
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Garante um limite superior teórico de erro esperado \(\mathbb{E}[J] \le 8(\ln K + 2) J_{\text{opt}}\), mitigando convergência para mínimos locais ruins.</p>
           </div>
           <div class="concept-card" style="border-top: 4px solid var(--aws);">
-            <h4>Métrica Silhouette Score</h4>
-            <p>Mede a coesão intra-cluster \(a(i)\) e separação inter-cluster \(b(i)\) para o ponto \(i\):</p>
-            \[s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}, \quad s(i) \in [-1, 1]\]
-            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Valores próximos de +1.0 indicam clusters perfeitamente bem separados.</p>
+            <h4>Determinação do K Ótimo</h4>
+            <p><strong>Método do Cotovelo (Elbow):</strong> Avalia o ponto de inflexão na curva \(J(K)\) onde a variação marginal \(\frac{\Delta J}{\Delta K}\) estabiliza.</p>
+            <p><strong>Coeficiente de Silhouette \(s(i)\):</strong> Mede a coesão intra-cluster \(a(i)\) contra a separação inter-cluster \(b(i)\):</p>
+            \[s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}, \quad s(i) \in [-1, +1]\]
           </div>
         </div>
 
         <div class="abox info" style="margin-top: 24px; border-left-color: var(--ok);">
-          <div class="abox-hdr" style="background: var(--ok); color: #0f172a;">Determinação do Número Ótimo de Clusters: Método do Cotovelo (Elbow Method) &amp; Coeficiente de Silhouette</div>
+          <div class="abox-hdr" style="background: var(--ok); color: #0f172a;">Prova Formal: Convergência Monotônica do Algoritmo de Lloyd</div>
           <div class="abox-body">
-            <p style="margin-bottom: 12px;">
-              Como o WCSS diminui monotonicamente à medida que \(K\) aumenta (atingindo 0 quando \(K = N\)), o <strong>Método do Cotovelo</strong> busca o ponto de inflexão na curva de inércia em função de \(K\), onde a taxa de variação da inércia \(\frac{\Delta J}{\Delta K}\) se estabiliza.
+            <p style="margin-bottom: 8px;">
+              O Algoritmo de Lloyd realiza minimização coordenada alternada da função custo WCSS \(J(C, \boldsymbol{\mu})\).
             </p>
-            <p style="margin-bottom: 0;">
-              Em complemento, o <strong>Silhouette Score médio</strong> avalia a qualidade do agrupamento sem necessitar de rótulos externos. O valor ótimo de \(K\) maximiza o score de Silhouette e atende aos requisitos operacionais do negócio.
+            \[J(C^{(t+1)}, \boldsymbol{\mu}^{(t+1)}) \le J(C^{(t+1)}, \boldsymbol{\mu}^{(t)}) \le J(C^{(t)}, \boldsymbol{\mu}^{(t)})\]
+            <p style="margin-top: 8px; margin-bottom: 0;">
+              No <strong>Passo E</strong>, reatribuir cada ponto ao centroide mais próximo minimiza \(J\) para centroides fixos. No <strong>Passo M</strong>, a média amostral \(\boldsymbol{\mu}_k\) é a solução exata que anula o gradiente \(\nabla_{\boldsymbol{\mu}_k} J = -2 \sum (\mathbf{x}_i - \boldsymbol{\mu}_k) = 0\). Como o número de partições de \(N\) observações em \(K\) grupos é finito (\(K^N\)) e a função custo é limitada inferiormente por zero (\(J \ge 0\)), a sequência \(J^{(t)}\) é monotonicamente não-crescente, garantindo convergência em tempo finito para um mínimo local.
             </p>
           </div>
         </div>
 
-        <!-- When to Use vs When NOT to Use -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.2 Trade-offs de Produção: Quando Usar vs. Quando NÃO Usar</h3>
-        <div class="grid-2" style="margin-top: 16px;">
-          <div class="card" style="border-top: 4px solid var(--ok);">
-            <div class="card-lbl" style="color: var(--ok);">Quando USAR o k-Means</div>
-            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
-              <li><strong>Clusters Isotrópicos e Convexos:</strong> Dados cujos agrupamentos possuem formato aproximadamente esférico e densidades homogêneas.</li>
-              <li><strong>Baixa a Média Dimensionalidade:</strong> Atributos numéricos contínuos previamente escalonados (\(d \le 50\)).</li>
-              <li><strong>Necessidade de Inferência em Tempo Real:</strong> Uma vez treinados os centroides, a inferência para novos pontos requer apenas o cálculo da distância euclidiana para \(K\) pontos (\(O(K \cdot d)\)).</li>
-              <li><strong>Grandes Volumes de Dados:</strong> Altamente escalável via algoritmo MiniBatchKMeans ou PySpark MLLib em clusters EMR.</li>
-            </ul>
-          </div>
+        <!-- 1.3 Fórmulas KaTeX & Legenda de Símbolos -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.3 Fórmulas KaTeX &amp; Legenda de Símbolos</h3>
+        <p>A tabela a seguir consolida as principais equações formais do k-Means com a respectiva legenda de símbolos:</p>
 
-          <div class="card" style="border-top: 4px solid var(--accent);">
-            <div class="card-lbl" style="color: var(--accent);">Quando NÃO USAR o k-Means</div>
-            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
-              <li><strong>Geometrias Não-Convexas:</strong> Clusters em formatos de luas entrelaçadas, anéis concêntricos ou espirais (o k-Means falha ao assumir limites lineares).</li>
-              <li><strong>Presença Significativa de Ruído / Outliers:</strong> Como os centroides são calculados pela média, um único outlier extremo desloca fortemente o centroide.</li>
-              <li><strong>Densidades Desiguais:</strong> Clusters com variâncias muito distintas tendem a ser divididos incorretamente pelo algoritmo.</li>
-              <li><strong>Maltdição da Dimensionalidade:</strong> Em altíssima dimensão (\(d > 500\)), a distância euclidiana perde a capacidade discriminativa (todas as distâncias tornam-se similares).</li>
-            </ul>
-          </div>
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--ok); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Conceito</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Equação Formal (KaTeX)</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Descrição Operacional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Função Custo WCSS (Inércia)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[J = \sum_{k=1}^{K} \sum_{\mathbf{x}_i \in C_k} \|\mathbf{x}_i - \boldsymbol{\mu}_k\|^2\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Soma dos quadrados das distâncias euclidianas intra-cluster a ser minimizada.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Atualização de Centroide</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[\boldsymbol{\mu}_k = \frac{1}{|C_k|} \sum_{\mathbf{x}_i \in C_k} \mathbf{x}_i\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Vetor médio geométrico recalculado no Passo M do Algoritmo de Lloyd.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Probabilidade k-means++</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[P(\mathbf{x}) = \frac{D(\mathbf{x})^2}{\sum_{\mathbf{x}' \in \mathcal{X}} D(\mathbf{x}')^2}\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Distribuição de probabilidade para amostragem do próximo centroide inicial.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Score de Silhouette</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Métrica de separabilidade individual variando no intervalo \([-1, +1]\).</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Draw.io Diagram -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.3 Arquitetura de Produção AWS para k-Means</h3>
-        <p>O diagrama técnico a seguir ilustra um pipeline enterprise de segmentação de clientes batch e real-time integrando Amazon S3 Iceberg, EMR Serverless, SageMaker Feature Store e SageMaker Training:</p>
-        
-        <div class="drawio-wrap" style="margin-top: 24px;">
-          <div class="drawio-label"><span class="dot"></span>k-Means Clustering — Pipeline Enterprise na AWS</div>
-          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph="{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;km_0\&quot;/&gt;&lt;mxCell id=\&quot;km_1\&quot; parent=\&quot;km_0\&quot;/&gt;&lt;mxCell id=\&quot;km_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_title\&quot; value=\&quot;K-MEANS CLUSTERING — PIPELINE ENTERPRISE NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_s3\&quot; value=\&quot;S3 Iceberg\nData Lake\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_emr\&quot; value=\&quot;EMR Serverless\n(PySpark Scale)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_fs\&quot; value=\&quot;SageMaker\nFeature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;420\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_sm\&quot; value=\&quot;SageMaker\nk-Means Job\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;620\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_out\&quot; value=\&quot;Centroid Store /\nReal-Time Endpoint\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#1e293b;strokeColor=#FF6B00;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry x=\&quot;800\&quot; y=\&quot;133\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_e1\&quot; value=\&quot;Parquet/Iceberg\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;km_s3\&quot; target=\&quot;km_emr\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_e2\&quot; value=\&quot;Normalized Features\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;km_emr\&quot; target=\&quot;km_fs\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_e3\&quot; value=\&quot;Online/Offline Vectors\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;km_fs\&quot; target=\&quot;km_sm\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;km_e4\&quot; value=\&quot;Cluster Labels\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;km_sm\&quot; target=\&quot;km_out\&quot; parent=\&quot;km_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
-        </div>
-        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-          <strong style="color: var(--accent);">Fluxo Enterprise AWS:</strong> O EMR Serverless extrai transações do S3 Iceberg e aplica normalização Z-score. Os vetores padronizados alimentam o SageMaker Feature Store. O algoritmo SageMaker k-Means otimiza os centroides via k-means++ e publica os rótulos de cluster de volta ao Lakehouse e a um Endpoint de inferência de baixíssima latência.
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--ok); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Símbolo</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Nome / Conceito</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Definição Matemática</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Domínio / Dimensão</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(N\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Número de Observações</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Total de amostras na base de dados</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{Z}^+\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(d\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Dimensionalidade</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Número de atributos/features por observação</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{Z}^+\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(K\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Número de Clusters</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Quantidade de grupos particionais pré-especificada</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{Z}^+ \, (K \le N)\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\mathbf{x}_i\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Vetor de Características</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(i\)-ésima observação no espaço de atributos</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}^d\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(C_k\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Conjunto do Cluster \(k\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Subconjunto de observações atribuídas ao cluster \(k\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(C_k \subset \mathcal{X}\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\boldsymbol{\mu}_k\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Centroide do Cluster \(k\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\boldsymbol{\mu}_k = \frac{1}{|C_k|} \sum_{\mathbf{x}_i \in C_k} \mathbf{x}_i\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}^d\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(J\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">WCSS / Inércia</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Soma das distâncias quadráticas intra-cluster</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}_{\ge 0}\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(a(i), b(i)\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Coesão &amp; Separação</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Distância média intra-cluster vs menor distância média inter-cluster vizinho</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}_{\ge 0}\)</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Executable Python Code -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.4 Código Python Executável (scikit-learn &amp; MLOps Best Practices)</h3>
-        <p>Abaixo apresentamos uma implementação completa com dados sintéticos (`make_blobs`), escalonamento de variáveis, sweep de hiperparâmetros (Elbow &amp; Silhouette) e métricas formais:</p>
+        <!-- 1.4 Diagrama Gráfico Inline -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.4 Diagrama Gráfico Inline &amp; Arquitetura AWS</h3>
+        <p>O gráfico vetorial abaixo ilustra a geometria de partição por fronteiras lineares de Voronoi no k-Means (à esquerda) em contraste direto com o agrupamento espacial de formas arbitrárias no DBSCAN (à direita):</p>
+
+        <!-- SVG 1: Side-by-side k-Means Voronoi vs DBSCAN Density -->
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 800 400" aria-label="k-Means Voronoi vs DBSCAN Density Clustering Comparison">
+            <defs>
+              <linearGradient id="bg-grad-m4" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f172a"/>
+                <stop offset="100%" stop-color="#1e293b"/>
+              </linearGradient>
+              <radialGradient id="halo-km1" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="halo-km2" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="halo-km3" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#10b981" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="eps-fill-db" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.02"/>
+              </radialGradient>
+            </defs>
+
+            <rect width="800" height="400" fill="url(#bg-grad-m4)" rx="12"/>
+
+            <text x="400" y="26" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="13" font-weight="700" letter-spacing="1.2">
+              GEOMETRIA DE CLUSTERING: k-MEANS (VORONOI ESFÉRICO) VS. DBSCAN (DENSIDADE &amp; RUÍDO)
+            </text>
+
+            <!-- PAINEL ESQUERDO: k-MEANS -->
+            <g transform="translate(20, 40)">
+              <rect width="370" height="340" rx="8" fill="#1e293b" fill-opacity="0.6" stroke="#94a3b8" stroke-width="1.5"/>
+              <text x="185" y="24" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">
+                k-Means: Fronteiras de Voronoi &amp; Clusters Esféricos
+              </text>
+
+              <!-- Voronoi Boundaries -->
+              <line x1="185" y1="35" x2="185" y2="330" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,4"/>
+              <line x1="185" y1="180" x2="360" y2="250" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,4"/>
+              <line x1="10" y1="190" x2="185" y2="180" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,4"/>
+
+              <rect x="120" y="165" width="130" height="20" rx="4" fill="#0f172a" stroke="#f59e0b" stroke-width="1"/>
+              <text x="185" y="179" text-anchor="middle" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="9" font-weight="600">
+                Fronteira Linear (Voronoi)
+              </text>
+
+              <!-- Cluster 1 (Sky Blue #38bdf8) -->
+              <circle cx="100" cy="100" r="42" fill="url(#halo-km1)"/>
+              <circle cx="85" cy="85" r="4" fill="#38bdf8"/>
+              <circle cx="115" cy="80" r="4" fill="#38bdf8"/>
+              <circle cx="70" cy="110" r="4" fill="#38bdf8"/>
+              <circle cx="120" cy="120" r="4" fill="#38bdf8"/>
+              <circle cx="95" cy="130" r="4" fill="#38bdf8"/>
+              <circle cx="130" cy="95" r="4" fill="#38bdf8"/>
+              <circle cx="100" cy="100" r="7" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5"/>
+              <path d="M96 100 L104 100 M100 96 L100 104" stroke="#38bdf8" stroke-width="2"/>
+              <text x="100" y="68" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">μ₁</text>
+
+              <!-- Cluster 2 (Purple #a78bfa) -->
+              <circle cx="275" cy="95" r="45" fill="url(#halo-km2)"/>
+              <circle cx="255" cy="80" r="4" fill="#a78bfa"/>
+              <circle cx="295" cy="75" r="4" fill="#a78bfa"/>
+              <circle cx="240" cy="105" r="4" fill="#a78bfa"/>
+              <circle cx="305" cy="110" r="4" fill="#a78bfa"/>
+              <circle cx="280" cy="125" r="4" fill="#a78bfa"/>
+              <circle cx="260" cy="115" r="4" fill="#a78bfa"/>
+              <circle cx="275" cy="95" r="7" fill="#0f172a" stroke="#a78bfa" stroke-width="2.5"/>
+              <path d="M271 95 L279 95 M275 91 L275 99" stroke="#a78bfa" stroke-width="2"/>
+              <text x="275" y="62" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">μ₂</text>
+
+              <!-- Cluster 3 (Emerald #10b981) -->
+              <circle cx="185" cy="255" r="50" fill="url(#halo-km3)"/>
+              <circle cx="160" cy="235" r="4" fill="#10b981"/>
+              <circle cx="210" cy="240" r="4" fill="#10b981"/>
+              <circle cx="145" cy="265" r="4" fill="#10b981"/>
+              <circle cx="220" cy="275" r="4" fill="#10b981"/>
+              <circle cx="175" cy="285" r="4" fill="#10b981"/>
+              <circle cx="195" cy="225" r="4" fill="#10b981"/>
+              <circle cx="185" cy="255" r="7" fill="#0f172a" stroke="#10b981" stroke-width="2.5"/>
+              <path d="M181 255 L189 255 M185 251 L185 259" stroke="#10b981" stroke-width="2"/>
+              <text x="185" y="220" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">μ₃</text>
+
+              <line x1="185" y1="255" x2="220" y2="275" stroke="#10b981" stroke-width="1.2" stroke-dasharray="2,2"/>
+              <text x="235" y="295" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">||xᵢ - μ₃||²</text>
+
+              <rect x="15" y="300" width="340" height="26" rx="4" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+              <text x="185" y="317" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9.5">
+                Assunção: Formato Esférico, Variâncias Iguais e Sem Ruído
+              </text>
+            </g>
+
+            <!-- PAINEL DIREITO: DBSCAN -->
+            <g transform="translate(410, 40)">
+              <rect width="370" height="340" rx="8" fill="#1e293b" fill-opacity="0.6" stroke="#94a3b8" stroke-width="1.5"/>
+              <text x="185" y="24" text-anchor="middle" fill="#10b981" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">
+                DBSCAN: Densidade Espacial &amp; Detecção de Ruído
+              </text>
+
+              <!-- Concentric Rings -->
+              <path d="M 60 220 A 130 130 0 0 1 310 220" fill="none" stroke="#38bdf8" stroke-width="12" stroke-opacity="0.15" stroke-linecap="round"/>
+              <circle cx="65" cy="215" r="4.5" fill="#38bdf8"/>
+              <circle cx="90" cy="160" r="4.5" fill="#38bdf8"/>
+              <circle cx="130" cy="120" r="4.5" fill="#38bdf8"/>
+              <circle cx="185" cy="105" r="4.5" fill="#38bdf8"/>
+              <circle cx="240" cy="120" r="4.5" fill="#38bdf8"/>
+              <circle cx="280" cy="160" r="4.5" fill="#38bdf8"/>
+              <circle cx="305" cy="215" r="4.5" fill="#38bdf8"/>
+
+              <path d="M 110 210 A 70 70 0 0 1 260 210" fill="none" stroke="#10b981" stroke-width="10" stroke-opacity="0.15" stroke-linecap="round"/>
+              <circle cx="115" cy="205" r="4.5" fill="#10b981"/>
+              <circle cx="140" cy="170" r="4.5" fill="#10b981"/>
+              <circle cx="185" cy="155" r="4.5" fill="#10b981"/>
+              <circle cx="230" cy="170" r="4.5" fill="#10b981"/>
+              <circle cx="255" cy="205" r="4.5" fill="#10b981"/>
+
+              <!-- Core Point Epsilon Radius -->
+              <circle cx="185" cy="105" r="32" fill="url(#eps-fill-db)" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3,3"/>
+              <line x1="185" y1="105" x2="217" y2="105" stroke="#38bdf8" stroke-width="1.5"/>
+              <text x="201" y="98" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="9" font-weight="700">ε</text>
+
+              <!-- Noise Points -->
+              <g transform="translate(50, 75)">
+                <path d="M-4 -4 L4 4 M-4 4 L4 -4" stroke="#ef4444" stroke-width="2"/>
+                <text x="0" y="-8" text-anchor="middle" fill="#ef4444" font-family="DM Sans, sans-serif" font-size="8.5" font-weight="600">Ruído (-1)</text>
+              </g>
+              <g transform="translate(320, 85)">
+                <path d="M-4 -4 L4 4 M-4 4 L4 -4" stroke="#ef4444" stroke-width="2"/>
+                <text x="0" y="-8" text-anchor="middle" fill="#ef4444" font-family="DM Sans, sans-serif" font-size="8.5" font-weight="600">Ruído (-1)</text>
+              </g>
+              <g transform="translate(185, 260)">
+                <path d="M-4 -4 L4 4 M-4 4 L4 -4" stroke="#ef4444" stroke-width="2"/>
+                <text x="0" y="16" text-anchor="middle" fill="#ef4444" font-family="DM Sans, sans-serif" font-size="8.5" font-weight="600">Outlier Isolado</text>
+              </g>
+
+              <rect x="25" y="275" width="320" height="50" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+              <circle cx="45" cy="292" r="4" fill="#38bdf8" stroke="#38bdf8" stroke-width="1.5"/>
+              <text x="55" y="295" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="9">Ponto Core (|Nε| ≥ MinPts)</text>
+
+              <circle cx="210" cy="292" r="4" fill="#10b981"/>
+              <text x="220" y="295" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="9">Ponto Borda</text>
+
+              <path d="M41 312 L49 312 M45 308 L45 316" stroke="#ef4444" stroke-width="2"/>
+              <text x="55" y="315" fill="#ef4444" font-family="DM Sans, sans-serif" font-size="9" font-weight="600">Ruído Nativo (Label = -1)</text>
+
+              <line x1="205" y1="312" x2="225" y2="312" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3,2"/>
+              <text x="230" y="315" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="9">Raio Vizinhança ε</text>
+            </g>
+          </svg>
+        </div>
+
+        <p>Abaixo ilustramos a arquitetura enterprise AWS para execução do k-Means em larga escala:</p>
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 860 200" xmlns="http://www.w3.org/2000/svg" aria-label="Pipeline k-Means Clustering AWS SageMaker">
+            <defs><marker id="km-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker></defs>
+            <rect width="860" height="200" rx="10" fill="#0f172a"/>
+            <text x="430" y="22" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5">k-MEANS CLUSTERING — PIPELINE ENTERPRISE AWS SAGEMAKER</text>
+            <line x1="30" y1="34" x2="830" y2="34" stroke="#1e293b" stroke-width="1"/>
+            <rect x="30" y="58" width="110" height="78" rx="8" fill="#1e293b" stroke="#16a34a" stroke-width="2"/>
+            <text x="85" y="85" text-anchor="middle" fill="#16a34a" font-size="22">🪣</text>
+            <text x="85" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon S3</text>
+            <text x="85" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Unlabeled Dataset</text>
+            <line x1="142" y1="97" x2="178" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#km-arrow)"/>
+            <rect x="180" y="58" width="120" height="78" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+            <text x="240" y="85" text-anchor="middle" fill="#eab308" font-size="22">⚙</text>
+            <text x="240" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">EMR Spark</text>
+            <text x="240" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Z-Score Normalization</text>
+            <line x1="302" y1="97" x2="338" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#km-arrow)"/>
+            <rect x="340" y="58" width="150" height="78" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+            <text x="415" y="85" text-anchor="middle" fill="#38bdf8" font-size="22">⭕</text>
+            <text x="415" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM k-Means</text>
+            <text x="415" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">K via Elbow / Silhouette</text>
+            <line x1="492" y1="97" x2="528" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#km-arrow)"/>
+            <rect x="530" y="58" width="130" height="78" rx="8" fill="#1e293b" stroke="#FF6B00" stroke-width="2"/>
+            <text x="595" y="85" text-anchor="middle" fill="#FF6B00" font-size="22">🚀</text>
+            <text x="595" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM Endpoint</text>
+            <text x="595" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Cluster Assignment</text>
+            <line x1="662" y1="97" x2="698" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#km-arrow)"/>
+            <rect x="700" y="58" width="130" height="78" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
+            <text x="765" y="85" text-anchor="middle" fill="#a78bfa" font-size="22">🤖</text>
+            <text x="765" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Bedrock</text>
+            <text x="765" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Segment Interpretation</text>
+          </svg>
+        </div>
+
+        <!-- 1.5 Código Python Executável -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.5 Código Python Executável (scikit-learn &amp; Strict Zero Data Leakage)</h3>
+        <p>Pipeline completo scikit-learn com divisão estrita de treino/teste, ajuste do precomputador `StandardScaler` apenas no treino e avaliação multicritério:</p>
 
         <pre style="background:#0b0f19; color:#f8fafc; padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.88rem; overflow-x: auto; border: 1px solid #1e293b;"><span style="color:#7c3aed;">import</span> numpy <span style="color:#7c3aed;">as</span> np
 <span style="color:#7c3aed;">from</span> sklearn.datasets <span style="color:#7c3aed;">import</span> make_blobs
+<span style="color:#7c3aed;">from</span> sklearn.model_selection <span style="color:#7c3aed;">import</span> train_test_split
 <span style="color:#7c3aed;">from</span> sklearn.preprocessing <span style="color:#7c3aed;">import</span> StandardScaler
 <span style="color:#7c3aed;">from</span> sklearn.cluster <span style="color:#7c3aed;">import</span> KMeans
 <span style="color:#7c3aed;">from</span> sklearn.metrics <span style="color:#7c3aed;">import</span> silhouette_score, calinski_harabasz_score, davies_bouldin_score
 
-<span style="color:#64748b;"># 1. Gerar Dataset Sintético com 4 clusters bem definidos em 5 dimensões</span>
+<span style="color:#64748b;"># 1. Dataset Sintético de Alta Dimensionalidade (5 atributos)</span>
 X_raw, y_true = make_blobs(
     n_samples=1200,
     n_features=5,
@@ -173,48 +441,104 @@ X_raw, y_true = make_blobs(
     random_state=42
 )
 
-<span style="color:#64748b;"># 2. MLOps Best Practice: Padronização Z-score (Essencial para Distância Euclidiana)</span>
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X_raw)
+<span style="color:#64748b;"># 2. Divisão Estrita Treino / Teste (Prevenção de Data Leakage)</span>
+X_train, X_test = train_test_split(X_raw, test_size=0.2, random_state=42)
 
-<span style="color:#64748b;"># 3. Avaliação de Hiperparâmetros (Sweep K=2 até K=8)</span>
+<span style="color:#64748b;"># 3. Fit do Scaler APENAS no conjunto de Treino</span>
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)  <span style="color:#64748b;"># Transform sem Data Leakage!</span>
+
+<span style="color:#64748b;"># 4. Sweep de Hiperparâmetros no Treino (Elbow &amp; Silhouette)</span>
 wcss = []
-silhouette_coefficients = []
+sil_train_scores = []
 k_range = range(2, 9)
 
 <span style="color:#7c3aed;">for</span> k <span style="color:#7c3aed;">in</span> k_range:
-    kmeans_eval = KMeans(n_clusters=k, init=<span style="color:#16a34a;">'k-means++'</span>, n_init=10, max_iter=300, random_state=42)
-    kmeans_eval.fit(X_scaled)
-    wcss.append(kmeans_eval.inertia_)
-    score = silhouette_score(X_scaled, kmeans_eval.labels_)
-    silhouette_coefficients.append(score)
+    km_eval = KMeans(n_clusters=k, init=<span style="color:#16a34a;">'k-means++'</span>, n_init=10, max_iter=300, random_state=42)
+    labels_eval = km_eval.fit_predict(X_train_scaled)
+    wcss.append(km_eval.inertia_)
+    sil_train_scores.append(silhouette_score(X_train_scaled, labels_eval))
 
-<span style="color:#64748b;"># 4. Treinamento do Modelo Definitivo com K=4 (k-means++)</span>
+<span style="color:#64748b;"># 5. Treinamento Definitivo com K=4 no Treino</span>
 optimal_k = 4
-kmeans_final = KMeans(
-    n_clusters=optimal_k,
-    init=<span style="color:#16a34a;">'k-means++'</span>,
-    n_init=10,
-    max_iter=300,
-    random_state=42
-)
-cluster_labels = kmeans_final.fit_predict(X_scaled)
-centroids = kmeans_final.cluster_centers_
+kmeans = KMeans(n_clusters=optimal_k, init=<span style="color:#16a34a;">'k-means++'</span>, n_init=10, max_iter=300, random_state=42)
+train_labels = kmeans.fit_predict(X_train_scaled)
 
-<span style="color:#64748b;"># 5. Avaliação Multicritério do Agrupamento</span>
-sil_avg = silhouette_score(X_scaled, cluster_labels)
-ch_score = calinski_harabasz_score(X_scaled, cluster_labels)
-db_score = davies_bouldin_score(X_scaled, cluster_labels)
+<span style="color:#64748b;"># 6. Inferência Out-of-Sample no Teste (Atribuição por Centroides Treinados)</span>
+test_labels = kmeans.predict(X_test_scaled)
+centroids = kmeans.cluster_centers_
+
+<span style="color:#64748b;"># 7. Avaliação Multicritério (Treino vs Teste)</span>
+sil_train = silhouette_score(X_train_scaled, train_labels)
+ch_train = calinski_harabasz_score(X_train_scaled, train_labels)
+db_train = davies_bouldin_score(X_train_scaled, train_labels)
+
+sil_test = silhouette_score(X_test_scaled, test_labels)
+ch_test = calinski_harabasz_score(X_test_scaled, test_labels)
+db_test = davies_bouldin_score(X_test_scaled, test_labels)
 
 print(f<span style="color:#16a34a;">"=== K-MEANS CLUSTERING METRICS (K={optimal_k}) ==="</span>)
-print(f<span style="color:#16a34a;">"Inertia (WCSS): {kmeans_final.inertia_:.2f}"</span>)
-print(f<span style="color:#16a34a;">"Silhouette Score: {sil_avg:.4f} (Ideal: próximo de +1.0)"</span>)
-print(f<span style="color:#16a34a;">"Calinski-Harabasz Index: {ch_score:.2f} (Ideal: maior valor)"</span>)
-print(f<span style="color:#16a34a;">"Davies-Bouldin Index: {db_score:.4f} (Ideal: menor valor)"</span>)
-print(f<span style="color:#16a34a;">"Centroides (5D Padronizados):\n{centroids.round(3)}"</span>)</pre>
+print(f<span style="color:#16a34a;">"Inércia (WCSS Treino): {kmeans.inertia_:.2f}"</span>)
+print(f<span style="color:#16a34a;">"Silhouette Score:        Treino = {sil_train:.4f} | Teste = {sil_test:.4f} (Ideal: próximo a +1.0)"</span>)
+print(f<span style="color:#16a34a;">"Calinski-Harabasz Index: Treino = {ch_train:.2f} | Teste = {ch_test:.2f} (Ideal: maior valor)"</span>)
+print(f<span style="color:#16a34a;">"Davies-Bouldin Index:    Treino = {db_train:.4f} | Teste = {db_test:.4f} (Ideal: menor valor)"</span>)
+print(f<span style="color:#16a34a;">"\nCentroides Aprendidos (5D Padronizados):\n{centroids.round(3)}"</span>)</pre>
+
+        <!-- 1.6 Quando Usar vs Quando NÃO Usar -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.6 Quando Usar vs. Quando NÃO Usar</h3>
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="card" style="border-top: 4px solid var(--ok);">
+            <div class="card-lbl" style="color: var(--ok);">Quando USAR o k-Means</div>
+            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
+              <li><strong>Clusters Convexos e Isotrópicos:</strong> Agrupamentos com geometria aproximadamente esférica e densidades similares.</li>
+              <li><strong>Baixa a Média Dimensionalidade:</strong> Atributos numéricos contínuos previamente padronizados via Z-score (\(d \le 50\)).</li>
+              <li><strong>Inferência em Tempo Real:</strong> Atribuição instantânea de novos pontos calculando a distância para \(K\) centroides (\(O(K \cdot d)\)).</li>
+              <li><strong>Escalabilidade Big Data:</strong> Suporte nativo a agrupamento em streaming via `MiniBatchKMeans` ou PySpark MLLib em clusters AWS EMR.</li>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--accent);">
+            <div class="card-lbl" style="color: var(--accent);">Quando NÃO USAR o k-Means</div>
+            <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
+              <li><strong>Geometrias Não-Convexas:</strong> Clusters em formatos de luas entrelaçadas, anéis concêntricos ou espirais.</li>
+              <li><strong>Presença de Outliers Extremos:</strong> A média aritmética dos centroides é altamente sensível a valores discrepantes.</li>
+              <li><strong>Variâncias e Densidades Desiguais:</strong> Grupos de tamanhos ou densidades muito dispares tendem a ser particionados incorretamente.</li>
+              <li><strong>Altíssima Dimensionalidade:</strong> A distância euclidiana sofre com a maldição da dimensionalidade em espaços esparsos (\(d > 500\)).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 1.7 Pontos Relevantes de Engenharia & MLOps -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.7 Pontos Relevantes de Engenharia &amp; MLOps</h3>
+        <div class="concept-grid" style="margin-top: 16px;">
+          <div class="concept-card">
+            <h4>1. Escalonamento Z-Score Obrigatório</h4>
+            <p>Como o k-Means se baseia estritamente na distância euclidiana \(L_2\), variáveis com maior magnitude numérica (ex: Salário vs Idade) dominam a função custo WCSS. A aplicação do `StandardScaler` fitted no treino é pré-requisito mandatório.</p>
+          </div>
+          <div class="concept-card">
+            <h4>2. MiniBatchKMeans para Streaming</h4>
+            <p>Para datasets gigantescos que superam a RAM física, o `MiniBatchKMeans` atualiza os centroides com amostras aleatórias de tamanho fixo (\(B \approx 1024\)), reduzindo o tempo de convergência em ordens de grandeza com perda negligenciável de WCSS.</p>
+          </div>
+          <div class="concept-card">
+            <h4>3. Atribuição Out-of-Sample em Produção</h4>
+            <p>Os centroides aprendidos pelo k-Means podem ser serializados em formato PMML, ONNX ou salvos como artefato no SageMaker Model Registry, permitindo inferência online ultra-rápida via chamada ao método `.predict()`.</p>
+          </div>
+        </div>
+
+        <!-- 1.8 Referências Bibliográficas -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">1.8 Referências Bibliográficas</h3>
+        <ul style="line-height: 1.8; color: var(--text-dim); padding-left: 20px; font-size: 0.9rem;">
+          <li><strong>Arthur, D., &amp; Vassilvitskii, S. (2007).</strong> <em>k-means++: The advantages of careful seeding.</em> SODA '07: Proceedings of the eighteenth annual ACM-SIAM symposium on Discrete algorithms, 1027–1035.</li>
+          <li><strong>Lloyd, S. (1982).</strong> <em>Least squares quantization in PCM.</em> IEEE Transactions on Information Theory, 28(2), 129–137.</li>
+          <li><strong>MacQueen, J. (1967).</strong> <em>Some methods for classification and analysis of multivariate observations.</u> Proceedings of the 5th Berkeley Symposium on Mathematical Statistics and Probability, 1:281–297.</li>
+          <li><strong>Steinhaus, H. (1956).</strong> <em>Sur la division des corps matériels en parties.</em> Bulletin de l'Académie Polonaise des Sciences, 4(12), 801–804.</li>
+        </ul>
       </section>
 
-      <!-- SEÇÃO 02: DBSCAN -->
+      <!-- ==================================================================== -->
+      <!-- SEÇÃO 02: DBSCAN DENSITY CLUSTERING                                  -->
+      <!-- ==================================================================== -->
       <section class="section" id="dbscan-clustering">
         <div class="sec-hdr">
           <div class="sec-num" style="color:var(--aws)">02</div>
@@ -223,32 +547,35 @@ print(f<span style="color:#16a34a;">"Centroides (5D Padronizados):\n{centroids.r
             <h2>DBSCAN: MinPts, \(\epsilon\)-Vizinhança &amp; Detecção Nativa de Ruído</h2>
           </div>
         </div>
-        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          O <strong>DBSCAN</strong> (Density-Based Spatial Clustering of Applications with Noise) conecta regiões contínuas de alta densidade de pontos separadas por regiões de baixa densidade. Ao contrário do k-Means, o DBSCAN não exige a definição prévia do número de clusters \(K\) e é capaz de identificar clusters de formatos geométricos arbitrários, isolando nativamente ruídos e outliers <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Ester et al., 1996]</span>.
+
+        <!-- 2.1 Introdução -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">2.1 Introdução</h3>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 12px 0 18px 0;">
+          O <strong>DBSCAN</strong> (Density-Based Spatial Clustering of Applications with Noise), introduzido por Ester et al. (1996), é o algoritmo não-supervisionado paradigmático para a descoberta de clusters de formatos geométricos arbitrários. Diferente de algoritmos particionais como o k-Means, o DBSCAN não exige a especificação prévia do número de grupos \(K\) e identifica nativamente regiões de baixa densidade espacial como ruído ou outliers.
         </p>
 
-        <!-- Intuição Matemática e Fórmulas -->
-        <h3 style="margin-top: 30px; font-size: 1.3rem;">2.1 Intuição Matemática &amp; Classificação de Pontos</h3>
+        <!-- 2.2 Conceitos Fundamentais -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">2.2 Conceitos Fundamentais</h3>
         <p>
-          O algoritmo é governado por dois hiperparâmetros fundamentais: a distância máxima \(\epsilon\) (Epsilon) e o número mínimo de pontos \(\text{MinPts}\).
+          O comportamento do DBSCAN é governado por dois hiperparâmetros essenciais: o raio de busca espacial \(\epsilon\) (Epsilon) e a quantidade mínima de vizinhos \(\text{MinPts}\).
         </p>
 
         <div class="concept-grid" style="margin-top: 24px;">
           <div class="concept-card" style="border-top: 4px solid var(--aws);">
             <h4>\(\epsilon\)-Vizinhança de um Ponto</h4>
-            <p>O conjunto de pontos dentro do raio \(\epsilon\) em relação a \(p\):</p>
-            \[N_\epsilon(p) = \{ q \in D \mid \text{dist}(p, q) \le \epsilon \}\]
+            <p>Dada uma métrica de distância \(d(p, q)\), a \(\epsilon\)-vizinhança do ponto \(p \in \mathcal{D}\) é definida por:</p>
+            \[N_\epsilon(p) = \{ q \in \mathcal{D} \mid d(p, q) \le \epsilon \}\]
           </div>
           <div class="concept-card" style="border-top: 4px solid var(--ok);">
-            <h4>Classificação Estrutural de Pontos</h4>
+            <h4>Classificação Tripartida de Pontos</h4>
             <p><strong>1. Ponto Core (Núcleo):</strong> \(|N_\epsilon(p)| \ge \text{MinPts}\)</p>
-            <p><strong>2. Ponto Borda (Border):</strong> \(|N_\epsilon(p)| < \text{MinPts}\), mas pertence à vizinhança de um Ponto Core.</p>
-            <p><strong>3. Ruído / Outlier:</strong> Não é Core nem Borda (\(\text{Rótulo} = -1\)).</p>
+            <p><strong>2. Ponto Borda (Border):</strong> \(|N_\epsilon(p)| < \text{MinPts}\), porém \(p \in N_\epsilon(q)\) onde \(q\) é Core.</p>
+            <p><strong>3. Ruído / Outlier:</strong> Não é Core nem Borda (\(\text{Label} = -1\)).</p>
           </div>
           <div class="concept-card" style="border-top: 4px solid var(--spark);">
             <h4>Alcançabilidade &amp; Conectividade</h4>
-            <p><strong>Diretamente Atingível por Densidade:</strong> \(p \in N_\epsilon(q)\) com \(q\) sendo um Ponto Core.</p>
-            <p><strong>Conectado por Densidade:</strong> Existe uma cadeia de pontos conectando \(p\) e \(q\) a um ancestral Core comum \(o\).</p>
+            <p><strong>Diretamente Atingível:</strong> \(p \in N_\epsilon(q)\) com \(q\) sendo um Ponto Core (relação assimétrica).</p>
+            <p><strong>Conectado por Densidade:</strong> Existe um ancestral comum \(o\) tal que tanto \(p\) quanto \(q\) sejam atingíveis por densidade a partir de \(o\) (simétrica).</p>
           </div>
         </div>
 
@@ -256,97 +583,249 @@ print(f<span style="color:#16a34a;">"Centroides (5D Padronizados):\n{centroids.r
           <div class="abox-hdr" style="background: var(--aws); color: #0f172a;">Heurística de Calibração: O Gráfico k-Distance para Seleção do Epsilon (\(\epsilon\))</div>
           <div class="abox-body">
             <p style="margin-bottom: 8px;">
-              Para calibrar \(\epsilon\), calcula-se a distância de cada observação para seu \(k\)-ésimo vizinho mais próximo, onde \(k = \text{MinPts} - 1\). Ordenando essas distâncias em ordem crescente e plotando a curva resultante, o ponto de inflexão ("joelho" ou cotovelo) indica o valor ótimo de \(\epsilon\).
+              Para calibrar o raio \(\epsilon\) de maneira orientada a dados, calcula-se a distância de cada ponto para o seu \(k\)-ésimo vizinho mais próximo, onde \(k = \text{MinPts} - 1\). Ordenando as distâncias em ordem decrescente, o "joelho" (ponto de máxima curvatura) no gráfico indica o limiar ótimo de \(\epsilon\). Pontos acima da inflexão pertencem a ruído esparso, enquanto pontos abaixo compõem os clusters densos.
             </p>
           </div>
         </div>
 
-        <!-- When to Use vs When NOT to Use -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.2 Trade-offs de Produção: Quando Usar vs. Quando NÃO Usar</h3>
+        <!-- 2.3 Fórmulas KaTeX & Legenda de Símbolos -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.3 Fórmulas KaTeX &amp; Legenda de Símbolos</h3>
+        <p>Tabela de equações estruturais do DBSCAN e legenda dos parâmetros espaciais:</p>
+
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--aws); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Conceito</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Equação Formal (KaTeX)</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Descrição Operacional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">\(\epsilon\)-Vizinhança</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[N_\epsilon(p) = \{ q \in \mathcal{D} \mid d(p, q) \le \epsilon \}\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Conjunto de pontos dentro da hiperesfera de raio \(\epsilon\) centrada em \(p\).</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Condição Ponto Core</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[|N_\epsilon(p)| \ge \text{MinPts}\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Exigência de densidade mínima para que \(p\) seja semente de um cluster.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Rotulagem de Ruído</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[\text{Label}(p) = -1 \iff |N_\epsilon(p)| < \text{MinPts} \land \nexists q \in N_\epsilon(p) \text{ core}\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Classificação automática de observações isoladas como ruído nativo.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--aws); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Símbolo</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Nome / Conceito</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Definição Matemática</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Domínio / Dimensão</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\mathcal{D}\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Dataset Espacial</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Conjunto total de observações espaciais</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathcal{D} \subset \mathbb{R}^d\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\epsilon\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Epsilon (Raio)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Raio máximo da busca espacial de vizinhança</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}_{> 0}\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\text{MinPts}\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Mínimo de Pontos</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Quantidade limite de vizinhos para caracterizar densidade core</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{Z}^+\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(d(p, q)\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Métrica de Distância</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Distância euclidiana, Manhattan ou Haversine entre \(p\) e \(q\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}_{\ge 0}\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(d_k(p)\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(k\)-Distância</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Distância do ponto \(p\) ao seu \(k\)-ésimo vizinho mais próximo</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}_{\ge 0}\)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 2.4 Diagrama Gráfico Inline -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.4 Diagrama Gráfico Inline &amp; Arquitetura AWS</h3>
+        <p>Abaixo detalhamos o fluxo de processamento de dados não-estruturados / anomalias no DBSCAN integrado a pipelines de tempo real na AWS:</p>
+
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 860 200" xmlns="http://www.w3.org/2000/svg" aria-label="Pipeline DBSCAN Clustering Detecção Anomalia AWS">
+            <defs><marker id="dbs-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker></defs>
+            <rect width="860" height="200" rx="10" fill="#0f172a"/>
+            <text x="430" y="22" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5">DBSCAN CLUSTERING — FLUXO DE DETECÇÃO DE ANOMALIAS AWS</text>
+            <line x1="30" y1="34" x2="830" y2="34" stroke="#1e293b" stroke-width="1"/>
+            <rect x="30" y="58" width="110" height="78" rx="8" fill="#1e293b" stroke="#16a34a" stroke-width="2"/>
+            <text x="85" y="85" text-anchor="middle" fill="#16a34a" font-size="22">📡</text>
+            <text x="85" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Kinesis Streams</text>
+            <text x="85" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Real-Time Events</text>
+            <line x1="142" y1="97" x2="178" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#dbs-arrow)"/>
+            <rect x="180" y="58" width="120" height="78" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+            <text x="240" y="85" text-anchor="middle" fill="#eab308" font-size="22">⚡</text>
+            <text x="240" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Kinesis Analytics</text>
+            <text x="240" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Feature Windowing</text>
+            <line x1="302" y1="97" x2="338" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#dbs-arrow)"/>
+            <rect x="340" y="58" width="150" height="78" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="2"/>
+            <text x="415" y="85" text-anchor="middle" fill="#ef4444" font-size="22">🔍</text>
+            <text x="415" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM DBSCAN</text>
+            <text x="415" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">eps + MinPts tuned</text>
+            <line x1="492" y1="97" x2="528" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#dbs-arrow)"/>
+            <rect x="530" y="58" width="130" height="78" rx="8" fill="#1e293b" stroke="#FF6B00" stroke-width="2"/>
+            <text x="595" y="85" text-anchor="middle" fill="#FF6B00" font-size="22">🚨</text>
+            <text x="595" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM Endpoint</text>
+            <text x="595" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Noise = Anomaly</text>
+            <line x1="662" y1="97" x2="698" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#dbs-arrow)"/>
+            <rect x="700" y="58" width="130" height="78" rx="8" fill="#1e293b" stroke="#7c3aed" stroke-width="2"/>
+            <text x="765" y="85" text-anchor="middle" fill="#a78bfa" font-size="22">🔔</text>
+            <text x="765" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">EventBridge</text>
+            <text x="765" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Alert Rules</text>
+          </svg>
+        </div>
+
+        <!-- 2.5 Código Python Executável -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.5 Código Python Executável (scikit-learn com `make_moons` &amp; Out-of-Sample Prediction)</h3>
+        <p>Código reprodutível com `make_moons`, ruído uniforme, escalonamento no treino e mapeamento de inferência out-of-sample via pontos Core:</p>
+
+        <pre style="background:#0b0f19; color:#f8fafc; padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.88rem; overflow-x: auto; border: 1px solid #1e293b;"><span style="color:#7c3aed;">import</span> numpy <span style="color:#7c3aed;">as</span> np
+<span style="color:#7c3aed;">from</span> sklearn.datasets <span style="color:#7c3aed;">import</span> make_moons
+<span style="color:#7c3aed;">from</span> sklearn.model_selection <span style="color:#7c3aed;">import</span> train_test_split
+<span style="color:#7c3aed;">from</span> sklearn.preprocessing <span style="color:#7c3aed;">import</span> StandardScaler
+<span style="color:#7c3aed;">from</span> sklearn.cluster <span style="color:#7c3aed;">import</span> DBSCAN
+<span style="color:#7c3aed;">from</span> sklearn.metrics <span style="color:#7c3aed;">import</span> silhouette_score, calinski_harabasz_score, davies_bouldin_score
+
+<span style="color:#64748b;"># 1. Dataset de Luas Entrelaçadas + Ruído Espacial Uniforme</span>
+X_moons, _ = make_moons(n_samples=850, noise=0.08, random_state=42)
+np.random.seed(42)
+noise_points = np.random.uniform(low=-1.5, high=2.5, size=(50, 2))
+X_raw = np.vstack([X_moons, noise_points])
+
+<span style="color:#64748b;"># 2. Divisão Estrita Treino / Teste (Prevenção de Data Leakage)</span>
+X_train, X_test = train_test_split(X_raw, test_size=0.2, random_state=42)
+
+<span style="color:#64748b;"># 3. Escalonamento Z-score (Fit no Treino)</span>
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+<span style="color:#64748b;"># 4. Ajuste do DBSCAN no Conjunto de Treino</span>
+min_pts = 5
+eps_val = 0.24
+dbscan = DBSCAN(eps=eps_val, min_samples=min_pts, metric=<span style="color:#16a34a;">'euclidean'</span>)
+train_labels = dbscan.fit_predict(X_train_scaled)
+
+<span style="color:#64748b;"># 5. Mapeamento de Inferência Out-of-Sample para Novos Pontos (Via Distância a Core Points)</span>
+<span style="color:#7c3aed;">def</span> <span style="color:#38bdf8;">predict_dbscan</span>(db_model, X_tr_scaled, tr_lbls, X_te_scaled):
+    core_mask = tr_lbls != -1
+    <span style="color:#7c3aed;">if</span> <span style="color:#7c3aed;">not</span> np.any(core_mask):
+        <span style="color:#7c3aed;">return</span> np.full(len(X_te_scaled), -1)
+    core_pts = X_tr_scaled[core_mask]
+    core_lbls = tr_lbls[core_mask]
+    
+    <span style="color:#64748b;"># Matriz de distâncias euclidianas para os pontos Core</span>
+    dists = np.linalg.norm(X_te_scaled[:, np.newaxis, :] - core_pts[np.newaxis, :, :], axis=2)
+    min_idx = np.argmin(dists, axis=1)
+    min_dists = dists[np.arange(len(X_te_scaled)), min_idx]
+    
+    <span style="color:#64748b;"># Atribui o rótulo do Core mais próximo se dist &lt;= eps, senão Ruído (-1)</span>
+    <span style="color:#7c3aed;">return</span> np.where(min_dists &lt;= db_model.eps, core_lbls[min_idx], -1)
+
+test_labels = predict_dbscan(dbscan, X_train_scaled, train_labels, X_test_scaled)
+
+<span style="color:#64748b;"># 6. Mapeamento de Métricas Filtrando Ruído (Label != -1)</span>
+train_valid = train_labels != -1
+test_valid = test_labels != -1
+
+n_clusters_train = len(set(train_labels)) - (1 <span style="color:#7c3aed;">if</span> -1 <span style="color:#7c3aed;">in</span> train_labels <span style="color:#7c3aed;">else</span> 0)
+n_noise_train = list(train_labels).count(-1)
+n_noise_test = list(test_labels).count(-1)
+
+sil_tr = silhouette_score(X_train_scaled[train_valid], train_labels[train_valid])
+ch_tr = calinski_harabasz_score(X_train_scaled[train_valid], train_labels[train_valid])
+db_tr = davies_bouldin_score(X_train_scaled[train_valid], train_labels[train_valid])
+
+sil_te = silhouette_score(X_test_scaled[test_valid], test_labels[test_valid]) <span style="color:#7c3aed;">if</span> np.sum(test_valid) > 2 <span style="color:#7c3aed;">else</span> 0.0
+ch_te = calinski_harabasz_score(X_test_scaled[test_valid], test_labels[test_valid]) <span style="color:#7c3aed;">if</span> np.sum(test_valid) > 2 <span style="color:#7c3aed;">else</span> 0.0
+db_te = davies_bouldin_score(X_test_scaled[test_valid], test_labels[test_valid]) <span style="color:#7c3aed;">if</span> np.sum(test_valid) > 2 <span style="color:#7c3aed;">else</span> 0.0
+
+print(<span style="color:#16a34a;">"=== DBSCAN CLUSTERING METRICS ==="</span>)
+print(f<span style="color:#16a34a;">"Clusters Encontrados (Treino): {n_clusters_train}"</span>)
+print(f<span style="color:#16a34a;">"Ruído / Outliers (Label = -1):  Treino = {n_noise_train}/{len(train_labels)} ({n_noise_train/len(train_labels):.1%}) | Teste = {n_noise_test}/{len(test_labels)} ({n_noise_test/len(test_labels):.1%})"</span>)
+print(f<span style="color:#16a34a;">"Silhouette Score (Sem Ruído):   Treino = {sil_tr:.4f} | Teste = {sil_te:.4f}"</span>)
+print(f<span style="color:#16a34a;">"Calinski-Harabasz Index:         Treino = {ch_tr:.2f} | Teste = {ch_te:.2f}"</span>)
+print(f<span style="color:#16a34a;">"Davies-Bouldin Index:            Treino = {db_tr:.4f} | Teste = {db_te:.4f}"</span>)</pre>
+
+        <!-- 2.6 Quando Usar vs Quando NÃO Usar -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.6 Quando Usar vs. Quando NÃO Usar</h3>
         <div class="grid-2" style="margin-top: 16px;">
           <div class="card" style="border-top: 4px solid var(--ok);">
             <div class="card-lbl" style="color: var(--ok);">Quando USAR o DBSCAN</div>
             <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
-              <li><strong>Formatos Geométricos Complexos:</strong> Clusters não-esféricos, em forma de U, espirais, filamentos ou superfícies não-lineares.</li>
-              <li><strong>Detecção Fina de Outliers / Fraudes:</strong> Identificação automática de dados ruidosos sem contaminar o agrupamento dos dados válidos.</li>
-              <li><strong>Número de Clusters Desconhecido:</strong> Quando não há conhecimento a priori da quantidade \(K\) de grupos na base.</li>
-              <li><strong>Dados Espaciais e Geoespaciais:</strong> Agrupamento de coordenadas GPS (Latitude, Longitude) via métrica Haversine.</li>
+              <li><strong>Geometrias Não-Convexas Complexas:</strong> Grupos em formato de anéis concêntricos, luas entrelaçadas ou filamentos espaciais.</li>
+              <li><strong>Detecção Fina de Outliers e Fraudes:</strong> Mapeamento automático de ruídos em logs de servidores ou transações financeiras.</li>
+              <li><strong>Número Desconhecido de Grupos:</strong> Quando não se possui conhecimento prévio da quantidade \(K\) de agrupamentos.</li>
+              <li><strong>Dados Geográficos / GPS:</strong> Agrupamento espacial de coordenadas de latitude/longitude usando a distância Haversine.</li>
             </ul>
           </div>
 
           <div class="card" style="border-top: 4px solid var(--accent);">
             <div class="card-lbl" style="color: var(--accent);">Quando NÃO USAR o DBSCAN</div>
             <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
-              <li><strong>Clusters com Densidades Variadas:</strong> Um único par (\(\epsilon\), \text{MinPts}) não consegue capturar simultaneamente regiões muito densas e regiões esparsas (para isso, utilize <strong>HDBSCAN</strong>).</li>
-              <li><strong>Altíssima Dimensionalidade:</strong> Devido à maldição da dimensionalidade, em espaços de alta dimensão o conceito de vizinhança esférica se esvazia.</li>
-              <li><strong>Alta Complexidade de Inferência:</strong> Atribuir novos pontos em tempo real exige comparar contra toda a base treinada (\(O(N)\) sem árvore espacial).</li>
+              <li><strong>Clusters com Densidades Muito Variadas:</strong> Um par fixo (\(\epsilon\), \(\text{MinPts}\)) não consegue separar simultaneamente regiões densas e esparsas (utilizar **HDBSCAN**).</li>
+              <li><strong>Espaços de Alta Dimensão:</strong> A vizinhança hiper-esférica perde sentido geométrico devido ao esvaziamento do espaço numérico (\(d > 50\)).</li>
+              <li><strong>Inferência Real-Time Sem Índice Espacial:</strong> Classificação out-of-sample sem árvore espacial (\(k\)-d tree) escala em tempo \(O(N)\) por requisição.</li>
             </ul>
           </div>
         </div>
 
-        <!-- Draw.io Diagram -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.3 Arquitetura de Produção AWS para DBSCAN</h3>
-        <p>O diagrama abaixo demonstra um fluxo de detecção de anomalias e agrupamento de ruídos em tempo real utilizando Amazon EMR Spark Streaming, SageMaker Feature Store e S3 Iceberg:</p>
-        
-        <div class="drawio-wrap" style="margin-top: 24px;">
-          <div class="drawio-label"><span class="dot"></span>DBSCAN Clustering — Fluxo de Detecção de Anomalias na AWS</div>
-          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph="{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;db_0\&quot;/&gt;&lt;mxCell id=\&quot;db_1\&quot; parent=\&quot;db_0\&quot;/&gt;&lt;mxCell id=\&quot;db_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_title\&quot; value=\&quot;DBSCAN CLUSTERING — FLUXO DE DETECÇÃO DE ANOMALIAS E RUÍDO NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_emr\&quot; value=\&quot;EMR Spark\nStreaming\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_fs\&quot; value=\&quot;SageMaker\nFeature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;240\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_sm\&quot; value=\&quot;SageMaker\nDBSCAN Engine\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;440\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_s3\&quot; value=\&quot;S3 Iceberg\nClean Clusters\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;680\&quot; y=\&quot;70\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_noise\&quot; value=\&quot;Outliers / Noise\n(Label = -1)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#451a03;strokeColor=#ea580c;fontColor=#ffedd5;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry x=\&quot;650\&quot; y=\&quot;200\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_e1\&quot; value=\&quot;Spatial Features\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;db_emr\&quot; target=\&quot;db_fs\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_e2\&quot; value=\&quot;Eps/MinPts Scaling\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;db_fs\&quot; target=\&quot;db_sm\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_e3\&quot; value=\&quot;Core &amp; Border Points\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;db_sm\&quot; target=\&quot;db_s3\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;db_e4\&quot; value=\&quot;Density Noise\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;db_sm\&quot; target=\&quot;db_noise\&quot; parent=\&quot;db_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
+        <!-- 2.7 Pontos Relevantes de Engenharia & MLOps -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.7 Pontos Relevantes de Engenharia &amp; MLOps</h3>
+        <div class="concept-grid" style="margin-top: 16px;">
+          <div class="concept-card">
+            <h4>1. Regra Prática para MinPts</h4>
+            <p>Em engenharia de ML, adota-se a heurística \(\text{MinPts} \ge d + 1\) (onde \(d\) é a dimensionalidade). Para dados ruidosos ou 2D, a recomendação clássica é \(\text{MinPts} = 2 \cdot d\).</p>
+          </div>
+          <div class="concept-card">
+            <h4>2. Indexação Espacial em Produção</h4>
+            <p>Para otimizar as consultas de vizinhança de \(O(N^2)\) para \(O(N \log N)\), o scikit-learn utiliza algoritmos de árvore espacial (`algorithm='kd_tree'` ou `'ball_tree'`).</p>
+          </div>
+          <div class="concept-card">
+            <h4>3. Transição para HDBSCAN</h4>
+            <p>Em pipelines enterprise com variância de densidade, o HDBSCAN (Hierarchical DBSCAN) converte o raio \(\epsilon\) em um parâmetro contínuo, construindo uma árvore de hierarquia de densidade estável.</p>
+          </div>
         </div>
-        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-          <strong style="color: var(--accent);">Fluxo de Detecção de Ruído:</strong> Transações espaciais processadas no Spark Streaming alimentam o SageMaker DBSCAN Engine. O algoritmo divide a carga entre dados densos válidos (persistidos na camada Gold S3 Iceberg) e pontos isolados com rótulo \(-1\) (encaminhados para filas de inspeção de anomalias/fraudes).
-        </div>
 
-        <!-- Executable Python Code -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.4 Código Python Executável (scikit-learn com `make_moons`)</h3>
-        <p>Abaixo demonstramos a aplicação do DBSCAN em dados não-convexos com inclusão deliberada de ruído sintético:</p>
-
-        <pre style="background:#0b0f19; color:#f8fafc; padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.88rem; overflow-x: auto; border: 1px solid #1e293b;"><span style="color:#7c3aed;">import</span> numpy <span style="color:#7c3aed;">as</span> np
-<span style="color:#7c3aed;">from</span> sklearn.datasets <span style="color:#7c3aed;">import</span> make_moons
-<span style="color:#7c3aed;">from</span> sklearn.preprocessing <span style="color:#7c3aed;">import</span> StandardScaler
-<span style="color:#7c3aed;">from</span> sklearn.cluster <span style="color:#7c3aed;">import</span> DBSCAN
-<span style="color:#7c3aed;">from</span> sklearn.neighbors <span style="color:#7c3aed;">import</span> NearestNeighbors
-<span style="color:#7c3aed;">from</span> sklearn.metrics <span style="color:#7c3aed;">import</span> silhouette_score
-
-<span style="color:#64748b;"># 1. Gerar Dataset de Luas Entrelaçadas + Ruído Uniforme</span>
-X_moons, _ = make_moons(n_samples=850, noise=0.08, random_state=42)
-
-np.random.seed(42)
-noise_points = np.random.uniform(low=-1.5, high=2.5, size=(50, 2))
-X_raw = np.vstack([X_moons, noise_points])
-
-<span style="color:#64748b;"># 2. MLOps Best Practice: Escalonamento Z-score</span>
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X_raw)
-
-<span style="color:#64748b;"># 3. Heurística k-distance para estimar Epsilon (k = MinPts - 1)</span>
-min_pts = 5
-neighbors = NearestNeighbors(n_neighbors=min_pts)
-neighbors_fit = neighbors.fit(X_scaled)
-distances, indices = neighbors_fit.kneighbors(X_scaled)
-sorted_k_distances = np.sort(distances[:, min_pts - 1])
-
-<span style="color:#64748b;"># 4. Ajuste do Modelo DBSCAN com Epsilon Otimizado</span>
-dbscan = DBSCAN(eps=0.22, min_samples=min_pts, metric=<span style="color:#16a34a;">'euclidean'</span>)
-labels = dbscan.fit_predict(X_scaled)
-
-<span style="color:#64748b;"># 5. Avaliação do Agrupamento e Filtragem de Outliers</span>
-core_samples_mask = np.zeros_like(labels, dtype=bool)
-core_samples_mask[dbscan.core_sample_indices_] = True
-
-n_clusters = len(set(labels)) - (1 <span style="color:#7c3aed;">if</span> -1 <span style="color:#7c3aed;">in</span> labels <span style="color:#7c3aed;">else</span> 0)
-n_noise = list(labels).count(-1)
-
-non_noise_mask = labels != -1
-sil_score = silhouette_score(X_scaled[non_noise_mask], labels[non_noise_mask]) <span style="color:#7c3aed;">if</span> n_clusters > 1 <span style="color:#7c3aed;">else</span> 0.0
-
-print(f<span style="color:#16a34a;">"=== DBSCAN CLUSTERING METRICS ==="</span>)
-print(f<span style="color:#16a34a;">"Clusters Encontrados: {n_clusters}"</span>)
-print(f<span style="color:#16a34a;">"Pontos de Ruído / Outliers (Label = -1): {n_noise} ({n_noise/len(labels):.1%})"</span>)
-print(f<span style="color:#16a34a;">"Pontos Núcleo (Core Points): {np.sum(core_samples_mask)}"</span>)
-print(f<span style="color:#16a34a;">"Silhouette Score (Somente Clusters Válidos): {sil_score:.4f}"</span>)</pre>
+        <!-- 2.8 Referências Bibliográficas -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">2.8 Referências Bibliográficas</h3>
+        <ul style="line-height: 1.8; color: var(--text-dim); padding-left: 20px; font-size: 0.9rem;">
+          <li><strong>Ester, M., Kriegel, H. P., Sander, J., &amp; Xu, X. (1996).</strong> <em>A density-based algorithm for discovering clusters in large spatial databases with noise.</em> Proceedings of the Second International Conference on Knowledge Discovery and Data Mining (KDD-96), 226–231.</li>
+          <li><strong>Schubert, E., Sander, J., Ester, M., Kriegel, H. P., &amp; Xu, X. (2017).</strong> <em>DBSCAN Revisited, Revisited: Why and How You Should (Still) Use DBSCAN.</em> ACM Transactions on Database Systems (TODS), 42(3), 1–21.</li>
+        </ul>
       </section>
 
-      <!-- SEÇÃO 03: PCA -->
+      <!-- ==================================================================== -->
+      <!-- SEÇÃO 03: PRINCIPAL COMPONENT ANALYSIS (PCA)                         -->
+      <!-- ==================================================================== -->
       <section class="section" id="pca-dimensionality-reduction">
         <div class="sec-hdr">
           <div class="sec-num" style="color:var(--spark)">03</div>
@@ -355,138 +834,433 @@ print(f<span style="color:#16a34a;">"Silhouette Score (Somente Clusters Válidos
             <h2>Principal Component Analysis (PCA): Matriz de Covariância, SVD &amp; Variância Explicada</h2>
           </div>
         </div>
-        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          A <strong>Análise de Componentes Principais (PCA)</strong> é a técnica não-supervisionada canônica para redução de dimensionalidade linear. O PCA projeta os dados originais em um novo sistema de coordenadas ortogonais de menor dimensão, maximizando a variância retida ou minimizando o erro quadrático médio de reconstrução <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Pearson, 1901; Jolliffe, 2002]</span>.
+
+        <!-- 3.1 Introdução -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">3.1 Introdução</h3>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 12px 0 18px 0;">
+          A <strong>Análise de Componentes Principais (PCA)</strong>, desenvolvida originalmente por Karl Pearson (1901) e expandida por Harold Hotelling (1933), é a técnica linear de aprendizagem não-supervisionada canônica para redução de dimensionalidade. O PCA projeta dados multivariados de alta dimensão em um novo subespaço de eixos ortogonais (Componentes Principais) alinhados com as direções de máxima variância dos dados, eliminando redundâncias e multicolinearidade sem perda significativa de informação.
         </p>
 
-        <!-- Intuição Matemática e Fórmulas -->
-        <h3 style="margin-top: 30px; font-size: 1.3rem;">3.1 Intuição Matemática, Matriz de Covariância &amp; SVD</h3>
+        <!-- 3.2 Conceitos Fundamentais -->
+        <h3 style="margin-top: 30px; font-size: 1.3rem;">3.2 Conceitos Fundamentais</h3>
         <p>
-          Dada uma matriz de dados \(\mathbf{X} \in \mathbb{R}^{N \times d}\), a primeira etapa consiste na centralização dos dados na média:
+          Dada uma matriz de observações originais \(\mathbf{X} \in \mathbb{R}^{N \times d}\), a primeira etapa consiste na centralização dos dados subtraindo o vetor média amostral \(\boldsymbol{\mu}\):
         </p>
-        \[\mathbf{X}_{\text{centered}} = \mathbf{X} - \mathbf{1} \boldsymbol{\mu}^T, \quad \text{onde } \boldsymbol{\mu} = \frac{1}{N}\sum_{i=1}^{N} \mathbf{x}_i\]
+        \[\boldsymbol{\mu} = \frac{1}{N}\sum_{i=1}^{N} \mathbf{x}_i \in \mathbb{R}^d \implies \bar{\mathbf{X}} = \mathbf{X} - \mathbf{1}_N \boldsymbol{\mu}^T \in \mathbb{R}^{N \times d}\]
 
         <p style="margin-top: 16px;">
-          Em seguida, calcula-se a <strong>Matriz de Covariância Amostral</strong> \(\mathbf{\Sigma}\):
+          Calcula-se em seguida a <strong>Matriz de Covariância Amostral Simétrica</strong> \(\mathbf{\Sigma}\):
         </p>
-        \[\mathbf{\Sigma} = \frac{1}{N-1} \mathbf{X}_{\text{centered}}^T \mathbf{X}_{\text{centered}} \in \mathbb{R}^{d \times d}\]
+        \[\mathbf{\Sigma} = \frac{1}{N-1} \bar{\mathbf{X}}^T \bar{\mathbf{X}} \in \mathbb{R}^{d \times d}\]
 
         <div class="concept-grid" style="margin-top: 24px;">
           <div class="concept-card" style="border-top: 4px solid var(--spark);">
-            <h4>Equação de Autovalores &amp; Autovetores</h4>
-            <p>Os autovetores \(\mathbf{v}_i\) determinam as direções dos componentes principais e os autovalores \(\lambda_i\) medem a variância:</p>
-            \[\mathbf{\Sigma} \mathbf{v}_i = \lambda_i \mathbf{v}_i, \quad \text{com } \|\mathbf{v}_i\| = 1\]
+            <h4>Decomposição Espectral (Autovalores &amp; Autovetores)</h4>
+            <p>Resolve-se a equação de autovalores para a matriz simétrica \(\mathbf{\Sigma}\):</p>
+            \[\mathbf{\Sigma} \mathbf{v}_k = \lambda_k \mathbf{v}_k, \quad \text{sujeito a } \|\mathbf{v}_k\|_2 = 1, \; \mathbf{v}_i^T \mathbf{v}_j = 0 \; (i \neq j)\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Os autovetores \(\mathbf{v}_k\) definem a direção dos eixos principais e os autovalores \(\lambda_k\) representam a variância capturada.</p>
           </div>
           <div class="concept-card" style="border-top: 4px solid var(--ok);">
             <h4>Decomposição em Valores Singulares (SVD)</h4>
-            <p>Em vez de \(\mathbf{\Sigma}\), aplica-se SVD diretamente sobre a matriz centralizada <span style="font-size: 0.85rem; color: var(--spark); font-weight: bold;">[Golub &amp; Reinsch, 1970]</span>:</p>
-            \[\mathbf{X}_{\text{centered}} = \mathbf{U} \mathbf{S} \mathbf{V}^T\]
-            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Onde \(\lambda_i = \frac{\sigma_i^2}{N-1}\), garantindo maior estabilidade numérica.</p>
+            <p>Em produção, evita-se construir \(\mathbf{\Sigma}\) explicitamente aplicando SVD direta sobre a matriz centralizada \(\bar{\mathbf{X}}\):</p>
+            \[\bar{\mathbf{X}} = \mathbf{U} \mathbf{S} \mathbf{V}^T\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">A relação algébrica exata entre os valores singulares \(s_k\) e autovalores é \(\lambda_k = \frac{s_k^2}{N-1}\).</p>
           </div>
           <div class="concept-card" style="border-top: 4px solid var(--aws);">
-            <h4>Razão de Variância Explicada (EVR)</h4>
-            <p>A proporção de variância retida pelo \(i\)-ésimo componente principal é dada por:</p>
-            \[\text{EVR}_i = \frac{\lambda_i}{\sum_{j=1}^{d} \lambda_j}, \quad \text{Variância Acumulada}(k) = \frac{\sum_{i=1}^{k} \lambda_i}{\sum_{j=1}^{d} \lambda_j}\]
+            <h4>Razão de Variância Explicada (EVR) &amp; Corte</h4>
+            <p>A taxa de variância conservada pelo \(k\)-ésimo componente é dada por:</p>
+            \[\text{EVR}_k = \frac{\lambda_k}{\sum_{j=1}^{d} \lambda_j} = \frac{s_k^2}{\sum_{j=1}^{d} s_j^2}\]
+            <p style="font-size: 12px; color: var(--text-dim); margin-top: 8px;">Define-se o número de componentes retidos \(r\) tal que a variância acumulada \(\text{CEVR}(r) \ge 0.95\).</p>
           </div>
         </div>
 
         <div class="abox info" style="margin-top: 24px; border-left-color: var(--spark);">
-          <div class="abox-hdr" style="background: var(--spark); color: #ffffff;">Projeção Ortogonal &amp; Reconstrução com Erro Mínimo</div>
+          <div class="abox-hdr" style="background: var(--spark); color: #ffffff;">Prova Formal: Minimização do Erro de Reconstrução via Norma de Frobenius</div>
           <div class="abox-body">
             <p style="margin-bottom: 8px;">
-              Selecionando os \(k\) maiores autovetores \(\mathbf{W}_k = [\mathbf{v}_1, \mathbf{v}_2, \dots, \mathbf{v}_k] \in \mathbb{R}^{d \times k}\), a projeção reduzida é obtida por:
+              Pelo Teorema de Eckart-Young-Mirsky, a projeção ortogonal \(\mathbf{Z}_r = \bar{\mathbf{X}} \mathbf{V}_r \in \mathbb{R}^{N \times r}\) sobre as \(r\) maiores colunas de \(\mathbf{V}\) produz a matriz reconstruída \(\hat{\mathbf{X}} = \mathbf{Z}_r \mathbf{V}_r^T + \mathbf{1}_N \boldsymbol{\mu}^T\) que minimiza o erro quadrático de reconstrução sob a norma de Frobenius:
             </p>
-            \[\mathbf{Z} = \mathbf{X}_{\text{centered}} \mathbf{W}_k \in \mathbb{R}^{N \times k}\]
+            \[\|\mathbf{X} - \hat{\mathbf{X}}\|_F^2 = \|\bar{\mathbf{X}} - \bar{\mathbf{X}} \mathbf{V}_r \mathbf{V}_r^T\|_F^2 = (N-1) \sum_{k=r+1}^{d} \lambda_k\]
             <p style="margin-top: 8px; margin-bottom: 0;">
-              A reconstrução aproximada \(\hat{\mathbf{X}} = \mathbf{Z} \mathbf{W}_k^T + \mathbf{1}\boldsymbol{\mu}^T\) minimiza o Erro Quadrático Médio (MSE) de reconstrução para qualquer subespaço linear de dimensão \(k\).
+              Isso demonstra que o erro de informação descartado pela redução de dimensionalidade é exatamente proporcional à soma dos autovalores associados às componentes omitidas.
             </p>
           </div>
         </div>
 
-        <!-- When to Use vs When NOT to Use -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.2 Trade-offs de Produção: Quando Usar vs. Quando NÃO Usar</h3>
+        <!-- 3.3 Fórmulas KaTeX & Legenda de Símbolos -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.3 Fórmulas KaTeX &amp; Legenda de Símbolos</h3>
+        <p>Tabela de equações fundamentais e matriz de símbolos do PCA e SVD:</p>
+
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--spark); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Conceito</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Equação Formal (KaTeX)</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Descrição Operacional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Matriz de Covariância</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[\mathbf{\Sigma} = \frac{1}{N-1} \bar{\mathbf{X}}^T \bar{\mathbf{X}}\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Mede a variância das variáveis nas diagonais e as covariâncias nas partes fora da diagonal.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Relação SVD &amp; Covariância</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[\bar{\mathbf{X}} = \mathbf{U} \mathbf{S} \mathbf{V}^T, \quad \lambda_k = \frac{s_k^2}{N-1}\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Valores singulares da SVD fornecem diretamente os autovalores da covariância.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Projeção &amp; Reconstrução</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[\mathbf{Z}_r = \bar{\mathbf{X}} \mathbf{V}_r, \quad \hat{\mathbf{X}} = \mathbf{Z}_r \mathbf{V}_r^T + \mathbf{1}\boldsymbol{\mu}^T\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Transformação linear dos dados para dimensão reduzida \(r\) e mapeamento inverso.</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-weight: bold;">Erro Frobenius Reconstrução</td>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\[\|\mathbf{X} - \hat{\mathbf{X}}\|_F^2 = (N-1) \sum_{k=r+1}^{d} \lambda_k\]</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Erro quadrático de reconstrução exato sob a norma de Frobenius.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="overflow-x: auto; margin-top: 16px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+            <thead>
+              <tr style="background: #0f172a; border-bottom: 2px solid var(--spark); color: var(--text);">
+                <th style="padding: 10px; border: 1px solid #1e293b;">Símbolo</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Conceito / Nome</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Definição Matemática</th>
+                <th style="padding: 10px; border: 1px solid #1e293b;">Domínio / Dimensão</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\mathbf{X}\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Matriz de Dados Brutos</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Matriz de entrada com \(N\) amostras e \(d\) atributos</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}^{N \times d}\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\boldsymbol{\mu}\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Vetor Média Amostral</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Média aritmética de cada coluna/característica</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}^d\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\bar{\mathbf{X}}\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Matriz Centralizada</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\bar{\mathbf{X}} = \mathbf{X} - \mathbf{1}_N \boldsymbol{\mu}^T\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}^{N \times d}\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\mathbf{\Sigma}\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Matriz de Covariância</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbf{\Sigma} = \frac{1}{N-1} \bar{\mathbf{X}}^T \bar{\mathbf{X}}\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}^{d \times d}\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\lambda_k, \mathbf{v}_k\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Autovalor &amp; Autovetor</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbf{\Sigma} \mathbf{v}_k = \lambda_k \mathbf{v}_k, \quad \|\mathbf{v}_k\|_2 = 1\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\lambda_k \in \mathbb{R}_{\ge 0}, \, \mathbf{v}_k \in \mathbb{R}^d\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(s_k\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Valor Singular (SVD)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\bar{\mathbf{X}} = \mathbf{U} \mathbf{S} \mathbf{V}^T, \quad \lambda_k = \frac{s_k^2}{N-1}\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}_{\ge 0}\)</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid #1e293b; font-family: monospace;">\(\mathbf{Z}_r\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Matriz Projetada (Scores)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">Dados transformados no subespaço de dimensão \(r\)</td>
+                <td style="padding: 10px; border: 1px solid #1e293b;">\(\mathbb{R}^{N \times r}\)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3.4 Diagrama Gráfico Inline -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.4 Diagrama Gráfico Inline &amp; Arquitetura AWS</h3>
+        <p>O diagrama vetorial inline a seguir exibe a rotação dos eixos ortogonais dos autovetores \(PC_1\) e \(PC_2\) com a variância explicada no Scree Plot inset (à direita):</p>
+
+        <!-- SVG 2: PCA Dimensionality Reduction Scatter & Scree Plot -->
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 800 400" aria-label="PCA Dimensionality Reduction Eigenvectors and Scree Plot">
+            <defs>
+              <linearGradient id="bg-grad-pca" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0f172a"/>
+                <stop offset="100%" stop-color="#1e293b"/>
+              </linearGradient>
+              <marker id="arrow-pc1" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+              </marker>
+              <marker id="arrow-pc2" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#a78bfa"/>
+              </marker>
+              <marker id="arrow-axis" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#94a3b8"/>
+              </marker>
+            </defs>
+
+            <rect width="800" height="400" fill="url(#bg-grad-pca)" rx="12"/>
+
+            <text x="400" y="26" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="13" font-weight="700" letter-spacing="1.2">
+              PRINCIPAL COMPONENT ANALYSIS (PCA): VETORES AUTOVALORES (PC1 vs PC2) &amp; SCREE PLOT
+            </text>
+
+            <!-- PAINEL ESQUERDO: SCATTER 2D E PROJEÇÃO -->
+            <g transform="translate(20, 40)">
+              <rect width="490" height="340" rx="8" fill="#1e293b" fill-opacity="0.5" stroke="#94a3b8" stroke-width="1.5"/>
+              <text x="245" y="24" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">
+                Espaço de Atributos Originais (X₁, X₂) &amp; Subespaço Ortogonal Projetado
+              </text>
+
+              <line x1="50" y1="300" x2="450" y2="300" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-axis)"/>
+              <text x="460" y="304" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11" font-weight="600">X₁</text>
+
+              <line x1="60" y1="310" x2="60" y2="40" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-axis)"/>
+              <text x="60" y="30" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11" font-weight="600">X₂</text>
+
+              <line x1="60" y1="210" x2="450" y2="210" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+              <line x1="250" y1="40" x2="250" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+
+              <line x1="80" y1="280" x2="420" y2="130" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6,4"/>
+              <text x="430" y="125" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Eixo Projeção PC₁</text>
+
+              <!-- Perpendicular Projection Lines -->
+              <line x1="160" y1="215" x2="185" y2="234" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,2"/>
+              <line x1="280" y1="160" x2="295" y2="185" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,2"/>
+              <line x1="340" y1="195" x2="325" y2="172" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,2"/>
+
+              <!-- Scatter Cloud -->
+              <g fill="#38bdf8" fill-opacity="0.8">
+                <circle cx="130" cy="260" r="4"/>
+                <circle cx="160" cy="215" r="4"/>
+                <circle cx="190" cy="240" r="4"/>
+                <circle cx="210" cy="210" r="4"/>
+                <circle cx="230" cy="190" r="4"/>
+                <circle cx="250" cy="205" r="4"/>
+                <circle cx="280" cy="160" r="4"/>
+                <circle cx="310" cy="180" r="4"/>
+                <circle cx="340" cy="195" r="4"/>
+                <circle cx="370" cy="140" r="4"/>
+              </g>
+
+              <!-- Mean Center -->
+              <circle cx="250" cy="205" r="8" fill="none" stroke="#f8fafc" stroke-width="1.5"/>
+              <circle cx="250" cy="205" r="2.5" fill="#f8fafc"/>
+              <text x="250" y="225" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">μ (Média Centralizada)</text>
+
+              <!-- PC1 Vector -->
+              <line x1="250" y1="205" x2="380" y2="148" stroke="#38bdf8" stroke-width="3" marker-end="url(#arrow-pc1)"/>
+              <text x="365" y="135" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="11" font-weight="800">PC₁ (v₁)</text>
+
+              <!-- PC2 Vector -->
+              <line x1="250" y1="205" x2="208" y2="110" stroke="#a78bfa" stroke-width="3" marker-end="url(#arrow-pc2)"/>
+              <text x="185" y="105" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="11" font-weight="800">PC₂ (v₂)</text>
+
+              <!-- Orthogonality Symbol -->
+              <path d="M 238 180 L 247 176 L 259 200" fill="none" stroke="#a78bfa" stroke-width="1.2"/>
+
+              <rect x="25" y="45" width="200" height="36" rx="4" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+              <text x="35" y="60" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="9.5" font-weight="700">PC₁: Max Variância (λ₁)</text>
+              <text x="35" y="74" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="9.5" font-weight="700">PC₂: Ortogonal a PC₁ (λ₂)</text>
+            </g>
+
+            <!-- PAINEL DIREITO: SCREE PLOT -->
+            <g transform="translate(530, 40)">
+              <rect width="250" height="340" rx="8" fill="#1e293b" fill-opacity="0.6" stroke="#94a3b8" stroke-width="1.5"/>
+              <text x="125" y="24" text-anchor="middle" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="12" font-weight="700">
+                Scree Plot &amp; Variância Acumulada
+              </text>
+
+              <line x1="35" y1="270" x2="225" y2="270" stroke="#94a3b8" stroke-width="1.5"/>
+              <line x1="35" y1="270" x2="35" y2="50" stroke="#94a3b8" stroke-width="1.5"/>
+
+              <text x="125" y="295" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="10">Componentes Principais</text>
+              <text x="20" y="45" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">% EVR</text>
+
+              <!-- Bars -->
+              <rect x="55" y="90" width="35" height="180" rx="3" fill="#38bdf8"/>
+              <text x="72" y="82" text-anchor="middle" fill="#38bdf8" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">78.4%</text>
+              <text x="72" y="284" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="9.5" font-weight="600">PC₁</text>
+
+              <rect x="110" y="233" width="35" height="37" rx="3" fill="#a78bfa"/>
+              <text x="127" y="225" text-anchor="middle" fill="#a78bfa" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">16.2%</text>
+              <text x="127" y="284" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="9.5" font-weight="600">PC₂</text>
+
+              <rect x="165" y="258" width="35" height="12" rx="3" fill="#94a3b8"/>
+              <text x="182" y="250" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">5.4%</text>
+              <text x="182" y="284" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="9.5" font-weight="600">PC₃</text>
+
+              <!-- Cumulative Line -->
+              <path d="M 72 90 L 127 54 L 182 42" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,3"/>
+              <circle cx="72" cy="90" r="4" fill="#f59e0b"/>
+              <circle cx="127" cy="54" r="4" fill="#f59e0b"/>
+              <circle cx="182" cy="42" r="4" fill="#f59e0b"/>
+
+              <text x="135" y="48" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="9" font-weight="700">94.6% Acumulada</text>
+
+              <line x1="35" y1="52" x2="225" y2="52" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2,2"/>
+
+              <rect x="20" y="305" width="210" height="22" rx="4" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+              <text x="125" y="320" text-anchor="middle" fill="#f59e0b" font-family="DM Sans, sans-serif" font-size="9" font-weight="600">
+                Corte Retém ≥ 95% da Variância Total
+              </text>
+            </g>
+          </svg>
+        </div>
+
+        <p>Abaixo exibimos a arquitetura de produção AWS para compressão de atributos via PCA:</p>
+        <div class="svg-wrap" style="background: #0f172a; border-radius: 10px; border: 1px solid #1e293b; padding: 16px; margin: 24px 0;">
+          <svg width="100%" viewBox="0 0 860 200" xmlns="http://www.w3.org/2000/svg" aria-label="Pipeline PCA Dimensionality Reduction AWS SageMaker">
+            <defs><marker id="pca-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker></defs>
+            <rect width="860" height="200" rx="10" fill="#0f172a"/>
+            <text x="430" y="22" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5">PCA DIMENSIONALITY REDUCTION — PIPELINE AWS SAGEMAKER</text>
+            <line x1="30" y1="34" x2="830" y2="34" stroke="#1e293b" stroke-width="1"/>
+            <rect x="30" y="58" width="115" height="78" rx="8" fill="#1e293b" stroke="#16a34a" stroke-width="2"/>
+            <text x="87" y="85" text-anchor="middle" fill="#16a34a" font-size="22">🪣</text>
+            <text x="87" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Amazon S3</text>
+            <text x="87" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">High-Dim Dataset</text>
+            <line x1="147" y1="97" x2="183" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#pca-arrow)"/>
+            <rect x="185" y="58" width="130" height="78" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+            <text x="250" y="85" text-anchor="middle" fill="#eab308" font-size="22">⚙</text>
+            <text x="250" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">EMR Spark</text>
+            <text x="250" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Z-Score Standardization</text>
+            <line x1="317" y1="97" x2="353" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#pca-arrow)"/>
+            <rect x="355" y="58" width="150" height="78" rx="8" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/>
+            <text x="430" y="85" text-anchor="middle" fill="#a78bfa" font-size="22">📐</text>
+            <text x="430" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">SM PCA</text>
+            <text x="430" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Eigendecomposition SVD</text>
+            <line x1="507" y1="97" x2="543" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#pca-arrow)"/>
+            <rect x="545" y="58" width="140" height="78" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="2"/>
+            <text x="615" y="85" text-anchor="middle" fill="#38bdf8" font-size="22">🗄</text>
+            <text x="615" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">Feature Store</text>
+            <text x="615" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">Low-Dim Embeddings</text>
+            <line x1="687" y1="97" x2="723" y2="97" stroke="#475569" stroke-width="1.5" marker-end="url(#pca-arrow)"/>
+            <rect x="725" y="58" width="110" height="78" rx="8" fill="#1e293b" stroke="#FF6B00" stroke-width="2"/>
+            <text x="780" y="85" text-anchor="middle" fill="#FF6B00" font-size="22">📊</text>
+            <text x="780" y="105" text-anchor="middle" fill="#f8fafc" font-family="DM Sans, sans-serif" font-size="10" font-weight="700">QuickSight</text>
+            <text x="780" y="119" text-anchor="middle" fill="#94a3b8" font-family="DM Sans, sans-serif" font-size="9">2D/3D Biplot</text>
+          </svg>
+        </div>
+
+        <!-- 3.5 Código Python Executável -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.5 Código Python Executável (Pipeline scikit-learn &amp; Validação SVD Manual)</h3>
+        <p>Pipeline scikit-learn com `make_pipeline`, retenção de \(\ge 95\%\) da variância explicada acumulada e cálculo do erro de reconstrução MSE no conjunto de teste:</p>
+
+        <pre style="background:#0b0f19; color:#f8fafc; padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.88rem; overflow-x: auto; border: 1px solid #1e293b;"><span style="color:#7c3aed;">import</span> numpy <span style="color:#7c3aed;">as</span> np
+<span style="color:#7c3aed;">from</span> sklearn.datasets <span style="color:#7c3aed;">import</span> make_blobs
+<span style="color:#7c3aed;">from</span> sklearn.model_selection <span style="color:#7c3aed;">import</span> train_test_split
+<span style="color:#7c3aed;">from</span> sklearn.preprocessing <span style="color:#7c3aed;">import</span> StandardScaler
+<span style="color:#7c3aed;">from</span> sklearn.decomposition <span style="color:#7c3aed;">import</span> PCA
+<span style="color:#7c3aed;">from</span> sklearn.pipeline <span style="color:#7c3aed;">import</span> make_pipeline
+
+<span style="color:#64748b;"># 1. Dataset Sintético de Alta Dimensionalidade (20 atributos)</span>
+X_raw, _ = make_blobs(n_samples=1000, n_features=20, centers=5, random_state=42)
+rng = np.random.RandomState(42)
+transformation_matrix = rng.randn(20, 20)
+X_correlated = np.dot(X_raw, transformation_matrix)
+
+<span style="color:#64748b;"># 2. Divisão Estrita Treino / Teste (Zero Data Leakage)</span>
+X_train, X_test = train_test_split(X_correlated, test_size=0.2, random_state=42)
+
+<span style="color:#64748b;"># 3. Pipeline scikit-learn: Scaler + PCA conservando >= 95% da Variância</span>
+pca_pipeline = make_pipeline(
+    StandardScaler(),
+    PCA(n_components=0.95, svd_solver=<span style="color:#16a34a;">'full'</span>, random_state=42)
+)
+
+<span style="color:#64748b;"># Fit e Transform APENAS no conjunto de Treino</span>
+X_train_pca = pca_pipeline.fit_transform(X_train)
+
+<span style="color:#64748b;"># Transform no conjunto de Teste (Zero Data Leakage)</span>
+X_test_pca = pca_pipeline.transform(X_test)
+
+<span style="color:#64748b;"># Extração dos componentes para cálculo de métricas</span>
+scaler_step = pca_pipeline.named_steps[<span style="color:#16a34a;">'standardscaler'</span>]
+pca_step = pca_pipeline.named_steps[<span style="color:#16a34a;">'pca'</span>]
+
+<span style="color:#64748b;"># 4. Cálculo de EVR e Curva Scree Plot</span>
+evr = pca_step.explained_variance_ratio_
+scree_cumsum = np.cumsum(evr)
+
+<span style="color:#64748b;"># 5. Validação com SVD Manual no Treino (X_centered = U * S * Vt)</span>
+X_train_scaled = scaler_step.transform(X_train)
+U, S, Vt = np.linalg.svd(X_train_scaled, full_matrices=False)
+eigenvalues_svd = (S ** 2) / (X_train_scaled.shape[0] - 1)
+evr_svd = eigenvalues_svd / np.sum(eigenvalues_svd)
+
+<span style="color:#64748b;"># 6. Reconstrução e Erro Quadrático Médio (MSE) no Teste</span>
+X_test_scaled = scaler_step.transform(X_test)
+X_test_reconstructed = pca_step.inverse_transform(X_test_pca)
+test_reconstruction_mse = np.mean((X_test_scaled - X_test_reconstructed) ** 2)
+
+print(<span style="color:#16a34a;">"=== PCA PIPELINE &amp; SCREE METRICS ==="</span>)
+print(f<span style="color:#16a34a;">"Dimensão Original:                    {X_train.shape[1]} atributos"</span>)
+print(f<span style="color:#16a34a;">"Componentes Retidos (>=95% Variância): {pca_step.n_components_}"</span>)
+print(f<span style="color:#16a34a;">"Taxa de Compressão de Atributos:       {(1 - pca_step.n_components_ / X_train.shape[1]):.1%}"</span>)
+print(f<span style="color:#16a34a;">"EVR por Componente (Scikit-Learn):      {evr[:5].round(4)}"</span>)
+print(f<span style="color:#16a34a;">"EVR por Componente (SVD Manual):        {evr_svd[:5].round(4)}"</span>)
+print(f<span style="color:#16a34a;">"Scree Plot Variância Acumulada:        {scree_cumsum.round(4)}"</span>)
+print(f<span style="color:#16a34a;">"Erro de Reconstrução (MSE no Teste):  {test_reconstruction_mse:.6f}"</span>)</pre>
+
+        <!-- 3.6 Quando Usar vs Quando NÃO Usar -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.6 Quando Usar vs. Quando NÃO Usar</h3>
         <div class="grid-2" style="margin-top: 16px;">
           <div class="card" style="border-top: 4px solid var(--ok);">
             <div class="card-lbl" style="color: var(--ok);">Quando USAR o PCA</div>
             <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
-              <li><strong>Compressão de Embeddings e Altíssima Dimensionalidade:</strong> Redução de vetores de features (\(d > 100\)) antes de aplicar classificadores ou agrupamentos.</li>
-              <li><strong>Eliminação de Multicolinearidade:</strong> Transforma atributos altamente correlacionados em componentes ortogonais (não-correlacionados).</li>
-              <li><strong>Visualização de Dados (2D/3D):</strong> Projeção em 2 ou 3 componentes principais para análise exploratória.</li>
-              <li><strong>Aceleração de Pipelines de ML:</strong> Reduz drasticamente a memória e o tempo de treinamento de modelos subsequentes.</li>
+              <li><strong>Compressão de Vetores &amp; Embeddings:</strong> Redução de matrizes de alta dimensão (\(d > 100\)) antes de modelos supervisionados ou Vector Search.</li>
+              <li><strong>Remoção de Multicolinearidade:</strong> Converte variáveis originais correlacionadas em eixos ortogonais descorrelacionados.</li>
+              <li><strong>Visualização Exploratória (2D/3D):</strong> Projeção de conjuntos de dados complexos em 2 ou 3 componentes principais.</li>
+              <li><strong>Aceleração Computacional:</strong> Redução do tempo de treinamento e uso de memória de classificadores downstream.</li>
             </ul>
           </div>
 
           <div class="card" style="border-top: 4px solid var(--accent);">
             <div class="card-lbl" style="color: var(--accent);">Quando NÃO USAR o PCA</div>
             <ul style="margin-top: 10px; padding-left: 18px; line-height: 1.6; font-size: 0.95rem;">
-              <li><strong>Manifolds Não-Lineares:</strong> Se as relações entre os dados forem não-lineares (ex: Swiss Roll), utilize técnicas como t-SNE, UMAP ou Kernel PCA.</li>
-              <li><strong>Necessidade de Interpretabilidade Direta:</strong> Cada componente principal é uma combinação linear de todas as variáveis originais, perdendo o significado direto do domínio.</li>
-              <li><strong>Matrizes Esparsas Gigantes:</strong> A centralização da média remove a esparsidade do dado (para matrizes esparsas como TF-IDF, utilize <strong>TruncatedSVD</strong>).</li>
+              <li><strong>Estruturas e Manifolds Não-Lineares:</strong> Quando as dependências forem não-lineares, utilize t-SNE, UMAP ou Kernel PCA.</li>
+              <li><strong>Requisito de Interpretabilidade Direta:</strong> Cada componente é uma combinação linear de todas as variáveis, perdendo o sentido de domínio original.</li>
+              <li><strong>Matrizes Esparsas de Texto (TF-IDF):</strong> A centralização subtrai a média e destrói a esparsidade do dado (utilizar **TruncatedSVD**).</li>
             </ul>
           </div>
         </div>
 
-        <!-- Draw.io Diagram -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.3 Arquitetura de Produção AWS para PCA</h3>
-        <p>O diagrama abaixo descreve a integração de um job de redução de dimensionalidade PCA utilizando Amazon EMR, SageMaker Processing e SageMaker Feature Store:</p>
-        
-        <div class="drawio-wrap" style="margin-top: 24px;">
-          <div class="drawio-label"><span class="dot"></span>PCA Dimensionality Reduction — Pipeline AWS</div>
-          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph="{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;960\&quot; pageHeight=\&quot;320\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;pca_0\&quot;/&gt;&lt;mxCell id=\&quot;pca_1\&quot; parent=\&quot;pca_0\&quot;/&gt;&lt;mxCell id=\&quot;pca_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;960\&quot; height=\&quot;320\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_title\&quot; value=\&quot;PRINCIPAL COMPONENT ANALYSIS (PCA) — REDUÇÃO DE DIMENSIONALIDADE NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;960\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_s3_raw\&quot; value=\&quot;S3 Iceberg\nHigh-Dim Matrix\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_emr\&quot; value=\&quot;EMR Serverless\n(SVD / PCA Spark)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#eab308;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;220\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_sm\&quot; value=\&quot;SageMaker\nProcessing / Fit\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;420\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_fs\&quot; value=\&quot;SageMaker\nFeature Store\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker_feature_store;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;620\&quot; y=\&quot;130\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_out\&quot; value=\&quot;Downstream ML /\nVector Index\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=6;fillColor=#1e293b;strokeColor=#16a34a;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry x=\&quot;800\&quot; y=\&quot;133\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_e1\&quot; value=\&quot;X (d &gt; 100 features)\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;pca_s3_raw\&quot; target=\&quot;pca_emr\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_e2\&quot; value=\&quot;Mean Centered / Cov\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#eab308;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;pca_emr\&quot; target=\&quot;pca_sm\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_e3\&quot; value=\&quot;Z (k principal components)\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;pca_sm\&quot; target=\&quot;pca_fs\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pca_e4\&quot; value=\&quot;Compressed Vector\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;pca_fs\&quot; target=\&quot;pca_out\&quot; parent=\&quot;pca_1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
+        <!-- 3.7 Pontos Relevantes de Engenharia & MLOps -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.7 Pontos Relevantes de Engenharia &amp; MLOps</h3>
+        <div class="concept-grid" style="margin-top: 16px;">
+          <div class="concept-card">
+            <h4>1. Sensibilidade à Escala das Variáveis</h4>
+            <p>Se as variáveis apresentarem escalas desiguais, o PCA atribuirá arbitrariamente o primeiro componente à variável de maior variância numérica. O uso do `StandardScaler` é estritamente obrigatório.</p>
+          </div>
+          <div class="concept-card">
+            <h4>2. TruncatedSVD para TF-IDF Esparso</h4>
+            <p>Em processamento de linguagem natural (NLP), o `TruncatedSVD` (LSA) executa decomposição em matrizes esparsas sem realizar a centralização de média que exigiria alocação densa de memória RAM.</p>
+          </div>
+          <div class="concept-card">
+            <h4>3. Compressão para Vector Search (RAG)</h4>
+            <p>O PCA é amplamente utilizado em sistemas RAG/GenAI para comprimir embeddings de 1536 dimensões (ex: OpenAI text-embedding-3) para 256 ou 512 dimensões, reduzindo a latência de busca em bancos vetoriais.</p>
+          </div>
         </div>
-        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
-          <strong style="color: var(--accent);">Compressão de Atributos:</strong> Matrizes de altíssima dimensão lidas do S3 Iceberg sofrem decomposição SVD no EMR Spark. O modelo de projeção PCA reduz a dimensão conservando 95% da variância acumulada, registrando os vetores compactados no SageMaker Feature Store para consumo por modelos supervisados downstream.
-        </div>
 
-        <!-- Executable Python Code -->
-        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.4 Código Python Executável (NumPy SVD vs. scikit-learn PCA)</h3>
-        <p>Abaixo apresentamos a validação da equivalência matemática entre a decomposição SVD manual e a biblioteca `sklearn.decomposition.PCA`:</p>
-
-        <pre style="background:#0b0f19; color:#f8fafc; padding: 18px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.88rem; overflow-x: auto; border: 1px solid #1e293b;"><span style="color:#7c3aed;">import</span> numpy <span style="color:#7c3aed;">as</span> np
-<span style="color:#7c3aed;">from</span> sklearn.datasets <span style="color:#7c3aed;">import</span> make_blobs
-<span style="color:#7c3aed;">from</span> sklearn.preprocessing <span style="color:#7c3aed;">import</span> StandardScaler
-<span style="color:#7c3aed;">from</span> sklearn.decomposition <span style="color:#7c3aed;">import</span> PCA
-
-<span style="color:#64748b;"># 1. Gerar Dataset Sintético de Alta Dimensionalidade (20 características)</span>
-X_raw, _ = make_blobs(n_samples=1000, n_features=20, centers=5, random_state=42)
-
-<span style="color:#64748b;"># Adicionar correlação linear sintética entre atributos</span>
-transformation_matrix = np.random.RandomState(42).randn(20, 20)
-X_correlated = np.dot(X_raw, transformation_matrix)
-
-<span style="color:#64748b;"># 2. MLOps Best Practice: Centralizar Média e Padronizar Variância (Z-Score)</span>
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X_correlated)
-
-<span style="color:#64748b;"># 3. Implementação Manual do PCA via Decomposição SVD (X = U * S * Vt)</span>
-U, S, Vt = np.linalg.svd(X_scaled, full_matrices=False)
-eigenvalues_svd = (S ** 2) / (X_scaled.shape[0] - 1)
-evr_svd = eigenvalues_svd / np.sum(eigenvalues_svd)
-
-<span style="color:#64748b;"># 4. Scikit-Learn PCA Conservando 95% da Variância Explicada Acumulada</span>
-pca = PCA(n_components=0.95, svd_solver=<span style="color:#16a34a;">'full'</span>, random_state=42)
-X_pca = pca.fit_transform(X_scaled)
-
-<span style="color:#64748b;"># 5. Métricas de Compressão e Reconstrução da Matriz</span>
-n_components_retained = pca.n_components_
-explained_variance = pca.explained_variance_ratio_
-cumulative_variance = np.cumsum(explained_variance)
-
-<span style="color:#64748b;"># Reconstrução da matriz original a partir do subespaço reduzido</span>
-X_reconstructed = pca.inverse_transform(X_pca)
-reconstruction_mse = np.mean((X_scaled - X_reconstructed) ** 2)
-
-print(f<span style="color:#16a34a;">"=== PCA DIMENSIONALITY REDUCTION METRICS ==="</span>)
-print(f<span style="color:#16a34a;">"Dimensão Original: {X_scaled.shape[1]} atributos"</span>)
-print(f<span style="color:#16a34a;">"Componentes Retidos (>=95% Variância): {n_components_retained}"</span>)
-print(f<span style="color:#16a34a;">"Taxa de Compressão de Atributos: {(1 - n_components_retained / X_scaled.shape[1]):.1%}"</span>)
-print(f<span style="color:#16a34a;">"EVR por Componente (Scikit-Learn): {explained_variance[:5].round(4)}"</span>)
-print(f<span style="color:#16a34a;">"EVR por Componente (SVD Manual):   {evr_svd[:5].round(4)}"</span>)
-print(f<span style="color:#16a34a;">"Variância Acumulada Retida: {cumulative_variance[-1]:.4f}"</span>)
-print(f<span style="color:#16a34a;">"Erro Quadrático Médio (MSE) de Reconstrução: {reconstruction_mse:.6f}"</span>)</pre>
+        <!-- 3.8 Referências Bibliográficas -->
+        <h3 style="margin-top: 36px; font-size: 1.3rem;">3.8 Referências Bibliográficas</h3>
+        <ul style="line-height: 1.8; color: var(--text-dim); padding-left: 20px; font-size: 0.9rem;">
+          <li><strong>Golub, G. H., &amp; Reinsch, C. (1970).</strong> <em>Singular value decomposition and least squares solutions.</em> Numerische Mathematik, 14(5), 403–420.</li>
+          <li><strong>Hotelling, H. (1933).</strong> <em>Analysis of a complex of statistical variables into principal components.</em> Journal of Educational Psychology, 24(6), 417–441.</li>
+          <li><strong>Jolliffe, I. T. (2002).</strong> <em>Principal Component Analysis.</em> Springer Series in Statistics (2nd ed.).</li>
+          <li><strong>Pearson, K. (1901).</strong> <em>On lines and planes of closest fit to systems of points in space.</em> Philosophical Magazine, 2(11), 559–572.</li>
+        </ul>
       </section>
 
-      <!-- SEÇÃO 04: COMPARATIVO TÉCNICO & MATRIZ DE DECISÃO -->
+      <!-- ==================================================================== -->
+      <!-- SEÇÃO 04: COMPARATIVO TÉCNICO & MATRIZ DE DECISÃO                    -->
+      <!-- ==================================================================== -->
       <section class="section" id="comparativo-tecnico">
         <div class="sec-hdr">
           <div class="sec-num" style="color:var(--ok)">04</div>
@@ -551,7 +1325,9 @@ print(f<span style="color:#16a34a;">"Erro Quadrático Médio (MSE) de Reconstru�
         </div>
       </section>
 
-      <!-- SEÇÃO 05: BIBLIOGRAFIA ACADÊMICA -->
+      <!-- ==================================================================== -->
+      <!-- SEÇÃO 05: BIBLIOGRAFIA ACADÊMICA GLOBAL                              -->
+      <!-- ==================================================================== -->
       <section class="section" id="bibliografia-referencias">
         <div class="sec-hdr">
           <div class="sec-num" style="color:var(--aws)">05</div>
@@ -573,6 +1349,7 @@ print(f<span style="color:#16a34a;">"Erro Quadrático Médio (MSE) de Reconstru�
           <li><strong>Lloyd, S. (1982).</strong> <em>Least squares quantization in PCM.</em> IEEE Transactions on Information Theory, 28(2), 129-137.</li>
           <li><strong>MacQueen, J. (1967).</strong> <em>Some methods for classification and analysis of multivariate observations.</em> Proceedings of the 5th Berkeley Symposium on Mathematical Statistics and Probability, 1:281–297.</li>
           <li><strong>Pearson, K. (1901).</strong> <em>On lines and planes of closest fit to systems of points in space.</em> Philosophical Magazine, 2(11), 559-572.</li>
+          <li><strong>Schubert, E., Sander, J., Ester, M., Kriegel, H. P., &amp; Xu, X. (2017).</strong> <em>DBSCAN Revisited, Revisited: Why and How You Should (Still) Use DBSCAN.</em> ACM Transactions on Database Systems (TODS), 42(3), 1–21.</li>
         </ul>
       </section>
 
@@ -641,20 +1418,5 @@ print(f<span style="color:#16a34a;">"Erro Quadrático Médio (MSE) de Reconstru�
   <script src="../../js/progress.js"></script>
   <script src="../../js/sidebar-loader.js"></script>
   <script src="../../js/a11y.js"></script>
-  <script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
-  <script>
-    // Force drawio diagrams to render after viewer-static is loaded
-    (function() {
-      function initDrawio() {
-        if (window.GraphViewer) {
-          try { GraphViewer.processPage(); } catch(e) {}
-        } else {
-          setTimeout(initDrawio, 200);
-        }
-      }
-      if (document.readyState === 'complete') { initDrawio(); }
-      else { window.addEventListener('load', initDrawio); }
-    })();
-  </script>
 </body>
 </html>
