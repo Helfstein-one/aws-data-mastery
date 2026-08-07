@@ -125,4 +125,49 @@ Integrity mode: development
 ### Layout e Visualizações
 - [ ] Todas as equações matemáticas renderizam sem delimitações brutas visíveis de KaTeX.
 - [ ] Todos os novos diagramas SVG nativos estão legíveis, sem sobreposição de textos e adaptados para leitura noturna/diurna.
+
+## 2026-08-07T02:30:51Z
+
+<USER_REQUEST>
+# Orquestração de Documentação e Arquitetura Antigravity (Multi-Agent IA Platform, RAG & LangChain)
+
+Working directory: /Users/mauriciohelfstein/dev/aws-data-mastery
+Integrity mode: development
+
+## Requirements
+
+### R1. Expansão de Conteúdo Estruturada (Um Agente por Página)
+Instancie subagentes especialistas dedicados para cada uma das páginas em `pages/ia-algoritmos/` e `pages/engenharia/` relacionadas a IA e GenAI:
+1. `pages/ia-algoritmos/supervisionado-regressao.html`
+2. `pages/ia-algoritmos/supervisionado-ensembles.html`
+3. `pages/ia-algoritmos/supervisionado-classificadores.html`
+4. `pages/ia-algoritmos/nao-supervisionado-clustering.html`
+5. `pages/ia-algoritmos/deep-learning-transformers.html`
+6. `pages/engenharia/genai-rag-architectures.html`
+7. `pages/engenharia/genai-system-design.html`
+8. `pages/engenharia/genai-mcp-protocol.html`
+
+Cada agente especialista deve garantir que a respectiva página contenha a estrutura obrigatória:
+- **Conceitos:** Explicações teóricas e conceituais acessíveis e aprofundadas.
+- **Exemplos Práticos:** Casos de uso do mundo real e aplicações em produtos digitais.
+- **Blocos de Código:** Código formatado, executável e comentado em Python/PySpark/SQL.
+- **Diagramas Draw.io:** Representações visuais nativas (SVG/Draw.io) com legendas detalhadas mapeando cada nó e interação.
+- **Referências:** Seção final com links e bibliografia acadêmica/técnica.
+
+### R2. Arquitetura de Plataforma de IA Multi-agentes (RAG & LangChain)
+Nas páginas de arquitetura de IA (`deep-learning-transformers.html`, `genai-rag-architectures.html`, `genai-system-design.html`):
+- Desenvolver diagramas de arquitetura complexos de plataformas de IA Multi-Agentes.
+- Contemplar a orquestração de múltiplos agentes (LangChain / LangGraph, Agents for Amazon Bedrock), RAG Avançado (Dense/Sparse Hybrid Search, Re-ranking) e integração com Vector DBs (Amazon OpenSearch Serverless, Aurora pgvector).
+- É **obrigatório** incluir legendas explicativas detalhadas abaixo de cada diagrama, descrevendo a função de cada componente e a sequência do fluxo de dados.
+
+### R3. Auditoria de Jornada & Auto-correção (Self-Healing)
+- Auditar a jornada de leitura e aprendizado de IA no portal.
+- Gerar um relatório detalhado de apontamentos identificando ambiguidades ou inconsistências.
+- Invocar um Agente Revisor dedicado para aplicar automaticamente todas as correções apontadas nas páginas HTML.
+
+## Acceptance Criteria
+- [ ] Todas as 8 páginas da trilha de IA/GenAI contêm Conceitos, Exemplos Práticos, Código, Diagramas com Legenda e Referências.
+- [ ] Diagramas da arquitetura Multi-Agente RAG + LangChain com legendas explicativas completas.
+- [ ] Relatório de auditoria gerado e correções aplicadas via agente revisor (self-healing).
+</USER_REQUEST>
 </USER_REQUEST>
