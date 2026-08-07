@@ -1,31 +1,34 @@
-# Project Plan: Financial Knowledge Pages Expansion & Quality Audit
+# Master Project Plan — IA Algoritmos Rewrite
 
-## Overview
-Expand and enhance 9 pages in `/pages/financas/` on branch `feat/financas-dados-cleanup`, resolving all sidebar JS/HTML issues, applying KaTeX and SVG guidelines, and completing full multi-agent audit rounds.
+## Architecture & Scope
+Deep rewrite of the 5 pages in `pages/ia-algoritmos/` for the AWS Data Mastery portal from the perspective of a Senior Data Scientist.
+All 15 algorithms must adhere strictly to requirements R1 (Scientific Rigor), R2 (Mandatory 8-section structure), R3 (KaTeX formatting), R4 (Inline SVG graphs), and R5 (Senior Data Scientist Peer Review & Audit).
 
 ## Milestones
 
-### Milestone 1: Baseline Audit & Sidebar Infrastructure Fix
-- Task 1.1: Explore `/pages/financas/` pages and sidebar JS scripts (`js/sidebar.js`, etc.).
-- Task 1.2: Dispatch Worker to fix sidebar JavaScript/HTML bugs across all 9 pages (ensure `toggleCategory`, `toggleNav`, `scrollToTop`, `#sidebar`, `#hamburger` are present and working without JS errors).
+| # | Milestone Name | Scope File / Algorithms | Dependencies | Status |
+|---|----------------|------------------------|--------------|--------|
+| 1 | M1: Supervisionado Regressão | `pages/ia-algoritmos/supervisionado-regressao.html`<br>(Linear Regression, Logistic Regression, Decision Tree) | None | DONE |
+| 2 | M2: Supervisionado Ensembles | `pages/ia-algoritmos/supervisionado-ensembles.html`<br>(Random Forest, Gradient Boosting, XGBoost, SVM) | M1 | DONE |
+| 3 | M3: Supervisionado Classificadores | `pages/ia-algoritmos/supervisionado-classificadores.html`<br>(k-NN, Naive Bayes) | M1, M2 | DONE |
+| 4 | M4: Não-Supervisionado Clustering | `pages/ia-algoritmos/nao-supervisionado-clustering.html`<br>(k-Means, DBSCAN, PCA) | M1, M2, M3 | DONE |
+| 5 | M5: Deep Learning & Transformers | `pages/ia-algoritmos/deep-learning-transformers.html`<br>(ANN/MLP, CNN, Transformer) | M1-M4 | IN_PROGRESS |
 
-### Milestone 2: Topic Specialists Content Expansion (9 HTML Pages)
-- Task 2.1: Specialist Worker for `onboarding.html` (KYC flow, Credit Proposal Data Contract in JSON Schema Draft-07/2020-12, AWS 2026 SVG architecture).
-- Task 2.2: Specialist Worker for `matematica-financeira.html` (Financial math basic to advanced, SAC/Price, VPL, Assaf/Ross bibliography, Python/PySpark/SQL executable code).
-- Task 2.3: Specialist Worker for `ciclo-vida-credito.html` (Credit lifecycle phases 1-6 detailed, AWS 2026 technical event streams).
-- Task 2.4: Specialist Worker for `pos-venda-reconciliacao.html` (Post-sales events: prepayments, late payments, fines, interest; Flink/MSK/S3 streaming architecture).
-- Task 2.5: Specialist Worker for `contabilidade-razonetes.html` (COSIF table, accounting entries, SVG T-account diagrams, BRGAAP CMN 4.966 EIR calculation).
-- Task 2.6: Specialist Worker for `risco-montecarlo.html` (Banking risk basic to advanced, IRB, Vasicek, Expected vs Unexpected Loss, PySpark Monte Carlo simulation).
-- Task 2.7: Specialist Worker for `normas-regulatorio.html` (CMN 2.682, 4.557, 4.966, 4.893 analysis, SVG provision stage diagram, BACEN DOC 3040 reports).
-- Task 2.8: Specialist Worker for `auditoria-dados.html` (BACEN/CVM physical lineage, PySpark column-level lineage, Lake Formation & Glue DQDL SVG governance).
-- Task 2.9: Specialist Worker for `finops-financas.html` (FinOps cost optimization: Iceberg Vacuum/Compaction, S3 Lifecycle Tiers, diagrams & cost tables).
+---
 
-### Milestone 3: Design & Quality Standard Enforcement
-- Task 3.1: Enforce KaTeX math delimiters (`\(` and `\[`) across all 9 pages.
-- Task 3.2: Verify dark mode premium theme (`style.css`), high contrast badges, responsive clean SVG diagrams without text overlap.
+## Mandatory 8-Section Structure per Algorithm (R2)
+1. **Introdução**: O que é, para que serve e contexto histórico conceitual.
+2. **Conceitos Fundamentais**: Intuição e pressupostos teóricos (Gauss-Markov, independência condicional, distâncias, convexidade, etc.).
+3. **Fórmulas KaTeX**: Equações analíticas precisas com delimitadores `\(` e `\[` (NUNCA `$`), blocos em linha única, símbolos escapados com `\\`. Tabela/legenda de símbolos obrigatória.
+4. **Gráficos SVG Inline**: Diagramas SVG nativos no HTML (responsivos com `width="100%"` e `viewBox`), paleta oficial (`#0f172a`, `#1e293b`, `#94a3b8`, `#38bdf8`, `#a78bfa`, `#10b981`, `#ef4444`, `#f59e0b`).
+5. **Código Python**: Script autocontido, `random_state`, pré-processamento sem data leakage (`fit_transform` no treino, `transform` no teste), métricas adequadas.
+6. **Quando Usar vs Não Usar**: Grid/tabela de prós e contras justificando sobreajuste, subajuste, dimensionalidade, outliers, interpretabilidade vs performance, custos computacionais.
+7. **Pontos Relevantes**: Dicas práticas de engenharia, regularização, tuning de hiperparâmetros.
+8. **Referências Bibliográficas**: Mínimo de 2 referências acadêmicas consagradas (Hastie et al., Bishop, Goodfellow et al., etc.).
 
-### Milestone 4: Multi-Agent Audit & Final Homologation
-- Task 4.1: Layout Reviewer audit (CSS, contrast, responsive design).
-- Task 4.2: UX Evaluator audit (readability, didactic flow, navigation).
-- Task 4.3: Forensic Auditor integrity audit (verify genuine implementations, no hardcoded cheating).
-- Task 4.4: Judge Agent final consolidation & approval for `feat/financas-dados-cleanup`.
+---
+
+## Quality Rules & Technical Constraints
+- **KaTeX Header (R3)**: `onload` script auto-render, `delimiters: [{left: '\\\\(', right: '\\\\)', display: false}, {left: '\\\\[', right: '\\\\]', display: true}]`.
+- **Global Scripts (R5.5)**: Must include `progress.js`, `sidebar-loader.js`, `a11y.js` and functional CSS links. Sidebar active link set to "🤖 IA, MLOps & Algoritmos".
+- **Zero Integrity Violations**: No placeholder code, no fake/hardcoded test outputs, authentic mathematical derivations and Python implementations.

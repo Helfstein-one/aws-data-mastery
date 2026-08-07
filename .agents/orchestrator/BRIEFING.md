@@ -1,80 +1,75 @@
-# BRIEFING — 2026-07-31T19:23:26Z
+# BRIEFING — 2026-08-02T02:14:08-03:00 (gen2 successor active)
 
 ## Mission
-Expand and enhance the 9 Financial Knowledge pages in /pages/financas/ on branch feat/financas-dados-cleanup, fix sidebar JS/HTML bugs, enforce KaTeX and SVG standards, and validate via Layout Reviewer, UX Evaluator, and Judge Agent.
+Lead the deep rewrite of the 5 pages in `pages/ia-algoritmos/` for the AWS Data Mastery portal from the perspective of a Senior Data Scientist. Milestones 1, 2, 3, and 4 are complete and verified. Executing Milestone 5 (`deep-learning-transformers.html`), followed by final global verification across all 5 pages and reporting to Sentinel parent.
 
 ## 🔒 My Identity
-- Archetype: Project Orchestrator
+- Archetype: self (gen2 successor)
 - Roles: orchestrator, user_liaison, human_reporter, successor
 - Working directory: /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator
-- Original parent: parent
-- Original parent conversation ID: 29cbc484-e972-4f72-b070-ba7ffa5dd8dd
+- Original parent: top-level
+- Original parent conversation ID: 0870a202-62bd-4d99-b804-0ec5d3fa3d3f
 
 ## 🔒 My Workflow
-- **Pattern**: Project Pattern
-- **Scope document**: /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/PROJECT.md
-1. **Decompose**: Decompose into Milestones (Sidebar Fixes, 9 Topic Specialist Workers, Layout/UX/Judge Audits).
-2. **Dispatch & Execute**: Direct iteration loop or delegate to specialist workers/reviewers/auditors.
-3. **On failure**: Retry -> Replace -> Skip -> Redistribute -> Redesign -> Escalate.
-4. **Succession**: Self-succeed at 16 spawns.
+- **Pattern**: Project Orchestration Pattern
+- **Scope document**: /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/plan.md
+1. **Decompose**: Split into 5 milestones (1 per page) covering 15 algorithms total.
+2. **Dispatch & Execute**: For each milestone, run Explorer -> Worker -> Reviewer -> Challenger -> Auditor cycle.
+3. **On failure**: Retry -> Replace -> Skip -> Redistribute -> Redesign.
+4. **Succession**: Self-succeed at spawn count >= 16.
 - **Work items**:
-  1. Initialize orchestrator state and project plan [done]
-  2. Baseline inspection and sidebar JS/HTML bug fix across 9 pages [done]
-  3. Topic Specialists execution for 9 pages [done]
-  4. KaTeX & SVG design enforcement audit [done]
-  5. Layout Reviewer, UX Evaluator, and Judge Agent audit rounds [done]
-- **Current phase**: Phase 4 (Final Approval & Merge Homologation)
-- **Current focus**: Project completion report
+  1. Milestone 1: supervisionado-regressao.html (Linear Regression, Logistic Regression, Decision Tree) [done]
+  2. Milestone 2: supervisionado-ensembles.html (Random Forest, Gradient Boosting, XGBoost, SVM) [done]
+  3. Milestone 3: supervisionado-classificadores.html (k-NN, Naive Bayes) [done]
+  4. Milestone 4: nao-supervisionado-clustering.html (k-Means, DBSCAN, PCA) [done]
+  5. Milestone 5: deep-learning-transformers.html (ANN/MLP, CNN, Transformer) [in-progress]
+- **Current phase**: 5 (Milestone 5 Execution & Final Verification)
+- **Current focus**: Milestone 5 Explorer dispatch and spec aggregation
 
 ## 🔒 Key Constraints
-- NEVER write, modify, or create source code files directly (DISPATCH-ONLY).
-- Delegate ALL code changes to subagents via invoke_subagent.
-- File modifications permitted ONLY for metadata/state files (.md) in .agents/ folder.
-- Follow KaTeX math delimiters (\( and \[) and clean SVG rules.
-- Run audit rounds with Layout Reviewer, UX Evaluator, and Judge Agent.
+- CODE_ONLY network mode
+- DISPATCH-ONLY orchestrator: do not write code files or solve directly, delegate to subagents
+- Verify KaTeX delimiters \(...\) and \[...\], single-line KaTeX blocks, escaped double backslashes
+- Mandatory 8 sections per algorithm across all 15 algorithms
+- Inline responsive SVG graphs with palette (#0f172a background, #1e293b/#94a3b8 axes, #38bdf8 positive, #a78bfa negative, #10b981 hits, #ef4444 errors, #f59e0b hyperplanes)
+- Python pipelines with random_state, Z-Score fit on train only, no data leakage
+- Peer review by Senior Data Scientist + Forensic Auditor audit on each page
+- Audit failure is a hard binary veto
 
 ## Current Parent
-- Conversation ID: 29cbc484-e972-4f72-b070-ba7ffa5dd8dd
-- Updated: not yet
+- Conversation ID: 0870a202-62bd-4d99-b804-0ec5d3fa3d3f
+- Updated: 2026-08-02T02:14:08-03:00
 
 ## Key Decisions Made
-- Decomposed work into Sidebar & Layout Infrastructure, 9 Topic Specialist Milestones, and Quality Audit Rounds.
+- Milestone 1 fully verified (Reviewers PASS, Challengers CONFIRMED, Auditor CLEAN).
+- Milestone 2 fully verified (Reviewers PASS, Challengers CONFIRMED, Auditor CLEAN, registered in `js/progress.js`).
+- Milestone 3 fully verified (Reviewers PASS, Challengers CONFIRMED, Auditor CLEAN, registered in `js/progress.js`).
+- Milestone 4 fully verified (Reviewers PASS, Challengers CONFIRMED, Auditor CLEAN, registered in `js/progress.js`).
+- Resumed as gen2 successor to execute Milestone 5 and perform final global verification.
 
 ## Team Roster
 | Agent | Type | Work Item | Status | Conv ID |
 |-------|------|-----------|--------|---------|
-| explorer_m1_1 | teamwork_preview_explorer | Baseline audit of 9 pages & sidebar JS | completed | 37f3b529-3e87-406a-a280-c8c36ae58043 |
-| worker_m1 | teamwork_preview_worker | Fix sidebar JS/HTML across all 9 pages | completed | 701d7fdb-7ea2-4be2-b6af-684a672c85ae |
-| worker_m2_onboarding | teamwork_preview_worker | Enhance onboarding.html | completed | 992a7b94-5030-4db3-9a0d-fee0008a4daf |
-| worker_m2_matematica | teamwork_preview_worker | Enhance matematica-financeira.html | completed | 11dce2c1-18ed-454e-8f53-651d7f5754ed |
-| worker_m2_ciclo | teamwork_preview_worker | Enhance ciclo-vida-credito.html | completed | ff996484-00ed-4b22-9e6b-baed2faf6028 |
-| worker_m2_posvenda | teamwork_preview_worker | Enhance pos-venda-reconciliacao.html | completed | 33cc27b2-fc09-4346-8540-82965c67554d |
-| worker_m2_contabilidade | teamwork_preview_worker | Enhance contabilidade-razonetes.html | completed | 02744e21-c69a-4a83-8ad9-63466daf24d9 |
-| worker_m2_risco | teamwork_preview_worker | Enhance risco-montecarlo.html | completed | 8ef730ea-48ea-4245-88c2-8691b6b3eb35 |
-| worker_m2_normas | teamwork_preview_worker | Enhance normas-regulatorio.html | completed | 1522a431-333c-4d6a-95c8-0d425fc66964 |
-| worker_m2_auditoria | teamwork_preview_worker | Enhance auditoria-dados.html | completed | 97477c63-45d1-4005-af8b-8dda376b6d0f |
-| worker_m2_finops | teamwork_preview_worker | Enhance finops-financas.html | completed | 79a81c46-f4cd-4dc7-9f3c-881e4f89137a |
-| reviewer_layout | teamwork_preview_reviewer | Layout, CSS, KaTeX & SVG audit | completed | 7f46cd06-baa0-4419-884d-e4fce874457f |
-| reviewer_ux | teamwork_preview_reviewer | UX & Sidebar functionality audit | completed | 159d0b95-70d0-4674-92b2-a9fc55a07fb9 |
-| auditor_forensic | teamwork_preview_auditor | Forensic integrity audit | completed | b7dd2835-35f3-479c-ba42-82319f645066 |
-| worker_m3_layout_fix | teamwork_preview_worker | CSS variable aliases & badge contrast fix | completed | edca3f34-bd96-4a9b-836c-58fb53bd4847 |
-| reviewer_judge | teamwork_preview_reviewer | Final Judge consolidation & merge approval | in-progress | ee815fca-a36e-4917-8193-e2d0d9dc7750 |
+| explorer_m5_math | teamwork_preview_explorer | M5 Math/KaTeX Analysis | in-progress | 5432e69d-3116-439f-990f-0ecb4e9ad147 |
+| explorer_m5_structure | teamwork_preview_explorer | M5 Structure/HTML Analysis | in-progress | 262cfcfe-e0e4-4fb3-8a81-4cabc4952d28 |
+| explorer_m5_python | teamwork_preview_explorer | M5 Python/SVG Analysis | in-progress | 1dd3b302-58ee-42e6-88ff-cab5226feec7 |
 
 ## Succession Status
 - Succession required: no
-- Spawn count: 16 / 16
-- Pending subagents: ee815fca-a36e-4917-8193-e2d0d9dc7750
-- Predecessor: none
-- Successor: not yet spawned
+- Spawn count: 3 / 16
+- Pending subagents: 5432e69d-3116-439f-990f-0ecb4e9ad147, 262cfcfe-e0e4-4fb3-8a81-4cabc4952d28, 1dd3b302-58ee-42e6-88ff-cab5226feec7
+- Predecessor: gen1 (conversation completed)
+- Successor: not yet spawned30dc-9fbf-4df6-9748-8dd027413032 (gen2)
+- Successor generation: gen2
 
 ## Active Timers
-- Heartbeat cron: task-21
+- Heartbeat cron: killed (task-21)
 - Safety timer: none
 
 ## Artifact Index
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/ORIGINAL_REQUEST.md — Original User Request
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/BRIEFING.md — Briefing Index
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/plan.md — Project Execution Plan
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/progress.md — Progress Heartbeat
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/context.md — Context and Requirements
-- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/PROJECT.md — Global Project Index
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/plan.md — Master project plan
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/progress.md — Liveness heartbeat & progress log
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/context.md — Context and architectural requirements
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/handoff.md — Handoff report for gen2
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/analysis_m3.md — Aggregated spec for Milestone 3
+- /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/orchestrator/analysis_m4.md — Aggregated spec for Milestone 4

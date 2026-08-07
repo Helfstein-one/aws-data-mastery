@@ -68,6 +68,11 @@
     "genai-multimodal-cognitivo": { name: "Multimodal & Agentes", badge: "AI Engineer", color: "#10b981", items: ["genai-multimodal-cognitivo.html"] },
     "genai-mcp-protocol": { name: "Model Context Protocol", badge: "AI Engineer", color: "#10b981", items: ["genai-mcp-protocol.html"] },
     "genai-llm-hardening": { name: "LLM Hardening & Guardrails", badge: "AI Engineer", color: "#10b981", items: ["genai-llm-hardening.html"] },
+    "supervisionado-regressao": { name: "Regressão & Árvores", badge: "AI Engineer", color: "#0284c7", items: ["supervisionado-regressao.html"] },
+    "supervisionado-classificadores": { name: "k-NN & Naive Bayes", badge: "AI Engineer", color: "#0284c7", items: ["supervisionado-classificadores.html"] },
+    "supervisionado-ensembles": { name: "Ensembles & SVM", badge: "AI Engineer", color: "#7c3aed", items: ["supervisionado-ensembles.html"] },
+    "nao-supervisionado-clustering": { name: "k-Means · DBSCAN · PCA", badge: "AI Engineer", color: "#10b981", items: ["nao-supervisionado-clustering.html"] },
+    "deep-learning-transformers": { name: "Deep Learning & Transformers", badge: "AI Engineer", color: "#a78bfa", items: ["deep-learning-transformers.html"] },
 
     // Fase 6
     "business-value": { name: "Valor de Negócio", badge: "Especialista", color: "#db2777", items: ["business-value.html"] },

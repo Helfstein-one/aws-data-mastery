@@ -1,50 +1,56 @@
-# BRIEFING — 2026-07-30T23:28:10Z
+# BRIEFING — 2026-08-01T16:48:10Z
 
 ## Mission
-Create and deeply expand 3 financial data engineering HTML pages for Batch 2 (Operations, Accounting & Risk): pos-venda-reconciliacao.html, contabilidade-razonetes.html, risco-montecarlo.html in pages/financas/.
+Update sidebar navigation and build search index for Milestone 3 (IA & Algoritmos de Machine Learning).
 
 ## 🔒 My Identity
-- Archetype: Specialist Redator Worker
+- Archetype: Specialist Worker
 - Roles: implementer, qa, specialist
 - Working directory: /Users/mauriciohelfstein/dev/aws-data-mastery/.agents/teamwork_preview_worker_m3
-- Original parent: 0812ffa0-5eba-4d84-bc16-6f946a8aeb9b
-- Milestone: Milestone 3 (Batch 2: Operations, Accounting & Risk Pages)
+- Original parent: 4064b384-0e17-44f1-8849-24c55e4f01bc
+- Milestone: Milestone 3 - Sidebar Navigation & Search Index Update
 
 ## 🔒 Key Constraints
-- CODE_ONLY network mode.
-- Relative paths: `../../style.css`, `../../assets/favicon.ico`, `../../js/sidebar-loader.js`, `../../js/a11y.js`, `../../js/progress.js`.
-- Head includes: KaTeX CDN (delimiters `\(` / `\)` and `\[` / `\]`, NO `$` delimiters), Mermaid JS, Diagrams.net script, Google Fonts.
-- Native interactive/responsive SVG diagrams with aligned text tags.
-- Deep technical content, complete financial formulas, code blocks, structured tables.
+- Minimal change principle.
+- No dummy/facade implementations or hardcoded values.
+- Verify search index contains all 5 new pages in `pages/ia-algoritmos/`.
+- Ensure proper sidebar layout, styling, data-page attributes, and click handlers.
 
 ## Current Parent
-- Conversation ID: 0812ffa0-5eba-4d84-bc16-6f946a8aeb9b
-- Updated: 2026-07-30T23:28:10Z
+- Conversation ID: 4064b384-0e17-44f1-8849-24c55e4f01bc
+- Updated: 2026-08-01T16:48:10Z
 
 ## Task Summary
-- **What to build**: 3 HTML pages in `pages/financas/`:
-  1. `pos-venda-reconciliacao.html` - Complete
-  2. `contabilidade-razonetes.html` - Complete
-  3. `risco-montecarlo.html` - Complete
-- **Success criteria**: All 3 files created, verified 0 raw `$` KaTeX math delimiters, responsive SVG diagrams created, strict skeleton DOM compliance.
+- **What to build**: Update `components/sidebar.html` with new IA & Algoritmos category & links, build/recompile `js/search-index.js` using `scratch/build_search_index.py`.
+- **Success criteria**:
+  - `components/sidebar.html` updated with `🤖 IA & Algoritmos de Machine Learning` category & 5 page links.
+  - `scratch/build_search_index.py` created/updated and executed cleanly.
+  - `js/search-index.js` updated and containing indexed entries for all 5 new pages in `pages/ia-algoritmos/`.
+  - Verification script `scratch/test_m3_verification.py` passes 100%.
 
 ## Change Tracker
 - **Files modified**:
-  - `pages/financas/pos-venda-reconciliacao.html` — Created (Reconciliation Flink, Gateway PIX, VPL, DLQ)
-  - `pages/financas/contabilidade-razonetes.html` — Created (Partidas dobradas, COSIF 15 dígitos, Spot/Stop Accrual, Accounting Translator, Data Mesh Iceberg)
-  - `pages/financas/risco-montecarlo.html` — Created (IRB, PySpark Monte Carlo EMR, Basileia III, Vasicek RWA, ALM Cash Flow Gap)
-- **Build status**: Complete & Verified
+  - `components/sidebar.html`: Added category header `🤖 IA & Algoritmos de Machine Learning` and links to 5 pages with proper `data-page` attributes and sub-links.
+  - `scratch/build_search_index.py`: Created script to scan HTML pages and generate `js/search-index.js`.
+  - `js/search-index.js`: Recompiled search index containing 88 indexed pages including all 5 new IA & Algoritmos pages.
+  - `scratch/test_m3_verification.py`: Verification script created and executed.
+- **Build status**: Pass (Search index generated cleanly with exit code 0)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: Passed (All 3 HTML files created and validated)
-- **Lint status**: Passed (Zero KaTeX math delimiter violations)
-- **Tests added/modified**: 3 independent HTML pages created and validated against layout contracts
+- **Build/test result**: Pass (Verification script `scratch/test_m3_verification.py` passed all steps)
+- **Lint status**: Pass
+- **Tests added/modified**: `scratch/test_m3_verification.py`
 
 ## Loaded Skills
 - None
 
 ## Key Decisions Made
-- All KaTeX math formulas use `\(` `\)` and `\[` `\]` exclusively.
-- All SVG diagrams built natively with responsive viewBox and inline text alignment.
-- Complete inclusion of code snippets (PySpark Monte Carlo, DLQ JSON payloads) and structured COSIF / Basileia tables.
+- `components/sidebar.html` updated with collapsible category `ia-algoritmos-cat` and sub-navigation anchors.
+- `scratch/build_search_index.py` handles HTML parsing cleanly with BeautifulSoup, cleaning script/style/svg elements for high quality search indexing.
+
+## Artifact Index
+- `.agents/teamwork_preview_worker_m3/ORIGINAL_REQUEST.md` — Original request text
+- `.agents/teamwork_preview_worker_m3/BRIEFING.md` — Agent working memory
+- `.agents/teamwork_preview_worker_m3/progress.md` — Progress tracker
+- `.agents/teamwork_preview_worker_m3/handoff.md` — Handoff report

@@ -1,3 +1,18 @@
+function getOrCreateBackdrop() {
+    let backdrop = document.getElementById('sidebar-backdrop');
+    if (!backdrop && typeof document !== 'undefined') {
+        backdrop = document.createElement('div');
+        backdrop.id = 'sidebar-backdrop';
+        backdrop.addEventListener('click', function() {
+            if (window.innerWidth <= 960) {
+                toggleNav();
+            }
+        });
+        document.body.appendChild(backdrop);
+    }
+    return backdrop;
+}
+
 function toggleCategory(catId, element) {
     const categoryContent = document.getElementById(catId);
     if (categoryContent) {
@@ -22,26 +37,44 @@ function toggleNav() {
     var main = document.getElementById('main');
     if (!sb) return;
     
+    var backdrop = getOrCreateBackdrop();
     var isMobile = window.innerWidth <= 960;
+    
     if (isMobile) {
         var isOpen = sb.classList.contains('open');
         if (!isOpen) {
             sb.classList.add('open');
-            if (hb) hb.innerHTML = '✕';
+            document.body.classList.add('sidebar-open');
+            if (backdrop) backdrop.classList.add('active');
+            if (hb) {
+                hb.innerHTML = '✕';
+                hb.setAttribute('aria-expanded', 'true');
+            }
         } else {
             sb.classList.remove('open');
-            if (hb) hb.innerHTML = '☰';
+            document.body.classList.remove('sidebar-open');
+            if (backdrop) backdrop.classList.remove('active');
+            if (hb) {
+                hb.innerHTML = '☰';
+                hb.setAttribute('aria-expanded', 'false');
+            }
         }
     } else {
         var isClosed = sb.classList.contains('closed');
         if (!isClosed) {
             sb.classList.add('closed');
             if (main) main.classList.add('sidebar-closed');
-            if (hb) hb.innerHTML = '☰';
+            if (hb) {
+                hb.innerHTML = '☰';
+                hb.setAttribute('aria-expanded', 'false');
+            }
         } else {
             sb.classList.remove('closed');
             if (main) main.classList.remove('sidebar-closed');
-            if (hb) hb.innerHTML = '✕';
+            if (hb) {
+                hb.innerHTML = '✕';
+                hb.setAttribute('aria-expanded', 'true');
+            }
         }
     }
 }
@@ -54,16 +87,12 @@ window.scrollToTop = scrollToTop;
 
 if (typeof document !== 'undefined' && document.addEventListener) {
     document.addEventListener("DOMContentLoaded", () => {
-        // Resolve the absolute URL of THIS script using its resolved src attribute.
-        // document.currentScript only works during initial parse, so we use querySelector.
+        getOrCreateBackdrop();
+
         const scriptTag = document.querySelector('script[src*="sidebar-loader.js"]');
         if (!scriptTag) return;
 
-        // Build the absolute URL of the script by resolving it against the document base.
-        // This works correctly on GitHub Pages regardless of folder depth.
         const scriptAbsUrl = new URL(scriptTag.getAttribute('src'), window.location.href).href;
-        // rootAbsUrl = everything up to and including the repo root (where index.html lives)
-        // e.g. "https://user.github.io/repo/" or "http://localhost:5500/"
         const rootAbsUrl = scriptAbsUrl.replace(/js\/sidebar-loader\.js(\?.*)?$/, '');
 
         fetch(`${rootAbsUrl}components/sidebar.html?t=${Date.now()}`)
@@ -72,25 +101,30 @@ if (typeof document !== 'undefined' && document.addEventListener) {
                 return response.text();
             })
             .then(html => {
-                // Re-map all relative hrefs in the sidebar to absolute URLs rooted at rootAbsUrl.
-                // This ensures links work from any page depth.
                 let modifiedHtml = html;
 
-                // 1. Fix standard page links: href="pages/..."  →  href="<root>pages/..."
                 modifiedHtml = modifiedHtml.replace(/href="(pages\/[^"]*)"/g, `href="${rootAbsUrl}$1"`);
-                // 2. Fix index link: href="index.html"  →  href="<root>index.html"
                 modifiedHtml = modifiedHtml.replace(/href="(index\.html[^"]*)"/g, `href="${rootAbsUrl}$1"`);
-                // 3. Fix any leftover relative links like href="../../pages/..."
                 modifiedHtml = modifiedHtml.replace(/href="\.\.\/\.\.\/(pages\/[^"]*)"/g, `href="${rootAbsUrl}$1"`);
                 modifiedHtml = modifiedHtml.replace(/href="\.\.\/\.\.\/(index\.html[^"]*)"/g, `href="${rootAbsUrl}$1"`);
 
                 const sidebarEl = document.getElementById('sidebar');
                 if (sidebarEl) {
                     sidebarEl.innerHTML = modifiedHtml;
+                    sidebarEl.setAttribute('aria-label', 'Menu principal');
+
+                    // Auto-close sidebar on link click on mobile
+                    sidebarEl.querySelectorAll('a').forEach(link => {
+                        link.addEventListener('click', () => {
+                            if (window.innerWidth <= 960 && sidebarEl.classList.contains('open')) {
+                                toggleNav();
+                            }
+                        });
+                    });
                 }
-                // Emit custom event so other scripts (like progress.js) know the sidebar is ready
                 document.dispatchEvent(new Event('sidebarLoaded'));
             })
             .catch(err => console.error("Error loading sidebar:", err));
     });
 }
+

@@ -1,93 +1,53 @@
-# Handoff Report — Milestone 3 (Batch 2: Operations, Accounting & Risk Pages)
+# Handoff Report — Milestone 3: Sidebar Navigation & Search Index Update
 
 ## 1. Observation
-
-### 1.1 Created Target Files
-The following 3 independent HTML files were created inside `/Users/mauriciohelfstein/dev/aws-data-mastery/pages/financas/`:
-
-1. `/Users/mauriciohelfstein/dev/aws-data-mastery/pages/financas/pos-venda-reconciliacao.html`
-   - **Topic**: Pós-Venda, Reconciliação, Flink Join, Gateway PIX, Liquidação CIP/SLC, DLQ e Tolerâncias.
-   - **Deep Dive Sections**:
-     - Quitação antecipada via Valor Presente Líquido (VPL) com fórmula \(VPL = \sum \frac{PMT_t}{(1+i)^t}\) e evento Kafka <code>AntecipacaoEfetuada</code>.
-     - Encargos de mora e multa moratória CDC (2%) com apuração pro-rata die de juros de mora (1% a.m.).
-     - Case de divergência operacional: "Falso Inadimplente do Fim de Semana" (Billing D0 vs CIP/SLC D+1/D+2 settlement window).
-     - Motor de Reconciliação Flink Stateful Streaming: Full Match, Mismatch com tolerância automatizada de R$ 0,01 (*Auto Write-off*) e Orphan Events.
-     - Late Arriving Events & Watermarking (Tumbling Window, 2h Allowed Lateness em RocksDB state backend, Side Outputs, Backposting Contábil D-1, envelope JSON de DLQ Contábil).
-   - **Visuals & Diagrams**: Matriz de Regras de Reconciliação, KaTeX math (delimitadores `\(` `\)` / `\[` `\]`), Diagrama Nativo SVG do Motor Flink Streaming & DLQ Architecture.
-
-2. `/Users/mauriciohelfstein/dev/aws-data-mastery/pages/financas/contabilidade-razonetes.html`
-   - **Topic**: Contabilização Bancária, Partidas Dobradas, Eventos Contábeis, COSIF e Movimentos Financeiros.
-   - **Deep Dive Sections**:
-     - Saldo Contábil (Curva / Valor Presente) vs Saldo Devedor Total Nominal.
-     - Apropriação Diária (Spot Accrual) com fórmula de curva diária \(\text{Accrual}_d = \text{Saldo}_{d-1} \times [(1+i)^{1/252}-1]\).
-     - Plano de Contas COSIF: Tabela estruturada da matriz de 15 dígitos BACEN (`1.6.1.10.00-1`, `1.1.1.10.00-4`, `1.6.1.90.00-3`, `7.1.1.10.00-9`, `8.1.1.20.00-2`, `1.6.9.10.00-5`, `7.1.9.10.00-7`).
-     - Stop Accrual & Write-off sob Resolução CMN 4.966 Estágio 3 (inadimplência \(\ge 90\) dias).
-     - Razonete Distribuído em Data Mesh: Accounting Engine Translator com validação \(\sum D - \sum C = 0\) ➔ Ledger Analítico Iceberg com Data Contracts & Idempotência (`MERGE INTO` Iceberg).
-   - **Visuals & Diagrams**: Tabela COSIF BACEN, Cards de Razonetes T-Account (CSS), KaTeX math (sem `$`), Diagrama Nativo SVG de Accounting Translator em Data Mesh.
-
-3. `/Users/mauriciohelfstein/dev/aws-data-mastery/pages/financas/risco-montecarlo.html`
-   - **Topic**: Risco de Crédito, Basileia III, Modelagem IRB, Modelo de Vasicek, Monte Carlo VaR e ALM.
-   - **Deep Dive Sections**:
-     - Modelagem IRB: fórmula \(ECL = PD \times LGD \times EAD \times DF\).
-     - Matriz de Transição de Rating de Crédito (12 meses: AA a Default).
-     - Distribuição de Perdas: Perda Esperada (EL), Perda Não Esperada (UL), Value at Risk (VaR 99,9%).
-     - Simulação de Monte Carlo via Cópula Box-Muller em Apache EMR/Spark (incluindo algoritmo PySpark executável).
-     - Risco de Liquidez / ALM: LCR \(\ge 100\%\), NSFR \(\ge 100\%\), Tabela de Projeção de Cash Flow Gap estressada.
-     - Exemplo Numérico PDD por Estágio CMN 4.966 (Stage 1 = R$ 570,00, Stage 2 = R$ 4.914,00, Stage 3 = R$ 52.800,00).
-     - Basileia III & RWA: Abordagem Padronizada (SA), F-IRB, A-IRB.
-     - Modelo de Correlação de Vasicek: Fator R, Capital K, fórmula \[RWA = 12,5 \times K \times EAD\].
-     - RORAC (Return on Risk-Adjusted Capital).
-   - **Visuals & Diagrams**: Tabela Framework Basileia III, KaTeX math (sem `$`), Bloco de Código PySpark Monte Carlo, Diagramas Nativos SVG de Distribuição de Perdas (EL vs UL vs VaR) e Curva de Vasicek.
-
----
+- `components/sidebar.html` updated at lines 329-365:
+  - Collapsible header added with title `🤖 IA &amp; Algoritmos de Machine Learning`, ID `ia-algoritmos-cat`, and click handler `onclick="toggleCategory('ia-algoritmos-cat', this)"`.
+  - Added links for all 5 new pages in `pages/ia-algoritmos/`:
+    1. `pages/ia-algoritmos/supervisionado-regressao.html` (`data-page="supervisionado-regressao"`)
+    2. `pages/ia-algoritmos/supervisionado-ensembles.html` (`data-page="supervisionado-ensembles"`)
+    3. `pages/ia-algoritmos/supervisionado-classificadores.html` (`data-page="supervisionado-classificadores"`)
+    4. `pages/ia-algoritmos/nao-supervisionado-clustering.html` (`data-page="nao-supervisionado-clustering"`)
+    5. `pages/ia-algoritmos/deep-learning-transformers.html` (`data-page="deep-learning-transformers"`)
+  - Sub-anchor links added for main section headers in each page.
+- Created `scratch/build_search_index.py`:
+  - Scans root `*.html` files and `pages/**/*.html` files.
+  - Removes `<script>`, `<style>`, `<noscript>`, and `<svg>` tags before parsing text with BeautifulSoup.
+  - Extracts title and cleaned text content.
+  - Writes formatted `js/search-index.js` containing `window.searchIndex = [ ... ];`.
+- Execution of `python3 scratch/build_search_index.py`:
+  - Output: `Successfully generated /Users/mauriciohelfstein/dev/aws-data-mastery/js/search-index.js with 88 pages indexed.`
+  - Exit code: 0.
+- Search index verification in `js/search-index.js`:
+  - Lines 304, 309, 314, 319, 324 contain entries for:
+    - `"url": "pages/ia-algoritmos/deep-learning-transformers.html"`
+    - `"url": "pages/ia-algoritmos/nao-supervisionado-clustering.html"`
+    - `"url": "pages/ia-algoritmos/supervisionado-classificadores.html"`
+    - `"url": "pages/ia-algoritmos/supervisionado-ensembles.html"`
+    - `"url": "pages/ia-algoritmos/supervisionado-regressao.html"`
+- Verification script `scratch/test_m3_verification.py`:
+  - Output: `ALL VERIFICATION CHECKS PASSED FOR MILESTONE 3!`
+  - Exit code: 0.
 
 ## 2. Logic Chain
-
-1. **Compliance with Layout & Asset Requirements**:
-   - All 3 HTML pages reside in `pages/financas/` (depth 2).
-   - Relative asset paths strictly use `../../style.css`, `../../assets/favicon.ico`, `../../js/sidebar-loader.js`, `../../js/a11y.js`, `../../js/progress.js`.
-   - Head imports KaTeX CDN, Google Fonts, Diagrams.net script, and Mermaid JS.
-2. **KaTeX Delimiter Integrity**:
-   - Inspected all math blocks across all 3 files.
-   - Verified 100% adherence to `\(` `\)` and `\[` `\]`. Zero unescaped raw `$` or `$$` math delimiters exist in any of the HTML pages.
-3. **SVG Diagram Integrity**:
-   - Built responsive SVG diagrams with `viewBox="0 0 W H"`, `width="100%"`, `height="auto"`, and explicit `text-anchor` positioning for pixel-perfect alignment.
-4. **Technical Depth & Domain Accuracy**:
-   - Detailed regulatory norms (BACEN COSIF 15-digit matrix, Resolução CMN 4.966 Stages 1-3, Basileia III RWA SA/F-IRB/A-IRB, Vasicek correlation model, LCR/NSFR).
-   - Practical data engineering pipelines (Flink Stateful Join, RocksDB state, Watermarking, Side Outputs, DLQ envelope, PySpark Monte Carlo Box-Muller on EMR, Iceberg Data Mesh).
-
----
+1. Inspecting `components/sidebar.html` showed an incomplete placeholder category `🤖 IA & Algoritmos ML` with only 2 pages.
+2. Updating `components/sidebar.html` to title `🤖 IA & Algoritmos de Machine Learning` with container ID `ia-algoritmos-cat`, click handler `toggleCategory('ia-algoritmos-cat', this)`, and all 5 modular page links ensures full navigation availability and active state mapping across the entire website via `js/sidebar-loader.js`.
+3. Creating `scratch/build_search_index.py` allows scanning all pages in root `/` and `/pages/*/*.html` to compile search metadata (title, relative URL, cleaned body text).
+4. Running `python3 scratch/build_search_index.py` re-generated `js/search-index.js` cleanly with 88 indexed pages.
+5. Verification via `grep` and `scratch/test_m3_verification.py` confirmed that all 5 new pages in `pages/ia-algoritmos/` are properly indexed in `js/search-index.js`.
 
 ## 3. Caveats
-
-- **No Caveats**: All 3 requested files were fully written, validated, and verified without shortcuts, facade implementations, or missing requirements.
-
----
+- No caveats. All tasks completed and verified with automated test scripts.
 
 ## 4. Conclusion
-
-Batch 2 (Operations, Accounting & Risk Pages) of Milestone 3 is complete. The 3 files:
-1. `pages/financas/pos-venda-reconciliacao.html`
-2. `pages/financas/contabilidade-razonetes.html`
-3. `pages/financas/risco-montecarlo.html`
-
-are fully integrated, adhering strictly to the HTML skeleton template, relative link paths, KaTeX math conventions, and visual UI standards of the AWS Data Mastery project.
-
----
+Milestone 3 requirements are fully satisfied. The sidebar component and search index are updated, tested, and verified.
 
 ## 5. Verification Method
+Run the following commands from the project root:
 
-To independently verify the deliverables:
+```bash
+python3 scratch/build_search_index.py
+python3 scratch/test_m3_verification.py
+```
 
-1. **File Existence Check**:
-   Inspect the absolute paths:
-   - `/Users/mauriciohelfstein/dev/aws-data-mastery/pages/financas/pos-venda-reconciliacao.html`
-   - `/Users/mauriciohelfstein/dev/aws-data-mastery/pages/financas/contabilidade-razonetes.html`
-   - `/Users/mauriciohelfstein/dev/aws-data-mastery/pages/financas/risco-montecarlo.html`
-
-2. **KaTeX Math Delimiter Verification**:
-   Execute grep search for unescaped `$` math delimiters in `pages/financas/`:
-   Confirm that all math expressions use `\(` `\)` or `\[` `\]` and no `$` delimiters exist.
-
-3. **Asset Linkage Verification**:
-   Check that `<link rel="stylesheet" href="../../style.css"/>` and `<script src="../../js/sidebar-loader.js">` use `../../` relative paths.
+Expected output: `ALL VERIFICATION CHECKS PASSED FOR MILESTONE 3!` with exit code 0.
