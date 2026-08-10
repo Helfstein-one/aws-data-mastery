@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Clustering &amp; Dimensionality Reduction. Algoritmos não-supervisionados: k-Means, DBSCAN, PCA. Segmentação de clientes, redução de dimensionalidade, explicação de variância em produção." name="description"/>
+<meta content="Clustering, k-Means, DBSCAN, PCA, Dimensionality Reduction, Unsupervised Learning, Segmentação, AWS SageMaker" name="keywords"/>
+<title>Clustering &amp; Dimensionality Reduction | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="Clustering &amp; Dimensionality Reduction | AWS Data Mastery" property="og:title"/>
+<meta content="k-Means, DBSCAN, PCA e segmentação de clientes em produção na AWS." property="og:description"/>
+<meta content="website" property="og:type"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero" style="border-left: 6px solid var(--aws-s3);">
+<div class="hero-ey">Aprendizado Não-Supervisionado</div>
+<h1>Clustering &amp; <em>Dimensionality Reduction</em></h1>
+<p class="hero-d">Descubra estruturas ocultas em dados. k-Means para segmentação, DBSCAN para clusters densos, PCA para redução. Casos reais: segmentação de clientes bancários, análise de comportamento e otimização de features para modelos de produção.</p>
+<div class="pills">
+<span class="pill">Unsupervised</span>
+<span class="pill">Clustering</span>
+<span class="pill">PCA</span>
+<span class="pill">Segmentação</span>
+<span class="pill">Intermediário</span>
+</div>
+</div>
+<main class="main-content">
+<!-- SEÇÃO 01: O que é Aprendizado Não-Supervisionado -->
+<section class="section" id="unsupervised-intro">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--aws-s3)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--aws-s3)"></div>
+<h2>Aprendizado Não-Supervisionado: Descoberta de Padrões</h2>
+<p>Quando você tem dados, mas não tem labels (respostas).</p>
+</div>
+</div>
+<p><strong>Aprendizado Não-Supervisionado</strong> é diferente de classificação/regressão (supervisionados). Você tem dados, mas não tem labels (y). O objetivo é descobrir estruturas interessantes nos dados: grupos similares, features redundantes, padrões ocultos.</p>
+<div class="abox info">
+<strong>ℹ️ Exemplo Real:</strong> Um banco tem 1M clientes. Não tem labels ("cliente premium" vs "cliente risco"). Mas quer entender: quais grupos existem naturalmente? Quem é leal? Quem gasta mais? Clustering responde essas perguntas.
+      </div>
+<p><strong>Dois problemas principais:</strong></p>
+<ol style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Clustering:</strong> Agrupar pontos similares. Exemplos: k-Means, DBSCAN, Hierarchical Clustering.</li>
+<li><strong>Dimensionality Reduction:</strong> Reduzir número de features mantendo informação. Exemplos: PCA, t-SNE, UMAP.</li>
+</ol>
+<p><strong>Por que usar?</strong></p>
+<ul style="margin-left: 20px;">
+<li><strong>Exploração:</strong> Entender dados antes de modelar</li>
+<li><strong>Segmentação:</strong> Dividir clientes em grupos para estratégias diferentes</li>
+<li><strong>Redução:</strong> Reduzir 1000 features para 50, mantendo 95% da variância</li>
+<li><strong>Detecção de Anomalias:</strong> Pontos fora de clusters são outliers</li>
+<li><strong>Pré-processamento:</strong> Features reduzidas são mais rápidas de treinar</li>
+</ul>
+</section>
+<!-- SEÇÃO 02: Conceitos Fundamentais -->
+<section class="section" id="conceitos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--aws-s3)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--aws-s3)"></div>
+<h2>Core Concepts: Centroides, Densidade, Variância Explicada</h2>
+<p>Definições e intuições por trás dos algoritmos.</p>
+</div>
+</div>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--aws-s3);">
+<h4>📍 k-Means: Centroides &amp; Iterações</h4>
+<p><strong>Ideia:</strong> Particione dados em k grupos, cada um com um centroide (ponto médio). Iterativamente: (1) atribua pontos ao centroide mais próximo, (2) atualize centroide. Minimiza intra-cluster variance (soma das distâncias dentro de cada cluster).</p>
+<p><strong>Algoritmo:</strong> Inicialize k centroides aleatoriamente → Repita: atribuir pontos → atualizar centroide (até convergência).</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>🌀 DBSCAN: Agrupamento por Densidade</h4>
+<p><strong>Ideia:</strong> Clusters são regiões densas de pontos. Um ponto é core se tem ≥minPts pontos dentro de raio ε. Clusters formam-se conectando core points. Pontos isolados são ruído (outliers).</p>
+<p><strong>Vantagem:</strong> Detecta clusters de qualquer forma (não só esféricos como k-Means). Outliers automáticos.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>📐 PCA: Variância Explicada</h4>
+<p><strong>Ideia:</strong> Encontre as direções principais (componentes) onde dados têm mais variância. Primeira PC explica máxima variância; segunda é ortogonal e explica segunda máxima; etc. Reduz features mantendo informação.</p>
+<p><strong>Exemplo:</strong> 100 features → 20 PCs que explicam 95% da variância.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>🔗 Hierarchical Clustering</h4>
+<p><strong>Ideia:</strong> Cria árvore (dendrograma) de clusters. Aglomerativo: começar com cada ponto isolado, mesclar pares mais similares. Divisivo: começar com um grande cluster, dividir. Flexível: escolha altura para ter k clusters.</p>
+</div>
+</div>
+<div class="abox success">
+<strong>✅ Resumo:</strong> k-Means é rápido e simples. DBSCAN é mais realista (clusters não-esféricos, detecção de outliers). Hierarchical é interpretável (dendrograma). PCA reduz dimensionalidade preservando variância.
+      </div>
+</section>
+<!-- SEÇÃO 03: Arquitetura k-Means -->
+<section class="section" id="arquitetura-kmeans">
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>UNSUPERVISED LEARNING &amp; PCA DIMENSION REDUCTION PIPELINE</div>
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>ARQUITETURA TÉCNICA DA NUVEM AWS</div>
+<div class="mxgraph" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;cls_pca_arch_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;strokeWidth=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;860\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_pca_arch_title\&quot; value=\&quot;UNSUPERVISED LEARNING &amp;amp; PCA DIMENSION REDUCTION PIPELINE\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;35\&quot; width=\&quot;820\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_s3\&quot; value=\&quot;S3 Raw Data&amp;#10;Customer Telemetry\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_emr\&quot; value=\&quot;EMR PySpark&amp;#10;Data Normalization\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;200\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_proc\&quot; value=\&quot;SageMaker Processing&amp;#10;PCA Eigenvalues\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;360\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_trn\&quot; value=\&quot;SageMaker Training&amp;#10;K-Means Clustering\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;520\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_ddb\&quot; value=\&quot;DynamoDB&amp;#10;Customer Segments\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#3b82f6;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;680\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_pca_arch_edge_0\&quot; value=\&quot;ETL\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cls_s3\&quot; target=\&quot;cls_emr\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_pca_arch_edge_1\&quot; value=\&quot;PCA\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cls_emr\&quot; target=\&quot;cls_proc\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_pca_arch_edge_2\&quot; value=\&quot;K-Means\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cls_proc\&quot; target=\&quot;cls_trn\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cls_pca_arch_edge_3\&quot; value=\&quot;Save\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cls_trn\&quot; target=\&quot;cls_ddb\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}' style="max-width:100%;background:#0f172a;"></div>
+</div><div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Arquitetura AWS — Clustering Pca:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> AWS Lakehouse, Amazon S3, AWS Lambda, Amazon SageMaker</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Fluxo contínuo de dados com governança e observabilidade em nuvem.</li>
+<li><strong>Contexto:</strong> Diagrama técnico de referência operacional.</li>
+</ul>
+</div>
+</div>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — PCA &amp; K-Means Pipeline:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> S3, EMR PySpark, SageMaker PCA, SageMaker K-Means, DynamoDB</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Pipeline EMR PySpark + SageMaker PCA e K-Means para redução vetorial e inteligência de clientes.</li>
+<li><strong>Contexto:</strong> Clusterização não supervisionada de alta dimensionalidade.</li>
+</ul>
+</div>
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--aws-s3)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--aws-s3)"></div>
+<h2>Arquitetura k-Means: Iteração &amp; Convergência</h2>
+<p>Visualização do algoritmo passo a passo.</p>
+</div>
+</div>
+<p>O algoritmo k-Means em ação:</p>
+<svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+<!-- ITERATION 1 -->
+<g id="iter1">
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="100" y="25">Iteração 1: Inicialização Aleatória</text>
+<!-- Points -->
+<circle cx="40" cy="60" fill="#16a34a" r="3"></circle>
+<circle cx="60" cy="80" fill="#16a34a" r="3"></circle>
+<circle cx="150" cy="100" fill="#dc2626" r="3"></circle>
+<circle cx="170" cy="120" fill="#dc2626" r="3"></circle>
+<circle cx="100" cy="140" fill="#0284c7" r="3"></circle>
+<!-- Centroides inicial -->
+<polygon fill="var(--accent)" points="50,70 45,80 55,80"></polygon>
+<text fill="var(--accent)" font-size="9" font-weight="bold" text-anchor="middle" x="50" y="95">c1</text>
+<polygon fill="var(--spark)" points="160,110 155,120 165,120"></polygon>
+<text fill="var(--spark)" font-size="9" font-weight="bold" text-anchor="middle" x="160" y="135">c2</text>
+<rect fill="none" height="100" stroke="var(--muted)" stroke-dasharray="3,3" stroke-width="1" width="190" x="10" y="50"></rect>
+</g>
+<!-- ITERATION 2 -->
+<g id="iter2">
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="300" y="25">Iteração 2: Atribuição</text>
+<!-- Points with coloring -->
+<circle cx="240" cy="60" fill="#16a34a" r="3"></circle>
+<circle cx="260" cy="80" fill="#16a34a" r="3"></circle>
+<circle cx="350" cy="100" fill="#dc2626" r="3"></circle>
+<circle cx="370" cy="120" fill="#dc2626" r="3"></circle>
+<circle cx="300" cy="140" fill="var(--accent)" r="3"></circle>
+<!-- Assignments (lines to nearest centroid) -->
+<line opacity="0.5" stroke="var(--accent)" stroke-dasharray="2,2" stroke-width="1" x1="240" x2="250" y1="60" y2="70"></line>
+<line opacity="0.5" stroke="var(--accent)" stroke-dasharray="2,2" stroke-width="1" x1="260" x2="250" y1="80" y2="70"></line>
+<line opacity="0.5" stroke="var(--spark)" stroke-dasharray="2,2" stroke-width="1" x1="350" x2="360" y1="100" y2="110"></line>
+<line opacity="0.5" stroke="var(--spark)" stroke-dasharray="2,2" stroke-width="1" x1="370" x2="360" y1="120" y2="110"></line>
+<!-- Centroides -->
+<polygon fill="var(--accent)" points="250,70 245,80 255,80"></polygon>
+<text fill="var(--accent)" font-size="9" font-weight="bold" text-anchor="middle" x="250" y="95">c1</text>
+<polygon fill="var(--spark)" points="360,110 355,120 365,120"></polygon>
+<text fill="var(--spark)" font-size="9" font-weight="bold" text-anchor="middle" x="360" y="135">c2</text>
+<rect fill="none" height="100" stroke="var(--muted)" stroke-dasharray="3,3" stroke-width="1" width="190" x="210" y="50"></rect>
+</g>
+<!-- ITERATION 3 -->
+<g id="iter3">
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="600" y="25">Iteração 3: Atualizar Centroide</text>
+<!-- Points -->
+<circle cx="540" cy="60" fill="#16a34a" r="3"></circle>
+<circle cx="560" cy="80" fill="#16a34a" r="3"></circle>
+<circle cx="650" cy="100" fill="#dc2626" r="3"></circle>
+<circle cx="670" cy="120" fill="#dc2626" r="3"></circle>
+<circle cx="600" cy="140" fill="var(--accent)" r="3"></circle>
+<!-- Circles around clusters -->
+<circle cx="550" cy="70" fill="none" opacity="0.3" r="45" stroke="var(--accent)" stroke-dasharray="3,3" stroke-width="1"></circle>
+<circle cx="660" cy="110" fill="none" opacity="0.3" r="45" stroke="var(--spark)" stroke-dasharray="3,3" stroke-width="1"></circle>
+<!-- NEW Centroides (moved) -->
+<polygon 545,83="" 555,83"="" fill="var(--accent)" points="550" y="73"></polygon>
+<text fill="var(--accent)" font-size="9" font-weight="bold" text-anchor="middle" x="550" y="98">c1'</text>
+<polygon 655,120="" 665,120"="" fill="var(--spark)" points="660" y="110"></polygon>
+<text fill="var(--spark)" font-size="9" font-weight="bold" text-anchor="middle" x="660" y="135">c2'</text>
+<rect fill="none" height="100" stroke="var(--muted)" stroke-dasharray="3,3" stroke-width="1" width="190" x="510" y="50"></rect>
+</g>
+<!-- CONVERGENCE SECTION -->
+<text fill="#cbd5e1" font-size="13" font-weight="bold" x="100" y="220">Convergência (WCSS diminui)</text>
+<!-- WCSS plot -->
+<line stroke="var(--muted)" stroke-width="1" x1="50" x2="400" y1="330" y2="330"></line>
+<line stroke="var(--muted)" stroke-width="1" x1="50" x2="50" y1="250" y2="330"></line>
+<text fill="var(--muted)" font-size="10" x="35" y="290">WCSS</text>
+<text fill="var(--muted)" font-size="10" x="225" y="350">Iteration</text>
+<!-- WCSS curve (decreasing) -->
+<polyline fill="none" points="50,280 120,260 190,250 260,245 330,242 400,240" stroke="var(--accent)" stroke-width="2"></polyline>
+<!-- Annotations -->
+<text fill="var(--accent)" font-size="9" x="70" y="310">High</text>
+<text fill="var(--accent)" font-size="9" x="350" y="310">Convergido ✓</text>
+<!-- SILHOUETTE SCORE SECTION -->
+<text fill="#cbd5e1" font-size="13" font-weight="bold" x="700" y="220">Qualidade: Silhouette Score</text>
+<!-- Silhouette bars -->
+<rect fill="var(--aws-s3)" height="15" opacity="0.7" width="80" x="650" y="240"></rect>
+<text fill="#cbd5e1" font-size="10" x="740" y="252">Cluster 1: 0.72</text>
+<rect fill="var(--accent)" height="15" opacity="0.7" width="60" x="650" y="270"></rect>
+<text fill="#cbd5e1" font-size="10" x="740" y="282">Cluster 2: 0.54</text>
+<rect fill="var(--spark)" height="15" opacity="0.7" width="45" x="650" y="300"></rect>
+<text fill="#cbd5e1" font-size="10" x="740" y="312">Cluster 3: 0.40</text>
+<text fill="var(--muted)" font-size="9" x="700" y="330">Média: 0.55 (OK)</text>
+</svg>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Conceito Lógico / Algorítmico:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Representação Vetorial, Estrutura Neural / Árvore de Decisão</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Fluxo conceitual de dados e abstração matemática.</li>
+<li><strong>Contexto:</strong> Diagrama ilustrativo para o tema em questão.</li>
+</ul>
+</div>
+<p style="margin-top: 20px; font-size: 0.9rem; color: var(--muted);">Iteração 1: Centroides aleatórios. Iteração 2: Atribuir cada ponto ao centroide mais próximo. Iteração 3: Recalcular centroide de cada cluster. WCSS (Within-Cluster Sum of Squares) diminui até convergência. Silhouette score mede qualidade de separação (range: -1 a 1, melhor &gt; 0.5).</p>
+</section>
+<!-- SEÇÃO 04: Exemplos de Código -->
+<section class="section" id="codigo-exemplos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--aws-s3)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--aws-s3)"></div>
+<h2>Implementação Prática: k-Means, Elbow, DBSCAN &amp; PCA</h2>
+<p>Código pronto para produção com Scikit-learn e AWS.</p>
+</div>
+</div>
+<h3>Exemplo 1: k-Means com Segmentação de Clientes</h3>
+<p>Dividir clientes bancários em 4 segmentos baseado em padrão de gastos:</p>
+<pre><code class="language-python">import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score, davies_bouldin_score
+import matplotlib.pyplot as plt
+
+# 1. CARREGAR DADOS DE CLIENTES
+# Features: idade, renda_anual, num_transacoes, gasto_medio, meses_cliente, score_credito
+X = pd.DataFrame({
+    'age': np.random.randint(20, 75, 5000),
+    'income': np.random.randint(30000, 200000, 5000),
+    'transactions': np.random.randint(5, 500, 5000),
+    'avg_spend': np.random.randint(100, 10000, 5000),
+    'months_customer': np.random.randint(1, 120, 5000),
+    'credit_score': np.random.randint(300, 850, 5000)
+})
+
+print(f"Dataset shape: {X.shape}")
+print(X.head())
+
+# 2. NORMALIZAR (k-Means é sensível à escala)
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# 3. TREINAR k-Means COM k=4
+kmeans = KMeans(
+    n_clusters=4,
+    init='k-means++',      # Inicialização inteligente
+    n_init=10,             # Rodar 10 vezes, pegar melhor
+    max_iter=300,
+    random_state=42,
+    n_jobs=-1              # Parallelizar
+)
+
+labels = kmeans.fit_predict(X_scaled)
+
+# 4. AVALIAR QUALIDADE
+silhouette = silhouette_score(X_scaled, labels)
+davies_bouldin = davies_bouldin_score(X_scaled, labels)
+inertia = kmeans.inertia_  # WCSS
+
+print(f"\nSilhouette Score: {silhouette:.4f} (range: -1 a 1, melhor &gt; 0.5)")
+print(f"Davies-Bouldin Index: {davies_bouldin:.4f} (range: 0+, menor é melhor)")
+print(f"Inertia (WCSS): {inertia:.2f}")
+
+# 5. ADICIONAR LABELS AO DATASET ORIGINAL
+X['cluster'] = labels
+
+# 6. ANALISAR SEGMENTOS
+for cluster_id in range(4):
+    cluster_data = X[X['cluster'] == cluster_id]
+    print(f"\n=== Cluster {cluster_id} ===")
+    print(f"Tamanho: {len(cluster_data)} clientes")
+    print(f"Idade média: {cluster_data['age'].mean():.1f}")
+    print(f"Renda média: ${cluster_data['income'].mean():.0f}")
+    print(f"Gasto médio: ${cluster_data['avg_spend'].mean():.0f}")
+
+# 7. CARACTERIZAR SEGMENTOS
+segment_names = {
+    0: "High-Value Premium",
+    1: "Regular Users",
+    2: "Budget Conscious",
+    3: "Young Professionals"
+}
+
+X['segment'] = X['cluster'].map(segment_names)
+print(X[['age', 'income', 'avg_spend', 'segment']].head(10))</code></pre>
+<h3>Exemplo 2: Elbow Method para Encontrar k Ótimo</h3>
+<p>Como determinar o número de clusters ideal:</p>
+<pre><code class="language-python">import matplotlib.pyplot as plt
+
+# Dados do exemplo anterior (X_scaled)
+X_scaled = scaler.fit_transform(X)
+
+# 1. CALCULAR INERTIA PARA DIFERENTES k
+k_range = range(1, 11)
+inertias = []
+silhouette_scores = []
+
+for k in k_range:
+    km = KMeans(n_clusters=k, random_state=42, n_init=10, n_jobs=-1)
+    km.fit(X_scaled)
+    inertias.append(km.inertia_)
+
+    if k &gt; 1:  # Silhouette precisa de k &gt;= 2
+        silhouette_scores.append(silhouette_score(X_scaled, km.labels_))
+    else:
+        silhouette_scores.append(0)
+
+# 2. PLOTAR ELBOW CURVE
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+# Inertia vs k
+ax1.plot(k_range, inertias, 'bo-', linewidth=2, markersize=8)
+ax1.set_xlabel('Number of Clusters (k)')
+ax1.set_ylabel('Inertia (WCSS)')
+ax1.set_title('Elbow Method')
+ax1.grid(True, alpha=0.3)
+
+# Highlight elbow point (k=4)
+ax1.plot(4, inertias[3], 'r*', markersize=20, label='Elbow Point (k=4)')
+ax1.legend()
+
+# Silhouette Score vs k
+ax2.plot(k_range[1:], silhouette_scores[1:], 'go-', linewidth=2, markersize=8)
+ax2.set_xlabel('Number of Clusters (k)')
+ax2.set_ylabel('Silhouette Score')
+ax2.set_title('Silhouette Analysis')
+ax2.grid(True, alpha=0.3)
+
+# Highlight best k
+best_k = silhouette_scores[1:].index(max(silhouette_scores[1:])) + 2
+ax2.plot(best_k, max(silhouette_scores[1:]), 'r*', markersize=20, label=f'Best (k={best_k})')
+ax2.legend()
+
+plt.tight_layout()
+plt.savefig('elbow_analysis.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+print(f"Recomendação pelo elbow method: k=4")
+print(f"Recomendação pelo silhouette score: k={best_k}")</code></pre>
+<h3>Exemplo 3: DBSCAN para Detecção de Outliers</h3>
+<p>Encontrar anomalias em padrão de uso de ATM:</p>
+<pre><code class="language-python">from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
+
+# Dados: num_withdrawals, total_amount, hour_of_day (num_features=3)
+X_atm = np.random.randn(1000, 3) * 10 + [5, 500, 12]
+
+# 1. ENCONTRAR EPSILON ÓTIMO (usando k-distance graph)
+neighbors = NearestNeighbors(n_neighbors=4)
+neighbors_fit = neighbors.fit(X_atm)
+distances, indices = neighbors_fit.kneighbors(X_atm)
+
+# Ordenar distâncias do 4º vizinho mais próximo
+distances = np.sort(distances[:, -1], axis=0)
+
+# Plotar para encontrar "elbow"
+plt.figure(figsize=(10, 5))
+plt.plot(distances)
+plt.ylabel('4th Nearest Neighbor Distance')
+plt.xlabel('Points sorted by distance')
+plt.title('k-distance Graph for Epsilon Selection')
+plt.grid(True, alpha=0.3)
+plt.axhline(y=2.5, color='r', linestyle='--', label='Epsilon ≈ 2.5')
+plt.legend()
+plt.show()
+
+# 2. APLICAR DBSCAN COM eps=2.5, min_samples=4
+dbscan = DBSCAN(eps=2.5, min_samples=4)
+labels = dbscan.fit_predict(X_atm)
+
+# 3. ANÁLISE
+n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+n_outliers = list(labels).count(-1)
+
+print(f"Número de clusters: {n_clusters}")
+print(f"Número de outliers: {n_outliers} ({n_outliers/len(labels)*100:.1f}%)")
+
+# 4. EXAMINAR OUTLIERS
+outliers = X_atm[labels == -1]
+print(f"\nOutliers detectados:")
+for i, outlier in enumerate(outliers[:5]):
+    print(f"  Ponto {i}: withdrawals={outlier[0]:.1f}, amount=${outlier[1]:.1f}, hour={outlier[2]:.1f}")
+
+# 5. VISUALIZAR
+unique_labels = set(labels)
+colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
+
+for label, color in zip(unique_labels, colors):
+    if label == -1:
+        color = [0, 0, 0, 1]  # Preto para outliers
+        marker = 'x'
+        size = 100
+    else:
+        marker = 'o'
+        size = 30
+
+    class_member_mask = (labels == label)
+    xy = X_atm[class_member_mask]
+    plt.scatter(xy[:, 0], xy[:, 1], c=[color], marker=marker, s=size, alpha=0.6)
+
+plt.title('DBSCAN Clustering with Outlier Detection')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.show()</code></pre>
+<h3>Exemplo 4: PCA para Redução de Dimensionalidade</h3>
+<p>Reduzir 1000 features de dados de genes para visualização e treinamento mais rápido:</p>
+<pre><code class="language-python">from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+
+# Dados: gene expression (1000 genes, 200 amostras)
+X_genes = np.random.randn(200, 1000)
+
+# 1. APLICAR PCA
+pca = PCA()  # Sem especificar n_components, calcula todos
+pca.fit(X_genes)
+
+# 2. VARIÂNCIA EXPLICADA
+cumsum_var = np.cumsum(pca.explained_variance_ratio_)
+
+# Encontrar n_components para 95% variância
+n_components_95 = np.argmax(cumsum_var &gt;= 0.95) + 1
+print(f"Componentes para 95% variância: {n_components_95}")
+print(f"Redução: {X_genes.shape[1]} → {n_components_95} (compressão {X_genes.shape[1]/n_components_95:.1f}x)")
+
+# 3. PLOTAR VARIÂNCIA EXPLICADA
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+# Variância individual
+ax1.plot(range(1, 51), pca.explained_variance_ratio_[:50], 'o-', linewidth=2)
+ax1.set_xlabel('Principal Component')
+ax1.set_ylabel('Explained Variance Ratio')
+ax1.set_title('Scree Plot')
+ax1.grid(True, alpha=0.3)
+
+# Variância acumulada
+ax2.plot(range(1, 101), cumsum_var[:100], 'o-', linewidth=2, color='green')
+ax2.axhline(y=0.95, color='r', linestyle='--', label='95% threshold')
+ax2.axvline(x=n_components_95, color='r', linestyle='--')
+ax2.set_xlabel('Number of Components')
+ax2.set_ylabel('Cumulative Explained Variance')
+ax2.set_title('Cumulative Explained Variance')
+ax2.legend()
+ax2.grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+
+# 4. TRANSFORMAR DADOS
+pca_95 = PCA(n_components=n_components_95)
+X_reduced = pca_95.fit_transform(X_genes)
+
+print(f"\nDados transformados: {X_genes.shape} → {X_reduced.shape}")
+
+# 5. RECONSTRUIR E CALCULAR ERRO
+X_reconstructed = pca_95.inverse_transform(X_reduced)
+reconstruction_error = np.mean((X_genes - X_reconstructed) ** 2)
+print(f"Mean Squared Error (reconstrução): {reconstruction_error:.4f}")</code></pre>
+<h3>Exemplo 5: Hierarchical Clustering com Dendrograma</h3>
+<p>Visualizar estrutura de clusters:</p>
+<pre><code class="language-python">from scipy.cluster.hierarchy import dendrogram, linkage
+import matplotlib.pyplot as plt
+
+# Pequeno dataset para visualização
+X_small = np.array([
+    [2, 3],
+    [3, 2],
+    [3, 4],
+    [10, 10],
+    [11, 9],
+    [9, 11]
+])
+
+# Normalizar
+X_small_scaled = StandardScaler().fit_transform(X_small)
+
+# 1. CALCULAR LINKAGE MATRIX
+# method='ward' minimiza variância dentro de clusters
+Z = linkage(X_small_scaled, method='ward')
+
+# 2. PLOTAR DENDROGRAMA
+plt.figure(figsize=(12, 6))
+dendrogram(
+    Z,
+    labels=['P1', 'P2', 'P3', 'P4', 'P5', 'P6'],
+    leaf_rotation=90,
+    leaf_font_size=10
+)
+plt.title('Hierarchical Clustering Dendrogram (Ward Linkage)')
+plt.xlabel('Sample Index or (Cluster Size)')
+plt.ylabel('Distance')
+
+# Linha de corte para k=2 clusters
+plt.axhline(y=7, color='r', linestyle='--', label='Cut for k=2')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+print("Interpretação:")
+print("- Distância pequena entre pontos = muito similares")
+print("- Distância grande = clusters distintos")
+print("- Corte horizontal em y=7 dá 2 clusters: {P1,P2,P3} e {P4,P5,P6}")</code></pre>
+</section>
+<!-- SEÇÃO 05: PCA Explicação -->
+<section class="section" id="pca-detalhado">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--aws-s3)">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--aws-s3)"></div>
+<h2>PCA Deep Dive: Componentes Principais &amp; Variância</h2>
+<p>Teoria e aplicação prática em MNIST.</p>
+</div>
+</div>
+<p><strong>Principal Component Analysis (PCA)</strong> encontra as direções de máxima variância em dados. Primeira componente principal (PC1) aponta na direção onde dados variam mais. Segunda (PC2) é ortogonal e captura segunda maior variância.</p>
+<div class="abox info">
+<strong>ℹ️ Intuição Matemática:</strong> PCA resolve: encontre matriz de projeção V que maximiza σ²(XV) sujeito a ||V|| = 1. Solução: eigenvectors da matriz de covariância, em ordem de eigenvalues decrescentes.
+      </div>
+<h3>Exemplo 6: PCA em MNIST (Dígitos Manuscritos)</h3>
+<p>Reduzir 784 pixels para 50 features, mantendo qualidade:</p>
+<pre><code class="language-python">from sklearn.datasets import load_digits
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+
+# 1. CARREGAR MNIST (8x8 imagens de dígitos)
+digits = load_digits()  # 1797 amostras, 64 features (8x8)
+X, y = digits.data, digits.target
+
+print(f"Original: {X.shape}")
+
+# 2. NORMALIZAR
+X_scaled = X / 255.0  # Pixel values: 0-1
+
+# 3. APLICAR PCA COM DIFERENTES n_components
+n_components_list = [10, 20, 30, 50, 64]
+results = []
+
+for n_comp in n_components_list:
+    pca = PCA(n_components=n_comp, random_state=42)
+    X_reduced = pca.fit_transform(X_scaled)
+
+    # Treinar simples classificador
+    X_train, X_test, y_train, y_test = train_test_split(X_reduced, y, test_size=0.2, random_state=42)
+    lr = LogisticRegression(max_iter=200)
+    lr.fit(X_train, y_train)
+    accuracy = accuracy_score(y_test, lr.predict(X_test))
+
+    var_explained = np.sum(pca.explained_variance_ratio_)
+
+    results.append({
+        'n_components': n_comp,
+        'var_explained': var_explained,
+        'accuracy': accuracy,
+        'compression': X_scaled.shape[1] / n_comp
+    })
+
+    print(f"n={n_comp:2d}: Variância={var_explained:.1%}, Acurácia={accuracy:.1%}, Compressão={X_scaled.shape[1]/n_comp:.1f}x")
+
+# 4. VISUALIZAR TRADE-OFF
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+comps = [r['n_components'] for r in results]
+vars = [r['var_explained'] for r in results]
+accs = [r['accuracy'] for r in results]
+
+ax1.plot(comps, vars, 'go-', linewidth=2, markersize=8)
+ax1.set_xlabel('Number of Components')
+ax1.set_ylabel('Variance Explained')
+ax1.set_title('PCA: Variância vs Dimensionalidade')
+ax1.grid(True, alpha=0.3)
+
+ax2.plot(comps, accs, 'bo-', linewidth=2, markersize=8)
+ax2.set_xlabel('Number of Components')
+ax2.set_ylabel('Classification Accuracy')
+ax2.set_title('MNIST Accuracy vs PCA Components')
+ax2.grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+
+# 5. VISUALIZAR COMPONENTES PRINCIPAIS
+pca = PCA(n_components=10)
+pca.fit(X_scaled)
+
+fig, axes = plt.subplots(2, 5, figsize=(12, 5))
+for i, ax in enumerate(axes.flat):
+    component = pca.components_[i].reshape(8, 8)
+    ax.imshow(component, cmap='gray')
+    ax.set_title(f'PC{i+1}: {pca.explained_variance_ratio_[i]:.1%}')
+    ax.axis('off')
+
+plt.tight_layout()
+plt.show()</code></pre>
+</section>
+<!-- SEÇÃO 06: Comparação de Algoritmos de Clustering -->
+<section class="section" id="clustering-comparison">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--aws-s3)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--aws-s3)"></div>
+<h2>Comparação: k-Means vs DBSCAN vs Hierarchical</h2>
+<p>Quando usar cada algoritmo e trade-offs.</p>
+</div>
+</div>
+<div class="comparison-table">
+<table>
+<tr>
+<th>Critério</th>
+<th>k-Means</th>
+<th>DBSCAN</th>
+<th>Hierarchical</th>
+</tr>
+<tr>
+<td><strong>Velocidade</strong></td>
+<td>⚡ Rápido (O(nkd))</td>
+<td>📊 Médio (O(n²) naive)</td>
+<td>❌ Lento (O(n²))</td>
+</tr>
+<tr>
+<td><strong>Formato de Cluster</strong></td>
+<td>🔴 Esférico/convexo</td>
+<td>🎯 Qualquer forma</td>
+<td>🎯 Qualquer forma</td>
+</tr>
+<tr>
+<td><strong>Parâmetros</strong></td>
+<td>1 (k)</td>
+<td>2 (eps, min_samples)</td>
+<td>1 (linkage method)</td>
+</tr>
+<tr>
+<td><strong>Outliers</strong></td>
+<td>❌ Força em cluster</td>
+<td>✅ Detecta automático</td>
+<td>❌ Força em cluster</td>
+</tr>
+<tr>
+<td><strong>Escalabilidade</strong></td>
+<td>⚡ Milhões de pontos</td>
+<td>📊 100k pontos</td>
+<td>❌ 10k pontos máx</td>
+</tr>
+<tr>
+<td><strong>k Dinâmico?</strong></td>
+<td>❌ Requer predefinir</td>
+<td>✅ Automático</td>
+<td>✅ Dendrograma flexível</td>
+</tr>
+<tr>
+<td><strong>Interpretabilidade</strong></td>
+<td>📊 Média (centroides)</td>
+<td>📊 Média (densidade)</td>
+<td>🎯 Excelente (dendrograma)</td>
+</tr>
+<tr>
+<td><strong>Melhor para...</strong></td>
+<td>Datasets grandes, k conhecido</td>
+<td>Clusters irregulares, outliers</td>
+<td>Exploração, datasets pequenos</td>
+</tr>
+</table>
+</div>
+</section>
+<!-- SEÇÃO 07: Finance Case - Segmentação de Clientes -->
+<section class="section" id="caso-financeiro">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--aws-s3)">07</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--aws-s3)"></div>
+<h2>Finance Case: Segmentação de Clientes Bancários</h2>
+<p>Aplicação real em um banco brasileiro. Link com customer lifecycle e data quality.</p>
+</div>
+</div>
+<div class="card" style="border-left: 4px solid var(--aws-s3); background: var(--paper);">
+<h4>🏦 Caso: Banco XYZ - Segmentação de 5M Clientes</h4>
+<p><strong>Desafio:</strong> Banco tem 5 milhões de clientes. Quer personalizar ofertas de produto, limites de crédito e estratégia de retenção. Não tem segmentação inicial.</p>
+<p><strong>Abordagem:</strong></p>
+<ol>
+<li><strong>Dados:</strong> 500 features por cliente (account-level, transaction-level, behavioral)</li>
+<li><strong>Pré-processamento:</strong> Normalização, tratamento de missing values, feature engineering</li>
+<li><strong>Redução PCA:</strong> 500 features → 50 componentes (95% variância) via PCA</li>
+<li><strong>Clustering:</strong> k-Means com k=7 (elbow + business logic)</li>
+</ol>
+<p><strong>Resultados:</strong></p>
+<ul>
+<li><strong>Segmento 1 (VIP):</strong> 150k clientes. Alto gasto, renda &gt;R$10k/mês, prime members. Estratégia: ofertas premium, dedicated support.</li>
+<li><strong>Segmento 2 (Growing):</strong> 800k clientes. Crescimento de renda, investindo. Estratégia: produtos de crescimento (crédito, investimentos).</li>
+<li><strong>Segmento 3 (Stable):</strong> 2M clientes. Renda média, padrão estável. Estratégia: retenção, cross-sell moderado.</li>
+<li><strong>Segmento 4 (Inactive):</strong> 1.5M clientes. Baixo gasto, último acesso &gt;90 dias. Estratégia: reengajamento, ofertas especiais.</li>
+<li><strong>Segmento 5-7:</strong> Refinements de risco, idade, etc.</li>
+</ul>
+<p><strong>Impacto:</strong></p>
+<ul>
+<li>✅ Aumento de 18% em cross-sell rate (VIP segment)</li>
+<li>✅ Redução de 12% em churn (segmentação específica)</li>
+<li>✅ ROI +25% em marketing (mensagens personalizadas)</li>
+<li>✅ Tempo de processamento: 2 horas para 5M clientes (Spark cluster)</li>
+</ul>
+<p><strong>Links relacionados:</strong></p>
+<ul>
+<li><a href="../../pages/financas/ciclo-vida-credito.html">Customer Lifecycle &amp; Credit Decision</a> - como usar segmentos em decisões de crédito</li>
+<li><a href="../../pages/engenharia/data-quality.html">Data Quality &amp; Feature Engineering</a> - limpeza e normalização antes de clustering</li>
+<li><a href="../../pages/engenharia/dataops-mlops.html">DataOps &amp; ML Pipelines</a> - orquestração com AWS Glue e SageMaker</li>
+</ul>
+</div>
+</section>
+<!-- SEÇÃO 08: Referências -->
+<section class="section" id="referencias">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--aws-s3)">08</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--aws-s3)"></div>
+<h2>Referências &amp; Leitura Complementar</h2>
+</div>
+</div>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--aws-lambda);">
+<h4>📘 Documentação &amp; AWS</h4>
+<ul>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/">AWS SageMaker Documentation</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/clustering.html">Scikit-learn: Clustering</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/decomposition.html">Scikit-learn: Decomposition &amp; PCA</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/amazon-sagemaker-kmeans.html">SageMaker K-Means Algorithm</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>📚 Papers &amp; Pesquisa</h4>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/K-means_clustering">Wikipedia: k-Means</a></li>
+<li><a href="https://en.wikipedia.org/wiki/DBSCAN">Wikipedia: DBSCAN</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Principal_component_analysis">Wikipedia: PCA</a></li>
+<li><a href="https://arxiv.org/abs/1901.03973">Clustering &amp; Outlier Detection Survey</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>🔗 Tópicos Relacionados</h4>
+<ul>
+<li><a href="../../pages/operacoes/deep-learning-fundamentals.html">Deep Learning Fundamentals</a></li>
+<li><a href="../../pages/engenharia/dataops-mlops.html">DataOps &amp; ML Pipelines</a></li>
+<li><a href="../../pages/financas/ciclo-vida-credito.html">Customer Lifecycle &amp; Segmentation</a></li>
+<li><a href="../../pages/engenharia/data-quality.html">Data Quality &amp; Normalization</a></li>
+</ul>
+</div>
+</div>
+<div class="abox note">
+<strong>📅 Última atualização:</strong> Agosto 2026 |
+        <strong>Versão de conteúdo:</strong> 1.0 |
+        <strong>Python testado:</strong> 3.9+ |
+        <strong>Scikit-learn:</strong> 1.0+
+      </div>
+</section>
+</main>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mxgraph/4.1.0/mxClient.min.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script>
+  function toggleNav() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+  }
+</script>
+</body>
+</html>

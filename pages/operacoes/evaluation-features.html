@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Métricas de Avaliação e Feature Engineering. Precision, Recall, F1, AUC-ROC, MSE, RMAE. Feature scaling, encoding, seleção e criação. Hyperparameter tuning com GridSearch e Bayesian optimization." name="description"/>
+<meta content="Métricas, Evaluation, Feature Engineering, Precision, Recall, F1-Score, AUC-ROC, Cross-validation, Hyperparameter Tuning, GridSearch" name="keywords"/>
+<title>Evaluation Metrics &amp; Feature Engineering | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="Evaluation Metrics &amp; Feature Engineering | AWS Data Mastery" property="og:title"/>
+<meta content="Métricas completas, feature engineering e tuning de hiperparâmetros para modelos em produção." property="og:description"/>
+<meta content="website" property="og:type"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero" style="border-left: 6px solid var(--spark);">
+<div class="hero-ey">Otimização &amp; Avaliação de Modelos</div>
+<h1>Evaluation Metrics &amp; <em>Feature Engineering</em></h1>
+<p class="hero-d">Métricas além de acurácia: precision, recall, F1, AUC-ROC para classificação; MSE, RMSE, MAE, R² para regressão. Feature engineering: scaling, encoding, seleção, criação. Hyperparameter tuning com GridSearch e Bayesian Optimization. Crédito bancário e decisões de threshold.</p>
+<div class="pills">
+<span class="pill">Métricas</span>
+<span class="pill">Feature Engineering</span>
+<span class="pill">Tuning</span>
+<span class="pill">Validação</span>
+<span class="pill">Avançado</span>
+</div>
+</div>
+<main class="main-content">
+<!-- SEÇÃO 01: Por que Métricas Importam -->
+<section class="section" id="por-que-metricas">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Por que Métricas Importam? Além da Acurácia</h2>
+<p>Acurácia é uma métrica enganosa. Conheça as alternativas reais.</p>
+</div>
+</div>
+<p><strong>Acurácia = (TP + TN) / Total</strong> é a métrica mais comum, mas perigosa em datasets desbalanceados. Exemplo:</p>
+<div class="abox note">
+<strong>⚠️ Armadilha da Acurácia:</strong> Detecção de fraude onde 99.5% das transações são legítimas. Se o modelo sempre prever "legítimo", tem 99.5% acurácia, mas não detecta nenhuma fraude. Inútil em produção!
+      </div>
+<p>Por isso, usamos métricas específicas para classificação:</p>
+<ul style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Precision:</strong> De todas as predições POSITIVAS, quantas estavam corretas? Importa quando falsos positivos custam (ex: alertar fraude falsa).</li>
+<li><strong>Recall (Sensitivity):</strong> De todos os POSITIVOS reais, quantos encontramos? Importa quando falsos negativos custam (ex: não detectar fraude real).</li>
+<li><strong>F1-Score:</strong> Média harmônica de Precision e Recall. Bom balanço quando ambas importam.</li>
+<li><strong>AUC-ROC:</strong> Área sob a curva ROC. Mede performance em todos os thresholds. Melhor para comparar modelos.</li>
+</ul>
+<div class="abox success">
+<strong>✅ Regra de Ouro:</strong> Em datasets desbalanceados, sempre reporte F1-Score ou AUC-ROC, nunca apenas acurácia. Considere o custo business de falsos positivos vs falsos negativos.
+      </div>
+</section>
+<!-- SEÇÃO 02: Métricas de Classificação -->
+<section class="section" id="metricas-classificacao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Métricas de Classificação: Matriz de Confusão e Derivadas</h2>
+<p>Definições precisas e quando usar cada métrica.</p>
+</div>
+</div>
+<p><strong>Matriz de Confusão (2x2 para classificação binária):</strong></p>
+<svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+<!-- Title -->
+<text fill="#cbd5e1" font-size="14" font-weight="bold" text-anchor="middle" x="300" y="25">Matriz de Confusão</text>
+<!-- Table structure -->
+<rect fill="none" height="200" stroke="var(--muted)" stroke-width="1" width="500" x="50" y="50"></rect>
+<!-- Row headers -->
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="end" x="25" y="115">Real Positivo</text>
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="end" x="25" y="195">Real Negativo</text>
+<!-- Column headers -->
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="150" y="40">Pred Positivo</text>
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="300" y="40">Pred Negativo</text>
+<!-- Grid lines -->
+<line stroke="var(--muted)" stroke-width="1" x1="175" x2="175" y1="50" y2="250"></line>
+<line stroke="var(--muted)" stroke-width="1" x1="300" x2="300" y1="50" y2="250"></line>
+<line stroke="var(--muted)" stroke-width="1" x1="50" x2="550" y1="130" y2="130"></line>
+<line stroke="var(--muted)" stroke-width="1" x1="50" x2="550" y1="210" y2="210"></line>
+<!-- TP cell -->
+<rect fill="var(--aws-s3)" height="80" opacity="0.2" width="125" x="50" y="50"></rect>
+<text fill="#16a34a" font-size="20" font-weight="bold" text-anchor="middle" x="112.5" y="95">TP</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="112.5" y="115">True Positive</text>
+<!-- FN cell -->
+<rect fill="var(--spark)" height="80" opacity="0.2" width="125" x="175" y="50"></rect>
+<text fill="var(--spark)" font-size="20" font-weight="bold" text-anchor="middle" x="237.5" y="95">FN</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="237.5" y="115">False Negative</text>
+<!-- FP cell -->
+<rect fill="#ea580c" height="80" opacity="0.2" width="125" x="300" y="50"></rect>
+<text fill="#ea580c" font-size="20" font-weight="bold" text-anchor="middle" x="362.5" y="95">FP</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="362.5" y="115">False Positive</text>
+<!-- TN cell -->
+<rect fill="var(--aws-s3)" height="80" opacity="0.2" width="125" x="425" y="50"></rect>
+<text fill="#16a34a" font-size="20" font-weight="bold" text-anchor="middle" x="487.5" y="95">TN</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="487.5" y="115">True Negative</text>
+<!-- Metrics section -->
+<text fill="#cbd5e1" font-size="12" font-weight="bold" x="50" y="260">Métricas Derivadas:</text>
+<text fill="var(--accent)" font-size="11" x="50" y="280"><tspan font-weight="bold">Precision</tspan> = TP / (TP + FP) — de predições positivas, quantas estavam certas?</text>
+<text fill="var(--accent)" font-size="11" x="50" y="295"><tspan font-weight="bold">Recall</tspan> = TP / (TP + FN) — de positivos reais, quantos encontramos?</text>
+</svg>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Conceito Lógico / Algorítmico:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Representação Vetorial, Estrutura Neural / Árvore de Decisão</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Fluxo conceitual de dados e abstração matemática.</li>
+<li><strong>Contexto:</strong> Diagrama ilustrativo para o tema em questão.</li>
+</ul>
+</div>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>📊 Precision (Especificidade Positiva)</h4>
+<p><strong>Fórmula:</strong> TP / (TP + FP)</p>
+<p><strong>Pergunta:</strong> Quando o modelo diz "positivo", com que frequência está certo?</p>
+<p><strong>Quando importa:</strong> Falsos positivos custam (alertar fraude falsa → cliente insatisfeito, custo operacional)</p>
+<p><strong>Intervalo:</strong> 0 a 1 (melhor = 1)</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>🎯 Recall (Sensibilidade)</h4>
+<p><strong>Fórmula:</strong> TP / (TP + FN)</p>
+<p><strong>Pergunta:</strong> De todos os casos positivos, quantos o modelo encontrou?</p>
+<p><strong>Quando importa:</strong> Falsos negativos custam (não detectar fraude → banco perde dinheiro)</p>
+<p><strong>Intervalo:</strong> 0 a 1 (melhor = 1)</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--arch);">
+<h4>⚖️ F1-Score</h4>
+<p><strong>Fórmula:</strong> 2 × (Precision × Recall) / (Precision + Recall)</p>
+<p><strong>Pergunta:</strong> Qual é o balanço geral?</p>
+<p><strong>Quando importa:</strong> Quando você quer bom precision E recall, sem trade-off extremo</p>
+<p><strong>Intervalo:</strong> 0 a 1 (melhor = 1)</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--aws-s3);">
+<h4>📈 AUC-ROC</h4>
+<p><strong>Sigla:</strong> Area Under the Receiver Operating Characteristic Curve</p>
+<p><strong>Pergunta:</strong> Como varia o trade-off precision/recall com threshold?</p>
+<p><strong>Quando importa:</strong> Comparar modelos diferentes, ou ajustar threshold para caso de uso</p>
+<p><strong>Intervalo:</strong> 0 a 1 (melhor = 1, random = 0.5)</p>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 03: Métricas de Regressão -->
+<section class="section" id="metricas-regressao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Métricas de Regressão: MSE, RMSE, MAE, R²</h2>
+<p>Como avaliar modelos contínuos: previsão de preços, volume, taxa.</p>
+</div>
+</div>
+<div class="comparison-table">
+<table>
+<tr>
+<th>Métrica</th>
+<th>Fórmula</th>
+<th>Range</th>
+<th>Interpretação</th>
+<th>Quando Usar</th>
+</tr>
+<tr>
+<td><strong>MAE</strong><br/>(Mean Absolute Error)</td>
+<td>(1/n) Σ|y_true - y_pred|</td>
+<td>[0, ∞)</td>
+<td>Erro médio em mesmas unidades. Ex: R$ 500 erro médio</td>
+<td>Você quer interpretabilidade. Menos sensível a outliers</td>
+</tr>
+<tr>
+<td><strong>MSE</strong><br/>(Mean Squared Error)</td>
+<td>(1/n) Σ(y_true - y_pred)²</td>
+<td>[0, ∞)</td>
+<td>Erro quadrático médio. Penaliza erros grandes. Unidades ao quadrado</td>
+<td>Objetivo comum de otimização. Sensível a outliers</td>
+</tr>
+<tr>
+<td><strong>RMSE</strong><br/>(Root Mean Squared Error)</td>
+<td>√MSE</td>
+<td>[0, ∞)</td>
+<td>Raiz de MSE. Volta ao quadrado para mesmas unidades que y</td>
+<td>Mais interpretável que MSE. Padrão em pesquisa</td>
+</tr>
+<tr>
+<td><strong>R²</strong><br/>(Coefficient of Determination)</td>
+<td>1 - (SS_res / SS_tot)</td>
+<td>(-∞, 1]</td>
+<td>Proporção de variância explicada. R²=1 perfeito, R²=0 baseline, R²&lt;0 pior que média</td>
+<td>Comparar modelos normalizados. Padrão em regressão linear</td>
+</tr>
+</table>
+</div>
+<p><strong>Exemplo prático:</strong> Prever preço de imóvel:</p>
+<ul style="margin-left: 20px;">
+<li>Preços reais: [R$ 300k, R$ 450k, R$ 600k]</li>
+<li>Predições modelo: [R$ 310k, R$ 440k, R$ 590k]</li>
+<li>Erros: [R$ 10k, R$ -10k, R$ -10k]</li>
+<li>MAE: (10k + 10k + 10k) / 3 = R$ 10k</li>
+<li>RMSE: √((10k² + 10k² + 10k²) / 3) = R$ 10k</li>
+<li>R²: Como explica variação nos preços</li>
+</ul>
+</section>
+<!-- SEÇÃO 04: Exemplos de Código -->
+<section class="section" id="codigo-exemplos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Implementação Prática: Métricas, Confusion Matrix &amp; ROC Curve</h2>
+<p>Código completo com visualizações.</p>
+</div>
+</div>
+<h3>Exemplo 1: Métricas de Classificação Completas</h3>
+<p>Calcular todas as métricas e gerar relatório:</p>
+<pre><code class="language-python">import numpy as np
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, classification_report, roc_auc_score
+)
+
+# Dados simulados: fraude bancária
+y_true = np.array([1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1])
+y_pred = np.array([1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1])
+
+# 1. CALCULAR TODAS AS MÉTRICAS
+accuracy = accuracy_score(y_true, y_pred)
+precision = precision_score(y_true, y_pred)
+recall = recall_score(y_true, y_pred)
+f1 = f1_score(y_true, y_pred)
+
+print("=== Métricas Binárias ===")
+print(f"Acurácia: {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1-Score: {f1:.4f}")
+
+# 2. MATRIZ DE CONFUSÃO
+cm = confusion_matrix(y_true, y_pred)
+tn, fp, fn, tp = cm.ravel()
+
+print(f"\n=== Matriz de Confusão ===")
+print(f"True Negatives (TN): {tn}")
+print(f"False Positives (FP): {fp}")
+print(f"False Negatives (FN): {fn}")
+print(f"True Positives (TP): {tp}")
+
+# 3. RELATÓRIO DETALHADO
+print(f"\n=== Relatório de Classificação ===")
+print(classification_report(y_true, y_pred, target_names=['Legítimo', 'Fraude']))
+
+# 4. ANÁLISE DE CUSTO/BENEFÍCIO
+cost_false_positive = 50    # Alerta falso custa R$ 50 (revisão manual)
+cost_false_negative = 500   # Não detectar fraude custa R$ 500 (perda do banco)
+
+total_cost = (fp * cost_false_positive) + (fn * cost_false_negative)
+print(f"\n=== Análise Financeira ===")
+print(f"Falsos positivos (alertas falsos): {fp}")
+print(f"Falsos negativos (fraudes não detectadas): {fn}")
+print(f"Custo total: R$ {total_cost}")
+print(f"Custo médio por transação: R$ {total_cost / len(y_true):.2f}")</code></pre>
+<h3>Exemplo 2: ROC Curve e AUC Score</h3>
+<p>Visualizar e calcular AUC-ROC:</p>
+<pre><code class="language-python">from sklearn.metrics import roc_curve, auc, roc_auc_score
+import matplotlib.pyplot as plt
+
+# Dados com probabilidades
+y_true = np.array([1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1])
+y_scores = np.array([0.95, 0.12, 0.88, 0.72, 0.15, 0.35, 0.91, 0.08, 0.85, 0.20, 0.30, 0.80])
+
+# 1. CALCULAR ROC CURVE
+fpr, tpr, thresholds = roc_curve(y_true, y_scores)
+roc_auc = auc(fpr, tpr)
+
+# Método alternativo (mais rápido)
+auc_score = roc_auc_score(y_true, y_scores)
+
+print(f"AUC-ROC Score: {auc_score:.4f}")
+
+# 2. PLOTAR ROC CURVE
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='Random Classifier')
+
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate (1 - Specificity)')
+plt.ylabel('True Positive Rate (Sensitivity/Recall)')
+plt.title('ROC Curve - Fraude Detection')
+plt.legend(loc="lower right")
+plt.grid(True, alpha=0.3)
+plt.savefig('roc_curve.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# 3. THRESHOLD ANALYSIS
+print("\n=== Threshold Selection ===")
+print("{:<12} {:<15} {:<15} {:<15}".format('Threshold', 'TPR (Recall)', 'FPR', 'Precision'))
+print("-" * 60)
+
+thresholds_to_check = [0.3, 0.5, 0.7, 0.9]
+for thresh in thresholds_to_check:
+    y_pred_thresh = (y_scores &gt;= thresh).astype(int)
+    tp = np.sum((y_pred_thresh == 1) &amp; (y_true == 1))
+    fp = np.sum((y_pred_thresh == 1) &amp; (y_true == 0))
+    fn = np.sum((y_pred_thresh == 0) &amp; (y_true == 1))
+    tn = np.sum((y_pred_thresh == 0) &amp; (y_true == 0))
+
+    tpr_val = tp / (tp + fn) if (tp + fn) &gt; 0 else 0
+    fpr_val = fp / (fp + tn) if (fp + tn) &gt; 0 else 0
+    precision_val = tp / (tp + fp) if (tp + fp) &gt; 0 else 0
+
+    print(f"{thresh:&lt;12.1f} {tpr_val:&lt;15.4f} {fpr_val:&lt;15.4f} {precision_val:&lt;15.4f}")</code></pre>
+<h3>Exemplo 3: Cross-Validation (k-Fold &amp; Stratified)</h3>
+<p>Validação robusta com múltiplos folds:</p>
+<pre><code class="language-python">from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_validate
+from sklearn.ensemble import RandomForestClassifier
+
+# Dados (fraude)
+X = np.random.randn(1000, 20)
+y = np.random.binomial(1, 0.1, 1000)  # 10% fraude (desbalanceado)
+
+# 1. k-FOLD SIMPLES
+kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Cross-validation com múltiplas métricas
+scoring = {
+    'accuracy': 'accuracy',
+    'precision': 'precision',
+    'recall': 'recall',
+    'f1': 'f1',
+    'roc_auc': 'roc_auc'
+}
+
+cv_results = cross_validate(
+    model, X, y,
+    cv=kfold,
+    scoring=scoring,
+    return_train_score=True
+)
+
+# 2. RESULTADOS
+print("=== 5-Fold Cross-Validation Results ===")
+for metric in scoring.keys():
+    train_scores = cv_results[f'train_{metric}']
+    test_scores = cv_results[f'test_{metric}']
+
+    print(f"\n{metric.upper()}:")
+    print(f"  Train: {train_scores.mean():.4f} (+/- {train_scores.std():.4f})")
+    print(f"  Test:  {test_scores.mean():.4f} (+/- {test_scores.std():.4f})")
+
+# 3. FOLD-BY-FOLD DETAIL
+print("\n=== Fold-by-Fold Breakdown ===")
+print("{:<8} {:<20} {:<20}".format('Fold', 'F1-Score (Test)', 'AUC-ROC (Test)'))
+print("-" * 50)
+for fold in range(5):
+    f1 = cv_results['test_f1'][fold]
+    auc = cv_results['test_roc_auc'][fold]
+    print(f"{fold+1:&lt;8} {f1:&lt;20.4f} {auc:&lt;20.4f}")
+
+# 4. VERIFICAR OVERFITTING
+print("\n=== Overfitting Check ===")
+f1_train = cv_results['train_f1'].mean()
+f1_test = cv_results['test_f1'].mean()
+diff = f1_train - f1_test
+
+print(f"Train F1: {f1_train:.4f}")
+print(f"Test F1:  {f1_test:.4f}")
+print(f"Diferença: {diff:.4f}")
+if diff &gt; 0.1:
+    print("⚠️ Possível overfitting detectado!")</code></pre>
+<h3>Exemplo 4: Confusion Matrix Visualizada</h3>
+<p>Heatmap da matriz de confusão:</p>
+<pre><code class="language-python">from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Dados
+y_true = np.array([1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1])
+y_pred = np.array([1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1])
+
+# 1. CALCULAR MATRIZ
+cm = confusion_matrix(y_true, y_pred)
+
+# 2. PLOTAR COM HEATMAP
+plt.figure(figsize=(8, 6))
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt='d',
+    cmap='Blues',
+    xticklabels=['Legítimo', 'Fraude'],
+    yticklabels=['Legítimo', 'Fraude'],
+    cbar_kws={'label': 'Contagem'}
+)
+plt.ylabel('Rótulo Verdadeiro')
+plt.xlabel('Rótulo Predito')
+plt.title('Matriz de Confusão - Detecção de Fraude')
+plt.tight_layout()
+plt.savefig('confusion_matrix.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# 3. ANÁLISE
+tn, fp, fn, tp = cm.ravel()
+print(f"TN (Verdadeiros Negativos): {tn}")
+print(f"FP (Falsos Positivos): {fp}")
+print(f"FN (Falsos Negativos): {fn}")
+print(f"TP (Verdadeiros Positivos): {tp}")
+
+# Sensibilidade visual
+print(f"\nInterpretação:")
+print(f"- {tn} transações legítimas corretamente identificadas")
+print(f"- {fp} transações legítimas incorretamente marcadas como fraude")
+print(f"- {fn} fraudes não detectadas")
+print(f"- {tp} fraudes corretamente detectadas")</code></pre>
+</section>
+<!-- SEÇÃO 05: Feature Engineering -->
+<section class="section" id="feature-engineering">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Feature Engineering: Scaling, Encoding, Seleção &amp; Criação</h2>
+<p>Técnicas essenciais para preparar dados antes de treinar.</p>
+</div>
+</div>
+<h3>Exemplo 5: Normalização &amp; Escalamento</h3>
+<p>StandardScaler vs MinMaxScaler vs RobustScaler:</p>
+<pre><code class="language-python">from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+import numpy as np
+
+# Dados brutos com outliers
+X = np.array([
+    [1, 100],
+    [2, 110],
+    [3, 120],
+    [4, 1000],  # Outlier!
+    [5, 130],
+    [6, 140]
+])
+
+# 1. STANDARD SCALER (Z-score normalization)
+# (X - mean) / std → Melhor para: distribuição normal
+scaler_std = StandardScaler()
+X_standard = scaler_std.fit_transform(X)
+print("StandardScaler (Z-score):")
+print(X_standard)
+print(f"Mean: {X_standard.mean(axis=0)}, Std: {X_standard.std(axis=0)}\n")
+
+# 2. MIN-MAX SCALER (Normalization)
+# (X - min) / (max - min) → Range [0, 1]. Sensível a outliers
+scaler_minmax = MinMaxScaler()
+X_minmax = scaler_minmax.fit_transform(X)
+print("MinMaxScaler (Normalization):")
+print(X_minmax)
+print(f"Min: {X_minmax.min(axis=0)}, Max: {X_minmax.max(axis=0)}\n")
+
+# 3. ROBUST SCALER (Mediana &amp; IQR)
+# (X - median) / IQR → Resistente a outliers
+scaler_robust = RobustScaler()
+X_robust = scaler_robust.fit_transform(X)
+print("RobustScaler (Mediana):")
+print(X_robust)
+print("Menos afetado pelo outlier\n")
+
+# 4. COMPARAÇÃO
+print("=== Resumo ===")
+print("StandardScaler: Normal distributions, sem extremos")
+print("MinMaxScaler: Neural networks (precisa [0,1]), dados limpos")
+print("RobustScaler: Com outliers (usa mediana)")
+
+# 5. APLICAR SCALING NO PIPELINE
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+
+# Pipeline: Scaling + Modelo
+y = np.array([0, 0, 0, 1, 0, 0])  # Labels
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', RandomForestClassifier())
+])
+
+pipeline.fit(X, y)
+predictions = pipeline.predict(X)
+print(f"\nPredições após scaling: {predictions}")</code></pre>
+<h3>Exemplo 6: Encoding de Variáveis Categóricas</h3>
+<p>OneHotEncoder, LabelEncoder, TargetEncoder:</p>
+<pre><code class="language-python">from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+import pandas as pd
+
+# Dados com categorias
+data = pd.DataFrame({
+    'City': ['São Paulo', 'Rio', 'São Paulo', 'Minas', 'Rio', 'São Paulo'],
+    'Marital': ['Single', 'Married', 'Single', 'Divorced', 'Married', 'Single'],
+    'Income': [30000, 50000, 35000, 45000, 55000, 32000]
+})
+
+print("=== Dados Originais ===")
+print(data)
+
+# 1. LABEL ENCODING (Ordinais)
+# Uso: Variáveis ordinais (baixo &lt; médio &lt; alto)
+le = LabelEncoder()
+data['Marital_encoded'] = le.fit_transform(data['Marital'])
+print(f"\nLabel Encoding (Marital):")
+print(f"Classes: {le.classes_}")
+print(data[['Marital', 'Marital_encoded']])
+
+# 2. ONE-HOT ENCODING (Nominais)
+# Uso: Variáveis nominais sem ordem (cores, cidades, etc)
+city_encoded = pd.get_dummies(data['City'], prefix='City', drop_first=True)
+print(f"\nOne-Hot Encoding (City):")
+print(city_encoded)
+
+# 3. COMBINADO
+X = pd.concat([
+    data[['Income']],
+    city_encoded,
+    pd.get_dummies(data['Marital'], prefix='Marital', drop_first=True)
+], axis=1)
+
+print(f"\n=== Features Finais ===")
+print(X)
+print(f"Shape: {X.shape}")</code></pre>
+<h3>Exemplo 7: Feature Selection (Correlação &amp; Importância)</h3>
+<p>Selecionar as features mais relevantes:</p>
+<pre><code class="language-python">from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectKBest, f_classif, correlation_filter
+import pandas as pd
+
+# Dataset simulado
+X = pd.DataFrame({
+    'age': np.random.randint(20, 75, 1000),
+    'income': np.random.randint(30000, 200000, 1000),
+    'num_transactions': np.random.randint(5, 500, 1000),
+    'credit_score': np.random.randint(300, 850, 1000),
+    'days_since_contact': np.random.randint(0, 365, 1000),
+    'random_noise': np.random.randn(1000) * 100  # Feature inútil
+})
+
+y = (X['income'] &gt; 100000).astype(int)
+
+# 1. SELEÇÃO POR CORRELAÇÃO
+correlations = X.corrwith(y).abs()
+print("=== Feature Importance (Correlação) ===")
+print(correlations.sort_values(ascending=False))
+
+# Features com correlação &gt; 0.1
+important_features = correlations[correlations &gt; 0.1].index.tolist()
+print(f"\nFeatures importantes: {important_features}")
+
+# 2. SELEÇÃO POR STATISTICAL TEST (f_classif)
+# f_classif mede dependência entre feature e target
+selector = SelectKBest(f_classif, k=3)
+X_selected = selector.fit_transform(X, y)
+
+selected_features = X.columns[selector.get_support()].tolist()
+print(f"\n=== SelectKBest (k=3) ===")
+print(f"Features selecionadas: {selected_features}")
+
+# 3. SELEÇÃO POR FEATURE IMPORTANCE (Tree-based)
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf.fit(X, y)
+
+feature_importance = pd.Series(rf.feature_importances_, index=X.columns).sort_values(ascending=False)
+print(f"\n=== Feature Importance (Random Forest) ===")
+print(feature_importance)
+
+# Manter top 4 features
+top_features = feature_importance.head(4).index.tolist()
+print(f"\nTop 4 features: {top_features}")
+
+# 4. REMOVER FEATURES COM VARIÂNCIA MUITO BAIXA
+from sklearn.feature_selection import VarianceThreshold
+selector_var = VarianceThreshold(threshold=0.01)  # Remove features quase constantes
+X_filtered = selector_var.fit_transform(X)
+print(f"\n=== After Variance Filtering ===")
+print(f"Original features: {X.shape[1]}")
+print(f"After filtering: {X_filtered.shape[1]}")</code></pre>
+<h3>Exemplo 8: Feature Creation (Polinomial &amp; Interação)</h3>
+<p>Criar novas features a partir das existentes:</p>
+<pre><code class="language-python">from sklearn.preprocessing import PolynomialFeatures
+import pandas as pd
+
+# Features simples
+X = pd.DataFrame({
+    'age': [25, 35, 45, 55, 65],
+    'income': [30000, 50000, 70000, 90000, 110000]
+})
+
+print("=== Features Originais ===")
+print(X)
+
+# 1. POLYNOMIAL FEATURES (degree 2)
+# Cria: age, income, age², income², age×income
+poly = PolynomialFeatures(degree=2, include_bias=False)
+X_poly = poly.fit_transform(X)
+X_poly_df = pd.DataFrame(X_poly, columns=poly.get_feature_names_out())
+
+print(f"\n=== Polynomial Features (degree=2) ===")
+print(X_poly_df)
+
+# 2. INTERAÇÕES MANUAIS
+X['age_income_interaction'] = X['age'] * X['income']
+X['age_squared'] = X['age'] ** 2
+X['income_per_year'] = X['income'] / X['age']
+
+print(f"\n=== Interações Manuais ===")
+print(X)
+
+# 3. BINNING (Discretização)
+X_binned = X.copy()
+X_binned['age_group'] = pd.cut(X['age'], bins=[0, 30, 50, 70], labels=['Young', 'Middle', 'Senior'])
+X_binned['income_level'] = pd.cut(X['income'], bins=[0, 50000, 100000, 200000], labels=['Low', 'Medium', 'High'])
+
+print(f"\n=== Binned Features ===")
+print(X_binned)</code></pre>
+</section>
+<!-- SEÇÃO 06: Hyperparameter Tuning -->
+<section class="section" id="hyperparameter-tuning">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Hyperparameter Tuning: GridSearch, RandomSearch &amp; Bayesian</h2>
+<p>Encontrar melhores parâmetros automaticamente.</p>
+</div>
+</div>
+<h3>Exemplo 9: GridSearchCV vs RandomSearchCV</h3>
+<p>Otimizar hiperparâmetros de um modelo:</p>
+<pre><code class="language-python">from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+
+# Dados
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=10, random_state=42)
+
+# Definir gradedu de parâmetros
+param_grid = {
+    'n_estimators': [50, 100, 200],
+    'max_depth': [5, 10, 15, 20],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4],
+    'max_features': ['sqrt', 'log2']
+}
+
+# 1. GRID SEARCH (Exhaustivo)
+print("=== GridSearchCV (Exhaustivo) ===")
+grid_search = GridSearchCV(
+    RandomForestClassifier(random_state=42),
+    param_grid,
+    cv=5,
+    scoring='f1',
+    n_jobs=-1,
+    verbose=1
+)
+
+print(f"Total de combinações: {len(list(range(3))) * len(list(range(4))) * len(list(range(3))) * len(list(range(3))) * len(list(range(2)))}")
+print("Executando Grid Search...")
+grid_search.fit(X, y)
+
+print(f"\nMelhores parâmetros: {grid_search.best_params_}")
+print(f"Melhor F1-Score: {grid_search.best_score_:.4f}")
+
+# 2. RANDOM SEARCH (Aleatório, mais rápido)
+print(f"\n=== RandomizedSearchCV (Aleatório) ===")
+random_search = RandomizedSearchCV(
+    RandomForestClassifier(random_state=42),
+    param_grid,
+    n_iter=20,  # Testar 20 combinações aleatórias
+    cv=5,
+    scoring='f1',
+    n_jobs=-1,
+    random_state=42
+)
+
+print("Executando Random Search...")
+random_search.fit(X, y)
+
+print(f"\nMelhores parâmetros: {random_search.best_params_}")
+print(f"Melhor F1-Score: {random_search.best_score_:.4f}")
+
+# 3. COMPARAÇÃO
+print(f"\n=== Comparação ===")
+print(f"GridSearch: F1={grid_search.best_score_:.4f}")
+print(f"RandomSearch: F1={random_search.best_score_:.4f}")
+print(f"Diferença: {abs(grid_search.best_score_ - random_search.best_score_):.4f}")</code></pre>
+<h3>Exemplo 10: Bayesian Optimization com Optuna</h3>
+<p>Otimização inteligente com Bayesian Search:</p>
+<pre><code class="language-python">import optuna
+from optuna.integration.sklearn import OptunaSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+
+# Dados
+X, y = make_classification(n_samples=1000, n_features=20, random_state=42)
+
+# Definir objetivo (função a otimizar)
+def objective(trial):
+    params = {
+        'n_estimators': trial.suggest_int('n_estimators', 50, 200),
+        'max_depth': trial.suggest_int('max_depth', 5, 20),
+        'min_samples_split': trial.suggest_int('min_samples_split', 2, 10),
+        'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 4),
+    }
+
+    model = RandomForestClassifier(**params, random_state=42)
+
+    # Cross-validation
+    from sklearn.model_selection import cross_val_score
+    scores = cross_val_score(model, X, y, cv=5, scoring='f1')
+
+    return scores.mean()
+
+# Criar study (otimizador)
+study = optuna.create_study(direction='maximize')
+
+# Otimizar (default: 100 trials)
+print("=== Bayesian Optimization com Optuna ===")
+study.optimize(objective, n_trials=50, show_progress_bar=True)
+
+# Resultados
+print(f"\nMelhor valor: {study.best_value:.4f}")
+print(f"Melhores parâmetros: {study.best_params}")
+
+# Treinar modelo final
+best_model = RandomForestClassifier(**study.best_params, random_state=42)
+best_model.fit(X, y)
+final_score = best_model.score(X, y)
+print(f"Score no treino: {final_score:.4f}")</code></pre>
+</section>
+<!-- SEÇÃO 07: Finance Case - Crédito -->
+<section class="section" id="caso-credito">
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>SAGEMAKER FEATURE STORE &amp; CLARIFY ARCHITECTURE</div>
+<div class="mxgraph" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;eval_feat_arch_bg\&quot; value=\&quot;\&quot; style=&#x27;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;strokeWidth=1;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;860\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;eval_feat_arch_title\&quot; value=\&quot;SAGEMAKER FEATURE STORE &amp;amp; CLARIFY ARCHITECTURE\&quot; style=&#x27;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;fontStyle=1;letterSpacing=1.5;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;35\&quot; width=\&quot;820\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ef_s3\&quot; value=\&quot;S3 Raw Lake&amp;#10;User Analytics\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ef_glue\&quot; value=\&quot;Glue PySpark&amp;#10;Feature ETL\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;190\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ef_on\&quot; value=\&quot;Online Feature Store&amp;#10;Low Latency DynamoDB\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#3b82f6;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;340\&quot; y=\&quot;100\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ef_off\&quot; value=\&quot;Offline Feature Store&amp;#10;Batch Lakehouse S3\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;340\&quot; y=\&quot;220\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ef_cla\&quot; value=\&quot;SageMaker Clarify&amp;#10;SHAP &amp;amp; Bias Audit\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;520\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;ef_qs\&quot; value=\&quot;QuickSight&amp;#10;Fairness Dashboard\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.athena;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;680\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;eval_feat_arch_edge_0\&quot; value=\&quot;Extract\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;ef_s3\&quot; target=\&quot;ef_glue\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;eval_feat_arch_edge_1\&quot; value=\&quot;Online Ingest\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;ef_glue\&quot; target=\&quot;ef_on\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;eval_feat_arch_edge_2\&quot; value=\&quot;Batch Ingest\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;ef_glue\&quot; target=\&quot;ef_off\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;eval_feat_arch_edge_3\&quot; value=\&quot;Audit Bias\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;ef_off\&quot; target=\&quot;ef_cla\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;eval_feat_arch_edge_4\&quot; value=\&quot;Dashboard\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;ef_cla\&quot; target=\&quot;ef_qs\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}' style="max-width:100%;background:#0f172a;"></div></div>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Feature Store &amp; SageMaker Clarify:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> S3, AWS Glue, Online Feature Store, Offline Feature Store, SageMaker Clarify, QuickSight</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Ingestão dupla de atributos (Online/Offline) e auditoria de viés e explicabilidade SHAP.</li>
+<li><strong>Contexto:</strong> Governança e avaliação contínua de atributos preditivos.</li>
+</ul>
+</div>
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">07</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Finance Case: Credit Scoring &amp; Threshold Selection</h2>
+<p>Decisão de crédito: trade-off entre precision (false approvals) e recall (rejections).</p>
+</div>
+</div>
+<div class="card" style="border-left: 4px solid var(--accent); background: var(--paper);">
+<h4>💰 Caso: Aprovação de Crédito Pessoal</h4>
+<p><strong>Contexto:</strong> Banco quer automatizar decisão de crédito pessoal. Target: prever se cliente vai dar default (inadimplência).</p>
+<p><strong>Features:</strong> idade, renda, histórico de pagamentos, score de crédito, dívida total, tempo de emprego, setor.</p>
+<p><strong>Custo-Benefício:</strong></p>
+<ul>
+<li><strong>Falso Positivo (rejeitar bom cliente):</strong> Perde-se R$ 1k-5k em juros (oportunidade)</li>
+<li><strong>Falso Negativo (aprovar cliente ruim):</strong> Perde-se R$ 10k-50k (calote)</li>
+</ul>
+<p><strong>Decisão:</strong> Priorizar Recall (detectar defaults). Usar threshold 0.3 ao invés de 0.5:</p>
+<ul>
+<li>Threshold 0.5: Precision=92%, Recall=65% (muitos defaults escapam)</li>
+<li>Threshold 0.3: Precision=75%, Recall=88% (mais seguro, mas rejeita bons clientes)</li>
+</ul>
+<p><strong>Resultado:</strong> Com threshold 0.3, reduz taxa de default de 8% para 2%. Trade-off: rejeita 5% de clientes bons.</p>
+<p><strong>Link relacionado:</strong> <a href="../../pages/financas/ciclo-vida-credito.html">Credit Lifecycle &amp; Threshold Strategies</a> - como implementar diferentes thresholds por segmento.</p>
+</div>
+</section>
+<!-- SEÇÃO 08: Referências -->
+<section class="section" id="referencias">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">08</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Referências &amp; Leitura Complementar</h2>
+</div>
+</div>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--aws-lambda);">
+<h4>📘 Documentação &amp; AWS</h4>
+<ul>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/">AWS SageMaker Documentation</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/model_evaluation.html">Scikit-learn: Model Evaluation</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/preprocessing.html">Scikit-learn: Preprocessing</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/feature_selection.html">Scikit-learn: Feature Selection</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>📚 Papers &amp; Pesquisa</h4>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Precision_and_recall">Wikipedia: Precision &amp; Recall</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Receiver_operating_characteristic">Wikipedia: ROC Curve</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Confusion_matrix">Wikipedia: Confusion Matrix</a></li>
+<li><a href="https://optuna.readthedocs.io/en/stable/">Optuna Documentation</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>🔗 Tópicos Relacionados</h4>
+<ul>
+<li><a href="../../pages/operacoes/mlops-model-registry.html">MLOps &amp; Model Registry</a></li>
+<li><a href="../../pages/engenharia/dataops-mlops.html">DataOps &amp; ML Pipelines</a></li>
+<li><a href="../../pages/engenharia/data-quality.html">Data Quality &amp; Normalization</a></li>
+<li><a href="../../pages/financas/ciclo-vida-credito.html">Credit Lifecycle Decisions</a></li>
+</ul>
+</div>
+</div>
+<div class="abox note">
+<strong>📅 Última atualização:</strong> Agosto 2026 |
+        <strong>Versão de conteúdo:</strong> 1.0 |
+        <strong>Python testado:</strong> 3.9+ |
+        <strong>Scikit-learn:</strong> 1.0+ | <strong>Optuna:</strong> 3.0+
+      </div>
+</section>
+</main>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mxgraph/4.1.0/mxClient.min.js"></script>
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script>
+  function toggleNav() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+  }
+</script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>

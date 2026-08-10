@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="MLOps Pipeline &amp; Model Registry - Operacionalização de modelos de ML na AWS. Automação com SageMaker Pipelines, Model Registry, versionamento e monitoramento de modelos em produção." name="description"/>
+<meta content="MLOps, Model Registry, SageMaker Pipelines, CI/CD ML, Model Versioning, Feature Store, Model Monitoring, Production ML, AWS" name="keywords"/>
+<title>MLOps Pipeline &amp; Model Registry | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="MLOps Pipeline &amp; Model Registry | AWS Data Mastery" property="og:title"/>
+<meta content="Implementação end-to-end de MLOps com SageMaker, Model Registry e CI/CD para ML." property="og:description"/>
+<meta content="website" property="og:type"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero" style="border-left: 6px solid var(--spark);">
+<div class="hero-ey">Avançado: Operações de ML</div>
+<h1>MLOps Pipeline &amp; <em>Model Registry</em></h1>
+<p class="hero-d">DevOps para Machine Learning. Operacionalize modelos com SageMaker Pipelines, automação de treinamento, versionamento com Model Registry, monitoramento contínuo e governança em produção na AWS.</p>
+<div class="pills">
+<span class="pill">MLOps</span>
+<span class="pill">CI/CD</span>
+<span class="pill">SageMaker</span>
+<span class="pill">Automação</span>
+<span class="pill">Avançado</span>
+</div>
+</div>
+<main class="main-content">
+<!-- SEÇÃO 01: O que é MLOps -->
+<section class="section" id="o-que-e-mlops">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>O que é MLOps? DevOps para Machine Learning</h2>
+<p>Por que a operacionalização de ML é fundamentalmente diferente de software tradicional.</p>
+</div>
+</div>
+<p><strong>MLOps (Machine Learning Operations)</strong> é a disciplina que aplica princípios DevOps ao desenvolvimento e implantação de sistemas de ML. Diferente do software tradicional, modelos de ML têm características únicas:</p>
+<ol style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Dados dinâmicos:</strong> O modelo não muda, mas os dados subjacentes mudam constantemente. Seu modelo de detecção de fraude de 2023 pode estar obsoleto em 2024 porque os padrões fraudulentos evoluem.</li>
+<li><strong>Retrainamento contínuo:</strong> Você precisa retreinar regularmente à medida que novos dados chegam, sem parar de servir o modelo antigo.</li>
+<li><strong>Monitoramento não é apenas logs:</strong> Você precisa monitorar a <em>qualidade das predições</em>, não apenas CPU/memória. Se o accuracy caiu de 95% para 85%, você precisa saber imediatamente.</li>
+<li><strong>Reprodutibilidade:</strong> Qual versão de dados foi usada? Qual versão do modelo? Qual seed aleatório? Tudo precisa ser rastreável.</li>
+</ol>
+<div class="abox info">
+<strong>ℹ️ Fato Surpresa:</strong> Estudos mostram que apenas ~5% do código em produção de ML é o próprio modelo. Os outros 95% são infraestrutura de dados, feature engineering, validação, monitoramento e CI/CD. MLOps trata desses 95%.
+      </div>
+<p>Na AWS, implementamos MLOps através de uma combinação de serviços: <strong>SageMaker Pipelines</strong> (orquestração), <strong>Model Registry</strong> (versionamento), <strong>SageMaker Model Monitor</strong> (monitoramento), e <strong>CI/CD</strong> (automação com CodePipeline, GitHub Actions ou Jenkins).</p>
+</section>
+<!-- SEÇÃO 02: Conceitos Fundamentais -->
+<section class="section" id="conceitos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Core Concepts: Feature Engineering até Monitoring</h2>
+<p>Os pilares de uma estratégia MLOps robusta.</p>
+</div>
+</div>
+<div class="concept-grid">
+<div class="concept-card spark-card">
+<div class="cc-tag">Dados</div>
+<div class="cc-title">Feature Engineering &amp; Store</div>
+<div class="cc-body">A qualidade do modelo é limitada pela qualidade das features. Um <strong>Feature Store</strong> (como SageMaker Feature Store) é um repositório centralizado de features pré-computadas, reutilizáveis entre modelos. Exemplo: um "histórico de transações do cliente" é uma feature que pode ser usada por múltiplos modelos (fraude, risco de crédito, recomendação).</div>
+</div>
+<div class="concept-card spark-card">
+<div class="cc-tag">Treinamento</div>
+<div class="cc-title">Training Pipeline &amp; Orchestration</div>
+<div class="cc-body"><strong>SageMaker Pipelines</strong> automatiza o fluxo: ingestão de dados → preprocessamento → treinamento → avaliação → registro. Funciona como um "CI/CD para ML". Ao invés de rodar scripts manualmente, a pipeline executa automaticamente quando novos dados chegam.</div>
+</div>
+<div class="concept-card spark-card">
+<div class="cc-tag">Produção</div>
+<div class="cc-title">Model Versioning &amp; Registry</div>
+<div class="cc-body">O <strong>Model Registry</strong> rastreia todas as versões de um modelo: métricas de desempenho, data de treinamento, autor, dados usados, hiperparâmetros. Permite "rolar para trás" rapidamente se um modelo novo falhar em produção.</div>
+</div>
+<div class="concept-card spark-card">
+<div class="cc-tag">Deployment</div>
+<div class="cc-title">A/B Testing &amp; Canary Releases</div>
+<div class="cc-body">Não coloque 100% do tráfego em um modelo novo de uma vez. Use A/B testing: 90% das requisições para o modelo antigo (estável), 10% para o novo. Monitore métricas. Se tudo bem, aumente para 50/50, depois 100%. Se algo der errado, reverta automaticamente.</div>
+</div>
+<div class="concept-card spark-card">
+<div class="cc-tag">Observabilidade</div>
+<div class="cc-title">Model Monitoring &amp; Drift Detection</div>
+<div class="cc-body"><strong>Data Drift:</strong> Os dados de entrada mudaram (ex: padrões de transações). <strong>Model Drift:</strong> A qualidade das predições caiu. O SageMaker Model Monitor detecta ambas automaticamente e alerta.</div>
+</div>
+<div class="concept-card spark-card">
+<div class="cc-tag">Governança</div>
+<div class="cc-title">Compliance, Bias &amp; Explainability</div>
+<div class="cc-body">Modelos de IA em produção precisam de auditoria: explicabilidade (SHAP), detecção de bias (FairML), conformidade regulatória (LGPD, GDPR). A AWS fornece ferramentas como SageMaker Clarify para isso.</div>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 03: Arquitetura AWS -->
+<section class="section" id="arquitetura-aws">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Arquitetura AWS End-to-End: Glue → SageMaker → Lambda</h2>
+<p>Componentes da pilha MLOps na AWS e como se integram.</p>
+</div>
+</div>
+<p>Um pipeline MLOps típico na AWS conecta esses serviços:</p>
+<svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+<!-- Data Layer -->
+<g id="data-layer">
+<rect fill="none" height="100" rx="8" stroke="var(--aws-s3)" stroke-width="2" width="200" x="20" y="20"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="120" y="45">Data Sources</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="120" y="70">Databases, APIs,</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="120" y="85">S3 Raw Data</text>
+</g>
+<!-- ETL Layer -->
+<g id="etl-layer">
+<rect fill="none" height="100" rx="8" stroke="var(--aws-glue)" stroke-width="2" width="200" x="260" y="20"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="360" y="45">AWS Glue</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="360" y="70">Data Cleaning,</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="360" y="85">Normalization</text>
+</g>
+<!-- Feature Store -->
+<g id="feature-store">
+<rect fill="none" height="100" rx="8" stroke="var(--accent)" stroke-width="2" width="200" x="500" y="20"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="600" y="45">Feature Store</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="600" y="70">Pre-computed</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="600" y="85">Features</text>
+</g>
+<!-- Training Layer -->
+<g id="training-layer">
+<rect fill="none" height="100" rx="8" stroke="var(--arch)" stroke-width="2" width="240" x="740" y="20"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="860" y="35">SageMaker Training</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="860" y="55">Hyperparameter Tuning,</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="860" y="70">Distributed Training,</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="860" y="85">Checkpoints → S3</text>
+</g>
+<!-- Model Registry -->
+<g id="model-registry">
+<rect fill="none" height="100" rx="8" stroke="var(--genai)" stroke-width="2" width="200" x="260" y="170"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="360" y="195">Model Registry</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="360" y="220">v1.0, v1.1, v1.2...</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="360" y="235">(metadata, metrics)</text>
+</g>
+<!-- Evaluation -->
+<g id="evaluation">
+<rect fill="none" height="100" rx="8" stroke="var(--spark)" stroke-width="2" width="200" x="500" y="170"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="600" y="195">Model Evaluation</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="600" y="220">Accuracy, Precision,</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="600" y="235">F1, AUC...</text>
+</g>
+<!-- Deployment -->
+<g id="deployment">
+<rect fill="none" height="100" rx="8" stroke="var(--ok)" stroke-width="2" width="240" x="740" y="170"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="860" y="195">Deployment &amp; Serving</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="860" y="220">SageMaker Endpoints,</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="860" y="235">Lambda, Batch Transform</text>
+</g>
+<!-- Monitoring -->
+<g id="monitoring">
+<rect fill="none" height="100" rx="8" stroke="var(--warn)" stroke-width="2" width="200" x="260" y="320"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="360" y="345">Model Monitor</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="360" y="370">Data Drift, Model Drift,</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="360" y="385">Bias Detection</text>
+</g>
+<!-- CI/CD -->
+<g id="cicd">
+<rect fill="none" height="100" rx="8" stroke="var(--emr)" stroke-width="2" width="200" x="500" y="320"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="600" y="345">CI/CD Pipeline</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="600" y="370">CodePipeline,</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="600" y="385">GitHub Actions, Jenkins</text>
+</g>
+<!-- CloudWatch -->
+<g id="cloudwatch">
+<rect fill="none" height="100" rx="8" stroke="#6366f1" stroke-width="2" width="240" x="740" y="320"></rect>
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="860" y="345">CloudWatch &amp; Alerts</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="860" y="370">Predictions, Latency,</text>
+<text fill="var(--muted)" font-size="9" text-anchor="middle" x="860" y="385">Errors → SNS/Lambda</text>
+</g>
+<!-- Arrows (Data Flow) -->
+<line stroke="var(--accent)" stroke-width="2" x1="220" x2="260" y1="70" y2="70"></line>
+<polygon fill="var(--accent)" points="260,70 255,65 255,75"></polygon>
+<line stroke="var(--accent)" stroke-width="2" x1="460" x2="500" y1="70" y2="70"></line>
+<polygon fill="var(--accent)" points="500,70 495,65 495,75"></polygon>
+<line stroke="var(--accent)" stroke-width="2" x1="700" x2="740" y1="70" y2="70"></line>
+<polygon fill="var(--accent)" points="740,70 735,65 735,75"></polygon>
+<!-- Training to Registry -->
+<line stroke="var(--spark)" stroke-width="2" x1="860" x2="860" y1="120" y2="145"></line>
+<line stroke="var(--spark)" stroke-width="2" x1="860" x2="460" y1="145" y2="145"></line>
+<line stroke="var(--spark)" stroke-width="2" x1="460" x2="460" y1="145" y2="170"></line>
+<polygon fill="var(--spark)" points="460,170 455,165 465,165"></polygon>
+<!-- Registry to Evaluation -->
+<line stroke="var(--accent)" stroke-width="2" x1="460" x2="500" y1="220" y2="220"></line>
+<polygon fill="var(--accent)" points="500,220 495,215 495,225"></polygon>
+<!-- Evaluation to Deployment -->
+<line stroke="var(--accent)" stroke-width="2" x1="700" x2="740" y1="220" y2="220"></line>
+<polygon fill="var(--accent)" points="740,220 735,215 735,225"></polygon>
+<!-- Deployment to Monitoring -->
+<line stroke="var(--warn)" stroke-width="2" x1="860" x2="860" y1="270" y2="295"></line>
+<line stroke="var(--warn)" stroke-width="2" x1="860" x2="360" y1="295" y2="295"></line>
+<line stroke="var(--warn)" stroke-width="2" x1="360" x2="360" y1="295" y2="320"></line>
+<polygon fill="var(--warn)" points="360,320 355,315 365,315"></polygon>
+<!-- Monitoring Feedback Loop -->
+<path d="M 360 420 L 360 450 L 120 450 L 120 120" fill="none" stroke="var(--warn)" stroke-dasharray="5,5" stroke-width="2"></path>
+<polygon fill="var(--warn)" points="120,120 115,125 125,125"></polygon>
+<text fill="var(--warn)" font-size="10" font-weight="bold" x="200" y="460">Retraining Trigger</text>
+</svg>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Conceito Lógico / Algorítmico:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Representação Vetorial, Estrutura Neural / Árvore de Decisão</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Fluxo conceitual de dados e abstração matemática.</li>
+<li><strong>Contexto:</strong> Diagrama ilustrativo para o tema em questão.</li>
+</ul>
+</div>
+<p style="margin-top: 20px; font-size: 0.9rem; color: var(--muted);">Fluxo completo de MLOps: dados brutos → limpeza (Glue) → features (Feature Store) → treinamento (SageMaker) → registro (Model Registry) → avaliação → deployment → monitoramento (Model Monitor) → CI/CD automatizado.</p>
+<div class="abox success">
+<strong>✅ Benefício:</strong> Quando uma drift é detectada, o CI/CD dispara automaticamente um novo treinamento. Se o novo modelo tem métricas melhores, é promovido a produção. Se piora, a versão anterior é mantida. Tudo sem intervenção manual.
+      </div>
+</section>
+<!-- SEÇÃO 04: Implementação Prática -->
+<section class="section" id="implementacao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Implementação Prática: Código em Produção</h2>
+<p>Exemplos funcionais com boto3, SageMaker SDK e Model Registry.</p>
+</div>
+</div>
+<h3>Exemplo 1: Training Job com SageMaker e Model Registry</h3>
+<p>Código Python que treina um modelo XGBoost, avalia e registra no Model Registry:</p>
+<pre><code class="language-python">import boto3
+import sagemaker
+import pandas as pd
+from sagemaker.estimator import Estimator
+from sagemaker.model_monitor import DataCaptureConfig
+from datetime import datetime
+
+# Setup
+session = sagemaker.Session()
+role = sagemaker.get_execution_role()
+bucket = session.default_bucket()
+region = session.boto_region_name
+
+# 1. DOWNLOAD DADOS DE TREINAMENTO (ex: S3)
+s3_client = boto3.client('s3')
+train_data_path = 's3://{}/ml/train/data.csv'.format(bucket)
+test_data_path = 's3://{}/ml/test/data.csv'.format(bucket)
+
+# Carregar dados para avaliação local
+df_train = pd.read_csv(train_data_path)
+print(f"Training data shape: {df_train.shape}")
+
+# 2. CRIAR ESTIMADOR XGBOOST
+xgb_estimator = Estimator(
+    image_uri=sagemaker.image_uris.retrieve('xgboost', region, version='1.5-1'),
+    role=role,
+    instance_count=1,
+    instance_type='ml.m5.xlarge',
+    output_path='s3://{}/ml/model_artifacts/'.format(bucket),
+    sagemaker_session=session,
+    hyperparameters={
+        'objective': 'binary:logistic',
+        'max_depth': 5,
+        'eta': 0.2,
+        'gamma': 4,
+        'min_child_weight': 6,
+        'subsample': 0.8,
+        'num_round': 100,
+    }
+)
+
+# 3. TREINAR COM DATA CAPTURE ATIVADO (para Model Monitor)
+data_capture_config = DataCaptureConfig(
+    enabled=True,
+    sampling_percentage=100,
+    destination_s3_uri='s3://{}/datacapture'.format(bucket)
+)
+
+xgb_estimator.fit({'training': train_data_path}, logs=True)
+
+# 4. AVALIAR MODELO
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
+predictions = xgb_estimator.model_data  # Endpoint predictions
+y_true = pd.read_csv(test_data_path)['target'].values
+y_pred = xgb_estimator.predict(test_data_path)
+
+accuracy = accuracy_score(y_true, y_pred &gt; 0.5)
+precision = precision_score(y_true, y_pred &gt; 0.5)
+recall = recall_score(y_true, y_pred &gt; 0.5)
+f1 = f1_score(y_true, y_pred &gt; 0.5)
+auc = roc_auc_score(y_true, y_pred)
+
+print(f"Model Metrics:")
+print(f"  Accuracy:  {accuracy:.4f}")
+print(f"  Precision: {precision:.4f}")
+print(f"  Recall:    {recall:.4f}")
+print(f"  F1-Score:  {f1:.4f}")
+print(f"  AUC:       {auc:.4f}")
+
+# 5. REGISTRAR NO MODEL REGISTRY
+sm_client = boto3.client('sagemaker')
+
+# Criar modelo no SageMaker
+model_name = f"fraud-detection-xgb-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+sm_client.create_model(
+    ModelName=model_name,
+    PrimaryContainer={
+        'Image': sagemaker.image_uris.retrieve('xgboost', region, version='1.5-1'),
+        'ModelDataUrl': xgb_estimator.model_data,
+    },
+    ExecutionRoleArn=role,
+)
+
+# 6. REGISTRAR VERSÃO NO MODEL PACKAGE GROUP
+import json
+
+model_package_group = 'fraud-detection-models'
+model_package_description = json.dumps({
+    'accuracy': float(accuracy),
+    'precision': float(precision),
+    'recall': float(recall),
+    'f1_score': float(f1),
+    'auc': float(auc),
+    'training_data': train_data_path,
+    'test_data': test_data_path,
+    'training_date': datetime.now().isoformat(),
+})
+
+try:
+    sm_client.create_model_package_group(
+        ModelPackageGroupName=model_package_group,
+        ModelPackageGroupDescription='XGBoost Fraud Detection Pipeline'
+    )
+except sm_client.exceptions.ResourceInUseException:
+    print(f"Model package group '{model_package_group}' already exists")
+
+# Criar versão do modelo
+response = sm_client.create_model_package(
+    ModelPackageGroupName=model_package_group,
+    ModelPackageDescription=model_package_description,
+    ModelApprovalStatus='PendingManualApproval',  # Requer aprovação antes de produção
+    InferenceSpecification={
+        'Containers': [
+            {
+                'Image': sagemaker.image_uris.retrieve('xgboost', region, version='1.5-1'),
+                'ModelDataUrl': xgb_estimator.model_data,
+            }
+        ],
+        'SupportedContentTypes': ['text/csv', 'application/json'],
+        'SupportedResponseMIMETypes': ['application/json'],
+    }
+)
+
+print(f"\nModel registered successfully!")
+print(f"Model Package ARN: {response['ModelPackageArn']}")
+print(f"Status: {response['ModelApprovalStatus']}")
+
+# 7. APROVAR MODELO (em produção, isso seria feito por um humano/pipeline de validação)
+# sm_client.update_model_package(
+#     ModelPackageArn=response['ModelPackageArn'],
+#     ModelApprovalStatus='Approved'
+# )
+</code></pre>
+<h3>Exemplo 2: SageMaker Pipeline com Orchestração Automática</h3>
+<p>Cria um pipeline que roda automaticamente quando novos dados chegam:</p>
+<pre><code class="language-python">from sagemaker.workflow.pipeline import Pipeline
+from sagemaker.workflow.steps import ProcessingStep, TrainingStep
+from sagemaker.processing import ScriptProcessor
+from sagemaker.workflow.parameters import ParameterString, ParameterInteger
+
+# Parâmetros da Pipeline
+input_data = ParameterString(
+    name='InputDataUrl',
+    default_value='s3://my-bucket/ml/raw-data/'
+)
+model_approval_status = ParameterString(
+    name='ModelApprovalStatus',
+    default_value='PendingManualApproval'
+)
+
+# PASSO 1: Processamento de Dados (com Glue/Spark)
+processor = ScriptProcessor(
+    image_uri=sagemaker.image_uris.retrieve('python', region, version='3.8'),
+    role=role,
+    instance_count=1,
+    instance_type='ml.m5.xlarge',
+)
+
+step_process = ProcessingStep(
+    name='DataProcessing',
+    processor=processor,
+    job_arguments=['--input', input_data],
+    code='s3://my-bucket/scripts/preprocessing.py',
+)
+
+# PASSO 2: Treinamento
+xgb_estimator = Estimator(
+    image_uri=sagemaker.image_uris.retrieve('xgboost', region, version='1.5-1'),
+    role=role,
+    instance_count=1,
+    instance_type='ml.m5.xlarge',
+    output_path='s3://{}/artifacts/'.format(bucket),
+    sagemaker_session=session,
+)
+
+step_train = TrainingStep(
+    name='ModelTraining',
+    estimator=xgb_estimator,
+    inputs={'training': step_process.properties.ProcessingOutputConfigs[0].S3Output.S3Uri},
+)
+
+# PASSO 3: Avaliação (condicional)
+from sagemaker.workflow.conditions import ConditionGreaterThan, ConditionLessThan
+from sagemaker.workflow.properties import ProcessingJobProperties
+from sagemaker.workflow.step_collections import RegisterModel
+
+step_register = RegisterModel(
+    name='RegisterModel',
+    estimator=xgb_estimator,
+    model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+    content_types=['text/csv'],
+    response_types=['application/json'],
+    inference_instances=['ml.m5.xlarge'],
+    transform_instances=['ml.m5.xlarge'],
+    model_package_group_name='fraud-detection-models',
+    approval_status=model_approval_status,
+)
+
+# CRIAR E EXECUTAR A PIPELINE
+pipeline = Pipeline(
+    name='FraudDetectionPipeline',
+    steps=[step_process, step_train, step_register],
+)
+
+pipeline.upsert(role_arn=role)
+execution = pipeline.start(
+    parameters={
+        'InputDataUrl': 's3://my-bucket/ml/raw-data/',
+        'ModelApprovalStatus': 'PendingManualApproval',
+    }
+)
+
+print(f"Pipeline execution started: {execution.arn}")
+# Pode ser monitorado em SageMaker Console → Pipelines
+
+# SCHEDULE PARA RODAR AUTOMATICAMENTE A CADA 7 DIAS
+import schedule
+import time
+
+def run_pipeline():
+    execution = pipeline.start()
+    print(f"Pipeline triggered at {datetime.now()}")
+
+# schedule.every(7).days.do(run_pipeline)
+# Ou usar EventBridge para schedule em produção
+</code></pre>
+<div class="abox note">
+<strong>⚠️ Boas Práticas em Produção:</strong> Nunca use `.update_model_package()` com status "Approved" automaticamente. Implemente um estágio de validação humana ou pelo menos metriche automáticas rigorosas (ex: só aprovar se AUC &gt; 0.96 E accuracy &gt; 0.94). Um modelo ruim em produção é pior que nenhum modelo.
+      </div>
+</section>
+<!-- SEÇÃO 05: Comparação de Orquestração -->
+<section class="section" id="comparacao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Jenkins vs GitHub Actions vs SageMaker Pipelines</h2>
+<p>Qual ferramenta de CI/CD escolher para seu pipeline ML?</p>
+</div>
+</div>
+<div class="tbl-wrap" style="overflow-x: auto;">
+<table style="min-width: 1400px;">
+<thead>
+<tr>
+<th>Critério</th>
+<th>Jenkins</th>
+<th>GitHub Actions</th>
+<th>SageMaker Pipelines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Especialização</strong></td>
+<td>CI/CD genérico (DevOps)</td>
+<td>CI/CD genérico (DevOps)</td>
+<td><span class="good-txt">✅ ML-nativo</span></td>
+</tr>
+<tr>
+<td><strong>Orquestração ML</strong></td>
+<td>⚠️ Requer scripts customizados</td>
+<td>⚠️ Requer scripts customizados</td>
+<td><span class="good-txt">✅ Nativa (Processing, Training Steps)</span></td>
+</tr>
+<tr>
+<td><strong>Preço</strong></td>
+<td>💰 Self-hosted (infra própria)</td>
+<td>💰💰 ~$0.008/min para runners</td>
+<td>💰💰 $0.20 por step + compute</td>
+</tr>
+<tr>
+<td><strong>Escalabilidade</strong></td>
+<td><span class="good-txt">✅ Excelente (muitos plugins)</span></td>
+<td>⚠️ Boa, mas pode ficar caro</td>
+<td><span class="good-txt">✅ Automática no AWS</span></td>
+</tr>
+<tr>
+<td><strong>Integração AWS</strong></td>
+<td>⚠️ Via boto3 scripts</td>
+<td>⚠️ Via boto3 scripts</td>
+<td><span class="good-txt">✅ Integração nativa</span></td>
+</tr>
+<tr>
+<td><strong>Model Registry</strong></td>
+<td>❌ Não incluso</td>
+<td>❌ Não incluso</td>
+<td><span class="good-txt">✅ SageMaker Model Registry</span></td>
+</tr>
+<tr>
+<td><strong>Monitoramento de Drift</strong></td>
+<td>❌ Não incluso</td>
+<td>❌ Não incluso</td>
+<td><span class="good-txt">✅ SageMaker Model Monitor</span></td>
+</tr>
+<tr>
+<td><strong>Melhor Para</strong></td>
+<td>Grandes empresas com DevOps forte, multi-nuvem</td>
+<td>Startups, repos GitHub, CI/CD simples</td>
+<td><strong>ML workflows na AWS, AutoML, retraining</strong></td>
+</tr>
+<tr>
+<td><strong>Exemplo Use Case</strong></td>
+<td>Pipeline com Kubernetes, Spark, múltiplas linguagens</td>
+<td>Deploy de aplicação Python, validação de código</td>
+<td>Retrainamento automático de modelos, A/B testing</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 style="margin-top: 40px;">Recomendação: Abordagem Híbrida</h3>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Camada 1: SageMaker Pipelines</h4>
+<p>Use para orquestração ML: treinamento, avaliação, registro de modelos. Roda dentro da AWS, integrado com Model Registry e Monitor.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>Camada 2: GitHub Actions / Jenkins</h4>
+<p>Use para CI/CD de código: testes de código, lint, versionamento de scripts. Dispara SageMaker Pipelines via boto3 quando código é commitado.</p>
+</div>
+</div>
+<p style="margin-top: 20px;">Resultado: SageMaker cuida de ML, GitHub Actions cuida de código. Separação de responsabilidades.</p>
+</section>
+<!-- SEÇÃO 06: Referências -->
+<section class="section" id="referencias">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--spark)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--spark)"></div>
+<h2>Referências &amp; Recursos Complementares</h2>
+</div>
+</div>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--aws-lambda);">
+<h4>📘 Documentação AWS</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/pipelines.html" rel="noopener" target="_blank">SageMaker Pipelines Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/model-registry.html" rel="noopener" target="_blank">Model Registry Documentation</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor.html" rel="noopener" target="_blank">SageMaker Model Monitor</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/feature-store.html" rel="noopener" target="_blank">SageMaker Feature Store</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>📚 MLOps &amp; Governance</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="https://mlflow.org/" rel="noopener" target="_blank">MLflow - Model Management</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/clarify.html" rel="noopener" target="_blank">SageMaker Clarify (Bias Detection)</a></li>
+<li><a href="https://aws.amazon.com/blogs/machine-learning/" rel="noopener" target="_blank">AWS ML Blog</a></li>
+<li><a href="https://www.usenix.org/system/files/osdi18_final_161.pdf" rel="noopener" target="_blank">Hidden Technical Debt in ML Systems</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>🔗 Tópicos Relacionados</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="../../pages/engenharia/dataops-mlops.html">DataOps &amp; MLOps</a></li>
+<li><a href="../../pages/operacoes/data-quality-cicd.html">Data Quality &amp; CI/CD</a></li>
+<li><a href="../../pages/pratica/perguntas-mlops-genai.html">MLOps Interview Questions</a></li>
+<li><a href="../../pages/engenharia/genai-llmops-evaluation.html">LLMOps &amp; Evaluation</a></li>
+</ul>
+</div>
+</div>
+<div class="abox note">
+<strong>📅 Última atualização:</strong> Agosto 2026 | <strong>Versão do conteúdo:</strong> 1.0 | <strong>Tecnologias testadas:</strong> boto3 1.28+, SageMaker SDK 2.100+, SageMaker Pipelines v1+
+      </div>
+</section>
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>SAGEMAKER MODEL REGISTRY &amp; CICD DEPLOYMENT ARCHITECTURE</div>
+<div class="mxgraph" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;mr_mlops_arch_bg\&quot; value=\&quot;\&quot; style=&#x27;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;strokeWidth=1;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;860\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_mlops_arch_title\&quot; value=\&quot;SAGEMAKER MODEL REGISTRY &amp;amp; CICD DEPLOYMENT ARCHITECTURE\&quot; style=&#x27;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;fontStyle=1;letterSpacing=1.5;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;35\&quot; width=\&quot;820\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_pipe\&quot; value=\&quot;SageMaker Pipelines&amp;#10;Automated DAG\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_reg\&quot; value=\&quot;Model Registry&amp;#10;Approval Workflow\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;220\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_evb\&quot; value=\&quot;EventBridge&amp;#10;Approved Trigger\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;390\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_cp\&quot; value=\&quot;AWS CodePipeline&amp;#10;Canary Staging\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;550\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_ep\&quot; value=\&quot;SageMaker Production&amp;#10;Canary Endpoint\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#10b981;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;720\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_mlops_arch_edge_0\&quot; value=\&quot;Save Package\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;mr_pipe\&quot; target=\&quot;mr_reg\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_mlops_arch_edge_1\&quot; value=\&quot;Approve\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;mr_reg\&quot; target=\&quot;mr_evb\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_mlops_arch_edge_2\&quot; value=\&quot;Trigger CD\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;mr_evb\&quot; target=\&quot;mr_cp\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;mr_mlops_arch_edge_3\&quot; value=\&quot;Canary Deploy\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;mr_cp\&quot; target=\&quot;mr_ep\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}' style="max-width:100%;background:#0f172a;"></div></div>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Model Registry &amp; CICD Pipeline:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> SageMaker Pipelines, Model Registry, EventBridge, CodePipeline, SageMaker Endpoint</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Workflow automatizado de aprovação de modelos com deploy Canary via CodePipeline.</li>
+<li><strong>Contexto:</strong> Governança MLOps em larga escala.</li>
+</ul>
+</div>
+</main>
+</div>
+<!-- Scripts -->
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>
