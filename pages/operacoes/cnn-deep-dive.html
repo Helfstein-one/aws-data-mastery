@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="CNN Deep Dive - Convolutional Neural Networks: Convolutional layers, pooling, receptive fields, architectures (ResNet, VGG, MobileNet). Transfer learning, data augmentation. Finance applications: Document classification, OCR." name="description"/>
+<meta content="CNN, Convolutional Neural Networks, Transfer Learning, ResNet, VGG, MobileNet, MNIST, CIFAR-10, Data Augmentation, PyTorch, TensorFlow, Deep Learning" name="keywords"/>
+<title>Convolutional Neural Networks (CNN) Deep Dive | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="CNN Deep Dive | AWS Data Mastery" property="og:title"/>
+<meta content="Master Convolutional Neural Networks from fundamentals to production. Transfer learning, ResNet, VGG, MobileNet, finance applications." property="og:description"/>
+<meta content="website" property="og:type"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero" style="border-left: 6px solid var(--arch);">
+<div class="hero-ey">Intermediário: Deep Learning</div>
+<h1>Convolutional Neural Networks <em>Deep Dive</em></h1>
+<p class="hero-d">Dominar CNNs: da convolução ao transfer learning. Entenda filtros, pooling, receptive fields e arquiteturas modernas (ResNet, VGG, MobileNet). Implementação prática em PyTorch/TensorFlow com MNIST, CIFAR-10 e aplicações financeiras (OCR de documentos, classificação de cheques). Deploy em AWS SageMaker.</p>
+<div class="pills">
+<span class="pill">Convolutional Neural Networks</span>
+<span class="pill">Transfer Learning</span>
+<span class="pill">Computer Vision</span>
+<span class="pill">PyTorch/TensorFlow</span>
+<span class="pill">SageMaker</span>
+</div>
+</div>
+<main class="main-content">
+<!-- SEÇÃO 01: O que é CNN? -->
+<section class="section" id="o-que-e-cnn">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>O que é CNN? Estrutura Hierárquica de Características</h2>
+<p>Por que CNNs dominam visão computacional e como elas exploram estrutura espacial.</p>
+</div>
+</div>
+<p>Uma <strong>Convolutional Neural Network (CNN)</strong> é uma arquitetura de rede neural especializada em processar dados com estrutura espacial, como imagens. Diferentemente das redes neurais totalmente conectadas (que consideram todo pixel como independente), CNNs exploram a premissa fundamental da visão: <em>pixels próximos são mais relacionados que pixels distantes</em>.</p>
+<p>Imagine tentar reconhecer um rosto em uma imagem. Seus olhos não processam cada pixel individualmente e indepentemente. Em vez disso, você procura por padrões locais: bordas (contornos dos olhos), formas (nariz), e gradualmente combina essas características em conceitos mais abstratos. CNNs funcionam exatamente assim.</p>
+<h3>Hierarquia de Características</h3>
+<p>Uma CNN moderna típica segue este fluxo hierárquico:</p>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--arch);">
+<h4>Camadas Iniciais</h4>
+<p><strong>Detectam:</strong> Bordas, linhas, texturas simples.</p>
+<p style="margin-top: 10px; font-size: 0.9rem; color: var(--muted);">Filtros pequenos (3×3) capturam gradientes e mudanças de cor.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>Camadas Intermediárias</h4>
+<p><strong>Detectam:</strong> Formas compostas, partes de objetos (olhos, bocas).</p>
+<p style="margin-top: 10px; font-size: 0.9rem; color: var(--muted);">Combinação hierárquica de características simples.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Camadas Profundas</h4>
+<p><strong>Detectam:</strong> Objetos inteiros (rostos, carros, gatos).</p>
+<p style="margin-top: 10px; font-size: 0.9rem; color: var(--muted);">Reconhecimento de conceitos semanticamente ricos.</p>
+</div>
+</div>
+<div class="abox success">
+<strong>✅ Resultado:</strong> Este design hierárquico permite que CNNs aprendam representações eficientes de imagens com muito menos parâmetros que redes totalmente conectadas.
+      </div>
+</section>
+<!-- SEÇÃO 02: Conceitos Fundamentais -->
+<section class="section" id="conceitos-cnn">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Conceitos-Chave: Convolução, Pooling, Stride, Padding &amp; Receptive Field</h2>
+<p>Os componentes técnicos que fazem CNNs funcionarem.</p>
+</div>
+</div>
+<h3>Operação de Convolução</h3>
+<p>A convolução é o coração de uma CNN. Imagine um filtro (kernel) pequeno (ex: 3×3) deslizando sobre uma imagem. Em cada posição, o filtro multiplica seus pesos pelos valores de pixels correspondentes e soma o resultado. Este valor (chamado ativação) é armazenado em um mapa de características (feature map).</p>
+<p>Esse processo é repetido para múltiplos filtros diferentes, cada um aprendendo a detectar padrões diferentes (bordas horizontais, verticais, círculos, etc.).</p>
+<div class="abox info">
+<strong>ℹ️ Intuição Visual:</strong> Pense no filtro como uma ferramenta de detecção. Um filtro treinado para detectar bordas verticais terá pesos que enfatizam mudanças de cor na direção horizontal. Quando desliza sobre uma vertical line, produz alta ativação. Sobre um fundo uniforme, produz baixa ativação.
+      </div>
+<h3>Stride (Passo)</h3>
+<p><strong>Stride</strong> é o número de pixels que o filtro se move a cada passo. Um stride de 1 move o filtro 1 pixel por vez. Um stride de 2 move 2 pixels, reduzindo espacialmente o feature map pela metade.</p>
+<p><strong>Trade-off:</strong> Stride maior = feature map menor = menos computação, mas potencialmente perda de informação espacial.</p>
+<h3>Padding (Preenchimento)</h3>
+<p><strong>Padding</strong> adiciona pixels (tipicamente com valor 0) ao redor da imagem antes da convolução. Isso preserva o tamanho espacial da imagem ao aplicar filtros de borda.</p>
+<p><strong>Exemplo:</strong> Imagem 32×32 com padding=1 se torna 34×34 temporariamente, então após convolução com filtro 3×3 e stride 1, volta a 32×32.</p>
+<h3>Pooling (Subamostragem)</h3>
+<p><strong>Pooling</strong> reduz a dimensionalidade espacial combinando valores. Os tipos mais comuns são:</p>
+<ul style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Max Pooling (2×2):</strong> Pega o valor máximo de uma janela 2×2. Reduz dimensão pela metade, retém features mais importantes.</li>
+<li><strong>Average Pooling:</strong> Média dos valores na janela. Suaviza o feature map, menos comum para visão.</li>
+</ul>
+<h3>Receptive Field (Campo Receptivo)</h3>
+<p>O <strong>receptive field</strong> é a área da imagem original que influencia um pixel de saída. Camadas CNNs sucessivas aumentam o receptive field exponencialmente, permitindo que neurônios profundos "vejam" contexto global.</p>
+<p><strong>Importância para contexto visual:</strong> Para classificar uma imagem como "contendo um rosto", o neurônio final precisa "ver" toda a imagem (receptive field = tamanho da imagem). Nos primeiros pixels de uma CNN profunda, cada neurônio só "vê" 3×3 pixels inicialmente, depois 5×5, depois 7×7, etc.</p>
+<div class="abox note">
+<strong>⚠️ Gotcha Comum:</strong> Arquiteturas rasas (poucas camadas) têm receptive field pequeno. Para classificar objetos grandes ou contextos globais, você precisa de CNN profunda ou campo receptivo adequadamente aumentado via stride/pooling.
+      </div>
+</section>
+<!-- SEÇÃO 03: Arquitetura Deep Dive -->
+<section class="section" id="arquitetura">
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>AWS SERVERLESS COMPUTER VISION ARCHITECTURE</div>
+<div class="mxgraph" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;cnn_pipe_bg\&quot; value=\&quot;\&quot; style=&#x27;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;strokeWidth=1;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;860\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_pipe_title\&quot; value=\&quot;AWS SERVERLESS COMPUTER VISION ARCHITECTURE\&quot; style=&#x27;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;fontStyle=1;letterSpacing=1.5;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;35\&quot; width=\&quot;820\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_s3\&quot; value=\&quot;S3 Image Lake&amp;#10;Raw Images\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_evb\&quot; value=\&quot;EventBridge&amp;#10;Upload Event\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;180\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_lmb\&quot; value=\&quot;Lambda Preprocess&amp;#10;Bounding Box Crop\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;320\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_sm\&quot; value=\&quot;SageMaker Vision&amp;#10;ResNet Training\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;480\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_edge\&quot; value=\&quot;SageMaker Edge Manager&amp;#10;IoT Deploy\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#10b981;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;650\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_pipe_edge_0\&quot; value=\&quot;Notify\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cnn_s3\&quot; target=\&quot;cnn_evb\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_pipe_edge_1\&quot; value=\&quot;Crop\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cnn_evb\&quot; target=\&quot;cnn_lmb\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_pipe_edge_2\&quot; value=\&quot;Train\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cnn_lmb\&quot; target=\&quot;cnn_sm\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cnn_pipe_edge_3\&quot; value=\&quot;Deploy Neo\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cnn_sm\&quot; target=\&quot;cnn_edge\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}' style="max-width:100%;background:#0f172a;"></div></div>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Computer Vision &amp; Edge Manager:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> S3, EventBridge, Lambda, SageMaker Vision, SageMaker Edge Manager</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Pre-processamento serverless orientado a eventos e deploy compilado em dispositivos de borda.</li>
+<li><strong>Contexto:</strong> Inspeção visual automatizada e classificação de imagens.</li>
+</ul>
+</div>
+<svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 900 180" xmlns="http://www.w3.org/2000/svg"><text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="450" y="25">CONCEITO: OPERAÇÃO DE CONVOLUÇÃO 2D (SLIDING KERNEL &amp; FEATURE MAP)</text><rect fill="#1e293b" height="90" rx="6" stroke="var(--arch)" stroke-width="1.5" width="160" x="60" y="55"></rect><text fill="var(--arch)" font-size="11" font-weight="bold" text-anchor="middle" x="140" y="100">Input Matrix (NxN)</text><text fill="#cbd5e1" font-size="20" text-anchor="middle" x="270" y="105">✕</text><rect fill="#3b0764" height="90" rx="6" stroke="#a855f7" stroke-width="1.5" width="120" x="320" y="55"></rect><text fill="#fff" font-size="11" font-weight="bold" text-anchor="middle" x="380" y="100">Kernel (3x3)</text><text fill="#cbd5e1" font-size="20" text-anchor="middle" x="480" y="105">=</text><rect fill="#1e1b4b" height="90" rx="6" stroke="var(--spark)" stroke-width="1.5" width="140" x="520" y="55"></rect><text fill="var(--spark)" font-size="11" font-weight="bold" text-anchor="middle" x="590" y="100">Feature Map</text></svg>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Convolução 2D &amp; Feature Maps:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Matriz de Entrada, Kernel 3x3, Feature Map</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Operação convolucional deslizando o filtro sobre a matriz de entrada para extração de atributos.</li>
+<li><strong>Contexto:</strong> Fundamento de Visão Computacional.</li>
+</ul>
+</div>
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Arquitetura Típica: Convolução → Pooling → Dense</h2>
+<p>Layout padrão e fluxo de dados através de uma CNN.</p>
+</div>
+</div>
+<p>Uma CNN clássica segue este padrão:</p>
+<pre><code class="language-text">
+[Input Image: 28×28×1 (ex: MNIST)]
+           ↓
+[Conv Block 1: 32 filtros 3×3, ReLU] → 28×28×32
+           ↓
+[Max Pool 2×2] → 14×14×32
+           ↓
+[Conv Block 2: 64 filtros 3×3, ReLU] → 14×14×64
+           ↓
+[Max Pool 2×2] → 7×7×64
+           ↓
+[Conv Block 3: 128 filtros 3×3, ReLU] → 7×7×128
+           ↓
+[Max Pool 2×2] → 3×3×128
+           ↓
+[Flatten] → 1152 neurônios
+           ↓
+[Dense: 256 neurônios, ReLU] → 256
+           ↓
+[Dropout: 0.5]
+           ↓
+[Output Dense: 10 neurônios, Softmax] → 10 (ex: 10 dígitos MNIST)
+      </code></pre>
+<h3>Fluxo de Dados e Feature Maps</h3>
+<p>Cada convolução detecta padrões, e o pooling reduz ruído e aumenta eficiência computacional. As camadas iniciais detectam features simples (bordas), e camadas progressivas combinam essas para detectar features complexas.</p>
+<div class="abox success">
+<strong>✅ Resultado:</strong> O padrão Conv → Pool → Conv → Pool estratifica a extração de características, desde baixo nível até alto nível de abstração.
+      </div>
+<h3>Conexões Residuais (ResNet)</h3>
+<p>Arquiteturas modernas como <strong>ResNet</strong> (Residual Networks) adicionam "skip connections" que permitem treinar redes muito mais profundas. Sem skip connections, redes muito profundas (&gt;100 camadas) sofrem do problema do desaparecimento do gradiente durante backpropagation.</p>
+<p>Uma skip connection é uma simples adição: <code>output = f(x) + x</code>, onde <code>f(x)</code> é o bloco convolucional. Isso preserva gradientes e permite otimização eficiente.</p>
+</section>
+<!-- SEÇÃO 04: Exemplos de Código -->
+<section class="section" id="codigo">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Implementação Prática: PyTorch e TensorFlow</h2>
+<p>Código completo e testado para treinamento e inference.</p>
+</div>
+</div>
+<h3>Exemplo 1: CNN Simples em PyTorch (MNIST)</h3>
+<pre><code class="language-python">import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import datasets, transforms
+
+# 1. Definir arquitetura CNN
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super(SimpleCNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)  # 28×28 → 14×14 → 7×7
+        self.fc2 = nn.Linear(128, 10)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.pool(x)                        # 28×28 → 14×14
+        x = self.relu(self.conv2(x))
+        x = self.pool(x)                        # 14×14 → 7×7
+        x = x.view(x.size(0), -1)               # Flatten
+        x = self.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)                         # Logits
+        return x
+
+# 2. Carregar dados MNIST
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
+
+train_dataset = datasets.MNIST(root='./data', train=True, 
+                               download=True, transform=transform)
+train_loader = torch.utils.data.DataLoader(train_dataset, 
+                                          batch_size=64, shuffle=True)
+
+# 3. Treinar modelo
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = SimpleCNN().to(device)
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+criterion = nn.CrossEntropyLoss()
+
+for epoch in range(5):
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        loss = criterion(output, target)
+        loss.backward()
+        optimizer.step()
+    print(f"Epoch {epoch+1} concluída")
+
+# Salvar modelo
+torch.save(model.state_dict(), 'cnn_mnist.pth')
+      </code></pre>
+<h3>Exemplo 2: Transfer Learning com ResNet (TensorFlow/Keras)</h3>
+<pre><code class="language-python">import tensorflow as tf
+from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras import layers, models
+
+# 1. Carregar modelo ResNet50 pré-treinado em ImageNet
+base_model = ResNet50(
+    input_shape=(224, 224, 3),
+    include_top=False,
+    weights='imagenet'
+)
+
+# Congelar pesos da base (transfer learning)
+base_model.trainable = False
+
+# 2. Adicionar camadas customizadas no topo
+model = models.Sequential([
+    base_model,
+    layers.GlobalAveragePooling2D(),
+    layers.Dense(256, activation='relu'),
+    layers.Dropout(0.5),
+    layers.Dense(10, activation='softmax')  # 10 classes
+])
+
+# 3. Compilar
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# 4. Preparar dados com augmentação
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    horizontal_flip=True,
+    zoom_range=0.2
+)
+
+# Assumindo dados em diretório com subdirs: train/class1, train/class2, ...
+train_generator = train_datagen.flow_from_directory(
+    'path/to/train',
+    target_size=(224, 224),
+    batch_size=32
+)
+
+# 5. Treinar (fine-tuning)
+history = model.fit(
+    train_generator,
+    steps_per_epoch=100,
+    epochs=5,
+    verbose=1
+)
+
+# Salvar modelo
+model.save('cnn_resnet50_finetuned.h5')
+      </code></pre>
+<h3>Exemplo 3: Data Augmentation Avançada (PyTorch)</h3>
+<pre><code class="language-python">from torchvision import transforms
+from PIL import Image
+
+# Estratégia de augmentação: rotação, crop, flip, desfoque, etc.
+augmentation_transform = transforms.Compose([
+    transforms.RandomRotation(15),
+    transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+    transforms.RandomResizedCrop(size=224, scale=(0.8, 1.0)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])  # ImageNet stats
+])
+
+# Aplicar a transformações em imagem original
+image = Image.open('sample_image.jpg')
+augmented_images = [augmentation_transform(image) for _ in range(8)]
+
+# Visualizar augmentações
+import matplotlib.pyplot as plt
+fig, axes = plt.subplots(2, 4, figsize=(12, 6))
+for idx, aug_img in enumerate(augmented_images):
+    ax = axes[idx // 4, idx % 4]
+    ax.imshow(aug_img.permute(1, 2, 0))
+    ax.set_title(f'Augmentation {idx}')
+plt.show()
+      </code></pre>
+<h3>Exemplo 4: Modelo MobileNet para Dispositivos Edge</h3>
+<pre><code class="language-python">from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras import layers, models
+
+# MobileNet: versão leve para edge/mobile (1.3M parâmetros vs 25M de ResNet)
+base_model = MobileNetV2(
+    input_shape=(224, 224, 3),
+    include_top=False,
+    weights='imagenet'
+)
+
+# Arquitetura final
+model = models.Sequential([
+    base_model,
+    layers.GlobalAveragePooling2D(),
+    layers.Dense(128, activation='relu'),
+    layers.Dropout(0.2),
+    layers.Dense(10, activation='softmax')
+])
+
+# Compilar com otimizador leve
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# Info: MobileNet é ~12-20x menor que ResNet, adequado para:
+# - SageMaker edge deployment
+# - AWS Greengrass
+# - Smartphones e IoT
+
+print(f"Total parâmetros: {model.count_params()}")
+# Output: Total parâmetros: 2301706 (muito menor!)
+
+# Converter para TFLite para edge deployment
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+tflite_model = converter.convert()
+with open('mobilenet_edge.tflite', 'wb') as f:
+    f.write(tflite_model)
+      </code></pre>
+<div class="abox note">
+<strong>⚠️ Versões Testadas:</strong> PyTorch 2.0+, TensorFlow 2.13+, torchvision 0.15+
+      </div>
+</section>
+<!-- SEÇÃO 05: Arquiteturas Populares -->
+<section class="section" id="arquiteturas">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Arquiteturas Clássicas: LeNet, AlexNet, ResNet, VGG, MobileNet</h2>
+<p>Evolução histórica e características de cada arquitetura.</p>
+</div>
+</div>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>Arquitetura</th>
+<th>Ano</th>
+<th>Profundidade</th>
+<th>Parâmetros</th>
+<th>Accuracy (ImageNet)</th>
+<th>Caso de Uso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>LeNet-5</strong></td>
+<td>1998</td>
+<td>5 camadas</td>
+<td>60K</td>
+<td>N/A</td>
+<td>MNIST, reconhecimento de dígitos. Histórico.</td>
+</tr>
+<tr>
+<td><strong>AlexNet</strong></td>
+<td>2012</td>
+<td>8 camadas</td>
+<td>60M</td>
+<td>63.3% top-1</td>
+<td>Breakthrough em ImageNet. Usava GPUs. Agora obsoleto.</td>
+</tr>
+<tr>
+<td><strong>VGG-16</strong></td>
+<td>2014</td>
+<td>16 camadas</td>
+<td>138M</td>
+<td>71.3% top-1</td>
+<td>Transferência, features gerais. Computacionalmente pesado.</td>
+</tr>
+<tr>
+<td><strong>ResNet-50</strong></td>
+<td>2015</td>
+<td>50 camadas</td>
+<td>25M</td>
+<td>76.1% top-1</td>
+<td>Padrão ouro: profundidade, eficiência, features ricas. Recomendado.</td>
+</tr>
+<tr>
+<td><strong>MobileNetV2</strong></td>
+<td>2018</td>
+<td>53 camadas</td>
+<td>3.5M</td>
+<td>71.8% top-1</td>
+<td>Edge, móvel, baixa latência. AWS IoT, Greengrass.</td>
+</tr>
+<tr>
+<td><strong>EfficientNet-B0</strong></td>
+<td>2019</td>
+<td>Variável</td>
+<td>5.3M</td>
+<td>77.1% top-1</td>
+<td>Melhor trade-off accuracy/eficiência. Recomendado para novos projetos.</td>
+</tr>
+</tbody>
+</table>
+<h3>Recomendações Práticas</h3>
+<ul style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Transfer Learning Geral:</strong> ResNet-50 (melhor custo-benefício) ou EfficientNet-B0 (latest)</li>
+<li><strong>Edge/Móvel:</strong> MobileNetV2 ou MobileNetV3</li>
+<li><strong>Máxima Accuracy (recursos ilimitados):</strong> ResNet-152, EfficientNet-B7</li>
+<li><strong>Legacy/Compatibilidade:</strong> VGG-16 (features universais, mas lento)</li>
+</ul>
+</section>
+<!-- SEÇÃO 06: CNN vs Métodos Tradicionais -->
+<section class="section" id="cnn-vs-ml">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>CNN vs Machine Learning Tradicional: Quando Usar Cada Um?</h2>
+<p>Trade-offs e escolhas arquiteturais.</p>
+</div>
+</div>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>ML Tradicional (SVM, RF)</th>
+<th>CNN</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Feature Engineering</strong></td>
+<td>Manual (SIFT, HOG, etc.) - 80% do trabalho</td>
+<td>Automático (aprende features) - mais automático</td>
+</tr>
+<tr>
+<td><strong>Dados Necessários</strong></td>
+<td>100s-1000s de exemplos</td>
+<td>1000s-100,000s (mais com transfer learning: 100s)</td>
+</tr>
+<tr>
+<td><strong>Computação</strong></td>
+<td>CPU suficiente, rápido</td>
+<td>GPU recomendado, mais lento no treinamento</td>
+</tr>
+<tr>
+<td><strong>Accuracy (ImageNet style)</strong></td>
+<td>~50-60% top-1</td>
+<td>75%+ (com deep learning)</td>
+</tr>
+<tr>
+<td><strong>Interpretabilidade</strong></td>
+<td>Alta (feature importance)</td>
+<td>Baixa (caixa-preta, mas técnicas como CAM ajudam)</td>
+</tr>
+<tr>
+<td><strong>Implementação</strong></td>
+<td>Rápida, simples (sklearn)</td>
+<td>Mais complexa, requer experiência</td>
+</tr>
+</tbody>
+</table>
+<h3>Matriz de Decisão</h3>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Use ML Tradicional se:</h4>
+<ul style="margin-left: 16px; margin-top: 12px;">
+<li>Você tem <strong>poucos dados</strong> (&lt;100 exemplos)</li>
+<li>Precisa de <strong>rápida implementação</strong> e produção</li>
+<li>Requer <strong>interpretabilidade alta</strong> (requerimento regulatório)</li>
+<li>Imagens são <strong>pequenas ou simples</strong> (ex: 32×32)</li>
+<li>CPU apenas, sem GPU disponível</li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>Use CNN se:</h4>
+<ul style="margin-left: 16px; margin-top: 12px;">
+<li>Você tem <strong>muitos dados</strong> ou acesso a transfer learning</li>
+<li>Imagens são <strong>grandes, complexas ou naturais</strong></li>
+<li>Pode tolerar <strong>latência de treinamento</strong></li>
+<li>GPU/TPU disponível (AWS SageMaker, Vertex AI)</li>
+<li>Precisa de <strong>máxima accuracy</strong></li>
+</ul>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 07: Caso de Uso Financeiro -->
+<section class="section" id="caso-financeiro">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">07</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Aplicação Financeira: OCR de Documentos e Classificação de Cheques</h2>
+<p>CNN para processamento de documentos bancários e transações.</p>
+</div>
+</div>
+<h3>Caso Real: Automatizar Processamento de Cheques</h3>
+<p>Um banco processa 50,000 cheques por dia. Cada cheque é escaneado e precisa ser automaticamente:</p>
+<ul style="margin-left: 20px; margin-bottom: 16px;">
+<li>Classificado por tipo (pessoal, corporativo, pós-datado)</li>
+<li>Extraído: Número da conta, valor, favorecido, assinatura</li>
+<li>Validado: Assinatura legítima? Cheque duplicado?</li>
+</ul>
+<p><strong>Solução CNN:</strong></p>
+<pre><code class="language-python">import torch
+import torch.nn as nn
+from torchvision import transforms
+from PIL import Image
+
+# 1. Modelo CNN para classificação de cheques
+class CheckClassifier(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(32, 64, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(64, 128, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2)
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(128 * 28 * 28, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, 3)  # 3 classes: pessoal, corporativo, pós-datado
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
+
+# 2. Processar imagem de cheque
+model = CheckClassifier()
+model.load_state_dict(torch.load('check_classifier.pth'))
+model.eval()
+
+check_image = Image.open('check_scan.jpg')
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
+])
+
+input_tensor = transform(check_image).unsqueeze(0)
+with torch.no_grad():
+    output = model(input_tensor)
+    probabilities = torch.softmax(output, dim=1)
+    predicted_class = torch.argmax(probabilities, dim=1).item()
+
+class_names = ['Pessoal', 'Corporativo', 'Pós-datado']
+print(f"Classificação: {class_names[predicted_class]} ({probabilities[0][predicted_class]:.2%})")
+
+# 3. OCR para extrair campos (integrando com Textract AWS)
+import boto3
+textract = boto3.client('textract', region_name='us-east-1')
+
+with open('check_scan.jpg', 'rb') as f:
+    response = textract.detect_document_text(
+        Document={'Bytes': f.read()}
+    )
+
+# Extrair valores de campos específicos
+extracted_text = [block['Text'] for block in response['Blocks']
+                   if block['BlockType'] == 'LINE']
+print("Texto extraído:", extracted_text)
+      </code></pre>
+<h3>Arquitetura End-to-End no AWS</h3>
+<div class="abox success">
+<strong>✅ Pipeline Completo:</strong><br/>
+        S3 (Scan Upload) → Lambda (Trigger) → SageMaker Real-time Endpoint (CNN) → Textract (OCR) → DynamoDB (Resultado) → Revisão Humana
+      </div>
+<p><strong>Benefícios:</strong></p>
+<ul style="margin-left: 20px; margin-bottom: 16px;">
+<li>Redução de 80% no tempo de processamento manual</li>
+<li>Acurácia &gt;99% em classificação (após fine-tuning)</li>
+<li>Escalável: +10,000 cheques/hora com SageMaker auto-scaling</li>
+<li>Rastreabilidade completa: audit trail para conformidade</li>
+</ul>
+<div class="abox info">
+<strong>ℹ️ Integração Complementar:</strong> Veja <a href="../../pages/financas/contabilidade-razonetes.html">Contabilidade &amp; Razonetes</a> para como integrar este pipeline com sistemas contábeis.
+      </div>
+</section>
+<!-- SEÇÃO 08: Referências -->
+<section class="section" id="referencias">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">08</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Referências &amp; Leitura Complementar</h2>
+</div>
+</div>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--aws-lambda);">
+<h4>📘 Documentação Oficial</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/images-build-model.html" rel="noopener" target="_blank">SageMaker Built-in Image Classification</a></li>
+<li><a href="https://pytorch.org/vision/stable/" rel="noopener" target="_blank">PyTorch Torchvision</a></li>
+<li><a href="https://www.tensorflow.org/api_docs/python/tf/keras/applications" rel="noopener" target="_blank">TensorFlow Keras Applications</a></li>
+<li><a href="https://docs.aws.amazon.com/textract/" rel="noopener" target="_blank">AWS Textract (OCR)</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>📚 Papers Fundamentais</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="https://arxiv.org/abs/1512.03385" rel="noopener" target="_blank">Deep Residual Learning (ResNet - He et al., 2015)</a></li>
+<li><a href="https://arxiv.org/abs/1409.1556" rel="noopener" target="_blank">Very Deep Networks (VGG - Simonyan &amp; Zisserman, 2014)</a></li>
+<li><a href="https://arxiv.org/abs/1704.04861" rel="noopener" target="_blank">MobileNets: Efficient Convolutional Networks (2017)</a></li>
+<li><a href="https://arxiv.org/abs/1905.11946" rel="noopener" target="_blank">EfficientNet: Rethinking Model Scaling (Tan &amp; Le, 2019)</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>🔗 Tópicos Relacionados</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="../../pages/operacoes/deep-learning-fundamentals.html">Deep Learning Fundamentals</a></li>
+<li><a href="../../pages/engenharia/genai-multimodal-cognitivo.html">Modelos Multimodais &amp; Vision</a></li>
+<li><a href="../../pages/operacoes/transformers-attention.html">Transformers &amp; Attention</a></li>
+<li><a href="../../pages/engenharia/genai-fundamentos.html">GenAI Fundamentos</a></li>
+</ul>
+</div>
+</div>
+<div class="abox note">
+<strong>📅 Última atualização:</strong> Agosto 2026 | <strong>Versão do conteúdo:</strong> 1.0 | <strong>Frameworks testados:</strong> PyTorch 2.0+, TensorFlow 2.13+, torchvision 0.15+
+      </div>
+</section>
+</main>
+</div>
+<!-- Scripts -->
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>

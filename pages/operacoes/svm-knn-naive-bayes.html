@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Support Vector Machines, k-Nearest Neighbors e Naive Bayes. Algoritmos clássicos de classificação. Teoria, kernel trick, distance metrics e implementação em produção na AWS." name="description"/>
+<meta content="SVM, Support Vector Machines, k-NN, Naive Bayes, Classificação, Machine Learning, Kernel Trick, AWS SageMaker" name="keywords"/>
+<title>SVM, k-NN &amp; Naive Bayes | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="SVM, k-NN &amp; Naive Bayes | AWS Data Mastery" property="og:title"/>
+<meta content="Algoritmos clássicos de classificação: teoria, implementação e aplicações em produção." property="og:description"/>
+<meta content="website" property="og:type"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero" style="border-left: 6px solid var(--arch);">
+<div class="hero-ey">Algoritmos Clássicos: Classificação</div>
+<h1>Support Vector Machines, <em>k-NN &amp; Naive Bayes</em></h1>
+<p class="hero-d">Três pilares da classificação supervisionada. De margens de separação a distâncias euclidianas e probabilidade bayesiana. Implementação com scikit-learn, SageMaker e comparação prática para detecção de fraude e spam.</p>
+<div class="pills">
+<span class="pill">Classificação</span>
+<span class="pill">Machine Learning</span>
+<span class="pill">Produção</span>
+<span class="pill">Python</span>
+<span class="pill">Avançado</span>
+</div>
+</div>
+<main class="main-content">
+<!-- SEÇÃO 01: Introdução a SVM -->
+<section class="section" id="introducao-svm">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>SVM: Support Vector Machines - Margens Máximas</h2>
+<p>A ideia elegante por trás de um dos algoritmos mais poderosos em ML clássico.</p>
+</div>
+</div>
+<p><strong>Support Vector Machine (SVM)</strong> é um algoritmo de classificação que busca encontrar o hiperplano (superfície) que maximiza a margem entre as duas classes. Diferente de modelos que apenas tentam acertar a classificação, SVM busca acertar <em>com confiança máxima</em>.</p>
+<div class="abox info">
+<strong>ℹ️ Definição Técnica:</strong> SVM resolve um problema de otimização: maximize a margem entre classes sujeito à restrição de que nenhum ponto está no lado errado da fronteira de decisão. Isso resulta em um modelo robusto que generaliza bem.
+      </div>
+<p><strong>Por que margens importam?</strong> Imagine dois classificadores:</p>
+<ul style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Classificador A:</strong> Separação perfeita (100% acurácia no treino) mas com margem pequena</li>
+<li><strong>Classificador B:</strong> Separação com 98% acurácia no treino mas com margem grande</li>
+</ul>
+<p>No teste, o Classificador B quase sempre vence porque: quando dados novos chegam (mesmo com pequeno ruído), ele ainda está longe da fronteira de decisão. Isso é <strong>regularização implícita</strong>.</p>
+<p><strong>Três componentes-chave:</strong></p>
+<ol style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Support Vectors:</strong> Os pontos de dados que definem a margem. Apenas esses importam para a decisão; os pontos longe da fronteira são ignorados.</li>
+<li><strong>Margem:</strong> A distância entre o hiperplano e os support vectors mais próximos.</li>
+<li><strong>Kernel Trick:</strong> Transforma dados não-linearmente separáveis em espaço de alta dimensão onde se tornam separáveis linearmente.</li>
+</ol>
+</section>
+<!-- SEÇÃO 02: Conceitos Fundamentais -->
+<section class="section" id="conceitos-svm">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Conceitos: SVM Linear, Kernel Trick &amp; Soft Margins</h2>
+<p>Da teoria simples à prática robusta: hard margins, soft margins e kernels.</p>
+</div>
+</div>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--arch);">
+<h4>🔲 SVM Linear (Hard Margin)</h4>
+<p>Para dados perfeitamente separáveis. Encontra o hiperplano que maximiza a distância até os pontos mais próximos. Otimização: min ||w||² sujeito a y_i(w·x_i + b) ≥ 1 para todos os pontos.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>🎯 Soft Margin &amp; Regularização</h4>
+<p>Dados reais raramente são perfeitamente separáveis. Soft margin permite alguns pontos do lado errado da margem, controlado por parâmetro C. Quanto maior C, mais penalty para erros; quanto menor, mais tolerância.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>⚡ Kernel Trick: Espaço de Alta Dimensão</h4>
+<p>Sem calcular explicitamente a transformação φ(x), o kernel k(x_i, x_j) = φ(x_i)·φ(x_j) calcula o produto escalar no espaço transformado. Kernels comuns: Linear, RBF, Polynomial, Sigmoid.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>🔮 Dual Problem &amp; Support Vectors</h4>
+<p>A solução SVM depende apenas de produtos escalares entre vetores (x_i·x_j). Isso permite: (1) uso eficiente de kernels, (2) sparse solution (só support vectors importam). Para 10k pontos, talvez 100-500 sejam support vectors.</p>
+</div>
+</div>
+<div class="abox note">
+<strong>⚠️ Importante:</strong> SVM não retorna probabilidades por padrão, apenas decisões (+1 ou -1). Para probabilidades, use Platt Scaling ou cross-validação no output.
+      </div>
+</section>
+<!-- SEÇÃO 03: Arquitetura e Decision Boundaries -->
+<section class="section" id="arquitetura-svm">
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>SERVERLESS INFERENCE FOR CLASSICAL ML ALGORITHMS</div>
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>ARQUITETURA TÉCNICA DA NUVEM AWS</div>
+<div class="mxgraph" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;classical_ml_pipe_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;strokeWidth=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;860\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;classical_ml_pipe_title\&quot; value=\&quot;SERVERLESS INFERENCE FOR CLASSICAL ML ALGORITHMS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;35\&quot; width=\&quot;820\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cml_s3\&quot; value=\&quot;S3 Data Lake&amp;#10;Datasets\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cml_proc\&quot; value=\&quot;SageMaker Processing&amp;#10;Scikit-Learn Job\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;210\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cml_art\&quot; value=\&quot;S3 Model Artifacts&amp;#10;Joblib Weights\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;380\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cml_lmb\&quot; value=\&quot;Lambda Container&amp;#10;Lightweight Serving\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;540\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;cml_api\&quot; value=\&quot;API Gateway&amp;#10;REST Client\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.apigateway;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;700\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;classical_ml_pipe_edge_0\&quot; value=\&quot;Train Job\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cml_s3\&quot; target=\&quot;cml_proc\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;classical_ml_pipe_edge_1\&quot; value=\&quot;Save Model\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cml_proc\&quot; target=\&quot;cml_art\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;classical_ml_pipe_edge_2\&quot; value=\&quot;Load Artifact\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cml_art\&quot; target=\&quot;cml_lmb\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;classical_ml_pipe_edge_3\&quot; value=\&quot;Expose\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cml_lmb\&quot; target=\&quot;cml_api\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}' style="max-width:100%;background:#0f172a;"></div>
+</div><div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Arquitetura AWS — Svm Knn Naive Bayes:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> AWS Lakehouse, Amazon S3, AWS Lambda, Amazon SageMaker</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Fluxo contínuo de dados com governança e observabilidade em nuvem.</li>
+<li><strong>Contexto:</strong> Diagrama técnico de referência operacional.</li>
+</ul>
+</div>
+</div>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — SageMaker Processing &amp; Lambda Container:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> S3, SageMaker Processing, AWS Lambda Container, API Gateway</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Treinamento batch no SageMaker e serving serverless em containers Lambda leves.</li>
+<li><strong>Contexto:</strong> Implantação de baixo custo para algoritmos clássicos.</li>
+</ul>
+</div>
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Arquitetura: Decision Boundaries &amp; Support Vectors</h2>
+<p>Visualização de como SVM separa dados em espaço 2D e transformações via kernel.</p>
+</div>
+</div>
+<p>A figura abaixo mostra como SVM linear e não-linear operam:</p>
+<svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+<!-- LINEAR SVM -->
+<g id="linear-section">
+<text fill="#cbd5e1" font-size="14" font-weight="bold" text-anchor="middle" x="150" y="25">Linear SVM (Hard Margin)</text>
+<!-- Data points class 1 -->
+<circle cx="80" cy="80" fill="#16a34a" r="3"></circle>
+<circle cx="100" cy="70" fill="#16a34a" r="3"></circle>
+<circle cx="70" cy="100" fill="#16a34a" r="3"></circle>
+<!-- Data points class 2 -->
+<circle cx="200" cy="150" fill="#dc2626" r="3"></circle>
+<circle cx="220" cy="140" fill="#dc2626" r="3"></circle>
+<circle cx="210" cy="160" fill="#dc2626" r="3"></circle>
+<!-- Decision boundary -->
+<line stroke="var(--accent)" stroke-width="2" x1="50" x2="250" y1="120" y2="120"></line>
+<!-- Margins (dashed lines) -->
+<line opacity="0.5" stroke="var(--accent)" stroke-dasharray="3,3" stroke-width="1" x1="50" x2="250" y1="100" y2="100"></line>
+<line opacity="0.5" stroke="var(--accent)" stroke-dasharray="3,3" stroke-width="1" x1="50" x2="250" y1="140" y2="140"></line>
+<!-- Support vectors highlight -->
+<circle cx="70" cy="100" fill="none" r="8" stroke="var(--spark)" stroke-width="2"></circle>
+<circle cx="210" cy="160" fill="none" r="8" stroke="var(--spark)" stroke-width="2"></circle>
+<!-- Margin annotation -->
+<line stroke="var(--spark)" stroke-width="2" x1="270" x2="270" y1="100" y2="140"></line>
+<polygon fill="var(--spark)" points="270,100 265,105 275,105"></polygon>
+<polygon fill="var(--spark)" points="270,140 265,135 275,135"></polygon>
+<text fill="var(--spark)" font-size="11" font-weight="bold" x="290" y="125">Margin</text>
+</g>
+<!-- NON-LINEAR SVM -->
+<g id="nonlinear-section">
+<text fill="#cbd5e1" font-size="14" font-weight="bold" text-anchor="middle" x="600" y="25">Non-Linear SVM (RBF Kernel)</text>
+<!-- XOR-like data -->
+<!-- Class 1: corners -->
+<circle cx="520" cy="60" fill="#16a34a" r="3"></circle>
+<circle cx="560" cy="60" fill="#16a34a" r="3"></circle>
+<circle cx="520" cy="100" fill="#16a34a" r="3"></circle>
+<circle cx="560" cy="100" fill="#16a34a" r="3"></circle>
+<!-- Class 2: center -->
+<circle cx="540" cy="80" fill="#dc2626" r="3"></circle>
+<circle cx="535" cy="75" fill="#dc2626" r="3"></circle>
+<circle cx="545" cy="85" fill="#dc2626" r="3"></circle>
+<!-- Curved decision boundary (approximated with path) -->
+<circle cx="540" cy="80" fill="none" r="25" stroke="var(--accent)" stroke-width="2"></circle>
+<circle cx="540" cy="80" fill="none" opacity="0.5" r="32" stroke="var(--accent)" stroke-dasharray="3,3" stroke-width="1"></circle>
+<!-- Support vectors -->
+<circle cx="520" cy="60" fill="none" r="8" stroke="var(--spark)" stroke-width="2"></circle>
+<circle cx="545" cy="85" fill="none" r="8" stroke="var(--spark)" stroke-width="2"></circle>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="540" y="135">Boundary curves via kernel</text>
+</g>
+<!-- TRANSFORMATION SECTION -->
+<text fill="#cbd5e1" font-size="13" font-weight="bold" text-anchor="middle" x="150" y="200">Kernel Transformation φ: ℝ² → ℝᴺ</text>
+<!-- Before transformation -->
+<circle cx="100" cy="240" fill="#16a34a" r="3"></circle>
+<circle cx="120" cy="250" fill="#16a34a" r="3"></circle>
+<circle cx="130" cy="240" fill="#dc2626" r="3"></circle>
+<circle cx="150" cy="250" fill="#dc2626" r="3"></circle>
+<rect fill="none" height="50" stroke="var(--muted)" stroke-dasharray="3,3" stroke-width="1" width="100" x="80" y="220"></rect>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="130" y="310">Original: Non-separable</text>
+<!-- Arrow -->
+<line stroke="var(--accent)" stroke-width="2" x1="200" x2="320" y1="245" y2="245"></line>
+<polygon fill="var(--accent)" points="320,245 310,240 310,250"></polygon>
+<!-- After transformation -->
+<circle cx="380" cy="220" fill="#16a34a" r="3"></circle>
+<circle cx="400" cy="210" fill="#16a34a" r="3"></circle>
+<circle cx="420" cy="270" fill="#dc2626" r="3"></circle>
+<circle cx="440" cy="280" fill="#dc2626" r="3"></circle>
+<line stroke="var(--accent)" stroke-width="1" x1="350" x2="470" y1="200" y2="200"></line>
+<line stroke="var(--accent)" stroke-width="1" x1="350" x2="470" y1="290" y2="290"></line>
+<rect fill="none" height="110" stroke="var(--accent)" stroke-dasharray="3,3" stroke-width="1" width="150" x="330" y="190"></rect>
+<text fill="var(--accent)" font-size="10" text-anchor="middle" x="405" y="320">High-dim space: Linearly separable</text>
+</svg>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Conceito Lógico / Algorítmico:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Representação Vetorial, Estrutura Neural / Árvore de Decisão</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Fluxo conceitual de dados e abstração matemática.</li>
+<li><strong>Contexto:</strong> Diagrama ilustrativo para o tema em questão.</li>
+</ul>
+</div>
+<p style="margin-top: 20px; font-size: 0.9rem; color: var(--muted);">Left: Linear SVM encontra margem máxima entre classes. Support vectors (círculos vazios) definem a margem. Right: RBF kernel cria decision boundary não-linear. Abaixo: Kernel trick transforma dados para espaço separável sem computar explicitamente a transformação.</p>
+</section>
+<!-- SEÇÃO 04: Exemplos de Código -->
+<section class="section" id="codigo-exemplos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Implementação Prática: Código em Produção</h2>
+<p>Exemplos funcionais: Linear SVM, Kernel SVM, k-NN e Naive Bayes.</p>
+</div>
+</div>
+<h3>Exemplo 1: SVM Linear para Classificação Binária (Scikit-learn)</h3>
+<p>Detecção de fraude em transações bancárias:</p>
+<pre><code class="language-python">import numpy as np
+import pandas as pd
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+# 1. CARREGAR DADOS
+# Exemplo: dataset de transações bancárias
+X = np.random.randn(10000, 15)  # 15 features (montante, hora, país, etc)
+y = (X[:, 0] &gt; 0).astype(int)    # 1 = fraude, 0 = legítimo (simplificado)
+
+# 2. SPLIT TREINO/TESTE
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# 3. NORMALIZAR (ESSENCIAL PARA SVM)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 4. TREINAR SVM LINEAR COM SOFT MARGIN
+svm_linear = SVC(
+    kernel='linear',
+    C=1.0,              # Regularização: balance entre margin e erros
+    random_state=42,
+    probability=True    # Para outputs de probabilidade
+)
+svm_linear.fit(X_train_scaled, y_train)
+
+# 5. PREDIÇÕES
+y_pred = svm_linear.predict(X_test_scaled)
+y_pred_proba = svm_linear.decision_function(X_test_scaled)
+
+# 6. AVALIAÇÃO
+print(f"Acurácia: {accuracy_score(y_test, y_pred):.4f}")
+print(f"Precisão: {precision_score(y_test, y_pred):.4f}")
+print(f"Recall: {recall_score(y_test, y_pred):.4f}")
+print(f"F1-Score: {f1_score(y_test, y_pred):.4f}")
+print(f"Número de support vectors: {len(svm_linear.support_vectors_)}")
+print(f"Proporção do total: {len(svm_linear.support_vectors_) / len(X_train):.2%}")</code></pre>
+<h3>Exemplo 2: Kernel SVM (RBF) para Dados Não-Lineares</h3>
+<p>Classificação com padrões complexos (ex: detecção de anomalia em sistemas):</p>
+<pre><code class="language-python">from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+
+# 1. DADOS COM PADRÃO NÃO-LINEAR
+# Exemplo: dataset de atividades de sistema (CPU, Memória, Disco)
+X = np.random.randn(5000, 10)
+# Anomalia: quando 3+ features estão simultaneamente elevadas
+y = ((np.abs(X[:, 0]) &gt; 1.5) &amp; (np.abs(X[:, 1]) &gt; 1.5) &amp; (np.abs(X[:, 2]) &gt; 1.5)).astype(int)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# 2. NORMALIZAR
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 3. TUNE HIPERPARÂMETROS COM GRID SEARCH
+param_grid = {
+    'C': [0.1, 1, 10, 100],
+    'gamma': ['scale', 'auto', 0.001, 0.01, 0.1, 1]
+}
+
+svm_rbf = SVC(kernel='rbf', random_state=42)
+grid_search = GridSearchCV(
+    svm_rbf,
+    param_grid,
+    cv=5,
+    n_jobs=-1,
+    scoring='f1'  # Importante: otimizar F1 para datasets desbalanceados
+)
+grid_search.fit(X_train_scaled, y_train)
+
+print(f"Melhor C: {grid_search.best_params_['C']}")
+print(f"Melhor gamma: {grid_search.best_params_['gamma']}")
+print(f"Melhor F1-score: {grid_search.best_score_:.4f}")
+
+# 4. AVALIAÇÃO NO TESTE
+best_model = grid_search.best_estimator_
+y_pred = best_model.predict(X_test_scaled)
+print(f"F1-Score (teste): {f1_score(y_test, y_pred):.4f}")</code></pre>
+<h3>Exemplo 3: k-Nearest Neighbors (k-NN) com Distance Metrics</h3>
+<p>Recomendação de produtos similares para clientes:</p>
+<pre><code class="language-python">from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_score
+
+# 1. DADOS: Características de clientes (análise de perfil)
+# Features: idade, renda, frequência de compra, avg_gasto, categoria_preferida, etc
+X = np.random.randn(3000, 8)
+y = (X[:, 0] + X[:, 1] &gt; 0).astype(int)  # 1 = cliente premium, 0 = regular
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# 2. NORMALIZAR (k-NN é sensível a escala)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 3. TESTAR DIFERENTES k E MÉTRICAS DE DISTÂNCIA
+k_values = [3, 5, 7, 9, 11, 15]
+metrics = ['euclidean', 'manhattan', 'minkowski']
+
+best_score = 0
+best_k = 0
+best_metric = ''
+
+for k in k_values:
+    for metric in metrics:
+        knn = KNeighborsClassifier(n_neighbors=k, metric=metric)
+
+        # Cross-validation no treino
+        scores = cross_val_score(knn, X_train_scaled, y_train, cv=5, scoring='f1')
+        avg_score = scores.mean()
+
+        if avg_score &gt; best_score:
+            best_score = avg_score
+            best_k = k
+            best_metric = metric
+
+        print(f"k={k}, metric='{metric}': {avg_score:.4f} (+/- {scores.std():.4f})")
+
+# 4. TREINAR E AVALIAR COM MELHORES PARÂMETROS
+knn_best = KNeighborsClassifier(n_neighbors=best_k, metric=best_metric)
+knn_best.fit(X_train_scaled, y_train)
+
+y_pred = knn_best.predict(X_test_scaled)
+print(f"\nMelhor configuração: k={best_k}, metric='{best_metric}'")
+print(f"Acurácia: {accuracy_score(y_test, y_pred):.4f}")
+
+# 5. PREDIÇÃO COM PROBABILIDADES
+y_pred_proba = knn_best.predict_proba(X_test_scaled)
+print(f"Exemplo: próximo cliente é classe 1 com {y_pred_proba[0, 1]:.2%} confiança")</code></pre>
+<h3>Exemplo 4: Naive Bayes para Classificação Rápida</h3>
+<p>Filtragem de spam em emails bancários:</p>
+<pre><code class="language-python">from sklearn.naive_bayes import GaussianNB, MultinomialNB
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import Pipeline
+
+# VERSÃO 1: TEXTO (TF-IDF + Multinomial Naive Bayes)
+# Dados: emails com labels spam/não-spam
+
+emails = [
+    "Clique aqui para ganhar prêmio!",
+    "Sua conta foi atualizada",
+    "OFERTA ESPECIAL: 50% off!",
+    "Confirme suas informações",
+    "Não perca! Tempo limitado!",
+    "Seu extrato bancário anexado",
+    "Segurança: verifique atividade",
+    "WIN FREE MONEY NOW",
+]
+
+labels = [1, 0, 1, 0, 1, 0, 0, 1]  # 1 = spam, 0 = legítimo
+
+# Pipeline: Vetorizar + Classificar
+pipeline = Pipeline([
+    ('tfidf', TfidfVectorizer(max_features=100)),
+    ('nb', MultinomialNB())
+])
+
+pipeline.fit(emails, labels)
+
+# Predição
+test_email = "Click here to claim your prize!"
+prediction = pipeline.predict([test_email])[0]
+probability = pipeline.named_steps['nb'].predict_proba(
+    pipeline.named_steps['tfidf'].transform([test_email])
+)[0]
+
+print(f"Email: '{test_email}'")
+print(f"Classificação: {'SPAM' if prediction == 1 else 'LEGÍTIMO'}")
+print(f"Confiança SPAM: {probability[1]:.2%}")
+print(f"Confiança LEGÍTIMO: {probability[0]:.2%}")
+
+# VERSÃO 2: DADOS NUMÉRICOS (Gaussian Naive Bayes)
+# Características: comprimento do email, nº de links, nº de maiúsculas, etc
+
+X_email = np.array([
+    [150, 5, 30],  # legítimo: curto, poucos links, poucas maiúsculas
+    [200, 15, 80], # spam: médio, muitos links, muitas maiúsculas
+    [100, 2, 10],  # legítimo
+    [250, 20, 95], # spam
+])
+
+y_email = np.array([0, 1, 0, 1])
+
+gnb = GaussianNB()
+gnb.fit(X_email, y_email)
+
+test_sample = np.array([[180, 12, 70]])
+pred = gnb.predict(test_sample)[0]
+proba = gnb.predict_proba(test_sample)[0]
+
+print(f"\nEmail features [len={test_sample[0,0]}, links={test_sample[0,1]}, caps={test_sample[0,2]}]")
+print(f"Predição: {'SPAM' if pred == 1 else 'LEGÍTIMO'}")
+print(f"P(SPAM) = {proba[1]:.2%}, P(LEGÍTIMO) = {proba[0]:.2%}")</code></pre>
+<h3>Exemplo 5: AWS SageMaker Deployment - SVM em Produção</h3>
+<p>Treinar e servir modelo SVM via SageMaker endpoint:</p>
+<pre><code class="language-python">import boto3
+import sagemaker
+from sagemaker.estimator import Estimator
+from sagemaker.serializers import CSVSerializer
+
+# Setup
+session = sagemaker.Session()
+role = sagemaker.get_execution_role()
+bucket = session.default_bucket()
+region = session.boto_region_name
+
+# 1. PREPARAR DADOS EM S3
+train_data_s3 = 's3://{}/ml/fraud/train/data.csv'.format(bucket)
+# CSV format: y (0/1), feature1, feature2, ..., feature15
+
+# 2. CRIAR ESTIMADOR SAGEMAKER PARA SVM
+# Usar imagem pré-built da AWS para SVM
+svm_estimator = Estimator(
+    image_uri=sagemaker.image_uris.retrieve('sagemaker-scikit-learn', region, version='0.23-1'),
+    role=role,
+    instance_count=1,
+    instance_type='ml.m5.xlarge',
+    output_path='s3://{}/ml/fraud/models/'.format(bucket),
+    sagemaker_session=session,
+    hyperparameters={
+        'sagemaker_program': 'train.py',  # Seu script de treinamento
+        'sagemaker_python_version': 'python3'
+    }
+)
+
+# 3. TREINAR
+svm_estimator.fit({'training': train_data_s3})
+
+# 4. DEPLOY COMO ENDPOINT
+predictor = svm_estimator.deploy(
+    initial_instance_count=1,
+    instance_type='ml.t2.medium',
+    serializer=CSVSerializer(),  # Aceita CSV
+    content_type='text/csv'
+)
+
+# 5. FAZER PREDIÇÕES EM TEMPO REAL
+new_transaction = '45.50,1.0,0.5,2.1,0.8,1.2,0.3,1.5,0.9,0.7,1.1,0.2,0.6,0.4,1.8'
+response = predictor.predict(new_transaction)
+
+print(f"Transação features: {new_transaction}")
+print(f"Predição SVM: {response}")
+print(f"Classificação: {'FRAUDE DETECTADA ⚠️' if response[0] &gt; 0.5 else 'Legítimo ✅'}")</code></pre>
+</section>
+<!-- SEÇÃO 05: Comparação de Kernels -->
+<section class="section" id="kernels-comparison">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Kernels SVM: Comparação Prática</h2>
+<p>Linear, RBF, Polynomial e quando usar cada um.</p>
+</div>
+</div>
+<div class="comparison-table">
+<table>
+<tr>
+<th>Kernel</th>
+<th>Fórmula</th>
+<th>Quando Usar</th>
+<th>Vantagens</th>
+<th>Desvantagens</th>
+</tr>
+<tr>
+<td><strong>Linear</strong></td>
+<td>k(x,y) = x·y</td>
+<td>Dados linearmente separáveis ou muitas features</td>
+<td>Rápido, interpretável, usa poucos SV</td>
+<td>Falha em padrões não-lineares</td>
+</tr>
+<tr>
+<td><strong>RBF</strong></td>
+<td>k(x,y) = exp(-γ||x-y||²)</td>
+<td>Padrões não-lineares complexos (default)</td>
+<td>Versátil, funciona bem na maioria dos casos</td>
+<td>Lento em grandes datasets, γ sensível</td>
+</tr>
+<tr>
+<td><strong>Polynomial</strong></td>
+<td>k(x,y) = (αx·y + c)ᵈ</td>
+<td>Quando há relações polinomiais entre features</td>
+<td>Captura interações de features</td>
+<td>Caro computacionalmente, d é crítico</td>
+</tr>
+<tr>
+<td><strong>Sigmoid</strong></td>
+<td>k(x,y) = tanh(αx·y + c)</td>
+<td>Rara; às vezes similar a redes neurais simples</td>
+<td>Conexão com redes neurais</td>
+<td>Pouco confiável; necessita tuning fino</td>
+</tr>
+</table>
+</div>
+<div class="abox success">
+<strong>✅ Recomendação:</strong> Comece com RBF kernel. Se tiver muitas features (&gt;1000), tente Linear. Se souber de padrões polinomiais específicos, teste Polynomial com degrees 2-3.
+      </div>
+</section>
+<!-- SEÇÃO 06: Comparação SVM vs k-NN vs Naive Bayes -->
+<section class="section" id="comparacao-algoritmos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Qual Usar? SVM vs k-NN vs Naive Bayes</h2>
+<p>Trade-offs práticos e quando cada algoritmo brilha.</p>
+</div>
+</div>
+<div class="comparison-table">
+<table>
+<tr>
+<th>Critério</th>
+<th>SVM</th>
+<th>k-NN</th>
+<th>Naive Bayes</th>
+</tr>
+<tr>
+<td><strong>Velocidade Treino</strong></td>
+<td>📊 Médio (O(n²) a O(n³))</td>
+<td>⚡ Muito rápido (O(n))</td>
+<td>⚡⚡ Mais rápido (O(n))</td>
+</tr>
+<tr>
+<td><strong>Velocidade Predição</strong></td>
+<td>⚡ Rápido (depende de SV)</td>
+<td>📊 Lento (compara com todos)</td>
+<td>⚡⚡ Ultra rápido</td>
+</tr>
+<tr>
+<td><strong>Memória</strong></td>
+<td>💾 Baixa (só SV)</td>
+<td>💾💾 Alta (guarda todos)</td>
+<td>💾 Muito baixa</td>
+</tr>
+<tr>
+<td><strong>Não-linearidade</strong></td>
+<td>🎯 Excelente (kernels)</td>
+<td>🎯🎯 Ótimo (por natureza)</td>
+<td>❌ Ruim (assume independência)</td>
+</tr>
+<tr>
+<td><strong>Escalabilidade</strong></td>
+<td>📊 Médio (SV selection)</td>
+<td>❌ Ruim (brute force)</td>
+<td>🎯 Excelente</td>
+</tr>
+<tr>
+<td><strong>Interpretabilidade</strong></td>
+<td>📊 Média (support vectors)</td>
+<td>🎯 Ótima (exemplos)</td>
+<td>🎯🎯 Excelente (probabilidades)</td>
+</tr>
+<tr>
+<td><strong>Datasets Pequenos</strong></td>
+<td>🎯 Excelente</td>
+<td>❌ Não confiável (overfitting)</td>
+<td>🎯 Bom</td>
+</tr>
+<tr>
+<td><strong>Datasets Grandes</strong></td>
+<td>❌ Lento</td>
+<td>❌ Muito lento</td>
+<td>⚡ Perfeito</td>
+</tr>
+</table>
+</div>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--arch);">
+<h4>🏆 Use SVM Quando:</h4>
+<ul>
+<li>Dados medianamente grandes (1k-100k)</li>
+<li>Poucos features ou features bem espaçados</li>
+<li>Padrões não-lineares significativos</li>
+<li>Qualidade de classificação é crítica</li>
+<li>Exemplo: detecção de fraude, diagnóstico médico</li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>🔍 Use k-NN Quando:</h4>
+<ul>
+<li>Dataset pequeno a médio</li>
+<li>Dados têm estrutura local clara</li>
+<li>Interpretabilidade importa ("vizinhos similares")</li>
+<li>Padrões complexos localizados</li>
+<li>Exemplo: sistemas de recomendação, busca por similaridade</li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>⚡ Use Naive Bayes Quando:</h4>
+<ul>
+<li>Dados muito grandes (M+ registros)</li>
+<li>Features são independentes (ou aproximadamente)</li>
+<li>Velocidade é crítica (treino/predição rápida)</li>
+<li>Probabilidades interpretáveis são necessárias</li>
+<li>Exemplo: spam detection, análise de sentimento, categorização de documentos</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 07: Casos de Uso Reais - Financeiro -->
+<section class="section" id="casos-reais">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">07</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Casos Reais: Fraude, Spam &amp; Comportamento</h2>
+<p>Aplicações em produção: detecção de fraude e spam em instituições financeiras.</p>
+</div>
+</div>
+<div class="card" style="border-left: 4px solid var(--spark); background: var(--paper);">
+<h4>🏦 Caso 1: Detecção de Fraude em Transações Bancárias</h4>
+<p><strong>Contexto:</strong> Banco X processa 500k transações/dia. Taxa de fraude: 0.5% (~2.5k fraudes).</p>
+<p><strong>Features:</strong> montante, hora do dia, país, dispositivo, histórico de transações, padrão de comportamento do cliente (velocidade entre transações, padrão de gasto).</p>
+<p><strong>Solução:</strong> Ensemble de SVM (RBF kernel) + Naive Bayes.</p>
+<ul>
+<li><strong>SVM:</strong> Captura padrões não-lineares complexos (ex: combinações raras de features)</li>
+<li><strong>Naive Bayes:</strong> Classifica rápido, fornece probabilidade P(fraude|features)</li>
+<li><strong>Resultado:</strong> Acurácia 98.5%, Recall 94% (detecta 94% das fraudes)</li>
+</ul>
+<p><strong>Link relacionado:</strong> <a href="../../pages/engenharia/dataops-mlops.html">MLOps Pipeline &amp; Feature Store</a> - como serializar features em tempo real.</p>
+</div>
+<div class="card" style="border-left: 4px solid var(--accent); background: var(--paper);">
+<h4>📧 Caso 2: Filtragem de Spam &amp; Phishing em Emails Corporativos</h4>
+<p><strong>Contexto:</strong> Corporação com 10k usuários. 5M emails/dia, 3% são spam/phishing.</p>
+<p><strong>Features:</strong> Texto do email (TF-IDF), remetente, links presentes, padrão de maiúsculas, comprimento, palavras-chave maliciosas.</p>
+<p><strong>Solução:</strong> Naive Bayes (MultinomialNB) + retrainamento diário.</p>
+<ul>
+<li><strong>Por quê NB:</strong> Treina em 5 segundos, prediz em &lt;10ms, interpretável ("palavras spam")</li>
+<li><strong>Pipeline:</strong> Glue → Feature Store → SageMaker training job → SageMaker endpoint</li>
+<li><strong>Resultado:</strong> Presição 97%, Recall 91%</li>
+</ul>
+<p><strong>Link relacionado:</strong> <a href="../../pages/engenharia/data-quality.html">Data Quality &amp; Feature Normalization</a> - limpeza de texto, remoção de pontuação.</p>
+</div>
+<div class="card" style="border-left: 4px solid var(--genai); background: var(--paper);">
+<h4>🎯 Caso 3: Segmentação de Clientes (k-NN + SVM)</h4>
+<p><strong>Contexto:</strong> Fintech quer personalizar ofertas de crédito baseado em perfil de cliente.</p>
+<p><strong>Features:</strong> idade, renda, score de crédito, tempo de relacionamento, histórico de pagamentos, dispositivo usado.</p>
+<p><strong>Solução:</strong> k-NN para encontrar clientes similares; SVM para classificar em segmentos (premium, standard, risco).</p>
+<ul>
+<li><strong>k-NN:</strong> "Encontre os 10 clientes mais similares" → recomendação de produtos</li>
+<li><strong>SVM:</strong> "Classifique novo cliente em segmento" → determina limite de crédito</li>
+<li><strong>Resultado:</strong> Aumento de 12% em cross-sell, redução de 8% em default rate</li>
+</ul>
+<p><strong>Link relacionado:</strong> <a href="../../pages/operacoes/mlops-model-registry.html">Model Registry &amp; Versionamento</a> - rastrear versões para cada segmento.</p>
+</div>
+</section>
+<!-- SEÇÃO 08: Referências -->
+<section class="section" id="referencias">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--arch)">08</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--arch)"></div>
+<h2>Referências &amp; Leitura Complementar</h2>
+</div>
+</div>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--aws-lambda);">
+<h4>📘 Documentação &amp; AWS</h4>
+<ul>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/">AWS SageMaker Documentation</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/svm.html">Scikit-learn: SVM Guide</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/neighbors.html">Scikit-learn: k-NN</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/naive_bayes.html">Scikit-learn: Naive Bayes</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>📚 Papers &amp; Pesquisa</h4>
+<ul>
+<li><a href="https://arxiv.org/abs/1906.00446">Support Vector Machines: A Simple Tutorial - Pisimisi</a></li>
+<li><a href="https://www.jmlr.org/papers/volume11/sonnenb10a/sonnenb10a.pdf">Kernel Methods</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Support_vector_machine">Wikipedia: SVM</a></li>
+<li><a href="https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm">Wikipedia: k-NN</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>🔗 Tópicos Relacionados</h4>
+<ul>
+<li><a href="../../pages/operacoes/deep-learning-fundamentals.html">Deep Learning Fundamentals</a></li>
+<li><a href="../../pages/operacoes/mlops-model-registry.html">MLOps &amp; Model Registry</a></li>
+<li><a href="../../pages/engenharia/dataops-mlops.html">DataOps &amp; ML Pipelines</a></li>
+<li><a href="../../pages/engenharia/data-quality.html">Data Quality &amp; Feature Engineering</a></li>
+</ul>
+</div>
+</div>
+<div class="abox note">
+<strong>📅 Última atualização:</strong> Agosto 2026 |
+        <strong>Versão de conteúdo:</strong> 1.0 |
+        <strong>Python testado:</strong> 3.9+ |
+        <strong>Scikit-learn:</strong> 1.0+
+      </div>
+</section>
+</main>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mxgraph/4.1.0/mxClient.min.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script>
+  function toggleNav() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+  }
+</script>
+</body>
+</html>

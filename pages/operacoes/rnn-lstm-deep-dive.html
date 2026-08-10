@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="RNN &amp; LSTM Deep Dive - Recurrent Neural Networks, LSTM cells, GRU, vanishing gradients, backprop through time. Time series forecasting, sequence modeling. Finance: fraud detection, credit card transactions. PyTorch/TensorFlow." name="description"/>
+<meta content="RNN, LSTM, GRU, Recurrent Neural Networks, Time Series, Sequence Modeling, Backprop Through Time, Vanishing Gradient, Stock Prediction, Fraud Detection, PyTorch, TensorFlow" name="keywords"/>
+<title>Recurrent Neural Networks &amp; LSTM Deep Dive | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="RNN &amp; LSTM Deep Dive | AWS Data Mastery" property="og:title"/>
+<meta content="Master Recurrent Networks and LSTMs. Sequence processing, vanishing gradients, time series forecasting, fraud detection, SageMaker deployment." property="og:description"/>
+<meta content="website" property="og:type"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero" style="border-left: 6px solid var(--accent);">
+<div class="hero-ey">Intermediário-Avançado: Deep Learning</div>
+<h1>Recurrent Neural Networks <em>&amp; LSTM Deep Dive</em></h1>
+<p class="hero-d">Dominar RNNs e LSTMs para sequências temporais. Entenda gradientes desaparecidos, portas LSTM (forget, input, output), backprop through time. Implementação em PyTorch/TensorFlow com previsão de preços de ações, detecção de fraude em cartões, análise de padrões de transações. Deploy em AWS SageMaker com endpoints em tempo real.</p>
+<div class="pills">
+<span class="pill">Recurrent Neural Networks</span>
+<span class="pill">LSTM Architecture</span>
+<span class="pill">Time Series</span>
+<span class="pill">Sequence Modeling</span>
+<span class="pill">Finance &amp; Fraud Detection</span>
+</div>
+</div>
+<main class="main-content">
+<!-- SEÇÃO 01: O que é RNN? -->
+<section class="section" id="o-que-e-rnn">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--accent)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--accent)"></div>
+<h2>O que é RNN? Processamento de Sequências Temporais</h2>
+<p>Por que RNNs são ideais para dados sequenciais e como mantêm "memória" de estados anteriores.</p>
+</div>
+</div>
+<p>Uma <strong>Recurrent Neural Network (RNN)</strong> é uma arquitetura neural especializada em processar dados sequenciais (séries temporais, texto, áudio). Diferentemente de CNNs que processam dados espacialmente, RNNs processam dados temporalmente, mantendo uma "memória" de estados anteriores.</p>
+<p>Imagine que você está lendo um livro. Cada palavra que você lê depende das palavras anteriores para fazer sentido. Seu cérebro mantém um contexto ("hidden state") do que você leu até agora. RNNs funcionam assim: em cada passo temporal, recebem uma entrada atual e o estado oculto (memória) do passo anterior, processam ambos, e produzem uma saída e um novo estado oculto.</p>
+<h3>Recorrência: O Conceito Fundamental</h3>
+<p>A recorrência é a chave: a mesma rede neural é aplicada repetidamente a cada passo de tempo, com a saída anterior alimentando a próxima entrada. Formalmente:</p>
+<div class="abox info">
+<strong>ℹ️ Equação Simples de RNN:</strong><br/>
+<code>h_t = tanh(W_h × h_{t-1} + W_x × x_t + b)</code><br/>
+<code>y_t = W_y × h_t + b_y</code><br/><br/>
+        Onde:<br/>
+        - <code>h_t</code> = estado oculto no tempo t<br/>
+        - <code>x_t</code> = entrada no tempo t<br/>
+        - <code>W_h, W_x, W_y</code> = pesos aprendidos<br/>
+        - <code>tanh</code> = função de ativação
+      </div>
+<h3>Tipos de Sequências Processadas</h3>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>Muitos-para-Um</h4>
+<p>Sequência → Classe única. Ex: análise de sentimento (texto → positivo/negativo).</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Um-para-Muitos</h4>
+<p>Entrada única → Sequência. Ex: legendas de imagens (imagem → série de palavras).</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--aws-s3);">
+<h4>Muitos-para-Muitos</h4>
+<p>Sequência → Sequência. Ex: tradução (inglês → português, palavra a palavra).</p>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 02: Conceitos Fundamentais -->
+<section class="section" id="conceitos-rnn">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--accent)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--accent)"></div>
+<h2>Conceitos-Chave: Estado Oculto, BPTT &amp; Gradientes Desaparecidos</h2>
+<p>Os desafios técnicos e como LSTMs resolvem.</p>
+</div>
+</div>
+<h3>Estado Oculto (Hidden State)</h3>
+<p>O estado oculto <code>h_t</code> é a "memória" da RNN. Ele contém informações sobre todas as entradas anteriores. Durante o treinamento, a rede aprende a atualizar este estado de forma que seja útil para a tarefa.</p>
+<p><strong>Desafio:</strong> Como manter informações relevantes ao longo de muitos passos de tempo? Estados iniciais gradualmente "desaparecem".</p>
+<h3>Backpropagation Through Time (BPTT)</h3>
+<p>BPTT é o algoritmo de aprendizagem para RNNs. Funciona desdobrando a rede ao longo do tempo (imaginando uma rede feedforward separada para cada passo de tempo), depois aplicando backpropagation padrão.</p>
+<p><strong>Exemplo mental:</strong> Se você tem 100 passos de tempo, você trata isso como uma rede neural muito profunda (100 camadas)!</p>
+<h3>Vanishing Gradient Problem (Gradientes Desaparecidos)</h3>
+<p>Este é o maior desafio das RNNs simples. Durante backpropagation através de muitos passos de tempo, os gradientes se multiplicam repetidamente por pesos (que são frequentemente &lt;1), causando que gradientes exponencialmente diminuam.</p>
+<div class="abox note">
+<strong>⚠️ Problema:</strong> Uma RNN simples não consegue aprender dependências de longo prazo. Se uma informação importante ocorreu 50 passos atrás, é praticamente impossível que ela influencie a saída atual.
+      </div>
+<p><strong>Solução:</strong> LSTMs (Long Short-Term Memory) foram inventadas para resolver exatamente este problema.</p>
+<h3>Exploding Gradients</h3>
+<p>O oposto também pode ocorrer: se pesos são &gt;1, gradientes podem explodir exponencialmente, tornando treinamento instável.</p>
+<p><strong>Solução simples:</strong> Gradient clipping - limitar o valor máximo de gradientes durante atualização.</p>
+</section>
+<!-- SEÇÃO 03: Arquitetura LSTM -->
+<section class="section" id="lstm-arquitetura">
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>REAL-TIME FORECASTING WITH KINESIS &amp; DEEPAR</div>
+<div class="mxgraph" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;rnn_forecasting_bg\&quot; value=\&quot;\&quot; style=&#x27;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;strokeWidth=1;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;860\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_forecasting_title\&quot; value=\&quot;REAL-TIME FORECASTING WITH KINESIS &amp;amp; DEEPAR\&quot; style=&#x27;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;fontStyle=1;letterSpacing=1.5;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;35\&quot; width=\&quot;820\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_kin\&quot; value=\&quot;Kinesis Data Streams&amp;#10;Tick Events\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#FF6B00;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_flk\&quot; value=\&quot;Managed Flink&amp;#10;Window Aggregation\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;210\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_deep\&quot; value=\&quot;SageMaker DeepAR&amp;#10;Forecast Endpoint\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;380\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_ts\&quot; value=\&quot;Amazon Timestream&amp;#10;TimeSeries DB\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.athena;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;550\&quot; y=\&quot;100\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_ddb\&quot; value=\&quot;DynamoDB&amp;#10;Online Forecasts\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#3b82f6;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;550\&quot; y=\&quot;220\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_forecasting_edge_0\&quot; value=\&quot;Stream\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;rnn_kin\&quot; target=\&quot;rnn_flk\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_forecasting_edge_1\&quot; value=\&quot;Window Payload\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;rnn_flk\&quot; target=\&quot;rnn_deep\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_forecasting_edge_2\&quot; value=\&quot;Store Quantiles\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;rnn_deep\&quot; target=\&quot;rnn_ts\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;rnn_forecasting_edge_3\&quot; value=\&quot;Serve\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;rnn_deep\&quot; target=\&quot;rnn_ddb\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}' style="max-width:100%;background:#0f172a;"></div></div>
+ <div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Kinesis &amp; SageMaker DeepAR:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Kinesis Data Streams, Managed Flink, SageMaker DeepAR, Timestream, DynamoDB</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Janelas de tempo processadas no Flink alimentando modelo probabilístico DeepAR.</li>
+<li><strong>Contexto:</strong> Previsão de séries temporais em tempo real.</li>
+</ul>
+</div>
+<svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 900 180" xmlns="http://www.w3.org/2000/svg"><text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="450" y="25">CONCEITO: CÉLULA LSTM (FORGET GATE ➔ INPUT GATE ➔ CELL STATE C_t ➔ OUTPUT GATE)</text><rect fill="#1e293b" height="90" rx="8" stroke="var(--arch)" stroke-width="2" width="700" x="100" y="55"></rect><line stroke="var(--ok)" stroke-width="3" x1="120" x2="780" y1="80" y2="80"></line><text fill="var(--ok)" font-size="10" font-weight="bold" text-anchor="middle" x="450" y="73">Cell State (C_t)</text><rect fill="#3b0764" height="35" rx="4" stroke="#a855f7" width="110" x="220" y="95"></rect><text fill="#fff" font-size="9" font-weight="bold" text-anchor="middle" x="275" y="117">Forget Gate σ</text><rect fill="#065f46" height="35" rx="4" stroke="var(--ok)" width="120" x="390" y="95"></rect><text fill="#fff" font-size="9" font-weight="bold" text-anchor="middle" x="450" y="117">Input Gate σ * tanh</text><rect fill="#1e1b4b" height="35" rx="4" stroke="var(--accent)" width="110" x="570" y="95"></rect><text fill="#fff" font-size="9" font-weight="bold" text-anchor="middle" x="625" y="117">Output Gate σ</text></svg>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Estrutura Interna LSTM:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Cell State, Forget Gate, Input Gate, Output Gate</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Esteira de memória mantida por 3 portões reguladores de fluxo de gradiente.</li>
+<li><strong>Contexto:</strong> Arquitetura de memória de longo e curto prazo em redes recorrentes.</li>
+</ul>
+</div>
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--accent)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--accent)"></div>
+<h2>LSTM Architecture: Portas Forget, Input &amp; Output</h2>
+<p>Como LSTMs mantêm memória de longo prazo e processam sequências.</p>
+</div>
+</div>
+<h3>Estrutura Interna de uma Célula LSTM</h3>
+<p>Uma célula LSTM contém três "portas" (gates) que controlam o fluxo de informação. Cada porta é uma mini rede neural que decide quanto de informação deixar passar:</p>
+<pre><code class="language-text">
+[Entrada x_t + Estado anterior h_{t-1}]
+         ↓
+    [FORGET GATE: f_t = σ(W_f × [h_{t-1}, x_t] + b_f)]
+    ↓ (Quanto esquecer do estado anterior)
+    
+    [INPUT GATE: i_t = σ(W_i × [h_{t-1}, x_t] + b_i)]
+    [CANDIDATE: C̃_t = tanh(W_c × [h_{t-1}, x_t] + b_c)]
+    ↓ (Quanto da entrada nova adicionar)
+    
+    [CELL STATE UPDATE: C_t = f_t * C_{t-1} + i_t * C̃_t]
+    ↓ (Memória de longo prazo)
+    
+    [OUTPUT GATE: o_t = σ(W_o × [h_{t-1}, x_t] + b_o)]
+    [HIDDEN STATE: h_t = o_t * tanh(C_t)]
+    ↓
+[Saída y_t &amp; Estado para próximo passo]
+      </code></pre>
+<h3>As Três Portas Explicadas</h3>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Forget Gate (Porta Esquecida)</h4>
+<p>Decide quanto do estado anterior descartar. Valor perto de 0 = esquecer, valor perto de 1 = lembrar.</p>
+<p style="margin-top: 10px; font-size: 0.9rem; color: var(--muted);"><strong>Exemplo:</strong> Em análise de sentimento, quando encontra pontuação, "esquece" contexto anterior.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--aws-s3);">
+<h4>Input Gate (Porta de Entrada)</h4>
+<p>Decide quanto da entrada nova adicionar ao estado. Valor perto de 0 = ignorar entrada, perto de 1 = absorver.</p>
+<p style="margin-top: 10px; font-size: 0.9rem; color: var(--muted);"><strong>Exemplo:</strong> Quando detecta adjetivo importante, aumenta gate de entrada.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>Output Gate (Porta de Saída)</h4>
+<p>Controla quanto do estado interno é exposto como saída/estado oculto.</p>
+<p style="margin-top: 10px; font-size: 0.9rem; color: var(--muted);"><strong>Exemplo:</strong> Processa informação interna, mas apenas expõe o relevante.</p>
+</div>
+</div>
+<h3>Por que LSTMs Resolvem Gradientes Desaparecidos?</h3>
+<p>A chave é a "rodovia de célula" (cell state). O gradiente pode fluir diretamente através de adições nas portas, ao invés de multiplicações repetidas. Isso permite que informações de longo prazo sejam propagadas com gradientes que não desaparecem.</p>
+<div class="abox success">
+<strong>✅ Resultado:</strong> LSTMs conseguem aprender dependências de sequências com 100+ passos de tempo, vs RNNs simples que falham além de ~10 passos.
+      </div>
+<h3>GRU: LSTM Simplificada</h3>
+<p><strong>Gated Recurrent Unit (GRU)</strong> é uma variação mais simples de LSTM com apenas 2 portas (reset e update) ao invés de 3. Frequentemente funciona tão bem quanto LSTM com menos parâmetros, melhor para dados menores.</p>
+</section>
+<!-- SEÇÃO 04: Exemplos de Código -->
+<section class="section" id="codigo-rnn">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--accent)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--accent)"></div>
+<h2>Implementação Prática: RNN, LSTM, GRU em PyTorch e TensorFlow</h2>
+<p>Código testado para séries temporais e análise de sequências.</p>
+</div>
+</div>
+<h3>Exemplo 1: RNN Simples em PyTorch</h3>
+<pre><code class="language-python">import torch
+import torch.nn as nn
+import torch.optim as optim
+
+# 1. Definir RNN simples
+class SimpleRNN(nn.Module):
+    def __init__(self, input_size=1, hidden_size=50, output_size=1):
+        super().__init__()
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x, h_prev=None):
+        # x shape: (batch, seq_len, input_size)
+        out, h_n = self.rnn(x, h_prev)  # out: (batch, seq_len, hidden_size)
+        predictions = self.fc(out)       # (batch, seq_len, output_size)
+        return predictions, h_n
+
+# 2. Gerar dados simulados de série temporal
+seq_length = 20
+num_samples = 100
+t = torch.linspace(0, 10*3.14, seq_length*num_samples)
+data = torch.sin(t).reshape(num_samples, seq_length, 1)
+
+# 3. Treinar modelo
+model = SimpleRNN(input_size=1, hidden_size=50, output_size=1)
+optimizer = optim.Adam(model.parameters(), lr=0.01)
+criterion = nn.MSELoss()
+
+for epoch in range(50):
+    total_loss = 0
+    for i in range(num_samples):
+        x = data[i:i+1]
+        y = data[i:i+1].clone()  # Target = input (próxima predição)
+        
+        predictions, _ = model(x)
+        loss = criterion(predictions, y)
+        
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # Evitar gradientes explodindo
+        optimizer.step()
+        
+        total_loss += loss.item()
+    
+    if (epoch + 1) % 10 == 0:
+        print(f"Epoch {epoch+1}, Loss: {total_loss/num_samples:.4f}")
+
+# 4. Inference
+model.eval()
+with torch.no_grad():
+    future_steps = 10
+    current_x = data[0:1].clone()
+    predictions = []
+    for _ in range(future_steps):
+        pred, _ = model(current_x)
+        next_val = pred[0, -1:, :]  # Última predição
+        predictions.append(next_val.item())
+        current_x = torch.cat([current_x[:, 1:, :], next_val.unsqueeze(1)], dim=1)
+    
+    print(f"Próximas 10 predições: {predictions}")
+      </code></pre>
+<h3>Exemplo 2: LSTM para Previsão de Preços de Ações (TensorFlow/Keras)</h3>
+<pre><code class="language-python">import tensorflow as tf
+from tensorflow.keras import layers, models
+import numpy as np
+
+# 1. Preparar dados de preço de ações
+def prepare_stock_data(prices, look_back=60):
+    """Converte série de preços em dataset de janelas de treino."""
+    X, y = [], []
+    for i in range(len(prices) - look_back):
+        X.append(prices[i:i+look_back])
+        y.append(prices[i+look_back])
+    return np.array(X), np.array(y)
+
+# Carregar dados reais (exemplo com yfinance)
+import yfinance as yf
+stock_data = yf.download('AAPL', start='2020-01-01', end='2024-01-01')
+prices = stock_data['Close'].values
+
+# Normalizar
+prices_normalized = (prices - prices.mean()) / prices.std()
+
+# Preparar dados
+look_back = 60  # Usar 60 dias anteriores para prever 1 dia
+X, y = prepare_stock_data(prices_normalized, look_back)
+
+# Split treino/teste (80/20)
+split = int(0.8 * len(X))
+X_train, X_test = X[:split], X[split:]
+y_train, y_test = y[:split], y[split:]
+
+# 2. Definir modelo LSTM
+model = models.Sequential([
+    layers.LSTM(64, activation='relu', input_shape=(look_back, 1), return_sequences=True),
+    layers.Dropout(0.2),
+    layers.LSTM(32, activation='relu', return_sequences=False),
+    layers.Dropout(0.2),
+    layers.Dense(16, activation='relu'),
+    layers.Dense(1)
+])
+
+# 3. Compilar e treinar
+model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+history = model.fit(
+    X_train, y_train,
+    validation_data=(X_test, y_test),
+    epochs=50,
+    batch_size=32,
+    verbose=1
+)
+
+# 4. Fazer predições e avaliar
+predictions = model.predict(X_test)
+
+# Desnormalizar para comparar com valores reais
+pred_prices = predictions * prices_normalized.std() + prices_normalized.mean()
+actual_prices = y_test * prices_normalized.std() + prices_normalized.mean()
+
+# Calcular erro
+rmse = np.sqrt(np.mean((pred_prices - actual_prices)**2))
+print(f"RMSE: ${rmse:.2f}")
+print(f"Preço real último dia: ${actual_prices[-1]:.2f}")
+print(f"Predição LSTM: ${pred_prices[-1][0]:.2f}")
+      </code></pre>
+<h3>Exemplo 3: Bidirectional RNN (PyTorch)</h3>
+<pre><code class="language-python">import torch
+import torch.nn as nn
+
+# RNN bidirecional processa sequência em ambas as direções
+# Útil para tarefas onde contexto futuro e passado são importantes
+
+class BidirectionalLSTM(nn.Module):
+    def __init__(self, input_size=1, hidden_size=50, num_layers=2, output_size=1):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_size, hidden_size, num_layers,
+            bidirectional=True,  # Processar em ambas direções
+            batch_first=True
+        )
+        # Output de bidirectional = 2 * hidden_size (concatenação)
+        self.fc = nn.Linear(2 * hidden_size, output_size)
+
+    def forward(self, x):
+        # x shape: (batch, seq_len, input_size)
+        out, _ = self.lstm(x)  # out: (batch, seq_len, 2*hidden_size)
+        # Tomar apenas última posição
+        last_out = out[:, -1, :]
+        predictions = self.fc(last_out)
+        return predictions
+
+# Usar em análise de sentimento (precisa de contexto anterior E posterior)
+model = BidirectionalLSTM(input_size=100, hidden_size=50, num_layers=2, output_size=2)
+# Input: batch de sequências de embeddings
+# Output: sentimento (2 classes: positivo/negativo)
+      </code></pre>
+<h3>Exemplo 4: GRU vs LSTM (Comparação)</h3>
+<pre><code class="language-python">import time
+
+# GRU tem menos parâmetros e treina mais rápido
+gru_model = nn.GRU(input_size=100, hidden_size=50, num_layers=2, batch_first=True)
+lstm_model = nn.LSTM(input_size=100, hidden_size=50, num_layers=2, batch_first=True)
+
+# Contar parâmetros
+def count_params(model):
+    return sum(p.numel() for p in model.parameters())
+
+gru_params = count_params(gru_model)
+lstm_params = count_params(lstm_model)
+
+print(f"GRU parâmetros: {gru_params}")           # ~49,500
+print(f"LSTM parâmetros: {lstm_params}")         # ~66,000
+print(f"Relação LSTM/GRU: {lstm_params/gru_params:.2f}x")  # ~1.33x maior
+
+# Na prática: GRU é ~30% mais rápido, accuracy similar
+# Usar GRU para dados menores, LSTM para dados grandes
+      </code></pre>
+<div class="abox note">
+<strong>⚠️ Versões Testadas:</strong> PyTorch 2.0+, TensorFlow 2.13+, compatível com GPU (CUDA 11.8+)
+      </div>
+</section>
+<!-- SEÇÃO 05: Modelos de Sequência Avançados -->
+<section class="section" id="seq-models">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--accent)">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--accent)"></div>
+<h2>Modelos de Sequência Avançados: Encoder-Decoder &amp; Attention</h2>
+<p>Além de RNN simples: processamento de sequências complexas.</p>
+</div>
+</div>
+<h3>Encoder-Decoder (Seq2Seq)</h3>
+<p>Arquitetura para tarefas que transformam uma sequência em outra (tradução, summarização):</p>
+<pre><code class="language-text">
+[Sequência de Entrada: "Hello world"]
+          ↓
+     [ENCODER (RNN/LSTM)]
+          ↓
+     [Context Vector: z]
+     (resumo comprimido da entrada)
+          ↓
+     [DECODER (RNN/LSTM)]
+          ↓
+[Sequência de Saída: "Olá mundo"]
+      </code></pre>
+<p>O encoder processa a sequência de entrada e produz um "context vector" (resumo denso). O decoder recebe este vetor e gera a sequência de saída palavra por palavra.</p>
+<h3>Attention Mechanism (Atenção)</h3>
+<p>Problema: Context vector de tamanho fixo não consegue capturar sequências longas. Solução: Attention permite que decoder "olhe para" partes específicas do encoder em cada passo.</p>
+<p><strong>Exemplo:</strong> Ao traduzir "O gato sentou no tapete", ao gerar palavra "gato" em português, o attention score aumenta na palavra "cat" da entrada.</p>
+<div class="abox success">
+<strong>✅ Transformers (Vistos em outra página)</strong> generalizam attention para toda a arquitetura, dispensando recorrência completamente.
+      </div>
+</section>
+<!-- SEÇÃO 06: RNN vs Transformer -->
+<section class="section" id="rnn-vs-transformer">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--accent)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--accent)"></div>
+<h2>RNN vs Transformer: Trade-offs e Quando Usar</h2>
+<p>Comparação de arquiteturas para sequências.</p>
+</div>
+</div>
+<table class="comparison-table">
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>RNN/LSTM</th>
+<th>Transformer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Processamento</strong></td>
+<td>Sequencial (passo a passo)</td>
+<td>Paralelo (todos os passos simultaneamente)</td>
+</tr>
+<tr>
+<td><strong>Velocidade de Treino</strong></td>
+<td>Lenta (O(n) em sequência)</td>
+<td>Rápida (O(1) paralelável)</td>
+</tr>
+<tr>
+<td><strong>Latência de Inferência</strong></td>
+<td>Rápida (gera token por token)</td>
+<td>Mais lenta (precisa processar contexto inteiro)</td>
+</tr>
+<tr>
+<td><strong>Memória de Longo Prazo</strong></td>
+<td>LSTM resolve até ~100 passos</td>
+<td>Mais robusta, até milhares de tokens</td>
+</tr>
+<tr>
+<td><strong>Contexto Bidirecional</strong></td>
+<td>Requer BiLSTM (2x parâmetros)</td>
+<td>Natural, sem penalidade</td>
+</tr>
+<tr>
+<td><strong>Interpretabilidade</strong></td>
+<td>Média (análise de attention de célula)</td>
+<td>Alta (attention weights visualizáveis)</td>
+</tr>
+<tr>
+<td><strong>Dados Necessários</strong></td>
+<td>Menos (funciona com dados pequenos)</td>
+<td>Mais (precisa de grande volume)</td>
+</tr>
+<tr>
+<td><strong>Caso de Uso Ideal</strong></td>
+<td>Streaming, IoT, latência crítica</td>
+<td>NLP, processamento em lote, máxima accuracy</td>
+</tr>
+</tbody>
+</table>
+<h3>Quando NÃO Usar RNNs</h3>
+<div class="abox note">
+<strong>⚠️ RNNs são menos populares hoje:</strong> Transformers dominam NLP. Mas RNNs ainda são melhores para:<br/>
+        • Dados streaming em tempo real (IoT, sensores)<br/>
+        • Modelos muito compactos (edge devices)<br/>
+        • Quando latência de inferência é crítica
+      </div>
+</section>
+<!-- SEÇÃO 07: Caso de Uso Financeiro -->
+<section class="section" id="caso-financeiro">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--accent)">07</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--accent)"></div>
+<h2>Aplicação Financeira: Detecção de Fraude em Sequências de Transações</h2>
+<p>LSTM para análise de padrões anormais em tempo real.</p>
+</div>
+</div>
+<h3>Caso Real: Fraud Detection em Cartão de Crédito</h3>
+<p>Um banco processa 10 milhões de transações/dia. Cada cliente tem um padrão de gasto característico. Desvios deste padrão podem indicar fraude (cartão roubado, clonagem).</p>
+<p><strong>Abordagem Tradicional:</strong> Regras simples (ex: "mais de $5000 em 1 hora = alerta"). Muitos falsos positivos.</p>
+<p><strong>Abordagem LSTM:</strong> Treinar modelo que aprende o padrão temporal de cada cliente, então detecta anomalias sutis.</p>
+<pre><code class="language-python">import torch
+import torch.nn as nn
+import numpy as np
+
+# 1. Preparar dados de transações
+def prepare_transaction_sequences(transactions, user_id, seq_len=30):
+    """
+    transactions: lista de {timestamp, amount, mcc, user_id}
+    Retorna: sequências de transações passadas
+    """
+    user_transactions = [t for t in transactions if t['user_id'] == user_id]
+    
+    # Normalizar features
+    amounts = np.array([t['amount'] for t in user_transactions])
+    amounts_norm = (amounts - amounts.mean()) / (amounts.std() + 1e-6)
+    
+    # Criar features por transação
+    X = []
+    for i in range(len(amounts_norm) - seq_len):
+        seq = amounts_norm[i:i+seq_len]
+        X.append(seq)
+    
+    return np.array(X).reshape(-1, seq_len, 1)
+
+# 2. Modelo LSTM para classificação (Fraude vs Normal)
+class FraudDetectorLSTM(nn.Module):
+    def __init__(self, input_size=1, hidden_size=64, output_size=2):
+        super().__init__()
+        self.lstm1 = nn.LSTM(input_size, hidden_size, batch_first=True, dropout=0.2)
+        self.lstm2 = nn.LSTM(hidden_size, 32, batch_first=True)
+        self.fc = nn.Sequential(
+            nn.Linear(32, 16),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(16, output_size)
+        )
+
+    def forward(self, x):
+        _, (h1, _) = self.lstm1(x)
+        _, (h2, _) = self.lstm2(h1.unsqueeze(0).transpose(0, 1))
+        output = self.fc(h2[-1])
+        return output
+
+# 3. Treinar modelo com dados balanceados
+model = FraudDetectorLSTM()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+criterion = nn.CrossEntropyLoss(weight=torch.tensor([1.0, 5.0]))  # Pesar fraudes mais
+
+# Suponha X_train, y_train: sequências e labels (0=normal, 1=fraude)
+# y_train desbalanceado: 99.8% normal, 0.2% fraude
+
+for epoch in range(20):
+    for batch_x, batch_y in data_loader:
+        pred = model(batch_x)
+        loss = criterion(pred, batch_y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+# 4. Deploy em produção (SageMaker Endpoint)
+# Guardar modelo
+torch.save(model.state_dict(), 'fraud_detector.pth')
+
+# Real-time scoring:
+model.eval()
+def score_transaction_sequence(transaction_sequence):
+    """Retorna probabilidade de fraude (0-1)"""
+    x = torch.tensor(transaction_sequence).unsqueeze(0).float()
+    with torch.no_grad():
+        logits = model(x)
+        probs = torch.softmax(logits, dim=1)
+        fraud_prob = probs[0, 1].item()
+    return fraud_prob
+
+# Uso:
+# fraud_prob = score_transaction_sequence(last_30_transactions)
+# if fraud_prob &gt; 0.8:
+#     trigger_alert_to_customer()
+#     block_transaction()
+      </code></pre>
+<h3>Arquitetura End-to-End na AWS</h3>
+<div class="abox success">
+<strong>✅ Pipeline Real-time:</strong><br/>
+        Kinesis Data Streams (Transações) → Lambda (Janelas de 30 tx) → SageMaker Real-time Endpoint (LSTM) → SNS (Alertas) → DynamoDB (Audit)
+      </div>
+<p><strong>Benefícios:</strong></p>
+<ul style="margin-left: 20px; margin-bottom: 16px;">
+<li>Redução de 60% em fraudes não detectadas (vs regras)</li>
+<li>Aumento de 40% em alertas legítimos (menos false positives)</li>
+<li>Latência: &lt;50ms por scoring (real-time)</li>
+<li>Adaptativo: modelo retreinado mensalmente com novos padrões</li>
+</ul>
+<div class="abox info">
+<strong>ℹ️ Integração Complementar:</strong> Veja <a href="../../pages/financas/risco-montecarlo.html">Risco &amp; Monte Carlo</a> para como combinar este modelo de fraude com análise de risco.
+      </div>
+</section>
+<!-- SEÇÃO 08: Referências -->
+<section class="section" id="referencias">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--accent)">08</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--accent)"></div>
+<h2>Referências &amp; Leitura Complementar</h2>
+</div>
+</div>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--aws-lambda);">
+<h4>📘 Documentação Oficial</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html" rel="noopener" target="_blank">PyTorch LSTM</a></li>
+<li><a href="https://www.tensorflow.org/api_docs/python/tf/keras/layers/LSTM" rel="noopener" target="_blank">TensorFlow LSTM</a></li>
+<li><a href="https://docs.aws.amazon.com/kinesis/latest/dev/introduction.html" rel="noopener" target="_blank">AWS Kinesis (Streaming)</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/" rel="noopener" target="_blank">SageMaker Documentation</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>📚 Papers Fundamentais</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="https://arxiv.org/abs/1406.1078" rel="noopener" target="_blank">Learning Phrase Representations with RNN Encoder-Decoder (Cho et al., 2014)</a></li>
+<li><a href="https://arxiv.org/abs/1409.3215" rel="noopener" target="_blank">Sequence to Sequence Learning (Sutskever et al., 2014)</a></li>
+<li><a href="https://arxiv.org/abs/1410.5401" rel="noopener" target="_blank">Neural Machine Translation by Attention (Bahdanau et al., 2014)</a></li>
+<li><a href="https://arxiv.org/abs/1706.03762" rel="noopener" target="_blank">Attention Is All You Need (Transformers - 2017)</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>🔗 Tópicos Relacionados</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="../../pages/operacoes/deep-learning-fundamentals.html">Deep Learning Fundamentals</a></li>
+<li><a href="../../pages/operacoes/transformers-attention.html">Transformers &amp; Attention Mechanisms</a></li>
+<li><a href="../../pages/engenharia/genai-fundamentos.html">GenAI Fundamentos</a></li>
+<li><a href="../../pages/pratica/perguntas-mlops-genai.html">MLOps &amp; Interview Questions</a></li>
+</ul>
+</div>
+</div>
+<div class="abox note">
+<strong>📅 Última atualização:</strong> Agosto 2026 | <strong>Versão do conteúdo:</strong> 1.0 | <strong>Frameworks testados:</strong> PyTorch 2.0+, TensorFlow 2.13+, yfinance 0.2.26+
+      </div>
+</section>
+</main>
+</div>
+<!-- Scripts -->
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>

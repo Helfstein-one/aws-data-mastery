@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Transformers &amp; Attention Mechanisms - Arquitetura moderna de Deep Learning, Self-Attention, Multi-Head Attention, Positional Encoding e implementação prática com PyTorch e TensorFlow." name="description"/>
+<meta content="Transformers, Attention Mechanisms, Self-Attention, Multi-Head Attention, Deep Learning, PyTorch, TensorFlow, BERT, GPT, Positional Encoding" name="keywords"/>
+<title>Transformers &amp; Attention Mechanisms | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="Transformers &amp; Attention Mechanisms | AWS Data Mastery" property="og:title"/>
+<meta content="Arquitetura moderna Transformer, Self-Attention e implementação prática." property="og:description"/>
+<meta content="website" property="og:type"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero" style="border-left: 6px solid var(--genai);">
+<div class="hero-ey">Intermediário: Deep Learning</div>
+<h1>Transformers &amp; <em>Attention</em> Mechanisms</h1>
+<p class="hero-d">A revolução da inteligência artificial moderna. Entenda Self-Attention, Multi-Head Attention, Positional Encoding e implemente seus próprios Transformers com PyTorch e TensorFlow na AWS.</p>
+<div class="pills">
+<span class="pill">Deep Learning</span>
+<span class="pill">NLP</span>
+<span class="pill">Arquitetura</span>
+<span class="pill">PyTorch/TensorFlow</span>
+<span class="pill">Intermediário</span>
+</div>
+</div>
+<main class="main-content">
+<!-- SEÇÃO 01: Introdução -->
+<section class="section" id="introducao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>O que são Transformers? A Revolução de 2017</h2>
+<p>Por que Transformers se tornaram o padrão-ouro para tarefas de processamento de linguagem natural e visão.</p>
+</div>
+</div>
+<p>Em 2017, um artigo revolucionário intitulado <strong>"Attention Is All You Need"</strong> foi publicado por pesquisadores do Google. Ele introduziu a arquitetura <strong>Transformer</strong>, que posteriormente permitiria o desenvolvimento de modelos como BERT, GPT-2, GPT-3, e Claude.</p>
+<p>Antes dos Transformers, o estado da arte em NLP era dominado por <strong>Redes Neurais Recorrentes (RNNs)</strong> e <strong>LSTM (Long Short-Term Memory)</strong>. Esses modelos processavam sequências palavra por palavra, sequencialmente. O grande problema: eles esqueciam contexto de longo alcance (o começo de uma frase ao chegar no final) e não podiam ser paralelizados eficientemente.</p>
+<div class="abox note">
+<strong>⚠️ O Problema das RNNs Sequenciais:</strong> Para processar uma frase de 1000 palavras, uma RNN precisa de 1000 passos sequenciais. Se cada passo demora 1ms, o total é 1 segundo. Um Transformer processa as 1000 palavras simultaneamente, demorando apenas alguns milissegundos. A ganho de velocidade é exponencial.
+      </div>
+<p>Os <strong>Transformers</strong> resolvem esse problema através do mecanismo de <strong>Self-Attention (Auto-Atenção)</strong>. Ao invés de processar a sequência palavra-por-palavra, o Transformer processa todas as palavras ao mesmo tempo, computando as relações entre elas em paralelo. Isso é revolucionário por dois motivos:</p>
+<ol style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Paralelização:</strong> Todas as posições podem ser processadas simultaneamente, em vez de sequencialmente.</li>
+<li><strong>Dependências de Longo Alcance:</strong> O modelo pode correlacionar palavras distantes diretamente, capturando contexto de forma mais eficaz.</li>
+</ol>
+<p>Essa arquitetura se tornou tão eficaz que praticamente toda aplicação moderna de IA generativa—do ChatGPT ao Claude—é baseada em Transformers. Na AWS, você pode usar Transformers através do Amazon SageMaker, Bedrock (para modelos fundacionais), ou treinar seus próprios modelos em EC2/GPU.</p>
+<div class="abox info">
+<strong>ℹ️ Contexto Histórico:</strong> 2017 "Attention Is All You Need" → 2018 BERT (Google) → 2019 GPT-2 (OpenAI) → 2020 GPT-3 → 2023 GPT-4, Claude 3 → 2024 Claude 3.5. Todos usam Transformers.
+      </div>
+</section>
+<!-- SEÇÃO 02: Conceitos Fundamentais -->
+<section class="section" id="conceitos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Conceitos Fundamentais: Self-Attention, Multi-Head &amp; Posição</h2>
+<p>Os três pilares que tornam Transformers funcionarem: como as palavras "atendem" umas às outras.</p>
+</div>
+</div>
+<div class="concept-grid">
+<div class="concept-card genai-card">
+<div class="cc-tag">Mecanismo Central</div>
+<div class="cc-title">Self-Attention (Auto-Atenção)</div>
+<div class="cc-body">Self-Attention é o coração do Transformer. Para cada palavra, o modelo computa um <strong>score de relevância</strong> com relação a todas as outras palavras na sequência. Matematicamente, é calculado como:<br/><br/><code>Attention(Q, K, V) = softmax(QK<sup>T</sup>/√d)V</code><br/><br/>Onde Q (Query), K (Key), e V (Value) são projeções lineares do embedding da palavra. O resultado é uma representação ponderada que combina informações de todo o contexto.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Paralelização</div>
+<div class="cc-title">Multi-Head Attention</div>
+<div class="cc-body">Ao invés de computar um único mecanismo de atenção, o Transformer computa <strong>múltiplos mecanismos em paralelo</strong> (geralmente 8, 12 ou 16 "heads"). Cada head aprende a focar em padrões diferentes: uma pode focar em dependências sintáticas (sujeito-verbo), outra em relações semânticas (sinônimos), outra em entidades. Os resultados são concatenados e projetados novamente.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Localização</div>
+<div class="cc-title">Positional Encoding (Codificação de Posição)</div>
+<div class="cc-body">Como o Transformer não processa sequencialmente, ele não "sabe" a posição de cada palavra naturalmente. Por isso, adiciona informações de posição através de <strong>Positional Encoding</strong>. As posições são codificadas usando funções seno e cosseno de diferentes frequências, permitindo que o modelo capture tanto posições absolutas quanto relativas entre palavras.</div>
+</div>
+</div>
+<h3>Fluxo de Processamento da Self-Attention</h3>
+<p>Imagine a frase <em>"O gato subiu na árvore"</em>. Para a palavra "gato", o mecanismo de Self-Attention computa:</p>
+<ol style="margin-left: 20px; margin-bottom: 16px;">
+<li><strong>Query (Q):</strong> "Que aspecto da minha representação vou usar para procurar informações relevantes?" (projeção linear de "gato")</li>
+<li><strong>Key (K):</strong> Para cada palavra da frase, uma "etiqueta" que descreve do que ela trata (projeção de "O", "gato", "subiu", "na", "árvore")</li>
+<li><strong>Score:</strong> Computa o produto escalar Q·K para cada palavra. Resultado: "gato" é muito similar a "gato" (score alto), moderadamente similar a "subiu" (verbo que descreve ação do gato), menos similar a "o" (artigo)</li>
+<li><strong>Normalização:</strong> Aplica softmax aos scores para criar pesos que somam a 1</li>
+<li><strong>Value (V):</strong> Usa os pesos para fazer uma média ponderada dos valores (V) de todas as palavras. Resultado: uma nova representação de "gato" que captura contexto de todo o resto da frase</li>
+</ol>
+<div class="abox success">
+<strong>✅ Resultado Prático:</strong> A representação final de "gato" agora "sabe" que ela é o sujeito de "subiu" e que "árvore" é o alvo. Isso permite ao modelo fazer inferências complexas sobre relações sintáticas e semânticas.
+      </div>
+</section>
+<!-- SEÇÃO 03: Arquitetura Encoder-Decoder -->
+<section class="section" id="arquitetura">
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>MULTI-GPU TRANSFORMER LLM TRAINING &amp; SERVING</div>
+<div class="mxgraph" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;tf_llm_train_bg\&quot; value=\&quot;\&quot; style=&#x27;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;strokeWidth=1;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;860\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_llm_train_title\&quot; value=\&quot;MULTI-GPU TRANSFORMER LLM TRAINING &amp;amp; SERVING\&quot; style=&#x27;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;fontStyle=1;letterSpacing=1.5;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;35\&quot; width=\&quot;820\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_s3\&quot; value=\&quot;S3 Text Lake&amp;#10;Corpus Data\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_fsx\&quot; value=\&quot;FSx for Lustre&amp;#10;High Speed POSIX\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#0284c7;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;200\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_pod\&quot; value=\&quot;SageMaker HyperPod&amp;#10;Distributed Cluster\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;370\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_reg\&quot; value=\&quot;Model Registry&amp;#10;Weights Safetensors\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;550\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_ep\&quot; value=\&quot;SageMaker JumpStart&amp;#10;TensorRT Serving\&quot; style=&#x27;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#10b981;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;&#x27; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;720\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_llm_train_edge_0\&quot; value=\&quot;Sync\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;tf_s3\&quot; target=\&quot;tf_fsx\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_llm_train_edge_1\&quot; value=\&quot;Mount\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;tf_fsx\&quot; target=\&quot;tf_pod\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_llm_train_edge_2\&quot; value=\&quot;Save Weights\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;tf_pod\&quot; target=\&quot;tf_reg\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;tf_llm_train_edge_3\&quot; value=\&quot;Deploy Endpoint\&quot; style=&#x27;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;&#x27; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;tf_reg\&quot; target=\&quot;tf_ep\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}' style="max-width:100%;background:#0f172a;"></div></div>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — SageMaker HyperPod &amp; JumpStart:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> S3, FSx for Lustre, SageMaker HyperPod, Model Registry, SageMaker JumpStart</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Treinamento GPU paralelo via FSx e serving otimizado em instâncias aceleradas.</li>
+<li><strong>Contexto:</strong> Infraestrutura de ponta para modelos de atenção e Transformers.</li>
+</ul>
+</div>
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Arquitetura Transformer: Encoder-Decoder</h2>
+<p>Como as peças se encaixam: Encoder, Decoder, Feed-Forward Networks e normalização.</p>
+</div>
+</div>
+<p>A arquitetura Transformer original é composta por dois componentes principais:</p>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>Encoder Stack</h4>
+<p>Processa a <strong>entrada (source)</strong> para criar uma representação contextual rica. Cada camada do encoder contém:</p>
+<ul style="margin-top: 10px; padding-left: 20px; font-size: 0.95rem;">
+<li>Multi-Head Self-Attention</li>
+<li>Feed-Forward Network (2 camadas densas com ativação ReLU)</li>
+<li>Layer Normalization após cada sub-camada</li>
+<li>Residual Connections (skip connections)</li>
+</ul>
+<p style="margin-top: 10px; font-size: 0.88rem; color: var(--muted);"><strong>Exemplo:</strong> Em tradução de "O gato subiu", o encoder cria uma representação rica dessa frase.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Decoder Stack</h4>
+<p>Processa a <strong>saída (target)</strong> enquanto "atende" ao encoder. Cada camada do decoder contém:</p>
+<ul style="margin-top: 10px; padding-left: 20px; font-size: 0.95rem;">
+<li>Masked Multi-Head Self-Attention (só pode ver tokens anteriores)</li>
+<li>Multi-Head Cross-Attention (atende ao encoder)</li>
+<li>Feed-Forward Network</li>
+<li>Layer Normalization + Residual Connections</li>
+</ul>
+<p style="margin-top: 10px; font-size: 0.88rem; color: var(--muted);"><strong>Exemplo:</strong> Gera "O gato subiu" em português, token por token.</p>
+</div>
+</div>
+<h3 style="margin-top: 40px;">Fluxo de Dados End-to-End</h3>
+<svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+<!-- Input -->
+<rect fill="none" height="60" rx="8" stroke="var(--genai)" stroke-width="2" width="100" x="20" y="80"></rect>
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="70" y="115">Input Tokens</text>
+<!-- Embedding -->
+<rect fill="none" height="60" rx="8" stroke="var(--accent)" stroke-width="2" width="100" x="140" y="80"></rect>
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="190" y="110">Embedding +</text>
+<text fill="#cbd5e1" font-size="11" text-anchor="middle" x="190" y="125">Positional</text>
+<!-- Encoder -->
+<rect fill="none" height="60" rx="8" stroke="var(--arch)" stroke-width="2" width="100" x="260" y="80"></rect>
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="310" y="115">Encoder N×</text>
+<!-- Context -->
+<rect fill="none" height="60" rx="8" stroke="var(--spark)" stroke-width="2" width="100" x="380" y="80"></rect>
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="430" y="115">Context Vector</text>
+<!-- Decoder (first token) -->
+<rect fill="none" height="60" rx="8" stroke="var(--genai)" stroke-width="2" width="100" x="500" y="30"></rect>
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="550" y="65">Decoder N×</text>
+<!-- Output -->
+<rect fill="none" height="60" rx="8" stroke="var(--ok)" stroke-width="2" width="100" x="620" y="30"></rect>
+<text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="670" y="65">Output Token</text>
+<!-- Arrows -->
+<line stroke="var(--accent)" stroke-width="2" x1="120" x2="140" y1="110" y2="110"></line>
+<polygon fill="var(--accent)" points="140,110 135,105 135,115"></polygon>
+<line stroke="var(--accent)" stroke-width="2" x1="240" x2="260" y1="110" y2="110"></line>
+<polygon fill="var(--accent)" points="260,110 255,105 255,115"></polygon>
+<line stroke="var(--accent)" stroke-width="2" x1="360" x2="380" y1="110" y2="110"></line>
+<polygon fill="var(--accent)" points="380,110 375,105 375,115"></polygon>
+<!-- Context to Decoder (cross-attention) -->
+<line stroke="var(--spark)" stroke-dasharray="5,5" stroke-width="2" x1="480" x2="500" y1="110" y2="80"></line>
+<polygon fill="var(--spark)" points="500,80 495,85 500,90"></polygon>
+<line stroke="var(--accent)" stroke-width="2" x1="550" x2="620" y1="30" y2="60"></line>
+<polygon fill="var(--accent)" points="620,60 615,55 615,65"></polygon>
+<!-- Autoregressive feedback (loop) -->
+<path d="M 720 60 L 750 60 L 750 140 L 550 140 L 550 95" fill="none" stroke="var(--warn)" stroke-dasharray="5,5" stroke-width="2"></path>
+<polygon fill="var(--warn)" points="550,95 545,100 555,100"></polygon>
+<text fill="var(--warn)" font-size="11" font-weight="bold" x="710" y="155">Autoregressive</text>
+<!-- Labels -->
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="70" y="170">"O gato"</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="430" y="170">Contexto rico</text>
+<text fill="var(--muted)" font-size="10" text-anchor="middle" x="670" y="170">"The cat"</text>
+</svg>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Conceito Lógico / Algorítmico:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Representação Vetorial, Estrutura Neural / Árvore de Decisão</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Fluxo conceitual de dados e abstração matemática.</li>
+<li><strong>Contexto:</strong> Diagrama ilustrativo para o tema em questão.</li>
+</ul>
+</div>
+<p style="margin-top: 20px; font-size: 0.9rem; color: var(--muted);">Fluxo de uma sequência fonte (português) para destino (inglês) em um modelo Transformer de tradução. O decoder gera a saída de forma autoregressiva (token por token).</p>
+<div class="abox info">
+<strong>ℹ️ Variantes Modernas:</strong> Modelos como BERT (apenas Encoder) e GPT (apenas Decoder) simplificam a arquitetura. BERT usa apenas o Encoder para entender contexto bidirecional. GPT usa apenas Decoder com masked self-attention para gerar texto autorregressivamente.
+      </div>
+</section>
+<!-- SEÇÃO 04: Implementação Prática -->
+<section class="section" id="implementacao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Implementação Prática: PyTorch &amp; TensorFlow</h2>
+<p>Código funcional para treinar Transformers na AWS SageMaker.</p>
+</div>
+</div>
+<h3>Exemplo 1: Multi-Head Attention em PyTorch</h3>
+<p>Implementação didática (simplificada) do mecanismo de Multi-Head Attention:</p>
+<pre><code class="language-python">import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, embedding_dim, num_heads=8):
+        super().__init__()
+        self.embedding_dim = embedding_dim
+        self.num_heads = num_heads
+        self.head_dim = embedding_dim // num_heads
+
+        assert embedding_dim % num_heads == 0, "embedding_dim must be divisible by num_heads"
+
+        # Projeções lineares para Q, K, V e saída
+        self.fc_q = nn.Linear(embedding_dim, embedding_dim)
+        self.fc_k = nn.Linear(embedding_dim, embedding_dim)
+        self.fc_v = nn.Linear(embedding_dim, embedding_dim)
+        self.fc_out = nn.Linear(embedding_dim, embedding_dim)
+
+    def forward(self, query, key, value, mask=None):
+        batch_size = query.shape[0]
+
+        # Projeções lineares
+        Q = self.fc_q(query)  # (batch, seq_len, embedding_dim)
+        K = self.fc_k(key)
+        V = self.fc_v(value)
+
+        # Reshape para múltiplos heads: (batch, seq_len, num_heads, head_dim)
+        Q = Q.view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
+        K = K.view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
+        V = V.view(batch_size, -1, self.num_heads, self.head_dim).transpose(1, 2)
+
+        # Computar scores de atenção: (batch, num_heads, query_len, key_len)
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5)
+
+        # Aplicar máscara (opcional, para evitar atenção a tokens futuros)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+
+        # Normalizar com softmax
+        attention_weights = F.softmax(scores, dim=-1)
+
+        # Aplicar pesos aos valores
+        context = torch.matmul(attention_weights, V)  # (batch, num_heads, query_len, head_dim)
+
+        # Concatenar heads: (batch, query_len, embedding_dim)
+        context = context.transpose(1, 2).contiguous()
+        context = context.view(batch_size, -1, self.embedding_dim)
+
+        # Projeção final
+        output = self.fc_out(context)
+
+        return output, attention_weights
+
+# Uso
+embedding_dim = 512
+num_heads = 8
+attn = MultiHeadAttention(embedding_dim, num_heads)
+
+# Entrada: batch_size=4, seq_len=10, embedding_dim=512
+query = torch.randn(4, 10, embedding_dim)
+key = torch.randn(4, 10, embedding_dim)
+value = torch.randn(4, 10, embedding_dim)
+
+output, weights = attn(query, key, value)
+print(f"Output shape: {output.shape}")  # (4, 10, 512)
+</code></pre>
+<h3>Exemplo 2: Transformer Completo com TensorFlow/Keras</h3>
+<p>Implementação de um Transformer end-to-end para classificação de sequências (útil para análise de sentimento, detecção de fraude, etc.):</p>
+<pre><code class="language-python">import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+class TransformerBlock(layers.Layer):
+    def __init__(self, embedding_dim, num_heads, ff_dim, rate=0.1):
+        super().__init__()
+        self.att = layers.MultiHeadAttention(num_heads=num_heads, key_dim=embedding_dim)
+        self.ffn = keras.Sequential([
+            layers.Dense(ff_dim, activation="relu"),
+            layers.Dense(embedding_dim),
+        ])
+        self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
+        self.dropout1 = layers.Dropout(rate)
+        self.dropout2 = layers.Dropout(rate)
+
+    def call(self, inputs):
+        attn_output = self.att(inputs, inputs)
+        attn_output = self.dropout1(attn_output)
+        out1 = self.layernorm1(inputs + attn_output)
+
+        ffn_output = self.ffn(out1)
+        ffn_output = self.dropout2(ffn_output)
+        return self.layernorm2(out1 + ffn_output)
+
+# Construir modelo Transformer para classificação de sequências
+inputs = keras.Input(shape=(None,), dtype="int32")
+embedding_layer = layers.Embedding(
+    input_dim=20000,  # vocab size
+    output_dim=128,   # embedding dimension
+)
+x = embedding_layer(inputs)
+
+# Adicionar positional encoding
+positions = tf.range(start=0, limit=tf.shape(x)[1], delta=1)
+position_embedding = layers.Embedding(
+    input_dim=2048, output_dim=128
+)(positions)
+x = x + position_embedding
+
+# Stack de 4 camadas Transformer
+for _ in range(4):
+    x = TransformerBlock(embedding_dim=128, num_heads=4, ff_dim=128)(x)
+
+# Pooling e classificação
+x = layers.GlobalAveragePooling1D(data_format="channels_first")(x)
+x = layers.Dropout(0.1)(x)
+x = layers.Dense(20, activation="relu")(x)
+x = layers.Dropout(0.1)(x)
+outputs = layers.Dense(2, activation="softmax")(x)  # Binary classification
+
+model = keras.Model(inputs=inputs, outputs=outputs)
+model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+
+# Treinar na AWS SageMaker
+# model.fit(train_data, train_labels, validation_data=(val_data, val_labels), epochs=10, batch_size=32)
+</code></pre>
+<div class="abox note">
+<strong>⚠️ Considerações de Produção:</strong> Em produção (AWS SageMaker, Bedrock), use modelos pré-treinados (BERT, RoBERTa, Claude) ao invés de treinar do zero. Treinar Transformers é extremamente caro (GPU/TPU intensivo). Fine-tuning em dados específicos é mais eficiente.
+      </div>
+</section>
+<!-- SEÇÃO 05: Comparação com RNNs/LSTMs -->
+<section class="section" id="comparacao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Transformers vs RNNs/LSTMs: Trade-offs</h2>
+<p>Quando usar cada um e por que Transformers venceram a competição.</p>
+</div>
+</div>
+<div class="tbl-wrap" style="overflow-x: auto;">
+<table style="min-width: 1200px;">
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>RNN Simples</th>
+<th>LSTM</th>
+<th>Transformer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Paralelização</strong></td>
+<td><span class="bad-txt">❌ Sequencial</span></td>
+<td><span class="bad-txt">❌ Sequencial</span></td>
+<td><span class="good-txt">✅ Paralelo</span></td>
+</tr>
+<tr>
+<td><strong>Dependências Longas (&gt;1000 tokens)</strong></td>
+<td><span class="bad-txt">❌ Desvanecimento de gradiente</span></td>
+<td><span class="good-txt">✅ Bom (gates resolvem problema)</span></td>
+<td><span class="good-txt">✅ Excelente</span></td>
+</tr>
+<tr>
+<td><strong>Complexidade de Memória</strong></td>
+<td>O(1) por timestep</td>
+<td>O(1) por timestep</td>
+<td>O(n²) quadrática com seq_len</td>
+</tr>
+<tr>
+<td><strong>Velocidade de Treinamento (GPU/TPU)</strong></td>
+<td><span class="bad-txt">Lenta</span></td>
+<td><span class="bad-txt">Lenta</span></td>
+<td><span class="good-txt">Muito rápida</span></td>
+</tr>
+<tr>
+<td><strong>Velocidade de Inferência</strong></td>
+<td>Rápida (O(1))</td>
+<td>Rápida (O(1))</td>
+<td><span class="warn">Lenta na primeira predição (O(n²))</span></td>
+</tr>
+<tr>
+<td><strong>Contexto Bidirecional Naturalmente</strong></td>
+<td><span class="bad-txt">❌ Unidirecional</span></td>
+<td><span class="bad-txt">❌ Requer 2 camadas</span></td>
+<td><span class="good-txt">✅ Sim (Self-Attention)</span></td>
+</tr>
+<tr>
+<td><strong>Caso de Uso Ideal</strong></td>
+<td>Séries temporais simples, sensores IoT</td>
+<td>Processamento de streaming, previsão de séries</td>
+<td>NLP, Visão, Aplicações críticas de IA</td>
+</tr>
+<tr>
+<td><strong>Exemplo AWS</strong></td>
+<td>Kinesis com modelos simples em Lambda</td>
+<td>Forecast, SageMaker com modelos antigos</td>
+<td>SageMaker, Bedrock, Code Whisperer</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 style="margin-top: 40px;">Quando NÃO usar Transformers</h3>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--warn);">
+<h4>Aplicações Streaming em Tempo Real</h4>
+<p>Se você precisa processar dados de sensores em tempo real a cada 10ms, a latência O(n²) do Transformer é proibitiva. RNNs/LSTMs com estado persistente são mais adequados.</p>
+<p style="margin-top: 10px; font-size: 0.85rem; color: var(--muted);"><strong>Exemplo:</strong> Detecção de anomalia em logs de servidores (análise streaming).</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Sequências Muito Longas (&gt;10K tokens)</h4>
+<p>O custo quadrático de memória é impraticável. Alternativa: Transformers lineares (Performer, Linformer) ou Transformers esparsos (Longformer) que reduzem a complexidade.</p>
+<p style="margin-top: 10px; font-size: 0.85rem; color: var(--muted);"><strong>Exemplo:</strong> Análise de documentos PDF de 500 páginas.</p>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 06: Referências -->
+<section class="section" id="referencias">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Referências &amp; Leitura Complementar</h2>
+</div>
+</div>
+<div class="grid-3">
+<div class="card" style="border-top: 3px solid var(--aws-lambda);">
+<h4>📘 Documentação Oficial</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/hugging-face.html" rel="noopener" target="_blank">SageMaker Hugging Face Integration</a></li>
+<li><a href="https://docs.aws.amazon.com/bedrock/latest/userguide/" rel="noopener" target="_blank">Amazon Bedrock Documentation</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/pytorch.html" rel="noopener" target="_blank">SageMaker PyTorch Training</a></li>
+<li><a href="https://pytorch.org/docs/stable/nn.html#multiheadattention" rel="noopener" target="_blank">PyTorch MultiHeadAttention</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>📚 Papers Fundamentais</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="https://arxiv.org/abs/1706.03762" rel="noopener" target="_blank">Attention Is All You Need (Vaswani et al., 2017)</a></li>
+<li><a href="https://arxiv.org/abs/1810.04805" rel="noopener" target="_blank">BERT: Pre-training (Devlin et al., 2018)</a></li>
+<li><a href="https://arxiv.org/abs/1906.04341" rel="noopener" target="_blank">RoBERTa: Robust BERT (Liu et al., 2019)</a></li>
+<li><a href="https://arxiv.org/abs/2005.14165" rel="noopener" target="_blank">GPT-3 (Brown et al., 2020)</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>🔗 Tópicos Relacionados</h4>
+<ul style="padding-left: 16px; margin-top: 12px; font-size: 0.9rem;">
+<li><a href="../../pages/engenharia/genai-fundamentos.html">GenAI Fundamentos</a></li>
+<li><a href="../../pages/engenharia/genai-rag-architectures.html">RAG Architectures</a></li>
+<li><a href="../../pages/operacoes/troubleshooting-tuning.html">Performance Tuning</a></li>
+<li><a href="../../pages/pratica/perguntas-mlops-genai.html">MLOps &amp; GenAI Interview</a></li>
+</ul>
+</div>
+</div>
+<div class="abox note">
+<strong>📅 Última atualização:</strong> Agosto 2026 | <strong>Versão do conteúdo:</strong> 1.0 | <strong>Modelos testados:</strong> PyTorch 2.0+, TensorFlow 2.13+
+      </div>
+</section>
+</main>
+</div>
+<!-- Scripts -->
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>

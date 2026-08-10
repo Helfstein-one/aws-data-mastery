@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta content="Decision Trees &amp; Random Forest - Algoritmos de aprendizado baseados em árvores: construção de árvores de decisão, ensemble learning, random forests, XGBoost, aplicações em detecção de fraude." name="description"/>
+<meta content="decision trees, random forest, ensemble learning, tree-based algorithms, feature importance, machine learning, fraud detection" name="keywords"/>
+<title>Decision Trees &amp; Random Forest - AWS Data Mastery</title>
+<meta content="Decision Trees &amp; Random Forest - AWS Data Mastery" property="og:title"/>
+<meta content="Algoritmos de aprendizado baseados em árvores: decision trees, random forest, ensemble learning, feature importance." property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="../../assets/og-image.jpg" property="og:image"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<!-- HERO SECTION -->
+<div class="hero" style="border-left: 6px solid var(--spark);">
+<div class="hero-badge">🌳 Algoritmos Clássicos</div>
+<h1>Decision Trees &amp; <em>Random Forest</em></h1>
+<p class="hero-d">Algoritmos baseados em árvores para classificação e regressão. Ensemble learning, feature importance, interpretabilidade e aplicações reais em detecção de fraude bancária.</p>
+<div class="pills">
+<span class="pill">Machine Learning</span>
+<span class="pill">Tree-Based</span>
+<span class="pill">Python 3.9+</span>
+<span class="pill">Intermediário</span>
+<span class="pill">Fraude Bancária</span>
+</div>
+</div>
+<main class="main-content">
+<!-- SEÇÃO 01: O QUE SÃO DECISION TREES? -->
+<section class="section">
+<div class="sec-hdr">
+<div class="sec-num">01</div>
+<h2>O que são Decision Trees?</h2>
+</div>
+<p>
+<strong>Decision Trees (Árvores de Decisão)</strong> são algoritmos de aprendizado supervisionado que constroem modelos por meio de uma série de perguntas binárias (splits) sobre os dados. A estrutura em árvore é naturalmente interpretável: cada nó representa um teste sobre uma feature, cada ramo representa um resultado, e cada folha representa uma predição (classe ou valor).
+</p>
+<h3>Estrutura de uma Árvore de Decisão</h3>
+<div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--spark);">
+<p style="font-family: 'DM Mono', monospace; margin: 0;">
+<strong>Raiz (Root)</strong><br/>
+    └─ <strong>Nó Interno 1:</strong> "Age &gt; 30?" <br/>
+    │   ├─ <strong>Nó Interno 2:</strong> "Income &gt; 50k?" → Classe: Aprovado<br/>
+    │   └─ <strong>Folha:</strong> Classe: Rejeitado<br/>
+    └─ <strong>Folha:</strong> Classe: Aprovado
+  </p>
+</div>
+<h3>Histórico &amp; Importância</h3>
+<p>
+  Decision Trees surgiram nos anos 1960 com pesquisadores como Morgan e Sonquist, sendo popularizadas por Ross Quinlan com o algoritmo ID3 (1986) e C4.5 (1993). Hoje são fundamentais porque:
+</p>
+<ul style="margin: 12px 0 12px 24px; line-height: 1.8;">
+<li><strong>Interpretabilidade:</strong> Estrutura é transparente e fácil de comunicar aos stakeholders não-técnicos</li>
+<li><strong>Sem normalização:</strong> Funcionam com dados brutos sem necessidade de scaling</li>
+<li><strong>Importância de Features:</strong> Automaticamente revelam quais features mais contribuem para predições</li>
+<li><strong>Não-linearidade:</strong> Capturam padrões complexos e interações</li>
+<li><strong>Escalabilidade:</strong> Eficientes computacionalmente mesmo em datasets grandes</li>
+</ul>
+<p>
+<strong>Random Forest</strong> (2001, Leo Breiman) estende a ideia de árvores únicas usando <strong>ensemble learning</strong>: múltiplas árvores votam conjuntamente, reduzindo overfitting e melhorando precisão.
+</p>
+<div class="grid-2">
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Decision Tree</h4>
+<p>Uma árvore individual. Rápida mas propensa a overfitting. Ideal para interpretabilidade pura.</p>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>Random Forest</h4>
+<p>Ensemble de árvores com votação. Mais robusta, menos overfit. Melhor performance geral.</p>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 02: CONCEITOS FUNDAMENTAIS -->
+<section class="section">
+<div class="sec-hdr">
+<div class="sec-num">02</div>
+<h2>Conceitos Fundamentais</h2>
+</div>
+<h3>Critério de Split: Information Gain &amp; Gini Impurity</h3>
+<p>
+  Em cada nó, o algoritmo busca o split (divisão) que <strong>melhor separa os dados</strong>. Existem duas métricas principais:
+</p>
+<div class="grid-2" style="margin: 20px 0;">
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>Entropy &amp; Information Gain</h4>
+<p style="font-size: 0.9rem; margin-top: 8px; font-family: 'DM Mono', monospace;">
+<strong>Entropy(S) = -Σ pᵢ·log₂(pᵢ)</strong><br/>
+<strong>IG = Entropy(parent) - Σ(|Sᵥ|/|S|)·Entropy(v)</strong>
+</p>
+<p style="font-size: 0.85rem; margin-top: 8px;">
+      Mede redução de "desordem". Usado em ID3 e C4.5.
+    </p>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Gini Impurity</h4>
+<p style="font-size: 0.9rem; margin-top: 8px; font-family: 'DM Mono', monospace;">
+<strong>Gini(S) = 1 - Σ pᵢ²</strong>
+</p>
+<p style="font-size: 0.85rem; margin-top: 8px;">
+      Probabilidade de classificação errônea aleatória. Usado em CART.
+    </p>
+</div>
+</div>
+<p>
+<strong>Intuição:</strong> Um split bom cria nós "puros" (homogêneos em termos de classe), enquanto um split ruim cria nós misturados.
+</p>
+<h3>Exemplo Prático: Split em Dados de Fraude</h3>
+<p>
+  Imagine 100 transações (70 legítimas, 30 fraudes) no nó raiz (Gini = 0.42). O algoritmo testa splits:
+</p>
+<ul style="margin: 12px 0 12px 24px; line-height: 1.8; font-size: 0.95rem;">
+<li><strong>Split A "Amount &gt; R$3000?":</strong> Esquerda (20 legit, 15 fraude), Direita (50 legit, 15 fraude). Gini reduz para 0.35.</li>
+<li><strong>Split B "Distance &gt; 500km?":</strong> Esquerda (30 legit, 28 fraude), Direita (40 legit, 2 fraude). Gini reduz para 0.15. ← <strong>Melhor split!</strong></li>
+</ul>
+<h3>Pruning (Poda)</h3>
+<p>
+  Árvores tendem a crescer demais, memorizando dados (overfitting). <strong>Pruning</strong> remove nós que não reduzem significativamente o erro de validação:
+</p>
+<ul style="margin: 12px 0 12px 24px; line-height: 1.8;">
+<li><strong>Pre-pruning:</strong> Para o crescimento da árvore antes de atingir pureza 100%</li>
+<li><strong>Post-pruning:</strong> Treina a árvore completa depois remove nós que degradam validação</li>
+</ul>
+<div class="abox note">
+  ⚠️ <strong>Trade-off:</strong> Árvore profunda = baixo bias, alto variance (overfitting). Árvore rasa = alto bias, baixo variance (underfitting). Random Forest resolve isso com ensemble.
+</div>
+</section>
+<!-- SEÇÃO 03: ARQUITETURA DE CONSTRUÇÃO -->
+<section class="section">
+<div class="sec-hdr">
+<div class="sec-num">03</div>
+<h2>Arquitetura &amp; Processo de Construção</h2>
+</div>
+<h3>Algoritmo ID3 / C4.5 (Construção de Árvore)</h3>
+<p>
+  O processo de construção de uma árvore de decisão é <strong>greedy</strong> (guloso):
+</p>
+<div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--spark); font-family: 'DM Mono', monospace; font-size: 0.9rem;">
+<strong>1. Começar no nó raiz com todo o dataset</strong><br/>
+<strong>2. Para cada feature e cada valor de threshold:</strong><br/>
+      Calcular Information Gain ou Gini Impurity do split<br/>
+<strong>3. Escolher feature/threshold com maior ganho</strong><br/>
+<strong>4. Criar nós filhos (esquerda/direita)</strong><br/>
+<strong>5. Recursivamente repetir para nós filhos até:</strong><br/>
+      - Nó é "puro" (todas mesma classe)<br/>
+      - Profundidade máxima atingida<br/>
+      - Amostras mínimas atingidas<br/>
+<strong>6. Retornar árvore treinada</strong>
+</div>
+<h3>Random Forest: Ensemble de Árvores</h3>
+<p>
+  Random Forest treina <strong>N árvores independentes</strong> usando:
+</p>
+<ul style="margin: 12px 0 12px 24px; line-height: 1.8;">
+<li><strong>Bootstrap Sampling:</strong> Cada árvore treina em amostra aleatória COM reposição do dataset original (65-70% únicos)</li>
+<li><strong>Feature Randomness:</strong> Em cada split, apenas um subset aleatório de features é considerado (mtry)</li>
+<li><strong>Votação:</strong> Classificação = moda das predições das N árvores; Regressão = média</li>
+</ul>
+<div class="card" style="border-left: 4px solid var(--genai); background: var(--paper); padding: 16px; margin: 16px 0;">
+<h4 style="margin-top: 0;">Pseudocódigo: Random Forest</h4>
+<pre style="margin-top: 12px; font-family: 'DM Mono', monospace; font-size: 0.85rem; overflow-x: auto;">
+for i = 1 to num_trees:
+    # Bootstrap sample
+    sample_i = bootstrap(dataset, size=n)
+    
+    # Treinar árvore em amostra
+    tree_i = DecisionTree(sample_i, mtry=sqrt(num_features))
+    
+    # Armazenar árvore
+    forest.append(tree_i)
+
+# Predição (classificação)
+for nova_instância:
+    predictions = [tree.predict(nova_instância) for tree in forest]
+    final_prediction = majority_vote(predictions)
+  </pre>
+</div>
+<h3>Out-of-Bag (OOB) Error</h3>
+<p>
+  Uma vantagem do bootstrap é que ~30% dos dados não entram em cada amostra ("out-of-bag"). Esses dados podem ser usados como validação <strong>sem usar um conjunto separado</strong>:
+</p>
+<p style="font-size: 0.9rem; margin: 12px 0 12px 24px; color: var(--muted);">
+<strong>OOB Error =</strong> Erro médio das predições de árvores para as quais cada amostra foi out-of-bag. Estima performance em dados não vistos sem necessidade de validação cruzada.
+</p>
+<div class="abox success">
+  ✅ <strong>Vantagem:</strong> OOB fornece estimativa grátis de performance, ideal para grandes datasets.
+</div>
+</section>
+<!-- SEÇÃO 04: EXEMPLOS PRÁTICOS -->
+<section class="section">
+<div class="sec-hdr">
+<div class="sec-num">04</div>
+<h2>Implementação Prática com Código</h2>
+</div>
+<h3>Exemplo 1: Decision Tree - Classificação Iris</h3>
+<p>
+  Classificar flores Iris em 3 espécies usando 4 features (comprimento/largura de sépala, comprimento/largura de pétala).
+</p>
+<div class="code-block" style="margin-top: 15px;">
+<div class="code-header">Python - scikit-learn Decision Tree</div>
+<pre><code class="language-python">
+import numpy as np
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+
+# Carregar dataset Iris
+iris = load_iris()
+X = iris.data
+y = iris.target
+feature_names = iris.feature_names
+class_names = iris.target_names
+
+# Split train/test
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Treinar Decision Tree
+tree_model = DecisionTreeClassifier(
+    criterion='gini',           # 'gini' ou 'entropy'
+    max_depth=5,                # Profundidade máxima (evita overfitting)
+    min_samples_split=5,        # Mínimo de amostras para split
+    min_samples_leaf=2,         # Mínimo de amostras em folha
+    random_state=42
+)
+
+tree_model.fit(X_train, y_train)
+
+# Predições
+y_pred_train = tree_model.predict(X_train)
+y_pred_test = tree_model.predict(X_test)
+
+# Avaliação
+train_acc = accuracy_score(y_train, y_pred_train)
+test_acc = accuracy_score(y_test, y_pred_test)
+
+print(f"Train Accuracy: {train_acc:.4f}")
+print(f"Test Accuracy: {test_acc:.4f}")
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred_test))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_test, target_names=class_names))
+
+# Feature Importance
+feature_importance = tree_model.feature_importances_
+print("\nFeature Importance:")
+for feat, imp in zip(feature_names, feature_importance):
+    print(f"  {feat:30s}: {imp:.4f}")
+
+# Visualizar árvore
+plt.figure(figsize=(20, 10))
+plot_tree(tree_model, feature_names=feature_names, class_names=class_names, 
+          filled=True, rounded=True)
+plt.title("Decision Tree for Iris Classification")
+plt.tight_layout()
+plt.savefig('tree_visualization.png', dpi=150, bbox_inches='tight')
+print("\nTree visualization saved to 'tree_visualization.png'")
+  </code></pre>
+</div>
+<h3>Exemplo 2: Random Forest - Classificação Multi-classe</h3>
+<p>
+  Usar Random Forest para melhorar a performance da árvore única anterior.
+</p>
+<div class="code-block" style="margin-top: 15px;">
+<div class="code-header">Python - scikit-learn Random Forest</div>
+<pre><code class="language-python">
+from sklearn.ensemble import RandomForestClassifier
+
+# Treinar Random Forest
+rf_model = RandomForestClassifier(
+    n_estimators=100,           # Número de árvores
+    criterion='gini',
+    max_depth=10,               # Pode ser maior (ensemble reduz overfitting)
+    min_samples_split=5,
+    min_samples_leaf=2,
+    max_features='sqrt',        # Feature randomness: sqrt(n_features)
+    bootstrap=True,             # Use bootstrap sampling
+    oob_score=True,             # Calcular OOB error
+    n_jobs=-1,                  # Usar todos os cores
+    random_state=42
+)
+
+rf_model.fit(X_train, y_train)
+
+# Predições
+y_pred_rf = rf_model.predict(X_test)
+y_pred_proba_rf = rf_model.predict_proba(X_test)  # Probabilidades
+
+# Avaliação
+rf_acc = accuracy_score(y_test, y_pred_rf)
+oob_acc = rf_model.oob_score_
+
+print(f"Random Forest Test Accuracy: {rf_acc:.4f}")
+print(f"OOB Accuracy (Free Validation): {oob_acc:.4f}")
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_rf, target_names=class_names))
+
+# Feature Importance (média das importâncias das 100 árvores)
+feature_importance_rf = rf_model.feature_importances_
+print("\nFeature Importance (Random Forest):")
+for feat, imp in sorted(zip(feature_names, feature_importance_rf), 
+                       key=lambda x: x[1], reverse=True):
+    print(f"  {feat:30s}: {imp:.4f}")
+
+# Comparação
+print(f"\n=== Comparação ===")
+print(f"Decision Tree Accuracy: {test_acc:.4f}")
+print(f"Random Forest Accuracy: {rf_acc:.4f}")
+print(f"Melhora: {(rf_acc - test_acc) * 100:.2f}%")
+  </code></pre>
+</div>
+<h3>Exemplo 3: Feature Importance Analysis</h3>
+<p>
+  Analisar quais features mais contribuem para as predições.
+</p>
+<div class="code-block" style="margin-top: 15px;">
+<div class="code-header">Python - Feature Importance &amp; SHAP</div>
+<pre><code class="language-python">
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Feature importance do Random Forest
+fi_df = pd.DataFrame({
+    'Feature': feature_names,
+    'Importance': rf_model.feature_importances_
+}).sort_values('Importance', ascending=False)
+
+# Plot
+plt.figure(figsize=(10, 6))
+plt.barh(fi_df['Feature'], fi_df['Importance'], color='steelblue')
+plt.xlabel('Importance Score')
+plt.title('Feature Importance - Random Forest')
+plt.tight_layout()
+plt.savefig('feature_importance.png', dpi=150, bbox_inches='tight')
+print("Feature importance plot saved")
+
+# Explicabilidade com SHAP (opcional, requer: pip install shap)
+try:
+    import shap
+    
+    # Criar explainer
+    explainer = shap.TreeExplainer(rf_model)
+    shap_values = explainer.shap_values(X_test)
+    
+    # Plot summary
+    shap.summary_plot(shap_values[0], X_test, feature_names=feature_names, 
+                     plot_type="bar", show=False)
+    plt.savefig('shap_summary.png', dpi=150, bbox_inches='tight')
+    print("SHAP plot saved")
+except ImportError:
+    print("SHAP not installed. Install with: pip install shap")
+  </code></pre>
+</div>
+<div class="abox success">
+  ✅ <strong>Versões testadas:</strong> scikit-learn 1.3.2, Python 3.9+, NumPy 1.24+
+</div>
+</section>
+<!-- SEÇÃO 05: RANDOM FOREST VS SINGLE TREE -->
+<section class="section">
+<div class="sec-hdr">
+<div class="sec-num">05</div>
+<h2>Decision Tree vs Random Forest: Trade-offs</h2>
+</div>
+<div style="overflow-x: auto; margin: 20px 0;">
+<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+<thead>
+<tr style="background-color: rgba(37, 99, 235, 0.1); border-bottom: 2px solid var(--accent);">
+<th style="padding: 12px; text-align: left; font-weight: 600;">Aspecto</th>
+<th style="padding: 12px; text-align: left; font-weight: 600;">Decision Tree</th>
+<th style="padding: 12px; text-align: left; font-weight: 600;">Random Forest</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid var(--border);">
+<td style="padding: 12px;"><strong>Interpretabilidade</strong></td>
+<td style="padding: 12px;">🟢 Altíssima (visualizável)</td>
+<td style="padding: 12px;">🟡 Média (N árvores)</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--border);">
+<td style="padding: 12px;"><strong>Accuracy</strong></td>
+<td style="padding: 12px;">🟡 Moderada</td>
+<td style="padding: 12px;">🟢 Alta (ensemble)</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--border);">
+<td style="padding: 12px;"><strong>Overfitting</strong></td>
+<td style="padding: 12px;">🔴 Alto (sem regularização)</td>
+<td style="padding: 12px;">🟢 Baixo (bagging + features aleatórias)</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--border);">
+<td style="padding: 12px;"><strong>Tempo de Treino</strong></td>
+<td style="padding: 12px;">🟢 Rápido</td>
+<td style="padding: 12px;">🟡 Moderado (N árvores, mas paralelizável)</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--border);">
+<td style="padding: 12px;"><strong>Tempo de Inferência</strong></td>
+<td style="padding: 12px;">🟢 Muito rápido</td>
+<td style="padding: 12px;">🟡 Rápido (mas N predições em paralelo)</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--border);">
+<td style="padding: 12px;"><strong>Memória</strong></td>
+<td style="padding: 12px;">🟢 Baixa</td>
+<td style="padding: 12px;">🟡 Moderada (N árvores armazenadas)</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--border);">
+<td style="padding: 12px;"><strong>Scaling Features</strong></td>
+<td style="padding: 12px;">🟢 Não necessário</td>
+<td style="padding: 12px;">🟢 Não necessário</td>
+</tr>
+<tr style="border-bottom: 1px solid var(--border);">
+<td style="padding: 12px;"><strong>Dados Desbalanceados</strong></td>
+<td style="padding: 12px;">🟡 Problemas (precisa de ponderação)</td>
+<td style="padding: 12px;">🟡 Problemas (herda da árvore)</td>
+</tr>
+<tr>
+<td style="padding: 12px;"><strong>Use Cases Ideais</strong></td>
+<td style="padding: 12px;">Explicabilidade crítica, Regulação</td>
+<td style="padding: 12px;">Performance máxima, Competições</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3>Quando usar cada um?</h3>
+<div class="grid-2" style="margin: 20px 0;">
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>Use Decision Tree quando:</h4>
+<ul style="font-size: 0.9rem; margin-top: 8px;">
+<li>Interpretabilidade é crítica (regulação, auditoria)</li>
+<li>Dados são pequenos (&lt;10k amostras)</li>
+<li>Velocidade é prioritária</li>
+<li>Explicabilidade para stakeholders é essencial</li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>Use Random Forest quando:</h4>
+<ul style="font-size: 0.9rem; margin-top: 8px;">
+<li>Accuracy é prioritário</li>
+<li>Dados são grandes (&gt;50k amostras)</li>
+<li>Overfitting é problema conhecido</li>
+<li>Feature importance é suficiente para explicabilidade</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 06: HIPERPARÂMETROS -->
+<section class="section">
+<div class="sec-hdr">
+<div class="sec-num">06</div>
+<h2>Hiperparâmetros de Árvores</h2>
+</div>
+<p>
+  Hiperparâmetros controlam a complexidade da árvore/forest e devem ser ajustados via grid search ou random search.
+</p>
+<div class="grid-3" style="margin: 20px 0;">
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>max_depth</h4>
+<p style="font-size: 0.9rem; margin-top: 8px;">
+<strong>Profundidade máxima da árvore.</strong><br/>
+      Valores baixos → underfitting. Valores altos → overfitting.<br/>
+<strong>Típico:</strong> 5-15 para Random Forest
+    </p>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>min_samples_split</h4>
+<p style="font-size: 0.9rem; margin-top: 8px;">
+<strong>Mínimo de amostras para fazer split.</strong><br/>
+      Valores baixos → overfitting. Valores altos → underfitting.<br/>
+<strong>Típico:</strong> 2-20
+    </p>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>min_samples_leaf</h4>
+<p style="font-size: 0.9rem; margin-top: 8px;">
+<strong>Mínimo de amostras em folha.</strong><br/>
+      Regularização. Valores altos → árvore menor.<br/>
+<strong>Típico:</strong> 1-10
+    </p>
+</div>
+</div>
+<div class="grid-2" style="margin: 20px 0;">
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>n_estimators (RF apenas)</h4>
+<p style="font-size: 0.9rem; margin-top: 8px;">
+<strong>Número de árvores no ensemble.</strong><br/>
+      Mais árvores = melhor (até um ponto), mas mais lento.<br/>
+<strong>Típico:</strong> 100-1000
+    </p>
+</div>
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>max_features (RF apenas)</h4>
+<p style="font-size: 0.9rem; margin-top: 8px;">
+<strong>Features consideradas em cada split.</strong><br/>
+      'sqrt' = √(n_features), 'log2' = log₂(n_features).<br/>
+<strong>Típico:</strong> 'sqrt' para classificação
+    </p>
+</div>
+</div>
+<h3>Grid Search para Otimização</h3>
+<div class="code-block" style="margin-top: 15px;">
+<div class="code-header">Python - GridSearchCV para Random Forest</div>
+<pre><code class="language-python">
+from sklearn.model_selection import GridSearchCV
+
+# Grid de hiperparâmetros
+param_grid = {
+    'n_estimators': [50, 100, 200],
+    'max_depth': [5, 10, 15, None],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4],
+    'max_features': ['sqrt', 'log2']
+}
+
+# Grid Search
+grid_search = GridSearchCV(
+    RandomForestClassifier(random_state=42, n_jobs=-1),
+    param_grid,
+    cv=5,
+    scoring='accuracy',
+    n_jobs=-1,
+    verbose=1
+)
+
+grid_search.fit(X_train, y_train)
+
+print(f"Melhores parâmetros: {grid_search.best_params_}")
+print(f"Melhor score (CV): {grid_search.best_score_:.4f}")
+
+# Usar melhor modelo
+best_model = grid_search.best_estimator_
+test_score = best_model.score(X_test, y_test)
+print(f"Test Score: {test_score:.4f}")
+  </code></pre>
+</div>
+<div class="abox note">
+  ⚠️ <strong>Dica:</strong> Use Random Search para exploração mais ampla com menos iterações. GridSearch é ótimo para fine-tuning.
+</div>
+</section>
+<!-- SEÇÃO 07: BANKING FRAUD CASE -->
+<section class="section">
+<div class="sec-hdr">
+<div class="sec-num">07</div>
+<h2>Case Bancário: Detecção de Fraude com Random Forest</h2>
+</div>
+<h3>Contexto</h3>
+<p>
+  Um banco processa 10 milhões de transações mensais e enfrenta taxa de 0.2% de fraude (~20k casos). Uma árvore única seria lenta e propensa a overfitting. Random Forest oferece:
+</p>
+<ul style="margin: 12px 0 12px 24px; line-height: 1.8;">
+<li>✅ Alta acurácia (&gt;99%)</li>
+<li>✅ Identificação de features-chave de fraude</li>
+<li>✅ Tempo de inferência &lt;10ms por transação</li>
+<li>✅ Interpretabilidade via importância de features</li>
+</ul>
+<div class="card" style="border-left: 4px solid var(--spark); background: var(--paper); padding: 16px; margin: 16px 0;">
+<h4 style="margin-top: 0;">Features do Modelo</h4>
+<ul style="margin-top: 12px; line-height: 1.8; font-size: 0.9rem;">
+<li><strong>amount_usd:</strong> Valor da transação em USD</li>
+<li><strong>merchant_category:</strong> Categoria do comerciante (onerado)</li>
+<li><strong>distance_km:</strong> Distância do ponto de compra vs endereço registrado</li>
+<li><strong>time_of_day:</strong> Hora da transação (0-23)</li>
+<li><strong>days_since_card_issued:</strong> Dias desde emissão do cartão</li>
+<li><strong>transaction_count_24h:</strong> Número de transações nas últimas 24h</li>
+<li><strong>country_code:</strong> País da transação (onerado)</li>
+<li><strong>avg_amount_per_merchant:</strong> Gasto médio nesse comerciante</li>
+</ul>
+</div>
+<h3>Integração com Arquitetura</h3>
+<p>
+  Este modelo se integra com:
+</p>
+<ul style="margin: 12px 0 12px 24px; line-height: 1.8;">
+<li><a href="../../pages/engenharia/dataops-mlops.html">DataOps &amp; MLOps</a>: Pipeline de retraining automático com novas fraudes</li>
+<li><a href="../../pages/pratica/cases-reais.html">Cases Reais</a>: Exemplos de implementação em produção</li>
+<li><a href="../../pages/operacoes/mlops-model-registry.html">Model Registry</a>: Versionamento e deployment de modelos</li>
+<li><a href="../../pages/engenharia/data-quality.html">Data Quality</a>: Validação de features em tempo real</li>
+</ul>
+<h3>Implementação Completa</h3>
+<div class="code-block" style="margin-top: 15px;">
+<div class="code-header">Python - Fraud Detection Pipeline</div>
+<pre><code class="language-python">
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score, 
+    roc_auc_score, confusion_matrix, classification_report
+)
+
+# Simular dataset de transações (100k transações, 0.2% fraude)
+np.random.seed(42)
+n_transactions = 100000
+n_fraud = int(n_transactions * 0.002)  # 0.2% fraude
+
+# Features
+data = {
+    'amount_usd': np.concatenate([
+        np.random.exponential(50, n_transactions - n_fraud),  # Legítimas
+        np.random.exponential(200, n_fraud)  # Fraudes tendem a ser maiores
+    ]),
+    'merchant_category': np.random.choice(
+        ['grocery', 'gas', 'restaurant', 'hotel', 'airline'], n_transactions
+    ),
+    'distance_km': np.concatenate([
+        np.random.exponential(10, n_transactions - n_fraud),  # Distâncias pequenas normais
+        np.random.exponential(500, n_fraud)  # Fraudes de longe
+    ]),
+    'time_of_day': np.random.randint(0, 24, n_transactions),
+    'days_since_card_issued': np.random.randint(1, 365*5, n_transactions),
+    'transaction_count_24h': np.random.exponential(2, n_transactions),
+    'country_code': np.random.choice(['US', 'BR', 'MX', 'CN', 'IN'], n_transactions),
+    'avg_amount_per_merchant': np.random.exponential(100, n_transactions),
+}
+
+df = pd.DataFrame(data)
+
+# Target (balanceado: 80% legítimas no início, 20% fraudes)
+y = np.concatenate([
+    np.zeros(n_transactions - n_fraud, dtype=int),
+    np.ones(n_fraud, dtype=int)
+])
+df['is_fraud'] = y
+
+print(f"Dataset size: {len(df):,}")
+print(f"Fraude rate: {y.mean():.2%}")
+print(f"\nFeatures:\n{df.head()}")
+print(f"\nData types:\n{df.dtypes}")
+
+# Preparar features (encoding categóricas)
+categorical_features = ['merchant_category', 'country_code']
+le_dict = {}
+
+for col in categorical_features:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col])
+    le_dict[col] = le
+
+X = df.drop('is_fraud', axis=1)
+y = df['is_fraud']
+
+# Train/test split (80/20)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+print(f"\nTrain set: {len(X_train):,} | Test set: {len(X_test):,}")
+print(f"Train fraud rate: {y_train.mean():.2%}")
+print(f"Test fraud rate: {y_test.mean():.2%}")
+
+# Treinar Random Forest com class_weight='balanced' para dados desbalanceados
+rf_fraud = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=15,
+    min_samples_split=10,
+    min_samples_leaf=5,
+    max_features='sqrt',
+    class_weight='balanced',  # Pesa minoria (fraude) mais
+    n_jobs=-1,
+    random_state=42,
+    oob_score=True
+)
+
+rf_fraud.fit(X_train, y_train)
+
+# Predições
+y_pred_train = rf_fraud.predict(X_train)
+y_pred_test = rf_fraud.predict(X_test)
+y_pred_proba_test = rf_fraud.predict_proba(X_test)[:, 1]
+
+# Avaliação Treino
+print(f"\n=== TREINO ===")
+print(f"Accuracy: {accuracy_score(y_train, y_pred_train):.4f}")
+print(f"Precision: {precision_score(y_train, y_pred_train):.4f}")
+print(f"Recall: {recall_score(y_train, y_pred_train):.4f}")
+print(f"F1: {f1_score(y_train, y_pred_train):.4f}")
+print(f"OOB Score: {rf_fraud.oob_score_:.4f}")
+
+# Avaliação Teste
+print(f"\n=== TESTE ===")
+print(f"Accuracy: {accuracy_score(y_test, y_pred_test):.4f}")
+print(f"Precision: {precision_score(y_test, y_pred_test):.4f}")
+print(f"Recall: {recall_score(y_test, y_pred_test):.4f}")
+print(f"F1: {f1_score(y_test, y_pred_test):.4f}")
+print(f"ROC-AUC: {roc_auc_score(y_test, y_pred_proba_test):.4f}")
+
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred_test))
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred_test, 
+      target_names=['Legítima', 'Fraude']))
+
+# Feature Importance
+print("\n=== Feature Importance ===")
+feature_importance = pd.DataFrame({
+    'Feature': X.columns,
+    'Importance': rf_fraud.feature_importances_
+}).sort_values('Importance', ascending=False)
+
+print(feature_importance.to_string(index=False))
+
+# Exemplo: score de fraude para nova transação
+new_transaction = pd.DataFrame({
+    'amount_usd': [5000],  # Valor alto
+    'merchant_category': [2],  # Hotel (codificado)
+    'distance_km': [800],  # Distância grande
+    'time_of_day': [3],  # Madrugada
+    'days_since_card_issued': [45],  # Cartão novo
+    'transaction_count_24h': [5],  # Múltiplas transações
+    'country_code': [3],  # China (codificado)
+    'avg_amount_per_merchant': [50],  # Gasto pequeno nesse comerciante
+})
+
+fraud_probability = rf_fraud.predict_proba(new_transaction)[0][1]
+print(f"\n=== Exemplo: Nova Transação ===")
+print(f"Amount: USD ${new_transaction['amount_usd'].values[0]}")
+print(f"Distance: {new_transaction['distance_km'].values[0]} km")
+print(f"Time: {new_transaction['time_of_day'].values[0]}:00")
+print(f"Card age: {new_transaction['days_since_card_issued'].values[0]} days")
+print(f"\n→ Probabilidade de Fraude: {fraud_probability:.2%}")
+print(f"→ Decisão: {'BLOQUEAR' if fraud_probability &gt; 0.5 else 'PERMITIR'}")
+  </code></pre>
+</div>
+<div class="abox success">
+  ✅ <strong>Métrica crítica para fraude:</strong> Recall &gt; Precision (melhor deixar passar uma legítima do que bloquear fraude)
+</div>
+</section>
+<!-- SEÇÃO 08: REFERÊNCIAS -->
+<section class="section">
+<div class="sec-hdr">
+<div class="sec-num">08</div>
+<h2>Referências &amp; Leitura Complementar</h2>
+</div>
+<div class="grid-3" style="margin: 20px 0;">
+<div class="card" style="border-top: 3px solid var(--accent);">
+<h4>📘 Documentação AWS</h4>
+<ul style="font-size: 0.85rem; margin-top: 8px; padding-left: 18px;">
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/xgboost.html" target="_blank">SageMaker XGBoost (Tree-based)</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor.html" target="_blank">Model Monitor</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/pipelines.html" target="_blank">SageMaker Pipelines</a></li>
+<li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-model-explainability.html" target="_blank">SageMaker Clarify (Explicabilidade)</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--spark);">
+<h4>📚 Bibliotecas &amp; Algoritmos</h4>
+<ul style="font-size: 0.85rem; margin-top: 8px; padding-left: 18px;">
+<li><a href="https://scikit-learn.org/stable/modules/tree.html" target="_blank">scikit-learn Decision Trees</a></li>
+<li><a href="https://scikit-learn.org/stable/modules/ensemble.html#forests" target="_blank">scikit-learn Random Forest</a></li>
+<li><a href="https://xgboost.readthedocs.io/" target="_blank">XGBoost Documentation</a></li>
+<li><a href="https://lightgbm.readthedocs.io/" target="_blank">LightGBM (Gradient Boosting)</a></li>
+</ul>
+</div>
+<div class="card" style="border-top: 3px solid var(--genai);">
+<h4>🔗 Tópicos Relacionados</h4>
+<ul style="font-size: 0.85rem; margin-top: 8px; padding-left: 18px;">
+<li><a href="../../pages/operacoes/mlops-model-registry.html">MLOps &amp; Model Registry</a></li>
+<li><a href="../../pages/pratica/cases-reais.html">Cases Reais de Implementação</a></li>
+<li><a href="../../pages/engenharia/dataops-mlops.html">DataOps &amp; MLOps Pipelines</a></li>
+<li><a href="../../pages/engenharia/data-quality.html">Data Quality &amp; Feature Engineering</a></li>
+</ul>
+</div>
+</div>
+<h3>Papers Acadêmicos</h3>
+<ul style="font-size: 0.9rem; margin: 12px 0 12px 24px; line-height: 1.8;">
+<li><strong>Quinlan, J. R.</strong> (1986). "Induction of Decision Trees." <em>Machine Learning</em>, 1(1), 81-106.</li>
+<li><strong>Quinlan, J. R.</strong> (1993). <em>C4.5: Programs for Machine Learning</em>. Morgan Kaufmann.</li>
+<li><strong>Breiman, L.</strong> (2001). "Random Forests." <em>Machine Learning</em>, 45(1), 5-32.</li>
+<li><strong>Breiman, L.; Friedman, J.; Stone, C. J.; Olshen, R. A.</strong> (1984). <em>Classification and Regression Trees</em>. Chapman &amp; Hall/CRC.</li>
+<li><strong>Géron, A.</strong> (2022). <em>Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow (3ª edição)</em>. O'Reilly.</li>
+</ul>
+<h3>Livros Recomendados</h3>
+<ul style="font-size: 0.9rem; margin: 12px 0 12px 24px; line-height: 1.8;">
+<li>Hastie, T., Tibshirani, R., &amp; Friedman, J. (2009). <em>The Elements of Statistical Learning (2ª edição)</em>. Springer.</li>
+<li>James, G., Witten, D., Hastie, T., &amp; Tibshirani, R. (2013). <em>An Introduction to Statistical Learning</em>. Springer.</li>
+<li>Müller, A. C., &amp; Guido, S. (2016). <em>Introduction to Machine Learning with Python</em>. O'Reilly.</li>
+</ul>
+<div class="abox note">
+  📅 <strong>Última atualização:</strong> Agosto 2026 | <strong>Versão:</strong> 1.0 | <strong>Tecnologias:</strong> scikit-learn 1.3.2, Python 3.9+, XGBoost 2.0+
+</div>
+</section>
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>SAGEMAKER XGBOOST &amp; RANDOM FOREST PIPELINE</div>
+<div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
+<div class="drawio-label" style="color:var(--arch)"><span class="dot" style="background:var(--arch)"></span>ARQUITETURA TÉCNICA DA NUVEM AWS</div>
+<div class="mxgraph" data-mxgraph='{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1200\&quot; dy=\&quot;800\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;  &lt;root&gt;    &lt;mxCell id=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;    &lt;mxCell id=\&quot;dt_rf_pipe_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;strokeWidth=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;860\&quot; height=\&quot;360\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_rf_pipe_title\&quot; value=\&quot;SAGEMAKER XGBOOST &amp;amp; RANDOM FOREST PIPELINE\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=12;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;40\&quot; y=\&quot;35\&quot; width=\&quot;820\&quot; height=\&quot;30\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_s3\&quot; value=\&quot;S3 Tabular Lake&amp;#10;Feature Sets\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#16a34a;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;50\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_glue\&quot; value=\&quot;Glue PySpark&amp;#10;Feature Engineering\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#ea580c;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;200\&quot; y=\&quot;150\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_xgb\&quot; value=\&quot;SageMaker Built-in&amp;#10;XGBoost Training\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;370\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_reg\&quot; value=\&quot;Model Registry&amp;#10;Tree Artifacts\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#a78bfa;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;540\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_ep\&quot; value=\&quot;SageMaker Realtime&amp;#10;Inference Endpoint\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;align=center;fontColor=#e2e8f0;fontFamily=Inter;fontSize=10;fillColor=#10b981;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;      &lt;mxGeometry x=\&quot;700\&quot; y=\&quot;150\&quot; width=\&quot;60\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_rf_pipe_edge_0\&quot; value=\&quot;Clean Data\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;dt_s3\&quot; target=\&quot;dt_glue\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_rf_pipe_edge_1\&quot; value=\&quot;Train Trees\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;dt_glue\&quot; target=\&quot;dt_xgb\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_rf_pipe_edge_2\&quot; value=\&quot;Register\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;dt_xgb\&quot; target=\&quot;dt_reg\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\&quot;dt_rf_pipe_edge_3\&quot; value=\&quot;Deploy\&quot; style=\&quot;labelBackgroundColor=#080f1e;edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2;fillColor=none;fontColor=#94a3b8;fontFamily=Inter;fontSize=9;\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;dt_reg\&quot; target=\&quot;dt_ep\&quot;&gt;      &lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}' style="max-width:100%;background:#0f172a;"></div>
+</div><div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Arquitetura AWS — Decision Trees Random Forest:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> AWS Lakehouse, Amazon S3, AWS Lambda, Amazon SageMaker</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Fluxo contínuo de dados com governança e observabilidade em nuvem.</li>
+<li><strong>Contexto:</strong> Diagrama técnico de referência operacional.</li>
+</ul>
+</div>
+</div>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — SageMaker XGBoost &amp; Random Forest:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> S3, AWS Glue, SageMaker XGBoost, Model Registry, SageMaker Endpoint</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Transformação de atributos em Glue e treinamento paralelo de ensembles de árvores.</li>
+<li><strong>Contexto:</strong> Classificação e regressão estruturada de alta performance.</li>
+</ul>
+</div>
+<svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 900 180" xmlns="http://www.w3.org/2000/svg"><text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="450" y="25">CONCEITO: ÁRVORE DE DECISÃO &amp; ENSEMBLE BAGGING vs BOOSTING</text><circle cx="450" cy="50" fill="#3b0764" r="16" stroke="#a855f7" stroke-width="2"></circle><text fill="#fff" font-size="10" font-weight="bold" text-anchor="middle" x="450" y="54">Root</text><line stroke="#a855f7" stroke-width="2" x1="440" x2="320" y1="65" y2="100"></line><line stroke="#a855f7" stroke-width="2" x1="460" x2="580" y1="65" y2="100"></line><circle cx="320" cy="110" fill="#1e293b" r="14" stroke="var(--arch)" stroke-width="2"></circle><circle cx="580" cy="110" fill="#1e293b" r="14" stroke="var(--arch)" stroke-width="2"></circle><text fill="#fff" font-size="9" text-anchor="middle" x="320" y="114">X1 &lt; 0.5</text><text fill="#fff" font-size="9" text-anchor="middle" x="580" y="114">X1 ≥ 0.5</text></svg>
+<div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
+<strong style="color: var(--accent);">📌 Legenda &amp; Arquitetura — Árvores de Decisão &amp; Ensembles:</strong>
+<ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+<li style="margin-bottom: 4px;"><strong>Componentes AWS / Módulos:</strong> Root Node, Split Conditions, Leaf Predictions</li>
+<li style="margin-bottom: 4px;"><strong>Integração:</strong> Divisões sucessivas por ganho de informação (Entropia / Impureza de Gini).</li>
+<li><strong>Contexto:</strong> Fundamentos teóricos de Random Forest e XGBoost.</li>
+</ul>
+</div>
+</main>
+</div>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+<script src="../../js/sidebar-loader.js"></script>
+<script src="../../js/progress.js"></script>
+<script>
+function toggleNav() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.style.display = sidebar.style.display === 'block' ? 'none' : 'block';
+}
+</script>
+</body>
+</html>
