@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Bedrock Advanced APIs: Converse API, Tool Use, Prompt Caching, Batch Inference e Cross-Region Inference." name="description"/>
+<title>Bedrock Advanced APIs | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero">
+<div class="hero-ey">Módulo: IA &amp; GenAI</div>
+<h1>Bedrock Advanced APIs</h1>
+<p class="hero-d">Converse API com Tool Use (Function Calling), Prompt Caching para redução de custos, Batch Inference para processamento assíncrono em massa, e Cross-Region Inference Profiles para latência otimizada.</p>
+</div>
+<main class="main-content">
+
+<!-- 01 -->
+<section class="section" id="converse-api">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Converse API &amp; Tool Use (Function Calling)</h2>
+<p>API unificada multi-modelo com suporte nativo a ferramentas estruturadas — sem parsing manual de JSON.</p>
+</div>
+</div>
+<p>A <strong>Converse API</strong> é a forma moderna de interagir com o Amazon Bedrock. Diferente da <code>InvokeModel</code>, ela: (1) funciona com qualquer modelo suportado sem mudar o código, (2) mantém histórico de conversa (multi-turn), e (3) suporta <strong>Tool Use</strong> nativo — o modelo decide quando chamar uma função e estrutura os argumentos em JSON garantido.</p>
+<div class="concept-grid">
+<div class="concept-card genai-card">
+<div class="cc-tag">Portabilidade</div>
+<div class="cc-title">Multi-Model Unificado</div>
+<div class="cc-body">O mesmo código funciona com Claude 3.5 Sonnet, Llama 3, Mistral, Amazon Nova — sem adaptadores. Troca de modelo = troca do <code>modelId</code> string. Facilita A/B testing de modelos.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Agentes</div>
+<div class="cc-title">Tool Use / Function Calling</div>
+<div class="cc-body">Defina ferramentas com schema JSON. O modelo decide quando chamá-las, retorna argumentos estruturados. Você executa a função e devolve o resultado — o modelo continua a conversa com o dado real.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Conversa</div>
+<div class="cc-title">Multi-Turn Nativo</div>
+<div class="cc-body">Passe o histórico completo de mensagens (<code>messages</code> array). O modelo mantém contexto entre turnos sem que você precise gerenciar janela de contexto manualmente.</div>
+</div>
+</div>
+
+<h3 style="margin-top:28px;">Exemplo Completo: Agente de Dados com Tool Use</h3>
+<pre><code class="language-python">import boto3
+import json
+
+bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
+
+# Definição das ferramentas disponíveis para o modelo
+tools = [
+    {
+        "toolSpec": {
+            "name": "query_athena",
+            "description": "Executa uma query SQL no Amazon Athena e retorna os resultados. Use para responder perguntas sobre dados de negócio.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "sql": {
+                            "type": "string",
+                            "description": "Query SQL válida para o Athena. Sempre use LIMIT para evitar queries caras."
+                        },
+                        "database": {
+                            "type": "string",
+                            "description": "Nome do database no Glue Catalog",
+                            "enum": ["vendas_db", "financeiro_db", "logistica_db"]
+                        }
+                    },
+                    "required": ["sql", "database"]
+                }
+            }
+        }
+    },
+    {
+        "toolSpec": {
+            "name": "get_metric",
+            "description": "Busca uma métrica do CloudWatch para uma janela de tempo.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "metric_name": {"type": "string"},
+                        "namespace": {"type": "string"},
+                        "period_hours": {"type": "integer"}
+                    },
+                    "required": ["metric_name", "namespace"]
+                }
+            }
+        }
+    }
+]
+
+def call_tool(tool_name: str, tool_input: dict) -> str:
+    """Executa a ferramenta e retorna o resultado como string."""
+    if tool_name == "query_athena":
+        # Aqui você executa a query real no Athena
+        return json.dumps({"rows": [{"regiao": "Sul", "receita": 450000}], "count": 1})
+    elif tool_name == "get_metric":
+        return json.dumps({"average": 245.3, "unit": "Milliseconds"})
+    return json.dumps({"error": "Ferramenta não encontrada"})
+
+def agent_loop(user_question: str, model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"):
+    """Loop de agentic tool use com Converse API."""
+    messages = [{"role": "user", "content": [{"text": user_question}]}]
+
+    while True:
+        response = bedrock.converse(
+            modelId=model_id,
+            messages=messages,
+            toolConfig={"tools": tools},
+            system=[{"text": "Você é um assistente de análise de dados. Use as ferramentas disponíveis para responder perguntas com dados reais."}],
+            inferenceConfig={"maxTokens": 2048, "temperature": 0.1}
+        )
+
+        stop_reason = response["stopReason"]
+        assistant_message = response["output"]["message"]
+        messages.append(assistant_message)
+
+        if stop_reason == "end_turn":
+            # Resposta final sem tool use
+            return assistant_message["content"][0]["text"]
+
+        elif stop_reason == "tool_use":
+            # Processar chamadas de ferramenta
+            tool_results = []
+            for block in assistant_message["content"]:
+                if block.get("type") == "toolUse":
+                    result = call_tool(block["name"], block["input"])
+                    tool_results.append({
+                        "type": "toolResult",
+                        "toolUseId": block["toolUseId"],
+                        "content": [{"text": result}]
+                    })
+
+            messages.append({"role": "user", "content": tool_results})
+        else:
+            break
+
+    return "Conversa encerrada sem resposta."
+
+# Uso
+answer = agent_loop("Qual foi a receita total da região Sul no último mês?")
+print(answer)</code></pre>
+</section>
+
+<!-- 02 -->
+<section class="section" id="prompt-caching">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Prompt Caching — Redução de Custo em até 90%</h2>
+<p>Cache de prefixos de prompt para contextos grandes e repetitivos.</p>
+</div>
+</div>
+<p>Em sistemas RAG ou com documentos longos, o mesmo contexto (instruções do sistema + documentos de referência) é enviado repetidamente a cada turno de conversa. O <strong>Prompt Caching</strong> armazena o prefixo do prompt processado — tokens subsequentes que acertam o cache custam ~90% menos e chegam mais rápido:</p>
+<svg viewBox="0 0 860 160" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;background:#0f172a;border-radius:12px;padding:16px;margin:24px 0;">
+  <text x="430" y="22" fill="#94a3b8" font-size="11" font-weight="bold" text-anchor="middle" font-family="DM Sans">PROMPT CACHING — TOKENS LIDOS DO CACHE vs PROCESSADOS</text>
+  <rect x="20" y="40" width="340" height="50" rx="6" fill="#1e293b" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="190" y="60" fill="#a78bfa" font-size="10" font-weight="bold" text-anchor="middle" font-family="DM Sans">Sem Cache — Cada Request Processa Tudo</text>
+  <text x="190" y="76" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">System (2000 t) + Docs (8000 t) + Query (100 t) = 10.100 tokens × custo input</text>
+  <rect x="380" y="40" width="460" height="50" rx="6" fill="#1e293b" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="610" y="60" fill="#16a34a" font-size="10" font-weight="bold" text-anchor="middle" font-family="DM Sans">Com Cache — Prefixo Reutilizado</text>
+  <text x="610" y="76" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">Cache Read (10.000 t × 0.1×) + Query (100 t × 1×) → economia de ~90% nos tokens do contexto</text>
+  <rect x="20" y="105" width="160" height="40" rx="6" fill="#0f172a" stroke="#7c3aed" stroke-width="1"/>
+  <text x="100" y="120" fill="#a78bfa" font-size="10" text-anchor="middle" font-family="DM Mono">Primeiro Request:</text>
+  <text x="100" y="135" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">cache WRITE (1.25× custo)</text>
+  <rect x="195" y="105" width="160" height="40" rx="6" fill="#0f172a" stroke="#16a34a" stroke-width="1"/>
+  <text x="275" y="120" fill="#16a34a" font-size="10" text-anchor="middle" font-family="DM Mono">Requests Seguintes:</text>
+  <text x="275" y="135" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">cache READ (0.1× custo) ✅</text>
+  <rect x="370" y="105" width="460" height="40" rx="6" fill="#0f172a" stroke="#FF6B00" stroke-width="1"/>
+  <text x="600" y="120" fill="#FF6B00" font-size="10" text-anchor="middle" font-family="DM Mono">TTL do Cache:</text>
+  <text x="600" y="135" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">5 min padrão (Anthropic/Bedrock) — renovado a cada hit. Sessões longas amortizam o custo de write.</text>
+</svg>
+
+<pre><code class="language-python">import boto3
+
+bedrock = boto3.client("bedrock-runtime")
+
+SYSTEM_PROMPT = """Você é um especialista em análise de dados da empresa XYZ.
+[... 2000 tokens de instruções detalhadas ...]"""
+
+REFERENCE_DOCS = """
+[Documento 1: Política de Preços — 3000 tokens]
+[Documento 2: Catálogo de Produtos — 2500 tokens]
+[Documento 3: Histórico de Campanhas — 2500 tokens]
+"""
+
+def chat_with_cache(user_question: str, conversation_history: list):
+    """Chat com prompt caching no prefixo."""
+    response = bedrock.converse(
+        modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        system=[
+            {
+                "text": SYSTEM_PROMPT + REFERENCE_DOCS,
+                "cacheControl": {"type": "ephemeral"}  # marca para cache
+            }
+        ],
+        messages=conversation_history + [
+            {"role": "user", "content": [{"text": user_question}]}
+        ],
+        inferenceConfig={"maxTokens": 1024}
+    )
+
+    # Verificar uso do cache nas métricas
+    usage = response["usage"]
+    cache_read    = usage.get("cacheReadInputTokens", 0)
+    cache_written = usage.get("cacheWriteInputTokens", 0)
+    regular_input = usage.get("inputTokens", 0)
+
+    print(f"Cache Read: {cache_read} tokens (0.1× custo)")
+    print(f"Cache Write: {cache_written} tokens (1.25× custo)")
+    print(f"Input normal: {regular_input} tokens (1× custo)")
+
+    return response["output"]["message"]["content"][0]["text"]
+
+# Primeira chamada: escreve o cache
+r1 = chat_with_cache("Qual o desconto máximo para clientes Gold?", [])
+
+# Segunda chamada: lê do cache (90% mais barato)
+r2 = chat_with_cache("E para clientes Platinum?", [
+    {"role": "user", "content": [{"text": "Qual o desconto máximo para clientes Gold?"}]},
+    {"role": "assistant", "content": [{"text": r1}]}
+])</code></pre>
+</section>
+
+<!-- 03 -->
+<section class="section" id="batch-inference">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Batch Inference — Processamento Assíncrono em Massa</h2>
+<p>Classificação, extração e geração em milhares de documentos com até 50% de desconto.</p>
+</div>
+</div>
+<p>A Batch Inference (anteriormente chamada Model Invocation Job) é ideal quando você tem milhares de itens para processar (classificar reviews, extrair entidades de contratos, gerar resumos em massa) e pode tolerar latência de horas — o custo é até 50% menor que chamadas síncronas:</p>
+<pre><code class="language-python">import boto3
+import json
+
+bedrock = boto3.client("bedrock")
+
+# Preparar arquivo de input (JSONL — um request por linha)
+# Salvar em S3: s3://meu-bucket/batch-input/requests.jsonl
+# Formato: {"recordId": "001", "modelInput": {"messages": [...], "max_tokens": 200}}
+
+batch_job = bedrock.create_model_invocation_job(
+    jobName="classifica-reviews-2025-01",
+    modelId="anthropic.claude-3-haiku-20240307-v1:0",
+    roleArn="arn:aws:iam::123456789:role/BedrockBatchRole",
+    inputDataConfig={
+        "s3InputDataConfig": {
+            "s3Uri": "s3://meu-bucket/batch-input/requests.jsonl",
+            "s3InputFormat": "JSONLines"
+        }
+    },
+    outputDataConfig={
+        "s3OutputDataConfig": {
+            "s3Uri": "s3://meu-bucket/batch-output/",
+            "s3EncryptionKeyId": "arn:aws:kms:us-east-1:123:key/abc-123"
+        }
+    },
+    # Timeout máximo do job (opcional)
+    timeoutDurationInHours=24
+)
+
+job_arn = batch_job["jobArn"]
+print(f"Job iniciado: {job_arn}")
+
+# Monitorar status
+import time
+while True:
+    status = bedrock.get_model_invocation_job(jobIdentifier=job_arn)
+    state = status["status"]
+    print(f"Status: {state}")
+    if state in ["Completed", "Failed", "Stopped"]:
+        break
+    time.sleep(60)
+
+# Output é JSONL em S3: um resultado por linha
+# Processar resultados
+s3 = boto3.client("s3")
+# Download e parse do arquivo de output...</code></pre>
+<div class="callout" style="margin-top:16px;border-left:4px solid var(--genai);padding:16px 20px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.22);border-left-width:4px;border-radius:8px;">
+<strong style="color:var(--genai);">💡 Custo-Benefício: Quando Usar Batch</strong><br/>
+<strong>Use Batch quando:</strong> latência pode ser de horas, volume acima de 1000 itens, tarefas repetitivas (classificação, extração, sumarização). Custo até 50% menor. <strong>Não use quando:</strong> usuário aguarda resposta em tempo real, latência &lt; 10s é requisito, ou o volume é pequeno (overhead de setup não compensa).
+</div>
+</section>
+
+<!-- 04 -->
+<section class="section" id="cross-region">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Cross-Region Inference Profiles</h2>
+<p>Roteamento automático entre regiões para throughput maior e latência otimizada.</p>
+</div>
+</div>
+<p>Inference Profiles são configurações gerenciadas que roteiam requests entre múltiplas regiões AWS automaticamente. Útil para: (1) aumentar throughput além dos limites de uma região, (2) reduzir latência escolhendo a região mais próxima, (3) resiliência contra falhas regionais:</p>
+<pre><code class="language-python">import boto3
+
+bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
+
+# System-defined profile: inclui us-east-1, us-west-2, eu-west-1
+# O ARN tem o prefixo "us." que indica roteamento cross-region
+CROSS_REGION_PROFILE_ARN = (
+    "arn:aws:bedrock:us-east-1::foundation-model/"
+    "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    # Na prática, use o ARN do Inference Profile listado no console
+)
+
+response = bedrock.converse(
+    # Usar o Inference Profile ID (não o modelId direto)
+    modelId="us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    messages=[{
+        "role": "user",
+        "content": [{"text": "Resuma este contrato em 3 pontos principais..."}]
+    }],
+    inferenceConfig={"maxTokens": 500}
+)
+
+# A resposta inclui a região que efetivamente processou o request
+print(response["output"]["message"]["content"][0]["text"])
+
+# Listar profiles disponíveis
+bedrock_client = boto3.client("bedrock")
+profiles = bedrock_client.list_inference_profiles(typeEquals="SYSTEM_DEFINED")
+for p in profiles["inferenceProfileSummaries"]:
+    print(f"{p['inferenceProfileName']}: {p['inferenceProfileId']}")</code></pre>
+</section>
+
+<!-- Navegação Inferior -->
+<div style="margin-top:30px;display:flex;justify-content:space-between;">
+<a class="return-btn" href="genai-amazon-q.html" style="background:transparent;border:1px solid var(--border);color:var(--text);">
+<span>← Amazon Q</span>
+</a>
+<a class="return-btn" href="genai-system-design.html">
+<span>System Design (SDD) →</span>
+</a>
+</div>
+</main>
+</div>
+<script>
+  fetch('../../components/sidebar.html').then(r=>r.text()).then(h=>{
+    document.getElementById('sidebar').innerHTML=h;
+    var links=document.querySelectorAll('.nav-a');
+    links.forEach(function(l){
+      if(l.getAttribute('data-page')==='genai-bedrock-advanced-apis') l.classList.add('active');
+    });
+    var pg = document.querySelector('.nav-a.active');
+    if(pg){
+      var cat=pg.closest('.nav-cat-content');
+      if(cat){ cat.classList.add('open'); var lbl=cat.previousElementSibling; if(lbl){ lbl.classList.add('active'); var arr=lbl.querySelector('.arrow'); if(arr) arr.innerHTML='▼'; } }
+    }
+  });
+  function toggleNav(){
+    var sb=document.getElementById('sidebar'),main=document.getElementById('main'),hb=document.getElementById('hamburger');
+    if(sb.classList.contains('closed')){ sb.classList.remove('closed'); if(main) main.classList.remove('sidebar-closed'); if(hb) hb.innerHTML='✕'; }
+    else { sb.classList.add('closed'); if(main) main.classList.add('sidebar-closed'); if(hb) hb.innerHTML='☰'; }
+  }
+  function toggleCategory(catId, headerEl) {
+    var content=document.getElementById(catId),arrow=headerEl.querySelector('.arrow');
+    if(!content) return;
+    if(content.classList.contains('open')){ content.classList.remove('open'); headerEl.classList.remove('active'); if(arrow) arrow.innerHTML='▶'; }
+    else { content.classList.add('open'); headerEl.classList.add('active'); if(arrow) arrow.innerHTML='▼'; }
+  }
+</script>
+<script src="../../js/a11y.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>

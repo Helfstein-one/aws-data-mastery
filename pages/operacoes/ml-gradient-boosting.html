@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="XGBoost e LightGBM: ensemble boosting, SHAP values, SageMaker e tuning de hiperparâmetros." name="description"/>
+<title>Gradient Boosting: XGBoost &amp; LightGBM | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero">
+<div class="hero-ey">Módulo: Machine Learning</div>
+<h1>Gradient Boosting: XGBoost &amp; LightGBM</h1>
+<p class="hero-d">Os algoritmos dominantes em dados tabulares — desde Kaggle até modelos de crédito em produção. Teoria de ensemble boosting, diferenças entre XGBoost e LightGBM, SageMaker built-in e interpretabilidade com SHAP.</p>
+</div>
+<main class="main-content">
+
+<!-- 01 -->
+<section class="section" id="ensemble-teoria">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#0ea5e9">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#0ea5e9"></div>
+<h2>Ensemble: Boosting vs Bagging vs Stacking</h2>
+<p>Por que combinar modelos fracos é mais poderoso que um modelo forte único.</p>
+</div>
+</div>
+<div class="concept-grid">
+<div class="concept-card" style="border-top:4px solid #0ea5e9;">
+<div class="cc-tag">Paralelo</div>
+<div class="cc-title">Bagging (Random Forest)</div>
+<div class="cc-body">Treina N árvores em paralelo em amostras bootstrap do dataset. Reduz variância (overfitting). Cada árvore vota → maioria (classificação) ou média (regressão). Robusto mas limitado em bias.</div>
+</div>
+<div class="concept-card" style="border-top:4px solid #FF6B00;">
+<div class="cc-tag">Sequencial</div>
+<div class="cc-title">Boosting (XGBoost/LightGBM)</div>
+<div class="cc-body">Treina árvores em sequência — cada nova árvore foca nos <em>resíduos</em> (erros) da anterior. Reduz bias E variância progressivamente. Mais poderoso que bagging mas mais sensível a overfitting.</div>
+</div>
+<div class="concept-card" style="border-top:4px solid #a78bfa;">
+<div class="cc-tag">Meta-modelo</div>
+<div class="cc-title">Stacking</div>
+<div class="cc-body">Usa as previsões de N modelos base como features para um meta-modelo (geralmente regressão logística ou XGBoost). Combina os pontos fortes de cada modelo base. Mais complexo de manter em produção.</div>
+</div>
+</div>
+
+<h3 style="margin-top:28px;">Como o Boosting Funciona (Gradient Descent na Função de Perda)</h3>
+<svg viewBox="0 0 860 180" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;background:#0f172a;border-radius:12px;padding:16px;margin:20px 0;">
+  <text x="430" y="22" fill="#94a3b8" font-size="11" font-weight="bold" text-anchor="middle" font-family="DM Sans">GRADIENT BOOSTING — CICLO DE TREINAMENTO SEQUENCIAL</text>
+  <rect x="10" y="40" width="110" height="50" rx="6" fill="#1e293b" stroke="#0ea5e9" stroke-width="1.5"/>
+  <text x="65" y="60" fill="#38bdf8" font-size="10" font-weight="bold" text-anchor="middle" font-family="DM Sans">Modelo F₀</text>
+  <text x="65" y="76" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">previsão inicial</text>
+  <text x="65" y="88" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">(média dos y)</text>
+  <rect x="155" y="40" width="120" height="50" rx="6" fill="#1e293b" stroke="#FF6B00" stroke-width="1.5"/>
+  <text x="215" y="60" fill="#FF6B00" font-size="10" font-weight="bold" text-anchor="middle" font-family="DM Sans">Calcular Resíduos</text>
+  <text x="215" y="75" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">rᵢ = yᵢ - F(xᵢ)</text>
+  <text x="215" y="88" fill="#94a3b8" font-size="8" text-anchor="middle" font-family="DM Sans">(pseudo-residuals)</text>
+  <rect x="310" y="40" width="130" height="50" rx="6" fill="#1e293b" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="375" y="60" fill="#a78bfa" font-size="10" font-weight="bold" text-anchor="middle" font-family="DM Sans">Nova Árvore hₜ(x)</text>
+  <text x="375" y="75" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">treina nos resíduos</text>
+  <text x="375" y="88" fill="#94a3b8" font-size="8" text-anchor="middle" font-family="DM Sans">max_depth=3-6</text>
+  <rect x="475" y="40" width="140" height="50" rx="6" fill="#1e293b" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="545" y="60" fill="#16a34a" font-size="10" font-weight="bold" text-anchor="middle" font-family="DM Sans">F_{t+1} = Fₜ + η·hₜ</text>
+  <text x="545" y="75" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">η = learning_rate</text>
+  <text x="545" y="88" fill="#94a3b8" font-size="8" text-anchor="middle" font-family="DM Sans">atualiza ensemble</text>
+  <rect x="650" y="40" width="100" height="50" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="700" y="60" fill="#94a3b8" font-size="10" font-weight="bold" text-anchor="middle" font-family="DM Sans">Convergiu?</text>
+  <text x="700" y="76" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">n_estimators</text>
+  <text x="700" y="88" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="DM Sans">ou early stop</text>
+  <line x1="120" y1="65" x2="153" y2="65" stroke="#0ea5e9" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="275" y1="65" x2="308" y2="65" stroke="#FF6B00" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="440" y1="65" x2="473" y2="65" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="615" y1="65" x2="648" y2="65" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <path d="M700,92 Q700,140 375,145 Q155,145 155,92" fill="none" stroke="#FF6B00" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+  <text x="430" y="158" fill="#FF6B00" font-size="9" text-anchor="middle" font-family="DM Sans">repete até n_estimators ou perda convergir</text>
+  <defs><marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6Z" fill="#94a3b8"/></marker></defs>
+</svg>
+</section>
+
+<!-- 02 -->
+<section class="section" id="xgboost">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#0ea5e9">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#0ea5e9"></div>
+<h2>XGBoost — eXtreme Gradient Boosting</h2>
+<p>Regularização L1/L2 nativa, DART, Missing Values automático e built-in SageMaker.</p>
+</div>
+</div>
+<h3>Hiperparâmetros Críticos</h3>
+<div class="grid-2" style="margin-bottom:24px;">
+<div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #1e293b;">
+<div style="font-family:'DM Mono',monospace;font-size:10px;color:#0ea5e9;text-transform:uppercase;margin-bottom:10px;">Controle de Overfitting</div>
+<ul style="list-style:none;padding:0;margin:0;line-height:2;font-size:0.88em;color:var(--muted);">
+<li><code style="color:#38bdf8;">learning_rate (η)</code> — 0.01–0.3 (menor = mais árvores necessárias)</li>
+<li><code style="color:#38bdf8;">max_depth</code> — 3–10 (padrão=6; profundidade controla interações)</li>
+<li><code style="color:#38bdf8;">n_estimators</code> — 100–5000 (use early_stopping_rounds)</li>
+<li><code style="color:#38bdf8;">subsample</code> — 0.5–1.0 (fração de linhas por árvore)</li>
+<li><code style="color:#38bdf8;">colsample_bytree</code> — 0.5–1.0 (fração de features por árvore)</li>
+<li><code style="color:#38bdf8;">reg_alpha (L1)</code> — Esparsidade de pesos nas folhas</li>
+<li><code style="color:#38bdf8;">reg_lambda (L2)</code> — Suavização (padrão=1)</li>
+</ul>
+</div>
+<div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #1e293b;">
+<div style="font-family:'DM Mono',monospace;font-size:10px;color:#0ea5e9;text-transform:uppercase;margin-bottom:10px;">Funções de Perda (objective)</div>
+<ul style="list-style:none;padding:0;margin:0;line-height:2;font-size:0.88em;color:var(--muted);">
+<li><code style="color:#38bdf8;">binary:logistic</code> — Classificação binária</li>
+<li><code style="color:#38bdf8;">multi:softmax</code> — Multiclasse (retorna classe)</li>
+<li><code style="color:#38bdf8;">multi:softprob</code> — Multiclasse (retorna probabilidade)</li>
+<li><code style="color:#38bdf8;">reg:squarederror</code> — Regressão (MSE)</li>
+<li><code style="color:#38bdf8;">reg:tweedie</code> — Distribuição Tweedie (seguros)</li>
+<li><code style="color:#38bdf8;">rank:pairwise</code> — Learning to Rank</li>
+</ul>
+</div>
+</div>
+
+<h3>XGBoost no SageMaker (Built-in Algorithm)</h3>
+<pre><code class="language-python">import sagemaker
+from sagemaker.inputs import TrainingInput
+
+role = sagemaker.get_execution_role()
+session = sagemaker.Session()
+
+# Usar imagem built-in do XGBoost no SageMaker
+container = sagemaker.image_uris.retrieve("xgboost", session.boto_region_name, version="1.7-1")
+
+xgb = sagemaker.estimator.Estimator(
+    image_uri=container,
+    role=role,
+    instance_count=1,
+    instance_type="ml.m5.xlarge",
+    output_path=f"s3://{session.default_bucket()}/xgboost-output",
+    sagemaker_session=session
+)
+
+# Hiperparâmetros
+xgb.set_hyperparameters(
+    objective="binary:logistic",
+    num_round=500,
+    max_depth=6,
+    eta=0.1,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    eval_metric="auc",
+    early_stopping_rounds=20,
+    scale_pos_weight=3  # para dataset desbalanceado
+)
+
+# Training data
+train_input = TrainingInput(f"s3://meu-bucket/train/", content_type="csv")
+val_input   = TrainingInput(f"s3://meu-bucket/val/",   content_type="csv")
+
+xgb.fit({"train": train_input, "validation": val_input})
+
+# Deploy
+predictor = xgb.deploy(
+    initial_instance_count=1,
+    instance_type="ml.m5.large"
+)</code></pre>
+</section>
+
+<!-- 03 -->
+<section class="section" id="lightgbm">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#0ea5e9">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#0ea5e9"></div>
+<h2>LightGBM — Light Gradient Boosting Machine</h2>
+<p>Leaf-wise growth, GOSS, EFB — por que é 10x mais rápido que XGBoost em datasets grandes.</p>
+</div>
+</div>
+<div class="concept-grid">
+<div class="concept-card" style="border-top:4px solid #a78bfa;">
+<div class="cc-tag">Crescimento</div>
+<div class="cc-title">Leaf-Wise Growth</div>
+<div class="cc-body">XGBoost cresce em nível (todos os nós do mesmo nível juntos). LightGBM cresce na folha com maior ganho de informação. Resulta em árvores mais assimétricas mas com menor perda mais rápido.</div>
+</div>
+<div class="concept-card" style="border-top:4px solid #a78bfa;">
+<div class="cc-tag">Amostragem</div>
+<div class="cc-title">GOSS</div>
+<div class="cc-body">Gradient-based One-Side Sampling: mantém instâncias com gradiente alto (erros grandes) e descarta uma fração aleatória das instâncias de gradiente baixo. Reduz dados sem perda de informação crítica.</div>
+</div>
+<div class="concept-card" style="border-top:4px solid #a78bfa;">
+<div class="cc-tag">Features</div>
+<div class="cc-title">EFB</div>
+<div class="cc-body">Exclusive Feature Bundling: agrupa features mutuamente exclusivas (raramente não-zero ao mesmo tempo) em uma única feature. Reduz dimensionalidade efetiva sem perda de informação.</div>
+</div>
+</div>
+
+<h3 style="margin-top:24px;">Comparativo: XGBoost vs LightGBM</h3>
+<div style="overflow-x:auto;">
+<table style="width:100%;border-collapse:collapse;font-size:0.88em;">
+<thead>
+<tr style="background:#1e293b;">
+<th style="padding:10px;text-align:left;color:#0ea5e9;border-bottom:2px solid #334155;">Aspecto</th>
+<th style="padding:10px;text-align:center;color:#38bdf8;border-bottom:2px solid #334155;">XGBoost</th>
+<th style="padding:10px;text-align:center;color:#a78bfa;border-bottom:2px solid #334155;">LightGBM</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom:1px solid #1e293b;"><td style="padding:10px;">Velocidade (dataset grande)</td><td style="padding:10px;text-align:center;color:var(--muted);">⭐⭐⭐</td><td style="padding:10px;text-align:center;color:var(--muted);">⭐⭐⭐⭐⭐</td></tr>
+<tr style="border-bottom:1px solid #1e293b;"><td style="padding:10px;">Memória</td><td style="padding:10px;text-align:center;color:var(--muted);">Maior</td><td style="padding:10px;text-align:center;color:var(--muted);">Menor (histogramas)</td></tr>
+<tr style="border-bottom:1px solid #1e293b;"><td style="padding:10px;">Features Categóricas</td><td style="padding:10px;text-align:center;color:var(--muted);">Manual (one-hot)</td><td style="padding:10px;text-align:center;color:var(--muted);">Nativo (categorical_feature)</td></tr>
+<tr style="border-bottom:1px solid #1e293b;"><td style="padding:10px;">Precisão (dataset pequeno)</td><td style="padding:10px;text-align:center;color:var(--muted);">⭐⭐⭐⭐⭐</td><td style="padding:10px;text-align:center;color:var(--muted);">⭐⭐⭐⭐</td></tr>
+<tr style="border-bottom:1px solid #1e293b;"><td style="padding:10px;">Interpretabilidade (SHAP)</td><td style="padding:10px;text-align:center;color:var(--ok);">✅ Nativo</td><td style="padding:10px;text-align:center;color:var(--ok);">✅ Nativo</td></tr>
+<tr><td style="padding:10px;">SageMaker Built-in</td><td style="padding:10px;text-align:center;color:var(--ok);">✅ Oficial</td><td style="padding:10px;text-align:center;color:var(--muted);">Via Script Mode</td></tr>
+</tbody>
+</table>
+</div>
+
+<pre style="margin-top:20px;"><code class="language-python">import lightgbm as lgb
+from sklearn.model_selection import train_test_split
+
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2)
+
+# Suporte nativo a categorias (sem necessidade de one-hot encoding)
+ds_train = lgb.Dataset(X_train, label=y_train, categorical_feature=["regiao", "segmento"])
+ds_val   = lgb.Dataset(X_val,   label=y_val,   reference=ds_train)
+
+params = {
+    "objective": "binary",
+    "metric": "auc",
+    "learning_rate": 0.05,
+    "num_leaves": 63,          # leaf-wise: 2^max_depth - 1 como referência
+    "min_child_samples": 20,   # mínimo de amostras por folha (anti-overfitting)
+    "feature_fraction": 0.8,   # colsample equivalente
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "lambda_l1": 0.1,
+    "verbose": -1
+}
+
+model = lgb.train(
+    params,
+    ds_train,
+    num_boost_round=2000,
+    valid_sets=[ds_val],
+    callbacks=[lgb.early_stopping(50), lgb.log_evaluation(100)]
+)
+
+print(f"Best iteration: {model.best_iteration}, AUC: {model.best_score['valid_0']['auc']:.4f}")</code></pre>
+</section>
+
+<!-- 04 -->
+<section class="section" id="shap-values">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#0ea5e9">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#0ea5e9"></div>
+<h2>SHAP Values — Interpretabilidade de Modelos</h2>
+<p>Feature importance global vs importância local por predição individual.</p>
+</div>
+</div>
+<p>Feature importance padrão (gain/split count) diz quais features são importantes <em>globalmente</em>. SHAP (SHapley Additive exPlanations) explica <em>por que o modelo fez aquela previsão específica</em> para cada observação:</p>
+<pre><code class="language-python">import shap
+
+# SHAP nativo no XGBoost/LightGBM (rápido: Tree SHAP O(TLD²))
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X_val)
+
+# Importância global (média do valor absoluto dos SHAP)
+shap.summary_plot(shap_values, X_val, plot_type="bar")
+
+# Waterfall plot: por que o modelo classificou ESTA observação como fraude?
+shap.waterfall_plot(shap.Explanation(
+    values=shap_values[0],           # primeira observação
+    base_values=explainer.expected_value,
+    data=X_val.iloc[0],
+    feature_names=X_val.columns.tolist()
+))
+
+# Force plot: visualização interativa
+shap.force_plot(
+    explainer.expected_value,
+    shap_values[0],
+    X_val.iloc[0]
+)</code></pre>
+<div class="callout" style="margin-top:16px;border-left:4px solid #0ea5e9;padding:16px 20px;background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.22);border-left-width:4px;border-radius:8px;">
+<strong style="color:#38bdf8;">💡 SHAP em Modelos de Crédito</strong><br/>
+Regulações como LGPD e Basel III exigem explicabilidade em decisões de crédito automatizadas. SHAP permite gerar cartas de recusa com razões específicas: "Score reduzido em 15 pontos por renda_liquida abaixo de R$3.000" — direto e auditável.
+</div>
+</section>
+
+<!-- Navegação Inferior -->
+<div style="margin-top:30px;display:flex;justify-content:space-between;">
+<a class="return-btn" href="advanced-architectures.html" style="background:transparent;border:1px solid var(--border);color:var(--text);">
+<span>← Arquiteturas Avançadas</span>
+</a>
+<a class="return-btn" href="ml-time-series-anomaly.html">
+<span>Time Series &amp; Anomaly →</span>
+</a>
+</div>
+</main>
+</div>
+<script>
+  fetch('../../components/sidebar.html').then(r=>r.text()).then(h=>{
+    document.getElementById('sidebar').innerHTML=h;
+    var links=document.querySelectorAll('.nav-a');
+    links.forEach(function(l){
+      if(l.getAttribute('data-page')==='ml-gradient-boosting') l.classList.add('active');
+    });
+    var pg = document.querySelector('.nav-a.active');
+    if(pg){
+      var cat=pg.closest('.nav-cat-content');
+      if(cat){ cat.classList.add('open'); var lbl=cat.previousElementSibling; if(lbl){ lbl.classList.add('active'); var arr=lbl.querySelector('.arrow'); if(arr) arr.innerHTML='▼'; } }
+    }
+  });
+  function toggleNav(){
+    var sb=document.getElementById('sidebar'),main=document.getElementById('main'),hb=document.getElementById('hamburger');
+    if(sb.classList.contains('closed')){ sb.classList.remove('closed'); if(main) main.classList.remove('sidebar-closed'); if(hb) hb.innerHTML='✕'; }
+    else { sb.classList.add('closed'); if(main) main.classList.add('sidebar-closed'); if(hb) hb.innerHTML='☰'; }
+  }
+  function toggleCategory(catId, headerEl) {
+    var content=document.getElementById(catId),arrow=headerEl.querySelector('.arrow');
+    if(!content) return;
+    if(content.classList.contains('open')){ content.classList.remove('open'); headerEl.classList.remove('active'); if(arrow) arrow.innerHTML='▶'; }
+    else { content.classList.add('open'); headerEl.classList.add('active'); if(arrow) arrow.innerHTML='▼'; }
+  }
+</script>
+<script src="../../js/a11y.js"></script>
+</body>
+</html>
