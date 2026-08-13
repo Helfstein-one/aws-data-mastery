@@ -53,7 +53,16 @@ function scrollToTop() {
 window.scrollToTop = scrollToTop;
 
 if (typeof document !== 'undefined' && document.addEventListener) {
+    // Capture references NOW (before any inline script can overwrite window.toggleNav)
+    var _mobileToggleNav = toggleNav;
+    var _mobileToggleCategory = toggleCategory;
+
     document.addEventListener("DOMContentLoaded", () => {
+        // Reassign after all inline scripts have run — the captured refs still point to the
+        // mobile-aware implementations defined above, not the overwritten globals.
+        window.toggleNav = _mobileToggleNav;
+        window.toggleCategory = _mobileToggleCategory;
+
         // Resolve the absolute URL of THIS script using its resolved src attribute.
         // document.currentScript only works during initial parse, so we use querySelector.
         const scriptTag = document.querySelector('script[src*="sidebar-loader.js"]');

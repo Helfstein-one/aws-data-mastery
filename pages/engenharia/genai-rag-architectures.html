@@ -58,6 +58,113 @@
 </ul>
 </div>
 </section>
+<!-- ============================================================ -->
+<section class="section" id="pipeline-ingestao">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Pipeline de Ingestão RAG — Chunking, Embedding e Upsert</h2>
+<p>O código completo de indexação: do documento S3 bruto até o vetor no OpenSearch Serverless.</p>
+</div>
+</div>
+<p>A qualidade do RAG depende 80% da <strong>qualidade da ingestão</strong>. Um chunk mal feito garante recuperação irrelevante, mesmo com o melhor modelo. O pipeline abaixo usa <strong>chunking semântico</strong> (por frases/parágrafos, não por tamanho fixo), embeddings do Amazon Titan e upsert idempotente no OpenSearch Serverless (AOSS).</p>
+
+<div class="concept-grid">
+<div class="concept-card genai-card">
+<div class="cc-tag">Chunking</div>
+<div class="cc-title">Estratégia Semântica</div>
+<div class="cc-body">Divida por parágrafos ou seções lógicas (H2/H3 em docs). Evite corte no meio de frase. Adicione <strong>overlap</strong> de 10-15% do chunk anterior para manter contexto nas bordas. Tamanho ideal: 300-500 tokens.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Embedding</div>
+<div class="cc-title">Amazon Titan Text v2</div>
+<div class="cc-body"><code>amazon.titan-embed-text-v2:0</code> — 1024 dimensões, suporta até 8192 tokens por chunk. Para documentos multilíngues (PT/EN), Titan v2 performa melhor que modelos Open Source equivalentes.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Vector Store</div>
+<div class="cc-title">OpenSearch Serverless</div>
+<div class="cc-body">AOSS com índice k-NN (HNSW, cosine similarity). Sem gestão de cluster. Escala automático. Suporta campos de metadados filtráveis (<code>source</code>, <code>dept</code>, <code>date</code>) para filtros pré-retrieval.</div>
+</div>
+</div>
+
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">import</span> boto3, json, hashlib, re
+<span class="k">from</span> opensearchpy <span class="k">import</span> OpenSearch, RequestsHttpConnection
+<span class="k">from</span> requests_aws4auth <span class="k">import</span> AWS4Auth
+
+s3      = boto3.client(<span class="s">'s3'</span>)
+bedrock = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<span class="s">'us-east-1'</span>)
+
+<span class="c"># Autenticação AOSS</span>
+credentials = boto3.Session().get_credentials()
+awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
+                   <span class="s">'us-east-1'</span>, <span class="s">'aoss'</span>, session_token=credentials.token)
+aoss = OpenSearch(
+    hosts=[{<span class="s">'host'</span>: <span class="s">'https://xxxx.us-east-1.aoss.amazonaws.com'</span>, <span class="s">'port'</span>: 443}],
+    http_auth=awsauth, use_ssl=<span class="k">True</span>, verify_certs=<span class="k">True</span>,
+    connection_class=RequestsHttpConnection
+)
+
+<span class="k">def</span> <span class="nf">chunk_text</span>(text: str, max_tokens: int = 450, overlap_ratio: float = 0.12) -> list[dict]:
+    <span class="s">"""Chunking semântico por parágrafo com overlap."""</span>
+    paragraphs = [p.strip() <span class="k">for</span> p <span class="k">in</span> re.split(<span class="s">r'\n{2,}'</span>, text) <span class="k">if</span> p.strip()]
+    chunks, current, current_tokens = [], [], 0
+    overlap_buffer = []
+
+    <span class="k">for</span> para <span class="k">in</span> paragraphs:
+        tokens = len(para.split())
+        <span class="k">if</span> current_tokens + tokens > max_tokens <span class="k">and</span> current:
+            chunks.append({<span class="s">"text"</span>: <span class="s">" "</span>.join(current), <span class="s">"tokens"</span>: current_tokens})
+            <span class="c"># Mantém overlap: últimos 12% como contexto do próximo chunk</span>
+            overlap_size = max(1, int(len(current) * overlap_ratio))
+            current = current[-overlap_size:] + [para]
+            current_tokens = sum(len(p.split()) <span class="k">for</span> p <span class="k">in</span> current)
+        <span class="k">else</span>:
+            current.append(para)
+            current_tokens += tokens
+
+    <span class="k">if</span> current:
+        chunks.append({<span class="s">"text"</span>: <span class="s">" "</span>.join(current), <span class="s">"tokens"</span>: current_tokens})
+    <span class="k">return</span> chunks
+
+<span class="k">def</span> <span class="nf">embed_text</span>(text: str) -> list[float]:
+    <span class="s">"""Gera embedding com Amazon Titan Text Embeddings v2."""</span>
+    resp = bedrock.invoke_model(
+        modelId=<span class="s">'amazon.titan-embed-text-v2:0'</span>,
+        body=json.dumps({<span class="s">"inputText"</span>: text, <span class="s">"dimensions"</span>: 1024, <span class="s">"normalize"</span>: <span class="k">True</span>}),
+        contentType=<span class="s">'application/json'</span>
+    )
+    <span class="k">return</span> json.loads(resp[<span class="s">'body'</span>].read())[<span class="s">'embedding'</span>]
+
+<span class="k">def</span> <span class="nf">ingest_document</span>(bucket: str, key: str, metadata: dict = None):
+    <span class="s">"""Pipeline completo: S3 → chunk → embed → upsert no AOSS."""</span>
+    content = s3.get_object(Bucket=bucket, Key=key)[<span class="s">'Body'</span>].read().decode(<span class="s">'utf-8'</span>)
+    chunks = chunk_text(content)
+
+    <span class="k">for</span> i, chunk <span class="k">in</span> enumerate(chunks):
+        doc_id = hashlib.sha256(<span class="s">f"{key}_{i}"</span>.encode()).hexdigest()[:16]
+        embedding = embed_text(chunk[<span class="s">"text"</span>])
+
+        aoss.index(index=<span class="s">'knowledge-base'</span>, id=doc_id, body={
+            <span class="s">"text"</span>:      chunk[<span class="s">"text"</span>],
+            <span class="s">"embedding"</span>: embedding,
+            <span class="s">"source"</span>:    <span class="s">f"s3://{bucket}/{key}"</span>,
+            <span class="s">"chunk_idx"</span>: i,
+            <span class="s">"tokens"</span>:    chunk[<span class="s">"tokens"</span>],
+            **(metadata <span class="k">or</span> {})
+        })
+    print(<span class="s">f"✅ {len(chunks)} chunks indexados de s3://{bucket}/{key}"</span>)
+
+<span class="c"># Uso</span>
+ingest_document(<span class="s">"my-docs-bucket"</span>, <span class="s">"policies/rh-2024.pdf.txt"</span>,
+                metadata={<span class="s">"dept"</span>: <span class="s">"rh"</span>, <span class="s">"doc_type"</span>: <span class="s">"policy"</span>, <span class="s">"year"</span>: 2024})</pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 04: BUSCA HÍBRIDA + RE-RANKING + VECTOR STORE TABLE -->
+<!-- ============================================================ -->
+<!-- SECTION 03: PADRÕES AVANÇADOS DE BUSCA (VECTOR STORES) -->
+<!-- ============================================================ -->
 <section class="section" id="vector-stores">
 <svg style="max-width: 100%; background: #0f172a; border-radius: 12px; padding: 20px; margin: 24px 0;" viewbox="0 0 900 180" xmlns="http://www.w3.org/2000/svg"><text fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" x="450" y="25">CONCEITO: BUSCA SEMÂNTICA POR SIMILARIDADE DE COSSENO NO ESPAÇO VETORIAL</text><circle cx="200" cy="100" fill="none" r="60" stroke="var(--arch)" stroke-dasharray="3 3"></circle><line stroke="var(--accent)" stroke-width="2.5" x1="200" x2="240" y1="100" y2="60"></line><text fill="var(--accent)" font-size="10" font-weight="bold" x="250" y="55">Query Vector Q</text><line stroke="var(--ok)" stroke-width="2.5" x1="200" x2="250" y1="100" y2="75"></line><text fill="var(--ok)" font-size="10" font-weight="bold" x="260" y="80">Doc Vector D1 (cos θ ≈ 0.94)</text><rect fill="#1e293b" height="90" rx="6" stroke="var(--genai)" stroke-width="1.5" width="320" x="520" y="50"></rect><text fill="var(--genai)" font-size="11" font-weight="bold" text-anchor="middle" x="680" y="80">Fórmula Cosine Similarity</text><text fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle" x="680" y="110">cos(θ) = (A · B) / (||A|| * ||B||)</text></svg>
 <div class="diagram-legend" style="margin-top: 15px; margin-bottom: 25px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--genai); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b;">
@@ -69,7 +176,7 @@
 </ul>
 </div>
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">02</div>
+<div class="sec-num" style="color:var(--genai)">03</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>Padrões Avançados de Busca (Vector Stores)</h2>
@@ -135,7 +242,134 @@
 <span class="k">ORDER BY</span> embedding_vetor &lt;=&gt; <span class="s">'[0.015, -0.024, ..., 0.098]'</span>
 <span class="k">LIMIT</span> 5;</pre>
 </section>
-<!-- Checkbox Module Completion -->
+<!-- ============================================================ -->
+<!-- SECTION 03: PIPELINE DE INGESTÃO COMPLETO -->
+<!-- ============================================================ -->
+<section class="section" id="busca-hibrida">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Busca Híbrida, Re-Ranking e Comparativo de Vector Stores</h2>
+<p>Como combinar busca semântica (vetorial) com busca por palavra-chave (BM25) para máxima precisão na recuperação.</p>
+</div>
+</div>
+<p>A <strong>busca puramente vetorial</strong> é ótima para sinônimos e conceitos, mas péssima para nomes próprios, SKUs, siglas e termos exatos. A <strong>busca BM25</strong> (TF-IDF moderno) é precisa para termos exatos mas ignora semântica. A <strong>Busca Híbrida com RRF</strong> (Reciprocal Rank Fusion) combina os dois rankings e supera ambos isoladamente em ~15-25% nos benchmarks MTEB.</p>
+
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">def</span> <span class="nf">hybrid_search</span>(query: str, index: str = <span class="s">'knowledge-base'</span>,
+                  k: int = 8, alpha: float = 0.6) -> list[dict]:
+    <span class="s">"""
+    Busca híbrida: alpha=0.6 pesa 60% semântico + 40% BM25.
+    RRF garante que resultados em ambos os rankings sejam favorecidos.
+    """</span>
+    query_embedding = embed_text(query)
+
+    <span class="c"># Query híbrida do OpenSearch (combina knn + match em uma única requisição)</span>
+    body = {
+        <span class="s">"size"</span>: k,
+        <span class="s">"query"</span>: {
+            <span class="s">"hybrid"</span>: {
+                <span class="s">"queries"</span>: [
+                    {<span class="s">"knn"</span>: {<span class="s">"embedding"</span>: {<span class="s">"vector"</span>: query_embedding, <span class="s">"k"</span>: k}}},
+                    {<span class="s">"match"</span>: {<span class="s">"text"</span>: {<span class="s">"query"</span>: query, <span class="s">"boost"</span>: 1 - alpha}}}
+                ]
+            }
+        },
+        <span class="s">"search_pipeline"</span>: {
+            <span class="s">"phase_results_processors"</span>: [{
+                <span class="s">"normalization-processor"</span>: {
+                    <span class="s">"normalization"</span>: {<span class="s">"technique"</span>: <span class="s">"min_max"</span>},
+                    <span class="s">"combination"</span>: {<span class="s">"technique"</span>: <span class="s">"arithmetic_mean"</span>,
+                                      <span class="s">"parameters"</span>: {<span class="s">"weights"</span>: [alpha, 1 - alpha]}}
+                }
+            }]
+        }
+    }
+    hits = aoss.search(index=index, body=body)[<span class="s">'hits'</span>][<span class="s">'hits'</span>]
+    <span class="k">return</span> [{<span class="s">"text"</span>: h[<span class="s">'_source'</span>][<span class="s">'text'</span>], <span class="s">"score"</span>: h[<span class="s">'_score'</span>],
+              <span class="s">"source"</span>: h[<span class="s">'_source'</span>][<span class="s">'source'</span>]} <span class="k">for</span> h <span class="k">in</span> hits]
+
+<span class="k">def</span> <span class="nf">rag_answer</span>(question: str) -> str:
+    <span class="s">"""Pipeline RAG completo: busca híbrida → LLM gera resposta fundamentada."""</span>
+    chunks = hybrid_search(question, k=6)
+    context = <span class="s">"\n\n---\n\n"</span>.join([<span class="s">f"[Fonte: {c['source']}]\n{c['text']}"</span> <span class="k">for</span> c <span class="k">in</span> chunks])
+
+    prompt = <span class="s">f"""Responda à pergunta usando APENAS as informações dos documentos fornecidos.
+Se a informação não estiver nos documentos, responda "Não encontrei nos documentos disponíveis."
+Cite a fonte entre colchetes no final de cada afirmação.
+
+&lt;documentos&gt;
+{context}
+&lt;/documentos&gt;
+
+&lt;pergunta&gt;{question}&lt;/pergunta&gt;"""</span>
+
+    resp = bedrock.converse(
+        modelId=<span class="s">'anthropic.claude-3-5-sonnet-20241022-v2:0'</span>,
+        messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: [{<span class="s">"text"</span>: prompt}]}],
+        inferenceConfig={<span class="s">"maxTokens"</span>: 1000, <span class="s">"temperature"</span>: 0.1}
+    )
+    <span class="k">return</span> resp[<span class="s">'output'</span>][<span class="s">'message'</span>][<span class="s">'content'</span>][0][<span class="s">'text'</span>]</pre>
+
+<h3 style="margin-top:32px;">Comparativo de Vector Stores para RAG na AWS</h3>
+<div style="overflow-x:auto;margin-top:16px;">
+<table style="width:100%;border-collapse:collapse;font-size:0.88em;">
+<thead>
+<tr style="background:#1e293b;color:#e2e8f0;">
+<th style="padding:10px 12px;text-align:left;border-bottom:2px solid #334155;">Vector Store</th>
+<th style="padding:10px 12px;text-align:left;border-bottom:2px solid #334155;">Escala</th>
+<th style="padding:10px 12px;text-align:left;border-bottom:2px solid #334155;">Busca Híbrida</th>
+<th style="padding:10px 12px;text-align:left;border-bottom:2px solid #334155;">Latência p99</th>
+<th style="padding:10px 12px;text-align:left;border-bottom:2px solid #334155;">Custo/mês</th>
+<th style="padding:10px 12px;text-align:left;border-bottom:2px solid #334155;">Ideal para</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom:1px solid #1e293b;">
+<td style="padding:10px 12px;"><strong style="color:#a78bfa;">OpenSearch Serverless (AOSS)</strong></td>
+<td style="padding:10px 12px;">Ilimitado</td>
+<td style="padding:10px 12px;">✅ Nativo</td>
+<td style="padding:10px 12px;">~50ms</td>
+<td style="padding:10px 12px;">~$140 (2 OCU)</td>
+<td style="padding:10px 12px;">Produção enterprise, Bedrock KB</td>
+</tr>
+<tr style="border-bottom:1px solid #1e293b;background:#0f172a;">
+<td style="padding:10px 12px;"><strong style="color:#38bdf8;">pgvector (Aurora Serverless v2)</strong></td>
+<td style="padding:10px 12px;">Milhões de vetores</td>
+<td style="padding:10px 12px;">⚠️ Manual</td>
+<td style="padding:10px 12px;">~80-120ms</td>
+<td style="padding:10px 12px;">~$60-200</td>
+<td style="padding:10px 12px;">Já tem RDS, dados transacionais + vetoriais</td>
+</tr>
+<tr style="border-bottom:1px solid #1e293b;">
+<td style="padding:10px 12px;"><strong style="color:#10b981;">Amazon MemoryDB (Redis)</strong></td>
+<td style="padding:10px 12px;">Até 500M vetores</td>
+<td style="padding:10px 12px;">⚠️ Parcial</td>
+<td style="padding:10px 12px;">&lt;10ms</td>
+<td style="padding:10px 12px;">~$400+</td>
+<td style="padding:10px 12px;">Latência ultra-baixa, caching semântico</td>
+</tr>
+<tr style="border-bottom:1px solid #1e293b;background:#0f172a;">
+<td style="padding:10px 12px;"><strong style="color:#f59e0b;">Pinecone (via Bedrock KB)</strong></td>
+<td style="padding:10px 12px;">Gerenciado</td>
+<td style="padding:10px 12px;">✅ Nativo</td>
+<td style="padding:10px 12px;">~30-60ms</td>
+<td style="padding:10px 12px;">$70+ (plano Standard)</td>
+<td style="padding:10px 12px;">Equipe sem DevOps, POC rápida</td>
+</tr>
+<tr>
+<td style="padding:10px 12px;"><strong style="color:#94a3b8;">OpenSearch Provisionado</strong></td>
+<td style="padding:10px 12px;">Bilhões</td>
+<td style="padding:10px 12px;">✅ Nativo</td>
+<td style="padding:10px 12px;">~20-40ms</td>
+<td style="padding:10px 12px;">~$500+ (3 masters)</td>
+<td style="padding:10px 12px;">Alta throughput, múltiplos índices, multi-tenant</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
 <!-- Navegação Inferior -->
 <div style="margin-top: 30px; display: flex; justify-content: space-between;">
 <a class="return-btn" href="genai-fundamentos.html" style="background: transparent; border: 1px solid var(--border); color: var(--text);">

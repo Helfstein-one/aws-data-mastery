@@ -52,7 +52,105 @@
 <div class="cc-body">Em arquiteturas RAG, o Guardrail cruza a resposta do modelo com os documentos fonte que ele usou. Se ele detectar que a resposta não se baseia estritamente nos dados do seu OpenSearch (detectando uma alucinação grave), ele bloqueia a entrega da mensagem, evitando vexames corporativos.</div>
 </div>
 </div>
+
+<h3 style="margin-top:30px;">Guardrails boto3 — Criar e Aplicar</h3>
+<p>O Guardrail é criado uma vez e associado às chamadas de inferência via <code>guardrailIdentifier</code> no <code>converse()</code>. Suporta deny-list de tópicos, mascaramento de PII, filtros de conteúdo (HATE/VIOLENCE/SEXUAL) e grounding check para RAG.</p>
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">import</span> boto3
+
+bedrock_guardrails = boto3.client(<span class="s">'bedrock'</span>, region_name=<span class="s">'us-east-1'</span>)
+bedrock_runtime    = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<span class="s">'us-east-1'</span>)
+
+<span class="c"># 1. Criar o Guardrail uma única vez</span>
+guardrail = bedrock_guardrails.create_guardrail(
+    name=<span class="s">'corporate-chatbot-guardrail'</span>,
+    description=<span class="s">'Guardrail produção: bloqueia PII, tópicos sensíveis e alucinações RAG'</span>,
+
+    <span class="c"># Filtros de conteúdo por categoria e grau de tolerância</span>
+    contentPolicyConfig={
+        <span class="s">'filtersConfig'</span>: [
+            {<span class="s">'type'</span>: <span class="s">'HATE'</span>,           <span class="s">'inputStrength'</span>: <span class="s">'HIGH'</span>,   <span class="s">'outputStrength'</span>: <span class="s">'HIGH'</span>},
+            {<span class="s">'type'</span>: <span class="s">'VIOLENCE'</span>,       <span class="s">'inputStrength'</span>: <span class="s">'HIGH'</span>,   <span class="s">'outputStrength'</span>: <span class="s">'HIGH'</span>},
+            {<span class="s">'type'</span>: <span class="s">'PROMPT_ATTACK'</span>,  <span class="s">'inputStrength'</span>: <span class="s">'HIGH'</span>,   <span class="s">'outputStrength'</span>: <span class="s">'NONE'</span>},
+        ]
+    },
+
+    <span class="c"># Tópicos corporativos negados</span>
+    topicPolicyConfig={
+        <span class="s">'topicsConfig'</span>: [
+            {
+                <span class="s">'name'</span>: <span class="s">'aconselhamento-financeiro'</span>,
+                <span class="s">'definition'</span>: <span class="s">'Recomendações de investimentos, ações ou produtos financeiros específicos para o usuário'</span>,
+                <span class="s">'examples'</span>: [<span class="s">'Devo comprar ações da X?'</span>, <span class="s">'Qual fundo devo escolher?'</span>],
+                <span class="s">'type'</span>: <span class="s">'DENY'</span>
+            },
+            {
+                <span class="s">'name'</span>: <span class="s">'concorrentes'</span>,
+                <span class="s">'definition'</span>: <span class="s">'Qualquer elogio ou comparação favorável a empresas concorrentes'</span>,
+                <span class="s">'examples'</span>: [<span class="s">'O concorrente X é melhor?'</span>],
+                <span class="s">'type'</span>: <span class="s">'DENY'</span>
+            }
+        ]
+    },
+
+    <span class="c"># Mascaramento automático de PII</span>
+    sensitiveInformationPolicyConfig={
+        <span class="s">'piiEntitiesConfig'</span>: [
+            {<span class="s">'type'</span>: <span class="s">'EMAIL'</span>,   <span class="s">'action'</span>: <span class="s">'ANONYMIZE'</span>},
+            {<span class="s">'type'</span>: <span class="s">'PHONE'</span>,   <span class="s">'action'</span>: <span class="s">'ANONYMIZE'</span>},
+            {<span class="s">'type'</span>: <span class="s">'NAME'</span>,    <span class="s">'action'</span>: <span class="s">'ANONYMIZE'</span>},
+            {<span class="s">'type'</span>: <span class="s">'AWS_ACCESS_KEY'</span>, <span class="s">'action'</span>: <span class="s">'BLOCK'</span>},
+        ],
+        <span class="s">'regexesConfig'</span>: [
+            {<span class="s">'name'</span>: <span class="s">'CPF'</span>, <span class="s">'pattern'</span>: <span class="s">r'\d{3}\.\d{3}\.\d{3}-\d{2}'</span>, <span class="s">'action'</span>: <span class="s">'ANONYMIZE'</span>}
+        ]
+    },
+
+    <span class="c"># Grounding check: detecta alucinações comparando resposta com contexto RAG</span>
+    groundingPolicyConfig={
+        <span class="s">'filtersConfig'</span>: [{<span class="s">'type'</span>: <span class="s">'GROUNDING'</span>, <span class="s">'threshold'</span>: 0.75}]
+    },
+
+    blockedInputMessaging=<span class="s">"Sua mensagem não pode ser processada. Reformule ou contacte o suporte."</span>,
+    blockedOutputsMessaging=<span class="s">"Não encontrei uma resposta adequada para sua pergunta."</span>
+)
+guardrail_id      = guardrail[<span class="s">'guardrailId'</span>]
+guardrail_version = guardrail[<span class="s">'version'</span>]
+
+<span class="c"># 2. Aplicar nas chamadas de inferência (converse API)</span>
+<span class="k">def</span> <span class="nf">safe_chat</span>(user_message: str, rag_context: str = <span class="s">""</span>) -> dict:
+    messages = [{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: [{<span class="s">"text"</span>: user_message}]}]
+    kwargs = {
+        <span class="s">"modelId"</span>: <span class="s">"anthropic.claude-3-5-sonnet-20241022-v2:0"</span>,
+        <span class="s">"messages"</span>: messages,
+        <span class="s">"guardrailConfig"</span>: {
+            <span class="s">"guardrailIdentifier"</span>: guardrail_id,
+            <span class="s">"guardrailVersion"</span>: guardrail_version,
+            <span class="s">"trace"</span>: <span class="s">"enabled"</span>  <span class="c"># Retorna trace de qual filtro atuou</span>
+        }
+    }
+    <span class="c"># Se RAG, passa contexto para grounding check</span>
+    <span class="k">if</span> rag_context:
+        kwargs[<span class="s">"system"</span>] = [{<span class="s">"text"</span>: <span class="s">f"Responda apenas com base neste contexto:\n{rag_context}"</span>,
+                               <span class="s">"guardContent"</span>: {<span class="s">"text"</span>: {<span class="s">"text"</span>: rag_context, <span class="s">"qualifiers"</span>: [<span class="s">"grounding_source"</span>]}}}]
+    resp = bedrock_runtime.converse(**kwargs)
+    trace = resp.get(<span class="s">'trace'</span>, {}).get(<span class="s">'guardrail'</span>, {})
+    action = trace.get(<span class="s">'inputAssessment'</span>, {}).get(<span class="s">'topicPolicy'</span>, {}).get(<span class="s">'topics'</span>, [])
+    <span class="k">return</span> {
+        <span class="s">"response"</span>: resp[<span class="s">'output'</span>][<span class="s">'message'</span>][<span class="s">'content'</span>][0][<span class="s">'text'</span>],
+        <span class="s">"guardrail_triggered"</span>: [t[<span class="s">'name'</span>] <span class="k">for</span> t <span class="k">in</span> action <span class="k">if</span> t[<span class="s">'action'</span>] == <span class="s">'BLOCKED'</span>]
+    }</pre>
 </section>
+
+<div class="abox note" style="margin: 32px 0; border-left: 3px solid #a78bfa; background: #0f172a; padding: 20px; border-radius: 8px;">
+<strong style="color: var(--genai);">Guardrails vs Fine-Tuning — O Mapa de Decisão</strong>
+<p style="margin-top: 10px; margin-bottom: 4px; color: var(--muted);">
+<strong style="color: var(--text);">Use Guardrails quando o problema é de segurança em runtime:</strong> Prompt injection, vazamento de PII, respostas fora do escopo corporativo. O Guardrail é uma camada de inspeção ativa que funciona independente do modelo base — você pode trocar o LLM sem reconfigurar.
+</p>
+<p style="margin-top: 8px; margin-bottom: 0; color: var(--muted);">
+<strong style="color: var(--text);">Use Fine-Tuning quando o problema é de qualidade ou dialeto:</strong> O modelo não consegue manter o formato JSON certo, tem latência alta com few-shot, ou precisa de um tom de voz específico. Fine-Tuning altera os pesos — muda o comportamento na origem. <strong style="color: #f59e0b;">Nas implementações maduras, os dois coexistem: modelo fine-tuned com Guardrail na frente.</strong>
+</p>
+</div>
+
 <section class="section" id="finetuning">
 <div class="drawio-wrap" style="margin-top: 30px; margin-bottom: 15px;">
 <div class="drawio-label" style="color:var(--genai)"><span class="dot" style="background:var(--genai)"></span>SECURE FINE-TUNING PIPELINE IN ISOLATED VPC (LORA / PEFT)</div>
@@ -129,7 +227,66 @@
 </table>
 </div>
 </section>
-<!-- Checkbox Module Completion -->
+<h3 style="margin-top:30px;">Fine-Tuning com LoRA no SageMaker — Script Completo</h3>
+<p>O pipeline de fine-tuning no SageMaker usa o <strong>SageMaker JumpStart SDK</strong> para provisionar o job de treinamento em GPU, aplicando LoRA sobre um modelo base (ex: Llama 3 8B ou Mistral 7B). O dataset precisa estar no formato JSONL com pares <code>{"prompt": "...", "completion": "..."}</code>.</p>
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">from</span> sagemaker.jumpstart.estimator <span class="k">import</span> JumpStartEstimator
+<span class="k">import</span> sagemaker, boto3, json
+
+session    = sagemaker.Session()
+s3         = boto3.client(<span class="s">'s3'</span>)
+role       = sagemaker.get_execution_role()
+bucket     = session.default_bucket()
+model_id   = <span class="s">"meta-textgeneration-llama-3-8b-instruct"</span>  <span class="c"># Llama 3 8B Instruct</span>
+
+<span class="c"># 1. Preparar dataset JSONL no formato instruction-following</span>
+training_data = [
+    {<span class="s">"prompt"</span>: <span class="s">"&lt;|begin_of_text|&gt;&lt;|start_header_id|&gt;system&lt;|end_header_id|&gt;\nVocê é um especialista em crédito bancário.\n&lt;|eot_id|&gt;&lt;|start_header_id|&gt;user&lt;|end_header_id|&gt;\nO que é Score SERASA?&lt;|eot_id|&gt;&lt;|start_header_id|&gt;assistant&lt;|end_header_id|&gt;"</span>,
+     <span class="s">"completion"</span>: <span class="s">"O Score SERASA é um índice de 0 a 1000 que indica a probabilidade de um consumidor honrar seus compromissos financeiros..."</span>},
+    <span class="c"># ... mais exemplos do domínio específico</span>
+]
+<span class="c"># Salva em S3</span>
+jsonl_content = <span class="s">"\n"</span>.join(json.dumps(d, ensure_ascii=<span class="k">False</span>) <span class="k">for</span> d <span class="k">in</span> training_data)
+s3_train_path = <span class="s">f"s3://{bucket}/finetuning/train/data.jsonl"</span>
+s3.put_object(Bucket=bucket, Key=<span class="s">"finetuning/train/data.jsonl"</span>, Body=jsonl_content.encode())
+
+<span class="c"># 2. Configurar o Estimator com hiperparâmetros LoRA</span>
+estimator = JumpStartEstimator(
+    model_id=model_id,
+    model_version=<span class="s">"*"</span>,                  <span class="c"># Usa a versão mais recente disponível</span>
+    instance_type=<span class="s">"ml.g5.12xlarge"</span>,      <span class="c"># 4× A10G GPU: bom custo-benefício para LoRA</span>
+    instance_count=1,
+    role=role,
+    environment={<span class="s">"accept_eula"</span>: <span class="s">"true"</span>}, <span class="c"># Aceitar EULA do modelo Llama</span>
+)
+
+<span class="c"># Hiperparâmetros LoRA (PEFT): rank baixo = menos parâmetros treináveis</span>
+estimator.set_hyperparameters(
+    instruction_tuned=<span class="s">"True"</span>,
+    chat_dataset=<span class="s">"True"</span>,
+    epoch=<span class="s">"3"</span>,                  <span class="c"># 3 épocas geralmente suficiente para domínio específico</span>
+    learning_rate=<span class="s">"0.0001"</span>,
+    lora_r=<span class="s">"16"</span>,               <span class="c"># Rank LoRA: 16 bom equilíbrio qualidade × custo</span>
+    lora_alpha=<span class="s">"32"</span>,           <span class="c"># Alpha = 2 × rank: regra prática padrão</span>
+    lora_dropout=<span class="s">"0.05"</span>,
+    target_modules=<span class="s">"q_proj,v_proj"</span>,  <span class="c"># Apenas projeções de atenção (mais eficiente)</span>
+    per_device_train_batch_size=<span class="s">"2"</span>,
+    gradient_accumulation_steps=<span class="s">"4"</span>, <span class="c"># Batch efetivo = 8</span>
+    merge_weights=<span class="s">"True"</span>       <span class="c"># Mescla adapters no modelo base ao final (produção)</span>
+)
+
+<span class="c"># 3. Lançar o job de treinamento</span>
+estimator.fit({<span class="s">"training"</span>: s3_train_path}, wait=<span class="k">False</span>)
+print(<span class="s">f"Job iniciado: {estimator.latest_training_job.name}"</span>)
+
+<span class="c"># 4. Depois do job, fazer deploy do modelo fine-tuned</span>
+<span class="c"># predictor = estimator.deploy(initial_instance_count=1, instance_type="ml.g5.2xlarge")</span>
+<span class="c"># predictor.predict({"inputs": "Qual a diferença entre CDC e Score?"})</span></pre>
+
+<div style="margin-top:20px;padding:16px 20px;background:#0f172a;border:1px solid #1e293b;border-left:3px solid #f59e0b;border-radius:8px;">
+<strong style="color:#f59e0b;">⚡ QLoRA — Fine-Tuning em GPU Menor</strong>
+<p style="margin-top:8px;color:#94a3b8;margin-bottom:0;">Se a GPU não tem VRAM suficiente para LoRA (ex: ml.g5.2xlarge com 24GB), use <strong>QLoRA</strong>: o modelo base é quantizado em 4-bits (nf4) com BitsAndBytes antes do treinamento, reduzindo o uso de VRAM em ~75%. A qualidade final é ~2-3% inferior ao LoRA puro. No JumpStart, adicione <code>load_in_4bit="True"</code> e <code>bnb_4bit_quant_type="nf4"</code> nos hiperparâmetros.</p>
+</div>
+
 <!-- Navegação Inferior -->
 <div style="margin-top: 30px; display: flex; justify-content: space-between;">
 <a class="return-btn" href="genai-system-design.html" style="background: transparent; border: 1px solid var(--border); color: var(--text);">

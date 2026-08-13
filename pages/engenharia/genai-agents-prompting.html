@@ -86,7 +86,274 @@
 </ol>
 <p>Isso é o que permite criarmos "Data Analysts Virtuais" dentro do Slack da empresa, capazes de rodar queries no Data Lake, cruzar dados com planilhas de metas, e gerar gráficos em tempo real.</p>
 </section>
-<!-- Checkbox Module Completion -->
+<!-- ============================================================ -->
+<!-- SECTION 02: BEDROCK AGENTS NA PRÁTICA -->
+<!-- ============================================================ -->
+<section class="section" id="bedrock-agents">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Bedrock Agents na Prática — Action Groups e boto3</h2>
+<p>Como criar, configurar e invocar um Agente autônomo na AWS com ferramentas reais (Lambda + OpenAPI).</p>
+</div>
+</div>
+<p>Um <strong>Bedrock Agent</strong> é composto por três peças: o <strong>Foundation Model</strong> (cérebro), um ou mais <strong>Action Groups</strong> (conjunto de ferramentas definidas em OpenAPI) e, opcionalmente, uma <strong>Knowledge Base</strong> (memória semântica). O agente orquestra tudo autonomamente usando o loop ReAct.</p>
+<div class="concept-grid">
+<div class="concept-card genai-card">
+<div class="cc-tag">Foundation Model</div>
+<div class="cc-title">Raciocínio (ReAct)</div>
+<div class="cc-body">Claude 3.5 Sonnet raciocina sobre o objetivo, decide qual ferramenta chamar e em qual ordem. Suporta multi-turn com histórico de conversação automático via <code>sessionId</code>.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Action Group</div>
+<div class="cc-title">Ferramentas (OpenAPI)</div>
+<div class="cc-body">Cada ferramenta é descrita por um schema OpenAPI 3.0 e executada por uma função Lambda. O agente lê o schema para saber quais parâmetros passar e o que esperar de retorno.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Knowledge Base</div>
+<div class="cc-title">Memória Semântica (RAG)</div>
+<div class="cc-body">O agente consulta automaticamente a KB antes de raciocinar. Nenhum código extra: basta associar a KB ao agente no console ou via boto3 <code>knowledgeBases</code>.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Session State</div>
+<div class="cc-title">Memória de Sessão</div>
+<div class="cc-body">O <code>sessionState</code> permite injetar variáveis de contexto (<code>promptSessionAttributes</code>) e arquivos de resultado (<code>files</code>) diretamente no raciocínio do agente sem re-treinar nada.</div>
+</div>
+</div>
+
+<h3 style="margin-top:30px;">Criando um Agente com Action Group via boto3</h3>
+<p>O fluxo completo de criação tem 4 etapas: criar o agente, criar o action group com o schema OpenAPI, preparar (compilar) o agente e criar um alias para invocação. O schema OpenAPI vive em S3.</p>
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">import</span> boto3, json
+
+bedrock_agent = boto3.client(<span class="s">'bedrock-agent'</span>, region_name=<span class="s">'us-east-1'</span>)
+
+<span class="c"># 1. Criar o agente</span>
+agent = bedrock_agent.create_agent(
+    agentName=<span class="s">'data-analyst-agent'</span>,
+    agentResourceRoleArn=<span class="s">'arn:aws:iam::123456789012:role/BedrockAgentRole'</span>,
+    foundationModel=<span class="s">'anthropic.claude-3-5-sonnet-20241022-v2:0'</span>,
+    instruction=<span class="s">"""Você é um analista de dados sênior. Use as ferramentas disponíveis
+    para responder perguntas sobre vendas, anomalias e métricas de negócio.
+    Sempre execute queries antes de responder — nunca invente números."""</span>,
+    idleSessionTTLInSeconds=3600
+)
+agent_id = agent[<span class="s">'agent'</span>][<span class="s">'agentId'</span>]
+
+<span class="c"># 2. Associar Action Group com schema OpenAPI no S3</span>
+bedrock_agent.create_agent_action_group(
+    agentId=agent_id,
+    agentVersion=<span class="s">'DRAFT'</span>,
+    actionGroupName=<span class="s">'DataQueryTools'</span>,
+    actionGroupExecutor={
+        <span class="s">'lambda'</span>: <span class="s">'arn:aws:lambda:us-east-1:123456789012:function:DataAgentTools'</span>
+    },
+    apiSchema={
+        <span class="s">'s3'</span>: {
+            <span class="s">'s3BucketName'</span>: <span class="s">'my-agent-schemas'</span>,
+            <span class="s">'s3ObjectKey'</span>: <span class="s">'data-agent-openapi.json'</span>
+        }
+    },
+    description=<span class="s">'Ferramentas: query_athena, get_anomalies, list_tables'</span>
+)
+
+<span class="c"># 3. Preparar (compilar) o agente</span>
+bedrock_agent.prepare_agent(agentId=agent_id)
+
+<span class="c"># 4. Criar alias de produção</span>
+alias = bedrock_agent.create_agent_alias(
+    agentId=agent_id,
+    agentAliasName=<span class="s">'prod-v1'</span>
+)
+alias_id = alias[<span class="s">'agentAlias'</span>][<span class="s">'agentAliasId'</span>]
+print(<span class="s">f"Agent pronto: {agent_id} / Alias: {alias_id}"</span>)</pre>
+
+<h3 style="margin-top:30px;">Schema OpenAPI da Ferramenta (data-agent-openapi.json)</h3>
+<p>O schema define as ferramentas que o agente pode chamar. Cada <code>operationId</code> vira um botão que o LLM pode pressionar. A descrição é o que o modelo usa para decidir <em>quando</em> usar a ferramenta.</p>
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;">{
+  <span class="s">"openapi"</span>: <span class="s">"3.0.0"</span>,
+  <span class="s">"paths"</span>: {
+    <span class="s">"/query_athena"</span>: {
+      <span class="s">"post"</span>: {
+        <span class="s">"operationId"</span>: <span class="s">"query_athena"</span>,
+        <span class="s">"description"</span>: <span class="s">"Executa uma query SQL no Amazon Athena sobre o Data Lake. Use para responder perguntas numéricas sobre vendas, clientes e produtos."</span>,
+        <span class="s">"requestBody"</span>: {
+          <span class="s">"content"</span>: {
+            <span class="s">"application/json"</span>: {
+              <span class="s">"schema"</span>: {
+                <span class="s">"type"</span>: <span class="s">"object"</span>,
+                <span class="s">"properties"</span>: {
+                  <span class="s">"sql_query"</span>: { <span class="s">"type"</span>: <span class="s">"string"</span>, <span class="s">"description"</span>: <span class="s">"Query SQL válida no dialeto do Athena/Presto"</span> },
+                  <span class="s">"database"</span>: { <span class="s">"type"</span>: <span class="s">"string"</span>, <span class="s">"description"</span>: <span class="s">"Nome do database no Glue Catalog"</span> }
+                },
+                <span class="s">"required"</span>: [<span class="s">"sql_query"</span>, <span class="s">"database"</span>]
+              }
+            }
+          }
+        }
+      }
+    },
+    <span class="s">"/get_anomalies"</span>: {
+      <span class="s">"post"</span>: {
+        <span class="s">"operationId"</span>: <span class="s">"get_anomalies"</span>,
+        <span class="s">"description"</span>: <span class="s">"Detecta anomalias estatísticas em uma métrica para um período dado. Usa SageMaker RCF internamente."</span>,
+        <span class="s">"requestBody"</span>: {
+          <span class="s">"content"</span>: { <span class="s">"application/json"</span>: { <span class="s">"schema"</span>: { <span class="s">"type"</span>: <span class="s">"object"</span>,
+            <span class="s">"properties"</span>: {
+              <span class="s">"metric_name"</span>: { <span class="s">"type"</span>: <span class="s">"string"</span> },
+              <span class="s">"start_date"</span>: { <span class="s">"type"</span>: <span class="s">"string"</span>, <span class="s">"description"</span>: <span class="s">"ISO 8601 date"</span> },
+              <span class="s">"end_date"</span>: { <span class="s">"type"</span>: <span class="s">"string"</span> }
+            }, <span class="s">"required"</span>: [<span class="s">"metric_name"</span>, <span class="s">"start_date"</span>, <span class="s">"end_date"</span>]
+          }}}
+        }
+      }
+    }
+  }
+}</pre>
+
+<h3 style="margin-top:30px;">Invocando o Agente (invoke_agent)</h3>
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;">bedrock_agent_runtime = boto3.client(<span class="s">'bedrock-agent-runtime'</span>, region_name=<span class="s">'us-east-1'</span>)
+
+<span class="k">def</span> <span class="nf">invoke_data_agent</span>(question: str, session_id: str) -> str:
+    response = bedrock_agent_runtime.invoke_agent(
+        agentId=<span class="s">'ABCDEF1234'</span>,
+        agentAliasId=<span class="s">'TSTALIASID'</span>,
+        sessionId=session_id,
+        inputText=question,
+        <span class="c"># Injeta variáveis de contexto sem mudar o prompt base</span>
+        sessionState={
+            <span class="s">'promptSessionAttributes'</span>: {
+                <span class="s">'user_role'</span>: <span class="s">'data_analyst'</span>,
+                <span class="s">'default_database'</span>: <span class="s">'sales_gold'</span>
+            }
+        },
+        enableTrace=<span class="k">True</span>  <span class="c"># Retorna trace do ReAct loop para debug</span>
+    )
+
+    <span class="c"># A resposta é um EventStream (streaming)</span>
+    full_response = <span class="s">""</span>
+    <span class="k">for</span> event <span class="k">in</span> response[<span class="s">'completion'</span>]:
+        <span class="k">if</span> <span class="s">'chunk'</span> <span class="k">in</span> event:
+            full_response += event[<span class="s">'chunk'</span>][<span class="s">'bytes'</span>].decode()
+        <span class="k">elif</span> <span class="s">'trace'</span> <span class="k">in</span> event:
+            trace = event[<span class="s">'trace'</span>][<span class="s">'trace'</span>]
+            <span class="k">if</span> <span class="s">'orchestrationTrace'</span> <span class="k">in</span> trace:
+                orch = trace[<span class="s">'orchestrationTrace'</span>]
+                <span class="k">if</span> <span class="s">'invocationInput'</span> <span class="k">in</span> orch:
+                    print(<span class="s">f"🔧 Tool chamada: {orch['invocationInput']}"</span>)
+    <span class="k">return</span> full_response
+
+<span class="c"># Uso</span>
+resposta = invoke_data_agent(
+    question=<span class="s">"Houve alguma anomalia nas vendas esta semana? Se sim, qual região foi impactada?"</span>,
+    session_id=<span class="s">"sessao-usuario-123"</span>
+)
+print(resposta)</pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 03: MULTI-AGENT — SUPERVISOR + SUBAGENTES -->
+<!-- ============================================================ -->
+<section class="section" id="multi-agent">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Multi-Agent: Padrão Supervisor + Subagentes</h2>
+<p>Como orquestrar múltiplos agentes especializados sob um agente supervisor — o padrão mais robusto para automação corporativa.</p>
+</div>
+</div>
+<p>Um único agente com muitas ferramentas fica lento e comete mais erros — o modelo perde foco. O padrão <strong>Supervisor + Subagentes</strong> divide responsabilidades: um agente mestre recebe a tarefa de alto nível e delega para agentes especialistas (<em>SQL Agent</em>, <em>Anomaly Agent</em>, <em>Report Agent</em>). O Bedrock suporta isso nativamente com o tipo de Action Group <code>AGENT_COLLABORATOR</code>.</p>
+<div class="concept-grid">
+<div class="concept-card genai-card">
+<div class="cc-tag">Supervisor</div>
+<div class="cc-title">Orquestrador Mestre</div>
+<div class="cc-body">Recebe o objetivo final do usuário, decompõe em subtarefas e delega para subagentes. Agrega os resultados e gera a resposta consolidada. Tem pouquíssimas ferramentas diretas.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Subagente SQL</div>
+<div class="cc-title">Especialista em Dados</div>
+<div class="cc-body">Tem acesso apenas às tools de query: <code>query_athena</code>, <code>query_redshift</code>, <code>list_tables</code>. Sem acesso a envio de e-mail ou criação de relatório — princípio do menor privilégio.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Subagente Report</div>
+<div class="cc-title">Gerador de Artefatos</div>
+<div class="cc-body">Recebe dados estruturados e tem tools de criação: <code>generate_pdf</code>, <code>send_email_ses</code>, <code>upload_to_s3</code>. Nunca acessa o banco de dados diretamente.</div>
+</div>
+</div>
+
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="c"># Associar um subagente ao supervisor via AGENT_COLLABORATOR</span>
+bedrock_agent.create_agent_action_group(
+    agentId=supervisor_agent_id,
+    agentVersion=<span class="s">'DRAFT'</span>,
+    actionGroupName=<span class="s">'SQLSpecialist'</span>,
+    actionGroupExecutor={
+        <span class="s">'customControl'</span>: <span class="s">'RETURN_CONTROL'</span>  <span class="c"># Supervisor decide quando delegar</span>
+    },
+    agentCollaborator={                     <span class="c"># Tipo especial: outro agente</span>
+        <span class="s">'agentId'</span>: sql_subagent_id,
+        <span class="s">'agentAliasId'</span>: sql_alias_id,
+        <span class="s">'collaboratorName'</span>: <span class="s">'SQLSpecialist'</span>,
+        <span class="s">'collaborationInstruction'</span>: <span class="s">"Especialista em queries SQL. Chame-o quando precisar de dados quantitativos do Data Lake."</span>
+    }
+)
+
+<span class="c"># O supervisor agora pode "chamar" o SQL agent como se fosse uma tool</span>
+<span class="c"># O Bedrock gerencia o handoff e retorno de contexto automaticamente</span>
+
+<span class="c">## Exemplo de trace: Supervisor → SQL Agent → Athena → Volta ao Supervisor</span>
+<span class="c">## 1. User: "Qual o faturamento por região esta semana?"</span>
+<span class="c">## 2. Supervisor THOUGHT: "Preciso de dados → vou chamar SQLSpecialist"</span>
+<span class="c">## 3. SQLSpecialist ACTION: query_athena("SELECT region, SUM(revenue) ...")</span>
+<span class="c">## 4. SQLSpecialist OBSERVATION: {"SP": 1200000, "RJ": 800000, ...}</span>
+<span class="c">## 5. Supervisor ANSWER: "SP liderou com R$1.2M (60% do total)..."</span></pre>
+
+<h3 style="margin-top:30px;">Few-Shot Prompting com Exemplos Estruturados (Claude XML)</h3>
+<p>Para tarefas de geração de código ou SQL, few-shot prompting com exemplos explícitos em tags XML reduz drasticamente erros de formato:</p>
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">def</span> <span class="nf">nl_to_sql</span>(natural_language_query: str, schema_context: str) -> str:
+    prompt = f<span class="s">"""Você é um especialista em SQL para Amazon Athena (Presto).
+Converta a pergunta em linguagem natural para SQL válido.
+
+&lt;regras&gt;
+- Use apenas as tabelas e colunas listadas no schema
+- Sempre inclua LIMIT 1000 em queries sem GROUP BY
+- Datas no formato 'YYYY-MM-DD'
+- Nunca use subconsultas quando JOIN resolve
+&lt;/regras&gt;
+
+&lt;schema&gt;
+{schema_context}
+&lt;/schema&gt;
+
+&lt;exemplo&gt;
+&lt;pergunta&gt;Qual o total de vendas por produto este mês?&lt;/pergunta&gt;
+&lt;sql&gt;
+SELECT produto_id, produto_nome, SUM(valor_venda) AS total_vendas
+FROM sales_gold.fato_vendas
+WHERE DATE(dt_venda) BETWEEN DATE_TRUNC('month', CURRENT_DATE) AND CURRENT_DATE
+GROUP BY 1, 2
+ORDER BY total_vendas DESC
+LIMIT 100
+&lt;/sql&gt;
+&lt;/exemplo&gt;
+
+&lt;pergunta&gt;{natural_language_query}&lt;/pergunta&gt;
+
+Responda apenas com o bloco &lt;sql&gt;...&lt;/sql&gt;."""</span>
+
+    bedrock = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<span class="s">'us-east-1'</span>)
+    resp = bedrock.converse(
+        modelId=<span class="s">'anthropic.claude-3-5-haiku-20241022-v1:0'</span>,  <span class="c"># Haiku: mais barato p/ SQL</span>
+        messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: [{<span class="s">"text"</span>: prompt}]}],
+        inferenceConfig={<span class="s">"temperature"</span>: 0.0, <span class="s">"maxTokens"</span>: 500}
+    )
+    raw = resp[<span class="s">'output'</span>][<span class="s">'message'</span>][<span class="s">'content'</span>][0][<span class="s">'text'</span>]
+    <span class="c"># Extrai apenas o SQL da tag</span>
+    <span class="k">import</span> re
+    match = re.search(<span class="s">r'&lt;sql&gt;(.*?)&lt;/sql&gt;'</span>, raw, re.DOTALL)
+    <span class="k">return</span> match.group(1).strip() <span class="k">if</span> match <span class="k">else</span> raw</pre>
+</section>
+
 <!-- Navegação Inferior -->
 <div style="margin-top: 30px; display: flex; justify-content: space-between;">
 <a class="return-btn" href="genai-rag-architectures.html" style="background: transparent; border: 1px solid var(--border); color: var(--text);">

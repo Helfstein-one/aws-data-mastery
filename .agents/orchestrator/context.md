@@ -1,21 +1,23 @@
-# Context & Requirements
+# Context & Findings Index
 
-## Scope
-Branch: `feat/financas-dados-cleanup`
-Target Directory: `/pages/financas/` (9 pages):
-1. `onboarding.html`
-2. `matematica-financeira.html`
-3. `ciclo-vida-credito.html`
-4. `pos-venda-reconciliacao.html`
-5. `contabilidade-razonetes.html`
-6. `risco-montecarlo.html`
-7. `normas-regulatorio.html`
-8. `auditoria-dados.html`
-9. `finops-financas.html`
+## Target File Scope
+### Engenharia:
+- `pages/engenharia/genai-*.html` (to be enumerated by survey explorers)
 
-## Technical & Quality Guidelines
-- Sidebar JS: All 9 pages must have functioning sidebar links, `#sidebar`, `#hamburger`, `toggleCategory`, `toggleNav`, `scrollToTop` without console errors.
-- KaTeX Math: Use delimiters `\(` and `\[` (avoid raw unescaped LaTeX tags).
-- SVG Diagrams: Native, responsive, dark mode compatible, high contrast, zero text overlap.
-- Dark Mode Premium: Harmonized CSS (`style.css`), typography, badges.
-- Quality Verification: Layout Reviewer, UX Evaluator, Forensic Auditor, Judge Agent.
+### Operacoes:
+- `pages/operacoes/advanced-architectures.html`
+- `pages/operacoes/deep-learning-fundamentals.html`
+- `pages/operacoes/cnn-deep-dive.html`
+- `pages/operacoes/rnn-lstm-deep-dive.html`
+- `pages/operacoes/transformers-attention.html`
+- `pages/operacoes/mlops-model-registry.html`
+- `pages/operacoes/evaluation-features.html`
+
+## Technical Requirements Summary
+- Diagrams: Draw.io `<div class="mxgraph" ...>` wrapped in `<div class="drawio-wrap">` or responsive conceptual SVGs.
+- Client Renderer Script: `<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>` immediately before `</body>`.
+- Diagram Legend: `<div class="diagram-legend">...</div>` immediately after each diagram container detailing AWS components, integration, and context.
+- Audit & Verification:
+  - Technical content & Boto3/Python code accuracy.
+  - 100% W3C XML / JSON parsing of `data-mxgraph` attributes using `xml.etree.ElementTree.fromstring` and `json.loads`.
+  - DOM visibility.

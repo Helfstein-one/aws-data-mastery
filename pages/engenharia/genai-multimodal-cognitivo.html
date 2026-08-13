@@ -24,7 +24,7 @@
 <main class="main-content">
 <section class="section" id="multimodal">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">09</div>
+<div class="sec-num" style="color:var(--genai)">01</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>A Morte do OCR Clássico</h2>
@@ -36,7 +36,7 @@
 </section>
 <section class="section" id="arquitetura">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">09.1</div>
+<div class="sec-num" style="color:var(--genai)">02</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>Arquitetura de Pipeline Multimodal</h2>
@@ -77,7 +77,7 @@
 </section>
 <section class="section" id="tradeoffs">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">09.2</div>
+<div class="sec-num" style="color:var(--genai)">03</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>Trade-offs de Processamento Documental</h2>
@@ -147,6 +147,82 @@ def extrair_dados_fatura(imagem_bytes):
     return json.loads(response['body'].read())</code></pre>
 </div>
 </section>
+
+<section class="section" id="boto3-multimodal">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Pipeline Multimodal em Produção — S3 + Textract + Bedrock</h2>
+<p>Processamento batch de documentos com error handling, retries e saída estruturada para RAG.</p>
+</div>
+</div>
+<p>O código da seção anterior extrai dados de uma única imagem em memória. Em produção, os documentos chegam via S3, precisam de <strong>Textract</strong> para extração de layout/tabelas, e o resultado deve ser salvo de volta em S3 em formato estruturado para indexação no OpenSearch. O pipeline abaixo orquestra tudo isso com tratamento de erros e processamento em batch.</p>
+<div class="code-header"><span>Pipeline Multimodal Completo — S3 → Textract → Bedrock → S3</span></div>
+<div class="code-block">
+<pre><code class="language-python">import boto3, json, base64
+from botocore.exceptions import ClientError
+
+s3        = boto3.client("s3")
+textract  = boto3.client("textract")
+bedrock   = boto3.client("bedrock-runtime")
+
+BUCKET_IN  = "documentos-entrada"
+BUCKET_OUT = "documentos-processados"
+MODEL_ID   = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+
+def extrair_texto_textract(bucket: str, key: str) -> str:
+    resp = textract.detect_document_text(
+        Document={"S3Object": {"Bucket": bucket, "Name": key}}
+    )
+    return " ".join(
+        b["Text"] for b in resp["Blocks"] if b["BlockType"] == "LINE"
+    )
+
+def extrair_com_visao(bucket: str, key: str) -> dict:
+    img_bytes = s3.get_object(Bucket=bucket, Key=key)["Body"].read()
+    img_b64   = base64.b64encode(img_bytes).decode()
+
+    prompt = (
+        "Você é um extrator de dados. Retorne APENAS um JSON com os campos: "
+        "fornecedor, cnpj, data_emissao, valor_total, itens (lista de {descricao, qtd, valor})."
+    )
+    resp = bedrock.converse(
+        modelId=MODEL_ID,
+        messages=[{"role": "user", "content": [
+            {"image": {"format": "jpeg", "source": {"bytes": img_bytes}}},
+            {"text": prompt}
+        ]}]
+    )
+    return json.loads(resp["output"]["message"]["content"][0]["text"])
+
+def processar_documento(key: str) -> None:
+    try:
+        dados = extrair_com_visao(BUCKET_IN, key)
+        out_key = key.replace(".jpg", ".json").replace(".pdf", ".json")
+        s3.put_object(
+            Bucket=BUCKET_OUT, Key=out_key,
+            Body=json.dumps(dados, ensure_ascii=False).encode(),
+            ContentType="application/json"
+        )
+        print(f"✅ {key} → {out_key}")
+    except ClientError as e:
+        print(f"❌ Erro S3/Bedrock em {key}: {e}")
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"⚠️  Parsing falhou em {key}: {e}")
+
+def processar_bucket_em_batch(prefix: str = "faturas/") -> None:
+    paginator = s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=BUCKET_IN, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            if obj["Key"].endswith((".jpg", ".jpeg", ".pdf")):
+                processar_documento(obj["Key"])
+
+if __name__ == "__main__":
+    processar_bucket_em_batch("faturas/2025/")</code></pre>
+</div>
+</section>
+
 <!-- Navegação e Conclusão -->
 <div style="margin-top: 30px; display: flex; justify-content: space-between;">
 <a class="return-btn" href="genai-graphrag-neptune.html" style="background: transparent; border: 1px solid var(--border); color: var(--text);">

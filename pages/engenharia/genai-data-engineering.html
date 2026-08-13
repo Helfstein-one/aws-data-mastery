@@ -142,7 +142,295 @@ bedrock = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<sp
     result = json.loads(response[<span class="s">'body'</span>].read())
     <span class="k">return</span> result[<span class="s">'content'</span>][0][<span class="s">'text'</span>]</pre>
 </section>
-<!-- Checkbox Module Completion -->
+<!-- ============================================================ -->
+<!-- SECTION 02: TEXT-TO-SQL COM ATHENA -->
+<!-- ============================================================ -->
+<section class="section" id="text-to-sql">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>Text-to-SQL: Analistas em Linguagem Natural</h2>
+<p>Um pipeline completo que converte perguntas de negócio em SQL executado no Athena — zero conhecimento de SQL exigido do usuário.</p>
+</div>
+</div>
+<p>O padrão <strong>Text-to-SQL com LLM</strong> é um dos casos de uso de maior ROI na Engenharia de Dados: analistas de negócio passam a consultar o Data Lake diretamente, sem depender de tickets para a equipe de dados. A arquitetura é: <em>pergunta → Bedrock gera SQL → Athena executa → resultado formatado pelo LLM</em>.</p>
+
+<div class="concept-grid">
+<div class="concept-card genai-card">
+<div class="cc-tag">Schema Injection</div>
+<div class="cc-title">Context do Glue Catalog</div>
+<div class="cc-body">O schema das tabelas é injetado automaticamente no prompt via boto3 <code>get_table()</code>. O LLM conhece colunas, tipos e partições sem treinamento adicional.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Few-Shot</div>
+<div class="cc-title">Exemplos de Negócio</div>
+<div class="cc-body">3-5 exemplos de pergunta → SQL específicos do seu domínio reduzem erros em 70%. Use perguntas que o próprio time faria: "total de vendas por canal este mês".</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Validação</div>
+<div class="cc-title">Guard Rails de SQL</div>
+<div class="cc-body">Bloqueie operações destrutivas (<code>DROP</code>, <code>DELETE</code>, <code>INSERT</code>) via regex antes de enviar ao Athena. Limite resultados com <code>LIMIT</code> automático para evitar scans caros.</div>
+</div>
+</div>
+
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">import</span> boto3, json, re, time
+
+bedrock  = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<span class="s">'us-east-1'</span>)
+glue     = boto3.client(<span class="s">'glue'</span>,           region_name=<span class="s">'us-east-1'</span>)
+athena   = boto3.client(<span class="s">'athena'</span>,         region_name=<span class="s">'us-east-1'</span>)
+
+<span class="k">def</span> <span class="nf">get_schema_context</span>(database: str, table_names: list[str]) -> str:
+    <span class="s">"""Busca schema do Glue Catalog e formata para o prompt."""</span>
+    lines = []
+    <span class="k">for</span> t <span class="k">in</span> table_names:
+        tbl = glue.get_table(DatabaseName=database, Name=t)[<span class="s">'Table'</span>]
+        cols = [<span class="s">f"{c['Name']} ({c['Type']})"</span> <span class="k">for</span> c <span class="k">in</span> tbl[<span class="s">'StorageDescriptor'</span>][<span class="s">'Columns'</span>]]
+        parts = [<span class="s">f"{p['Name']} ({p['Type']})"</span> <span class="k">for</span> p <span class="k">in</span> tbl.get(<span class="s">'PartitionKeys'</span>, [])]
+        lines.append(<span class="s">f"Tabela: {database}.{t}\n  Colunas: {', '.join(cols)}\n  Partições: {', '.join(parts) or 'nenhuma'}"</span>)
+    <span class="k">return</span> <span class="s">"\n\n"</span>.join(lines)
+
+<span class="k">def</span> <span class="nf">nl_to_sql_athena</span>(pergunta: str, database: str = <span class="s">'sales_gold'</span>) -> dict:
+    schema = get_schema_context(database, [<span class="s">'fato_vendas'</span>, <span class="s">'dim_produto'</span>, <span class="s">'dim_regiao'</span>])
+    prompt = <span class="s">f"""Você é um engenheiro de dados especialista em Amazon Athena (SQL Presto).
+Converta a pergunta em SQL executável. NUNCA use DELETE/DROP/INSERT/UPDATE.
+Adicione LIMIT 5000 se não houver agregação.
+
+&lt;schema&gt;
+{schema}
+&lt;/schema&gt;
+
+&lt;exemplo&gt;
+&lt;pergunta&gt;Total de vendas por produto neste mês&lt;/pergunta&gt;
+&lt;sql&gt;SELECT p.nome_produto, SUM(v.valor_venda) AS total
+FROM sales_gold.fato_vendas v JOIN sales_gold.dim_produto p USING(produto_id)
+WHERE v.dt_venda >= DATE_TRUNC('month', CURRENT_DATE)
+GROUP BY 1 ORDER BY 2 DESC LIMIT 50&lt;/sql&gt;
+&lt;/exemplo&gt;
+
+&lt;pergunta&gt;{pergunta}&lt;/pergunta&gt;
+Responda APENAS com &lt;sql&gt;...&lt;/sql&gt;."""</span>
+
+    resp = bedrock.converse(
+        modelId=<span class="s">'anthropic.claude-3-5-haiku-20241022-v1:0'</span>,
+        messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: [{<span class="s">"text"</span>: prompt}]}],
+        inferenceConfig={<span class="s">"temperature"</span>: 0.0, <span class="s">"maxTokens"</span>: 600}
+    )
+    raw_sql = re.search(<span class="s">r'&lt;sql&gt;(.*?)&lt;/sql&gt;'</span>, resp[<span class="s">'output'</span>][<span class="s">'message'</span>][<span class="s">'content'</span>][0][<span class="s">'text'</span>], re.DOTALL)
+    sql = raw_sql.group(1).strip() <span class="k">if</span> raw_sql <span class="k">else</span> <span class="s">""</span>
+
+    <span class="c"># Guard: bloqueia operações destrutivas</span>
+    <span class="k">if</span> re.search(<span class="s">r'\b(DELETE|DROP|INSERT|UPDATE|TRUNCATE)\b'</span>, sql, re.IGNORECASE):
+        <span class="k">raise</span> ValueError(<span class="s">"SQL destrutivo bloqueado pelo guard rail."</span>)
+
+    <span class="c"># Executa no Athena</span>
+    execution = athena.start_query_execution(
+        QueryString=sql,
+        QueryExecutionContext={<span class="s">'Database'</span>: database},
+        ResultConfiguration={<span class="s">'OutputLocation'</span>: <span class="s">'s3://my-athena-results/text-to-sql/'</span>}
+    )
+    exec_id = execution[<span class="s">'QueryExecutionId'</span>]
+
+    <span class="c"># Poll até concluir (produção: use Step Functions ou EventBridge)</span>
+    <span class="k">while</span> <span class="k">True</span>:
+        state = athena.get_query_execution(QueryExecutionId=exec_id)[<span class="s">'QueryExecution'</span>][<span class="s">'Status'</span>][<span class="s">'State'</span>]
+        <span class="k">if</span> state <span class="k">in</span> (<span class="s">'SUCCEEDED'</span>, <span class="s">'FAILED'</span>, <span class="s">'CANCELLED'</span>): <span class="k">break</span>
+        time.sleep(1)
+
+    results = athena.get_query_results(QueryExecutionId=exec_id)[<span class="s">'ResultSet'</span>][<span class="s">'Rows'</span>]
+    <span class="k">return</span> {<span class="s">"sql_gerado"</span>: sql, <span class="s">"rows"</span>: results[:20], <span class="s">"status"</span>: state}
+
+<span class="c"># Uso</span>
+resultado = nl_to_sql_athena(<span class="s">"Qual foi o produto mais vendido na região Sul em junho?"</span>)
+print(resultado[<span class="s">'sql_gerado'</span>])</pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 03: ETL COGNITIVO COM GLUE + BEDROCK -->
+<!-- ============================================================ -->
+<section class="section" id="etl-cognitivo">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>ETL Cognitivo — Glue + Bedrock para Schema Drift</h2>
+<p>Usando LLMs para detectar e sugerir correções automáticas quando schemas evoluem inesperadamente no pipeline.</p>
+</div>
+</div>
+<p><strong>Schema drift</strong> é um dos maiores causadores de falha silenciosa em pipelines: uma coluna é renomeada pelo sistema de origem, o job do Glue continua rodando, mas gera NULLs em vez de dados. Com um LLM no loop, o pipeline detecta a divergência e <em>sugere o mapeamento correto</em> antes de gravar na camada Gold.</p>
+
+<div class="concept-grid">
+<div class="concept-card genai-card">
+<div class="cc-tag">Detecção</div>
+<div class="cc-title">Schema Diff Automático</div>
+<div class="cc-body">Compare o schema esperado (catalogado no Glue) com o schema real dos dados recebidos. Qualquer divergência de nome, tipo ou cardinalidade alimenta o prompt de análise.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Sugestão</div>
+<div class="cc-title">Mapeamento Semântico</div>
+<div class="cc-body">O LLM analisa semanticamente: <em>"customer_id" e "id_cliente" provavelmente são a mesma coisa</em>. Ele sugere um mapeamento JSON que o job Glue aplica como transformação de coluna.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Ação</div>
+<div class="cc-title">Auto-Heal ou Alerta</div>
+<div class="cc-body">Se a confiança do mapeamento for alta (>0.9), aplica automaticamente. Se baixa, aciona SNS com o contexto completo para revisão humana — Human-in-the-loop controlado.</div>
+</div>
+</div>
+
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">import</span> boto3, json
+<span class="k">from</span> pyspark.sql <span class="k">import</span> SparkSession
+<span class="k">from</span> awsglue.context <span class="k">import</span> GlueContext
+
+spark = SparkSession.builder.getOrCreate()
+gc = GlueContext(spark.sparkContext)
+bedrock = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<span class="s">'us-east-1'</span>)
+sns = boto3.client(<span class="s">'sns'</span>, region_name=<span class="s">'us-east-1'</span>)
+
+EXPECTED_SCHEMA = {
+    <span class="s">"customer_id"</span>: <span class="s">"string"</span>, <span class="s">"order_date"</span>: <span class="s">"date"</span>,
+    <span class="s">"product_sku"</span>: <span class="s">"string"</span>, <span class="s">"revenue"</span>: <span class="s">"double"</span>
+}
+
+<span class="k">def</span> <span class="nf">detect_and_heal_schema_drift</span>(df, table_name: str):
+    actual_schema = {f.name: str(f.dataType) <span class="k">for</span> f <span class="k">in</span> df.schema.fields}
+    missing = [c <span class="k">for</span> c <span class="k">in</span> EXPECTED_SCHEMA <span class="k">if</span> c <span class="k">not</span> <span class="k">in</span> actual_schema]
+    extra   = [c <span class="k">for</span> c <span class="k">in</span> actual_schema   <span class="k">if</span> c <span class="k">not</span> <span class="k">in</span> EXPECTED_SCHEMA]
+
+    <span class="k">if not</span> (missing <span class="k">or</span> extra):
+        <span class="k">return</span> df  <span class="c"># Schema OK, sem drift</span>
+
+    <span class="c"># Pede ao LLM para sugerir mapeamento semântico</span>
+    prompt = <span class="s">f"""Analise o schema drift da tabela '{table_name}'.
+Schema esperado: {json.dumps(EXPECTED_SCHEMA)}
+Schema recebido: {json.dumps(actual_schema)}
+Colunas faltando: {missing}
+Colunas extras:   {extra}
+
+Sugira um mapeamento JSON no formato:
+{{"mappings": [{{"de": "nome_recebido", "para": "nome_esperado", "confianca": 0.95, "motivo": "..."}}, ...], "acao_recomendada": "auto_heal|alerta_humano"}}
+Responda apenas com JSON válido."""</span>
+
+    resp = bedrock.converse(
+        modelId=<span class="s">'anthropic.claude-3-5-haiku-20241022-v1:0'</span>,
+        messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: [{<span class="s">"text"</span>: prompt}]}],
+        inferenceConfig={<span class="s">"temperature"</span>: 0.0, <span class="s">"maxTokens"</span>: 400}
+    )
+    suggestion = json.loads(resp[<span class="s">'output'</span>][<span class="s">'message'</span>][<span class="s">'content'</span>][0][<span class="s">'text'</span>])
+
+    <span class="k">if</span> suggestion[<span class="s">'acao_recomendada'</span>] == <span class="s">'auto_heal'</span>:
+        <span class="c"># Aplica renomeações sugeridas com alta confiança</span>
+        <span class="k">for</span> m <span class="k">in</span> suggestion[<span class="s">'mappings'</span>]:
+            <span class="k">if</span> m[<span class="s">'confianca'</span>] >= 0.9:
+                df = df.withColumnRenamed(m[<span class="s">'de'</span>], m[<span class="s">'para'</span>])
+        <span class="k">return</span> df
+    <span class="k">else</span>:
+        <span class="c"># Publica alerta no SNS com contexto completo para revisão humana</span>
+        sns.publish(
+            TopicArn=<span class="s">'arn:aws:sns:us-east-1:123456789012:data-quality-alerts'</span>,
+            Message=json.dumps({<span class="s">"tabela"</span>: table_name, <span class="s">"sugestao"</span>: suggestion}),
+            Subject=<span class="s">f"Schema Drift detectado: {table_name}"</span>
+        )
+        <span class="k">raise</span> RuntimeError(<span class="s">f"Schema drift requer revisão humana: {missing}"</span>)
+
+<span class="c"># No job Glue</span>
+df_raw = gc.create_dynamic_frame.from_catalog(database=<span class="s">"raw"</span>, table_name=<span class="s">"orders"</span>).toDF()
+df_healed = detect_and_heal_schema_drift(df_raw, <span class="s">"orders"</span>)
+df_healed.write.format(<span class="s">"iceberg"</span>).mode(<span class="s">"append"</span>).save(<span class="s">"sales_gold.orders"</span>)</pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 04: AI-ASSISTED DATA QUALITY -->
+<!-- ============================================================ -->
+<section class="section" id="ai-data-quality">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>AI-Assisted Data Quality — Detecção e Diagnóstico</h2>
+<p>Usando Bedrock para interpretar métricas de qualidade e gerar diagnósticos em linguagem natural para o time de negócio.</p>
+</div>
+</div>
+<p>O AWS Glue Data Quality e o Amazon Deequ geram <strong>scores de qualidade numéricos</strong>, mas o stakeholder de negócio não sabe o que fazer com "<em>Completeness score: 0.73</em>". Um LLM no loop transforma esse número em: <em>"31.1% do campo CPF está vazio na tabela de clientes. Isso impacta relatórios de LGPD e pode indicar falha na integração com o sistema X."</em></p>
+
+<div class="concept-grid">
+<div class="concept-card genai-card">
+<div class="cc-tag">Glue DQ</div>
+<div class="cc-title">Scores Numéricos</div>
+<div class="cc-body">O Glue Data Quality avalia regras DQDL (IsComplete, ColumnValues, Uniqueness) e retorna scores 0-1 por regra. Esses resultados ficam disponíveis via CloudWatch e S3.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">Bedrock</div>
+<div class="cc-title">Diagnóstico em NL</div>
+<div class="cc-body">O LLM recebe os scores + contexto da tabela e gera um relatório em português explicando o impacto de negócio, causas prováveis e ações recomendadas.</div>
+</div>
+<div class="concept-card genai-card">
+<div class="cc-tag">SNS + Lambda</div>
+<div class="cc-title">Alertas Inteligentes</div>
+<div class="cc-body">Em vez de alertas técnicos ("completeness < 0.8"), o time recebe: "Atenção: 27% dos pedidos do dia não têm CEP preenchido. Verificar integração com app mobile."</div>
+</div>
+</div>
+
+<pre style="background:#0f172a;color:#f8fafc;overflow-x:auto;padding:20px;border-radius:8px;font-size:0.85em;line-height:1.6;"><span class="k">import</span> boto3, json
+
+bedrock = boto3.client(<span class="s">'bedrock-runtime'</span>, region_name=<span class="s">'us-east-1'</span>)
+
+<span class="k">def</span> <span class="nf">generate_dq_narrative</span>(dq_results: dict, table_context: str) -> str:
+    <span class="s">"""Transforma resultados técnicos de DQ em narrativa de negócio."""</span>
+
+    failed_rules = [r <span class="k">for</span> r <span class="k">in</span> dq_results[<span class="s">'rules'</span>] <span class="k">if</span> r[<span class="s">'score'</span>] < 0.85]
+    <span class="k">if not</span> failed_rules:
+        <span class="k">return</span> <span class="s">"✅ Qualidade de dados OK — todas as regras passaram."</span>
+
+    prompt = <span class="s">f"""Você é um especialista em governança de dados. Analise os resultados de qualidade
+abaixo e gere um diagnóstico claro para o time de negócio (não técnico).
+
+Contexto da tabela: {table_context}
+
+Regras com problemas:
+{json.dumps(failed_rules, indent=2, ensure_ascii=False)}
+
+Para cada falha, explique:
+1. O que está errado em linguagem simples
+2. Provável causa (sistema de origem? transformação ETL? bug de ingestão?)
+3. Impacto de negócio (relatórios afetados, riscos de compliance LGPD/BACEN)
+4. Ação recomendada
+
+Seja direto e conciso. Use bullet points."""</span>
+
+    resp = bedrock.converse(
+        modelId=<span class="s">'anthropic.claude-3-5-sonnet-20241022-v2:0'</span>,
+        messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: [{<span class="s">"text"</span>: prompt}]}],
+        inferenceConfig={<span class="s">"maxTokens"</span>: 800, <span class="s">"temperature"</span>: 0.2}
+    )
+    <span class="k">return</span> resp[<span class="s">'output'</span>][<span class="s">'message'</span>][<span class="s">'content'</span>][0][<span class="s">'text'</span>]
+
+<span class="c"># Resultado real de Glue DQ (obtido via S3 ou CloudWatch após job)</span>
+dq_result_example = {
+    <span class="s">"table"</span>: <span class="s">"orders_silver"</span>,
+    <span class="s">"run_date"</span>: <span class="s">"2024-06-15"</span>,
+    <span class="s">"rules"</span>: [
+        {<span class="s">"rule"</span>: <span class="s">"IsComplete 'customer_cpf'"</span>,          <span class="s">"score"</span>: 0.69, <span class="s">"threshold"</span>: 0.95},
+        {<span class="s">"rule"</span>: <span class="s">"ColumnValues 'order_value' >= 0"</span>,      <span class="s">"score"</span>: 0.998, <span class="s">"threshold"</span>: 1.0},
+        {<span class="s">"rule"</span>: <span class="s">"Uniqueness 'order_id'"</span>,               <span class="s">"score"</span>: 0.82, <span class="s">"threshold"</span>: 1.0},
+        {<span class="s">"rule"</span>: <span class="s">"IsComplete 'product_sku'"</span>,             <span class="s">"score"</span>: 0.91, <span class="s">"threshold"</span>: 0.99}
+    ]
+}
+
+narrativa = generate_dq_narrative(
+    dq_results=dq_result_example,
+    table_context=<span class="s">"Tabela de pedidos de e-commerce — alimenta dashboard de vendas e relatório BACEN mensal"</span>
+)
+print(narrativa)
+<span class="c"># Output esperado:
+# ⚠️ ALERTA DE QUALIDADE — orders_silver (2024-06-15)
+#
+# 1. CPF de Cliente (31% vazio)
+#    - Provável causa: App mobile v3.2 liberado ontem não valida CPF no checkout.
+#    - Impacto: Relatório LGPD de clientes identificados ficará incompleto.
+#    - Ação: Rollback do app ou hotfix urgente. Reprocessar pedidos das últimas 12h.
+# ...</span></pre>
+</section>
+
 <!-- Navegação Inferior -->
 <div style="margin-top: 30px; display: flex; justify-content: space-between;">
 <a class="return-btn" href="genai-agents-prompting.html" style="background: transparent; border: 1px solid var(--border); color: var(--text);">
