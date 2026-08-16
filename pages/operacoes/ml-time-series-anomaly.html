@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Time Series e Anomaly Detection na AWS: ARIMA, Prophet, Amazon Forecast, SageMaker Random Cut Forest e CloudWatch." name="description"/>
+<title>Time Series &amp; Anomaly Detection | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
+</head>
+<body>
+<button id="hamburger" onclick="toggleNav()">☰</button>
+<nav id="sidebar"></nav>
+<div id="main">
+<div class="hero">
+<div class="hero-ey">Módulo: Machine Learning</div>
+<h1>Time Series &amp; Anomaly Detection</h1>
+<p class="hero-d">Da teoria de séries temporais (ARIMA, Prophet) ao Amazon Forecast gerenciado e detecção de anomalias em tempo real com SageMaker Random Cut Forest e CloudWatch Anomaly Detection.</p>
+</div>
+<main class="main-content">
+
+<!-- 01 -->
+<section class="section" id="ts-fundamentos">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#0ea5e9">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#0ea5e9"></div>
+<h2>Fundamentos de Séries Temporais</h2>
+<p>Tendência, sazonalidade, ruído e estacionariedade — os 4 pilares antes de qualquer modelo.</p>
+</div>
+</div>
+<div class="concept-grid">
+<div class="concept-card" style="border-top:4px solid #0ea5e9;">
+<div class="cc-tag">Decomposição</div>
+<div class="cc-title">Componentes de uma Série</div>
+<div class="cc-body"><strong>Tendência (T):</strong> direção de longo prazo. <strong>Sazonalidade (S):</strong> padrão periódico (diário, semanal, anual). <strong>Ciclo (C):</strong> flutuações de longo prazo não-periódicas. <strong>Ruído (ε):</strong> variação aleatória irredutível.</div>
+</div>
+<div class="concept-card" style="border-top:4px solid #FF6B00;">
+<div class="cc-tag">Pré-requisito</div>
+<div class="cc-title">Estacionariedade</div>
+<div class="cc-body">Série é estacionária quando média, variância e autocovariância não mudam com o tempo. ARIMA requer estacionariedade. Teste: ADF (Augmented Dickey-Fuller). Solução: diferenciação (d=1 ou d=2).</div>
+</div>
+<div class="concept-card" style="border-top:4px solid #a78bfa;">
+<div class="cc-tag">Avaliação</div>
+<div class="cc-title">Métricas de Forecast</div>
+<div class="cc-body"><strong>MAE:</strong> erro absoluto médio — interpretável. <strong>RMSE:</strong> penaliza outliers. <strong>MAPE:</strong> percentual médio (cuidado com y≈0). <strong>WAPE/SMAPE:</strong> variantes robustas. <strong>Backtest:</strong> Walk-forward validation.</div>
+</div>
+</div>
+</section>
+
+<!-- 02 -->
+<section class="section" id="arima-prophet">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#0ea5e9">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#0ea5e9"></div>
+<h2>ARIMA &amp; Prophet</h2>
+<p>O modelo clássico e o modelo do Facebook/Meta para séries com múltiplas sazonalidades.</p>
+</div>
+</div>
+<div class="grid-2" style="margin-bottom:24px;">
+<div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid rgba(14,165,233,0.3);">
+<div style="font-family:'DM Mono',monospace;font-size:10px;color:#0ea5e9;text-transform:uppercase;margin-bottom:10px;">ARIMA(p, d, q)</div>
+<p style="color:var(--muted);font-size:0.88em;margin-bottom:10px;"><strong>p:</strong> lags de autocorrelação (AR). <strong>d:</strong> ordem de diferenciação. <strong>q:</strong> ordem de média móvel (MA). Use <code>auto_arima</code> do pmdarima para encontrar (p,d,q) automaticamente.</p>
+<pre style="font-size:0.8em;"><code class="language-python">from pmdarima import auto_arima
+import pandas as pd
+
+df = pd.read_csv("vendas.csv", parse_dates=["data"], index_col="data")
+
+model = auto_arima(
+    df["vendas"],
+    seasonal=True,
+    m=12,            # sazonalidade mensal
+    stepwise=True,
+    suppress_warnings=True,
+    information_criterion="aic"
+)
+print(model.summary())
+
+# Forecast 6 meses
+forecast, conf_int = model.predict(n_periods=6, return_conf_int=True)</code></pre>
+</div>
+<div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid rgba(167,139,250,0.3);">
+<div style="font-family:'DM Mono',monospace;font-size:10px;color:#a78bfa;text-transform:uppercase;margin-bottom:10px;">Prophet (Meta)</div>
+<p style="color:var(--muted);font-size:0.88em;margin-bottom:10px;">Modelo aditivo com suporte a múltiplas sazonalidades (anual, semanal, diária), feriados, e mudanças de tendência (changepoints) automáticas. Robusto a dados faltantes.</p>
+<pre style="font-size:0.8em;"><code class="language-python">from prophet import Prophet
+import pandas as pd
+
+df = pd.read_csv("vendas.csv")
+df = df.rename(columns={"data": "ds", "vendas": "y"})
+
+m = Prophet(
+    seasonality_mode="multiplicative",  # ou additive
+    changepoint_prior_scale=0.05,       # flexibilidade da tendência
+    yearly_seasonality=True,
+    weekly_seasonality=True,
+    daily_seasonality=False
+)
+
+# Adicionar feriados brasileiros
+m.add_country_holidays(country_name="BR")
+
+m.fit(df)
+
+future = m.make_future_dataframe(periods=90, freq="D")
+forecast = m.predict(future)
+
+# Plotar componentes
+fig = m.plot_components(forecast)</code></pre>
+</div>
+</div>
+<div class="callout" style="border-left:4px solid #0ea5e9;padding:16px 20px;background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.22);border-left-width:4px;border-radius:8px;">
+<strong style="color:#38bdf8;">💡 Quando usar cada um</strong><br/>
+<strong>ARIMA:</strong> univariado, série única, dados estacionários/estacionárizáveis. <strong>Prophet:</strong> múltiplas sazonalidades, feriados, dados faltantes, stakeholders não-técnicos (output intuitivo). <strong>Amazon Forecast:</strong> dezenas/centenas de séries com features externas (preço, clima, promoções).
+</div>
+</section>
+
+<!-- 03 -->
+<section class="section" id="amazon-forecast">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#0ea5e9">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#0ea5e9"></div>
+<h2>Amazon Forecast</h2>
+<p>Forecasting gerenciado para múltiplas séries com AutoML, features externas e quantis de incerteza.</p>
+</div>
+</div>
+<div class="drawio-wrap" style="margin-top:16px;">
+<div class="drawio-label"><span class="dot"></span>AMAZON FORECAST — PIPELINE GERENCIADO</div>
+<div class="mxgraph" data-mxgraph='{"highlight":"#FF6B00","lightbox":false,"nav":false,"resize":true,"toolbar":"zoom","page":0,"xml":"&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;900\&quot; pageHeight=\&quot;240\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;bg\&quot; value=\&quot;\&quot; style=\&quot;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;900\&quot; height=\&quot;240\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;s3\&quot; value=\&quot;Amazon S3(CSV target + related)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;30\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;dsg\&quot; value=\&quot;Dataset Group\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#0ea5e9;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=10;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;145\&quot; y=\&quot;65\&quot; width=\&quot;100\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;ds1\&quot; value=\&quot;TARGET_TIME_SERIES\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#334155;fontColor=#94a3b8;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;145\&quot; y=\&quot;110\&quot; width=\&quot;100\&quot; height=\&quot;28\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;ds2\&quot; value=\&quot;RELATED_TIME_SERIES\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#334155;fontColor=#94a3b8;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;145\&quot; y=\&quot;145\&quot; width=\&quot;100\&quot; height=\&quot;28\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;pred\&quot; value=\&quot;Predictor(AutoML ou CNN-QR/DeepAR+)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.forecast;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;340\&quot; y=\&quot;90\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;fc\&quot; value=\&quot;Forecast(p10 / p50 / p90)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#a78bfa;fontColor=#a78bfa;fontFamily=DM Sans;fontSize=10;fontStyle=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;505\&quot; y=\&quot;93\&quot; width=\&quot;120\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;out\&quot; value=\&quot;Export Job(S3 output)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;730\&quot; y=\&quot;90\&quot; width=\&quot;48\&quot; height=\&quot;48\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e1\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#16a34a;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;s3\&quot; target=\&quot;dsg\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e2\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#0ea5e9;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;dsg\&quot; target=\&quot;pred\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e3\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#0284c7;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;pred\&quot; target=\&quot;fc\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;e4\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;strokeColor=#a78bfa;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;fc\&quot; target=\&quot;out\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="max-width:100%;background:#080f1e;"></div>
+</div>
+<div class="diagram-legend" style="margin-top:15px;margin-bottom:20px;font-size:0.9em;color:var(--muted);border-left:4px solid #0ea5e9;padding:15px;background:#0f172a;border-radius:8px;border:1px solid #1e293b;">
+<strong style="color:#38bdf8;">📌 Legenda — Amazon Forecast Pipeline:</strong>
+<ul style="margin-top:8px;padding-left:20px;line-height:1.6;margin-bottom:0;">
+<li><strong>Componentes AWS:</strong> S3 (dados), Dataset Group, Predictor (AutoML/DeepAR+/CNN-QR), Forecast (quantis p10/p50/p90), Export Job.</li>
+<li><strong>Integração:</strong> Target Time Series obrigatório; Related Time Series (features externas: preço, clima, promoção) opcional mas aumenta precisão significativamente.</li>
+<li><strong>Contexto:</strong> Suporta milhares de séries temporais simultâneas com AutoML — encontra o melhor algoritmo por série.</li>
+</ul>
+</div>
+<pre><code class="language-python">import boto3
+
+forecast = boto3.client("forecast")
+
+# 1. Dataset Group
+dsg = forecast.create_dataset_group(
+    DatasetGroupName="varejo-forecast",
+    Domain="RETAIL"
+)
+
+# 2. Dataset (Target Time Series)
+ds = forecast.create_dataset(
+    DatasetName="vendas-diarias",
+    Domain="RETAIL",
+    DatasetType="TARGET_TIME_SERIES",
+    DataFrequency="D",  # diário
+    Schema={
+        "Attributes": [
+            {"AttributeName": "item_id",   "AttributeType": "string"},
+            {"AttributeName": "timestamp", "AttributeType": "timestamp"},
+            {"AttributeName": "demand",    "AttributeType": "float"}
+        ]
+    }
+)
+
+# 3. Importar dados do S3
+forecast.create_dataset_import_job(
+    DatasetImportJobName="import-jan-2025",
+    DatasetArn=ds["DatasetArn"],
+    DataSource={"S3Config": {
+        "Path": "s3://meu-bucket/forecast/target/",
+        "RoleArn": "arn:aws:iam::123:role/ForecastRole"
+    }},
+    TimestampFormat="yyyy-MM-dd"
+)
+
+# 4. Criar Predictor com AutoML
+predictor = forecast.create_auto_predictor(
+    PredictorName="predictor-automl-v1",
+    ForecastHorizon=30,        # 30 dias à frente
+    ForecastFrequency="D",
+    DataConfig={
+        "DatasetGroupArn": dsg["DatasetGroupArn"]
+    },
+    OptimizationMetric="WAPE"  # Weighted Absolute Percentage Error
+)
+
+# 5. Gerar Forecast
+fc = forecast.create_forecast(
+    ForecastName="forecast-fev-2025",
+    PredictorArn=predictor["PredictorArn"],
+    ForecastTypes=["0.1", "0.5", "0.9"]  # p10, p50, p90
+)</code></pre>
+</section>
+
+<!-- 04 -->
+<section class="section" id="anomaly-detection">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#0ea5e9">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#0ea5e9"></div>
+<h2>Detecção de Anomalias — SageMaker Random Cut Forest</h2>
+<p>Algoritmo não-supervisionado para streaming de dados — sem labels necessários.</p>
+</div>
+</div>
+<p>O <strong>Random Cut Forest (RCF)</strong> do SageMaker é um algoritmo de detecção de anomalias baseado em floresta aleatória de cortes. A ideia: pontos anômalos requerem menos cortes para serem isolados da árvore — seu "anomaly score" é inversamente proporcional à profundidade média de isolamento.</p>
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;background:#0f172a;border-radius:12px;padding:16px;margin:24px 0;font-family:'DM Sans',sans-serif;">
+<text x="450" y="26" fill="#e2e8f0" font-size="14.5" font-weight="700" text-anchor="middle" font-family="DM Sans">Série Temporal com Anomalias Destacadas — Requisições/seg em um Serviço AWS</text>
+<!-- Faixa normal (média ± 2 desvios padrão) -->
+<polygon points="70,165.4 102.9,151.4 135.8,141.2 168.8,137.5 201.7,141.2 234.6,151.4 267.5,165.4 300.4,179.3 333.3,189.5 366.3,193.2 399.2,189.5 432.1,179.3 465,165.4 497.9,151.4 530.8,141.2 563.8,137.5 596.7,141.2 629.6,151.4 662.5,165.4 695.4,179.3 728.3,189.5 761.3,193.2 794.2,189.5 827.1,179.3 860,165.4 860,211.8 827.1,225.7 794.2,235.9 761.3,239.6 728.3,235.9 695.4,225.7 662.5,211.8 629.6,197.9 596.7,187.6 563.8,183.9 530.8,187.6 497.9,197.9 465,211.8 432.1,225.7 399.2,235.9 366.3,239.6 333.3,235.9 300.4,225.7 267.5,211.8 234.6,197.9 201.7,187.6 168.8,183.9 135.8,187.6 102.9,197.9 70,211.8" fill="#38bdf8" fill-opacity="0.12" stroke="#38bdf8" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4,3"/>
+<!-- Gridlines horizontais -->
+<line x1="70" y1="253.6" x2="860" y2="253.6" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="70" y1="207.1" x2="860" y2="207.1" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="70" y1="160.7" x2="860" y2="160.7" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="70" y1="114.3" x2="860" y2="114.3" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="70" y1="67.9" x2="860" y2="67.9" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<!-- Gridlines verticais -->
+<line x1="168.8" y1="40" x2="168.8" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="267.5" y1="40" x2="267.5" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="366.3" y1="40" x2="366.3" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="465" y1="40" x2="465" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="563.8" y1="40" x2="563.8" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="662.5" y1="40" x2="662.5" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="761.3" y1="40" x2="761.3" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3"/>
+<!-- Eixos -->
+<line x1="70" y1="300" x2="860" y2="300" stroke="#334155" stroke-width="1.5"/>
+<line x1="70" y1="40" x2="70" y2="300" stroke="#334155" stroke-width="1.5"/>
+<!-- Y ticks + labels -->
+<text x="62" y="303" fill="#94a3b8" font-size="9.5" text-anchor="end" font-family="DM Sans">0</text>
+<text x="62" y="257" fill="#94a3b8" font-size="9.5" text-anchor="end" font-family="DM Sans">50</text>
+<text x="62" y="210.5" fill="#94a3b8" font-size="9.5" text-anchor="end" font-family="DM Sans">100</text>
+<text x="62" y="164" fill="#94a3b8" font-size="9.5" text-anchor="end" font-family="DM Sans">150</text>
+<text x="62" y="117.5" fill="#94a3b8" font-size="9.5" text-anchor="end" font-family="DM Sans">200</text>
+<text x="62" y="71" fill="#94a3b8" font-size="9.5" text-anchor="end" font-family="DM Sans">250</text>
+<!-- X ticks + labels -->
+<text x="70" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">00h</text>
+<text x="168.8" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">06h</text>
+<text x="267.5" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">12h</text>
+<text x="366.3" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">18h</text>
+<text x="465" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">24h</text>
+<text x="563.8" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">30h</text>
+<text x="662.5" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">36h</text>
+<text x="761.3" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">42h</text>
+<text x="860" y="316" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="DM Sans">48h</text>
+<!-- Eixo titles -->
+<text x="465" y="334" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="DM Sans">Tempo</text>
+<text x="18" y="170" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="DM Sans" transform="rotate(-90 18 170)">Valor da Métrica (req/s)</text>
+<!-- Linha real da métrica -->
+<polyline points="70,185.8 102.9,179.3 135.8,158.9 168.8,162.6 201.7,160.7 234.6,58.6 267.5,186.7 300.4,197.9 333.3,215.5 366.3,209.9 399.2,216.4 432.1,201.6 465,190.4 497.9,170.9 530.8,272.1 563.8,157.9 596.7,169.1 629.6,172.8 662.5,183.0 695.4,81.8 728.3,208.1 761.3,218.3 794.2,209.0 827.1,286.1 860,191.4" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linejoin="round"/>
+<!-- Marcadores de anomalia -->
+<circle cx="234.6" cy="58.6" r="7" fill="#ef4444" fill-opacity="0.22" stroke="#ef4444" stroke-width="2"/>
+<circle cx="234.6" cy="58.6" r="2.5" fill="#ef4444"/>
+<text x="234.6" y="42" fill="#f87171" font-size="9.5" font-weight="600" text-anchor="middle" font-family="DM Sans">Pico anômalo</text>
+<circle cx="530.8" cy="272.1" r="7" fill="#ef4444" fill-opacity="0.22" stroke="#ef4444" stroke-width="2"/>
+<circle cx="530.8" cy="272.1" r="2.5" fill="#ef4444"/>
+<text x="530.8" y="291" fill="#f87171" font-size="9.5" font-weight="600" text-anchor="middle" font-family="DM Sans">Queda anômala</text>
+<circle cx="695.4" cy="81.8" r="7" fill="#ef4444" fill-opacity="0.22" stroke="#ef4444" stroke-width="2"/>
+<circle cx="695.4" cy="81.8" r="2.5" fill="#ef4444"/>
+<text x="695.4" y="65" fill="#f87171" font-size="9.5" font-weight="600" text-anchor="middle" font-family="DM Sans">Pico anômalo</text>
+<circle cx="827.1" cy="286.1" r="7" fill="#ef4444" fill-opacity="0.22" stroke="#ef4444" stroke-width="2"/>
+<circle cx="827.1" cy="286.1" r="2.5" fill="#ef4444"/>
+<text x="789" y="270" fill="#f87171" font-size="9.5" font-weight="600" text-anchor="end" font-family="DM Sans">Queda anômala</text>
+<!-- Legenda -->
+<rect x="70" y="358" width="16" height="12" fill="#38bdf8" fill-opacity="0.18" stroke="#38bdf8" stroke-width="1"/>
+<text x="92" y="368" fill="#cbd5e1" font-size="10.5" font-family="DM Sans">Faixa normal (média ± 2σ)</text>
+<line x1="300" y1="364" x2="326" y2="364" stroke="#38bdf8" stroke-width="2.5"/>
+<text x="332" y="368" fill="#cbd5e1" font-size="10.5" font-family="DM Sans">Valor real da métrica</text>
+<circle cx="590" cy="364" r="5" fill="#ef4444" fill-opacity="0.22" stroke="#ef4444" stroke-width="2"/>
+<text x="602" y="368" fill="#cbd5e1" font-size="10.5" font-family="DM Sans">Anomalia detectada</text>
+</svg>
+<div class="diagram-legend" style="margin-top:15px;margin-bottom:25px;font-size:0.9em;color:var(--muted);border-left:4px solid #ef4444;padding:15px;background:#0f172a;border-radius:8px;border:1px solid #1e293b;">
+<strong style="color:#f87171;">🎯 Caso de uso</strong><br/>
+<strong>Monitoramento de infraestrutura AWS</strong> — detectar picos de tráfego incomuns ou falhas silenciosas de serviço com <strong>Amazon Lookout for Metrics</strong> / <strong>SageMaker Random Cut Forest</strong>. A faixa normal (média ± 2 desvios padrão) representa o comportamento esperado da métrica ao longo do tempo; pontos que caem fora dela — como o pico de tráfego em ~10h/38h ou a queda abrupta (possível falha silenciosa) em ~28h/46h — disparam alarmes antes que o incidente afete usuários.
+</div>
+<div class="grid-2" style="margin-bottom:24px;">
+<div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #1e293b;">
+<div style="font-family:'DM Mono',monospace;font-size:10px;color:#0ea5e9;text-transform:uppercase;margin-bottom:10px;">RCF — Treinamento Batch + Inferência Streaming</div>
+<pre style="font-size:0.8em;"><code class="language-python">from sagemaker import RandomCutForest
+
+rcf = RandomCutForest(
+    role=role,
+    instance_count=1,
+    instance_type="ml.m5.large",
+    data_location=f"s3://{bucket}/rcf-train/",
+    output_path=f"s3://{bucket}/rcf-output/",
+    num_samples_per_tree=512,
+    num_trees=50
+)
+
+rcf.fit(rcf.record_set(X_train.values.astype("float32")))
+
+predictor = rcf.deploy(
+    initial_instance_count=1,
+    instance_type="ml.m5.large"
+)
+
+# Inferência em tempo real
+scores = predictor.predict(X_stream.values.astype("float32"))
+
+# Threshold: média + 3 desvios padrão dos scores de treino
+import numpy as np
+score_mean = np.mean(scores["scores"])
+score_std  = np.std(scores["scores"])
+threshold  = score_mean + 3 * score_std
+
+anomalies = [i for i, s in enumerate(scores["scores"]) if s > threshold]
+print(f"Anomalias detectadas: {anomalies}")</code></pre>
+</div>
+<div style="background:#0f172a;border-radius:10px;padding:16px;border:1px solid #1e293b;">
+<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--warn);text-transform:uppercase;margin-bottom:10px;">CloudWatch Anomaly Detection</div>
+<p style="color:var(--muted);font-size:0.88em;margin-bottom:10px;">Para métricas operacionais (latência de API, erros, throughput), o CloudWatch tem detecção de anomalias nativa baseada em ML — sem código, sem infraestrutura:</p>
+<pre style="font-size:0.8em;"><code class="language-python">cw = boto3.client("cloudwatch")
+
+# Criar modelo de anomalia para métrica existente
+cw.put_anomaly_detector(
+    Namespace="AWS/Lambda",
+    MetricName="Duration",
+    Dimensions=[{"Name": "FunctionName", "Value": "meu-processor"}],
+    Stat="Average",
+    Configuration={
+        "ExcludedTimeRanges": [
+            # Excluir janelas de manutenção
+            {"StartTime": "2025-01-01T02:00:00Z",
+             "EndTime":   "2025-01-01T04:00:00Z"}
+        ],
+        "MetricTimezone": "America/Sao_Paulo"
+    }
+)
+
+# Criar alarme baseado em anomalia (sem threshold fixo)
+cw.put_metric_alarm(
+    AlarmName="lambda-duration-anomaly",
+    ComparisonOperator="GreaterThanUpperThreshold",
+    EvaluationPeriods=3,
+    Metrics=[{
+        "Id": "m1",
+        "MetricStat": {
+            "Metric": {"Namespace": "AWS/Lambda", "MetricName": "Duration",
+                       "Dimensions": [{"Name": "FunctionName", "Value": "meu-processor"}]},
+            "Period": 300,
+            "Stat": "Average"
+        }
+    }, {
+        "Id": "ad1",
+        "Expression": "ANOMALY_DETECTION_BAND(m1, 2)",
+        "Label": "Duration (expected)"
+    }],
+    ThresholdMetricId="ad1",
+    AlarmActions=["arn:aws:sns:us-east-1:123:alerta-anomalia"]
+)</code></pre>
+</div>
+</div>
+<div class="callout" style="border-left:4px solid var(--ok);padding:16px 20px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.22);border-left-width:4px;border-radius:8px;">
+<strong style="color:var(--ok);">✅ Guia de Escolha: Detecção de Anomalias</strong><br/>
+<strong>SageMaker RCF:</strong> dados de negócio sem labels, transações financeiras, sensores IoT — máxima flexibilidade. <strong>CloudWatch Anomaly Detection:</strong> métricas operacionais AWS (latência, erros, throughput) — zero configuração. <strong>Amazon Lookout for Metrics:</strong> métricas de negócio (receita, DAU) com explicabilidade automática.
+</div>
+</section>
+
+<!-- Navegação Inferior -->
+<div style="margin-top:30px;display:flex;justify-content:space-between;">
+<a class="return-btn" href="ml-gradient-boosting.html" style="background:transparent;border:1px solid var(--border);color:var(--text);">
+<span>← Gradient Boosting</span>
+</a>
+<a class="return-btn" href="mlops-model-registry.html">
+<span>MLOps &amp; Model Registry →</span>
+</a>
+</div>
+</main>
+</div>
+<script src="../../js/sidebar-loader.js"></script>
+<script>
+  document.addEventListener('sidebarLoaded', function() {
+    var links = document.querySelectorAll('.nav-a');
+    links.forEach(function(l) {
+      if(l.getAttribute('data-page') === 'ml-time-series-anomaly') l.classList.add('active');
+    });
+    var pg = document.querySelector('.nav-a.active');
+    if(pg){
+      var cat = pg.closest('.nav-cat-content');
+      if(cat){ cat.classList.add('open'); var lbl=cat.previousElementSibling; if(lbl){ lbl.classList.add('active'); var arr=lbl.querySelector('.arrow'); if(arr) arr.innerHTML='▼'; } }
+    }
+  });
+</script>
+<script src="../../js/a11y.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>

@@ -24,7 +24,7 @@
 <main class="main-content">
 <section class="section" id="intro">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">08</div>
+<div class="sec-num" style="color:var(--genai)">01</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>O Limite do VectorDB Clássico</h2>
@@ -38,7 +38,7 @@
 </section>
 <section class="section" id="graphrag">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">08.1</div>
+<div class="sec-num" style="color:var(--genai)">02</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>A Solução: GraphRAG</h2>
@@ -80,7 +80,7 @@
 </section>
 <section class="section" id="hibrido">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">08.2</div>
+<div class="sec-num" style="color:var(--genai)">03</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>Arquitetura Híbrida: Vetor vs Grafo</h2>
@@ -126,6 +126,67 @@ RETURN d.nome, d.cargo</code></pre>
 </div>
 <p>O LLM recebe esses resultados diretos, garantindo **0% de alucinação** em interligações lógicas complexas!</p>
 </section>
+
+<section class="section" id="boto3-graphrag">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>GraphRAG na Prática — Neptune + Bedrock</h2>
+<p>Pipeline Text-to-Cypher: o LLM gera a query, o Neptune executa, o Bedrock sintetiza a resposta.</p>
+</div>
+</div>
+<p>O pipeline GraphRAG completo usa o <strong>Amazon Neptune Analytics</strong> como grafo de conhecimento e a <strong>Bedrock Converse API</strong> para duas tarefas: <em>gerar a query Cypher</em> a partir de linguagem natural, e <em>sintetizar a resposta final</em> com o contexto do grafo. Zero alucinação em relacionamentos — o LLM nunca "inventa" conexões porque o grafo é a fonte da verdade.</p>
+<div class="code-header"><span>Pipeline GraphRAG — Text-to-Cypher com Neptune e Bedrock</span></div>
+<div class="code-block">
+<pre><code class="language-python">import boto3, json
+
+bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
+neptune = boto3.client("neptunedata", region_name="us-east-1",
+                       endpoint_url="https://&lt;cluster&gt;.cluster.neptune.amazonaws.com:8182")
+
+SCHEMA = """
+Nós: Empresa(nome, setor), Diretor(nome, cargo), Startup(nome, valuation)
+Arestas: (Diretor)-[TRABALHOU_EM]->(Empresa), (Diretor)-[INVESTIU_EM]->(Startup)
+"""
+
+def text_to_cypher(pergunta: str) -> str:
+    resp = bedrock.converse(
+        modelId="anthropic.claude-3-5-haiku-20241022-v1:0",
+        messages=[{"role": "user", "content": [{"text": (
+            f"Schema do grafo:\n{SCHEMA}\n\n"
+            f"Gere APENAS uma query Cypher válida para responder: {pergunta}\n"
+            "Retorne só a query, sem explicação."
+        )}]}]
+    )
+    return resp["output"]["message"]["content"][0]["text"].strip()
+
+def executar_cypher(query: str) -> list:
+    result = neptune.execute_open_cypher_query(openCypherQuery=query)
+    return result.get("results", [])
+
+def graphrag_answer(pergunta: str) -> str:
+    cypher = text_to_cypher(pergunta)
+    dados  = executar_cypher(cypher)
+
+    resp = bedrock.converse(
+        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        messages=[{"role": "user", "content": [{"text": (
+            f"Dados extraídos do grafo:\n{json.dumps(dados, ensure_ascii=False)}\n\n"
+            f"Pergunta: {pergunta}\n"
+            "Responda de forma concisa e direta, baseado exclusivamente nos dados acima."
+        )}]}]
+    )
+    return resp["output"]["message"]["content"][0]["text"]
+
+# Exemplo de uso
+resposta = graphrag_answer(
+    "Quais diretores que trabalharam na Empresa A também investiram em startups de IA?"
+)
+print(resposta)</code></pre>
+</div>
+</section>
+
 <!-- Navegação e Conclusão -->
 <div style="margin-top: 30px; display: flex; justify-content: space-between;">
 <a class="return-btn" href="genai-llmops-evaluation.html" style="background: transparent; border: 1px solid var(--border); color: var(--text);">
@@ -192,6 +253,19 @@ RETURN d.nome, d.cargo</code></pre>
 </main>
 </div>
 <script src="../../js/sidebar-loader.js"></script>
+<script>
+  document.addEventListener('sidebarLoaded', function() {
+    var links = document.querySelectorAll('.nav-a');
+    links.forEach(function(l) {
+      if(l.getAttribute('data-page') === 'genai-graphrag-neptune') l.classList.add('active');
+    });
+    var pg = document.querySelector('.nav-a.active');
+    if(pg){
+      var cat = pg.closest('.nav-cat-content');
+      if(cat){ cat.classList.add('open'); var lbl=cat.previousElementSibling; if(lbl){ lbl.classList.add('active'); var arr=lbl.querySelector('.arrow'); if(arr) arr.innerHTML='▼'; } }
+    }
+  });
+</script>
 <script src="../../js/progress.js"></script>
 <script>
   function toggleNav() {

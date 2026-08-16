@@ -24,7 +24,7 @@
 <main class="main-content">
 <section class="section" id="llmops">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">07</div>
+<div class="sec-num" style="color:var(--genai)">01</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>O Problema da Avaliação em GenAI</h2>
@@ -52,7 +52,7 @@
 </section>
 <section class="section" id="ragas">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">07.1</div>
+<div class="sec-num" style="color:var(--genai)">02</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>Avaliando RAG (Framework RAGAS)</h2>
@@ -135,7 +135,7 @@
 </section>
 <section class="section" id="tracing">
 <div class="sec-hdr">
-<div class="sec-num" style="color:var(--genai)">07.2</div>
+<div class="sec-num" style="color:var(--genai)">03</div>
 <div class="sec-meta">
 <div class="sec-acc" style="background:var(--genai)"></div>
 <h2>Arquitetura de Observabilidade (Tracing)</h2>
@@ -173,6 +173,68 @@
 </code></pre>
 </div>
 </section>
+
+<section class="section" id="cicd-prompts">
+<div class="sec-hdr">
+<div class="sec-num" style="color:var(--genai)">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:var(--genai)"></div>
+<h2>CI/CD para Prompts — Versionamento e Gate de Qualidade</h2>
+<p>Prompts são código: versionar no S3, avaliar com RAGAS em cada PR, bloquear regressões.</p>
+</div>
+</div>
+<p>Prompts mudam com frequência e cada alteração pode degradar a qualidade silenciosamente. A solução é tratar prompts como artefatos de software: armazenar versões no S3, avaliar automaticamente com RAGAS em cada Pull Request, e usar o score de <em>faithfulness</em> como gate de qualidade — bloqueando merges que causem regressão.</p>
+<div class="code-header"><span>Prompt Registry + Avaliação Automática no CI/CD</span></div>
+<div class="code-block">
+<pre><code class="language-python">import boto3, json, sys
+from datasets import Dataset
+from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy
+
+s3 = boto3.client("s3")
+BUCKET = "meu-prompt-registry"
+
+def get_prompt(nome: str, versao: str = "latest") -> str:
+    obj = s3.get_object(Bucket=BUCKET, Key=f"prompts/{nome}/{versao}.txt")
+    return obj["Body"].read().decode()
+
+def publicar_prompt(nome: str, conteudo: str, versao: str) -> None:
+    for key in [f"prompts/{nome}/{versao}.txt", f"prompts/{nome}/latest.txt"]:
+        s3.put_object(Bucket=BUCKET, Key=key, Body=conteudo.encode())
+    print(f"Prompt '{nome}' v{versao} publicado.")
+
+def avaliar_prompt(nome: str, test_set: list) -> dict:
+    """test_set: lista de dicts com keys question, answer, contexts, ground_truth"""
+    dataset = Dataset.from_list(test_set)
+    scores = evaluate(dataset, metrics=[faithfulness, answer_relevancy])
+    return {
+        "faithfulness":     round(scores["faithfulness"], 4),
+        "answer_relevancy": round(scores["answer_relevancy"], 4),
+        "prompt":           nome,
+    }
+
+def ci_gate(scores: dict, threshold: float = 0.80) -> None:
+    print(json.dumps(scores, indent=2))
+    if scores["faithfulness"] &lt; threshold:
+        print(f"❌ CI falhou: faithfulness={scores['faithfulness']} abaixo de {threshold}. PR bloqueado.")
+        sys.exit(1)
+    print(f"✅ CI aprovado: faithfulness={scores['faithfulness']}")
+
+# Uso no pipeline (ex: GitHub Actions / CodeBuild)
+if __name__ == "__main__":
+    test_data = [
+        {
+            "question":    "Qual é o prazo de entrega?",
+            "answer":      "O prazo é de 5 dias úteis.",
+            "contexts":    ["Política: entregas em até 5 dias úteis a partir da confirmação."],
+            "ground_truth": "5 dias úteis",
+        }
+    ]
+    scores = avaliar_prompt("prompt-atendimento-v2", test_data)
+    ci_gate(scores)</code></pre>
+</div>
+</section>
+
 <!-- Navegação e Conclusão -->
 <div style="margin-top: 30px; display: flex; justify-content: space-between;">
 <a class="return-btn" href="genai-security-finetuning.html" style="background: transparent; border: 1px solid var(--border); color: var(--text);">
@@ -241,6 +303,19 @@
 </main>
 </div>
 <script src="../../js/sidebar-loader.js"></script>
+<script>
+  document.addEventListener('sidebarLoaded', function() {
+    var links = document.querySelectorAll('.nav-a');
+    links.forEach(function(l) {
+      if(l.getAttribute('data-page') === 'genai-llmops-evaluation') l.classList.add('active');
+    });
+    var pg = document.querySelector('.nav-a.active');
+    if(pg){
+      var cat = pg.closest('.nav-cat-content');
+      if(cat){ cat.classList.add('open'); var lbl=cat.previousElementSibling; if(lbl){ lbl.classList.add('active'); var arr=lbl.querySelector('.arrow'); if(arr) arr.innerHTML='▼'; } }
+    }
+  });
+</script>
 <script src="../../js/progress.js"></script>
 <script>
   function toggleNav() {

@@ -1,31 +1,41 @@
-# Project Plan: Financial Knowledge Pages Expansion & Quality Audit
+# Execution Plan — AWS Data Mastery AI Section Diagrams & Audit
 
-## Overview
-Expand and enhance 9 pages in `/pages/financas/` on branch `feat/financas-dados-cleanup`, resolving all sidebar JS/HTML issues, applying KaTeX and SVG guidelines, and completing full multi-agent audit rounds.
+## Master Objectives
+1. **R1: Add Draw.io / responsive SVG diagrams** to all target AI section pages:
+   - `pages/engenharia/genai-*.html` (all matching files)
+   - `pages/operacoes/advanced-architectures.html`
+   - `pages/operacoes/deep-learning-fundamentals.html`
+   - `pages/operacoes/cnn-deep-dive.html`
+   - `pages/operacoes/rnn-lstm-deep-dive.html`
+   - `pages/operacoes/transformers-attention.html`
+   - `pages/operacoes/mlops-model-registry.html`
+   - `pages/operacoes/evaluation-features.html`
+   Each Draw.io diagram must be a `<div class="mxgraph" ...>` wrapped inside a `<div class="drawio-wrap">` (or responsive conceptual SVG).
+2. **R2: Client renderer script & `.diagram-legend` callout box**:
+   - Ensure `<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>` is placed immediately before `</body>` on every diagram page.
+   - Insert a `.diagram-legend` callout box immediately after each diagram container detailing AWS components, integration, and context.
+3. **R3: Multi-agent audit & verification**:
+   - Validate technical content & Boto3/Python code accuracy across AI section pages.
+   - Verify 100% W3C XML / JSON parsing of `data-mxgraph` attributes using `xml.etree.ElementTree.fromstring` and `json.loads`.
+   - Verify DOM visibility and rendering styling.
 
-## Milestones
+## Phased Approach
 
-### Milestone 1: Baseline Audit & Sidebar Infrastructure Fix
-- Task 1.1: Explore `/pages/financas/` pages and sidebar JS scripts (`js/sidebar.js`, etc.).
-- Task 1.2: Dispatch Worker to fix sidebar JavaScript/HTML bugs across all 9 pages (ensure `toggleCategory`, `toggleNav`, `scrollToTop`, `#sidebar`, `#hamburger` are present and working without JS errors).
+### Phase 0: Survey & Codebase Mapping (Parallel Explorers)
+- Spawn 3 Explorers (`teamwork_preview_explorer`) to inspect target directory, locate all target files (especially `genai-*.html`), analyze existing HTML structure, CSS styles, existing diagrams, and scripts.
+- Synthesize findings into `PROJECT.md`.
 
-### Milestone 2: Topic Specialists Content Expansion (9 HTML Pages)
-- Task 2.1: Specialist Worker for `onboarding.html` (KYC flow, Credit Proposal Data Contract in JSON Schema Draft-07/2020-12, AWS 2026 SVG architecture).
-- Task 2.2: Specialist Worker for `matematica-financeira.html` (Financial math basic to advanced, SAC/Price, VPL, Assaf/Ross bibliography, Python/PySpark/SQL executable code).
-- Task 2.3: Specialist Worker for `ciclo-vida-credito.html` (Credit lifecycle phases 1-6 detailed, AWS 2026 technical event streams).
-- Task 2.4: Specialist Worker for `pos-venda-reconciliacao.html` (Post-sales events: prepayments, late payments, fines, interest; Flink/MSK/S3 streaming architecture).
-- Task 2.5: Specialist Worker for `contabilidade-razonetes.html` (COSIF table, accounting entries, SVG T-account diagrams, BRGAAP CMN 4.966 EIR calculation).
-- Task 2.6: Specialist Worker for `risco-montecarlo.html` (Banking risk basic to advanced, IRB, Vasicek, Expected vs Unexpected Loss, PySpark Monte Carlo simulation).
-- Task 2.7: Specialist Worker for `normas-regulatorio.html` (CMN 2.682, 4.557, 4.966, 4.893 analysis, SVG provision stage diagram, BACEN DOC 3040 reports).
-- Task 2.8: Specialist Worker for `auditoria-dados.html` (BACEN/CVM physical lineage, PySpark column-level lineage, Lake Formation & Glue DQDL SVG governance).
-- Task 2.9: Specialist Worker for `finops-financas.html` (FinOps cost optimization: Iceberg Vacuum/Compaction, S3 Lifecycle Tiers, diagrams & cost tables).
+### Phase 1: Test Infrastructure Track (E2E Testing Track)
+- Spawn test writing / testing orchestrator subagent to construct validation harness and test scripts:
+  - HTML validation script (W3C XML parsing, `json.loads` of `data-mxgraph`, presence of viewer-static.min.js before `</body>`, `.drawio-wrap` structure, `.diagram-legend` structure).
+  - Boto3/Python code accuracy validator for code snippets on these pages.
+  - DOM visibility & CSS class checker.
 
-### Milestone 3: Design & Quality Standard Enforcement
-- Task 3.1: Enforce KaTeX math delimiters (`\(` and `\[`) across all 9 pages.
-- Task 3.2: Verify dark mode premium theme (`style.css`), high contrast badges, responsive clean SVG diagrams without text overlap.
+### Phase 2: Implementation Track
+- Milestone 1: Implementation of diagrams, viewer script, and legends on `pages/engenharia/genai-*.html`.
+- Milestone 2: Implementation of diagrams, viewer script, and legends on `pages/operacoes/*.html` target pages.
+- Worker -> Reviewer -> Challenger -> Forensic Auditor iteration per milestone.
 
-### Milestone 4: Multi-Agent Audit & Final Homologation
-- Task 4.1: Layout Reviewer audit (CSS, contrast, responsive design).
-- Task 4.2: UX Evaluator audit (readability, didactic flow, navigation).
-- Task 4.3: Forensic Auditor integrity audit (verify genuine implementations, no hardcoded cheating).
-- Task 4.4: Judge Agent final consolidation & approval for `feat/financas-dados-cleanup`.
+### Phase 3: Final Audit & Verification
+- Execute full test suite (Tiers 1-5).
+- Run Forensic Auditor (`teamwork_preview_auditor`) to ensure 100% compliance with no hardcoded/facade cheating.
