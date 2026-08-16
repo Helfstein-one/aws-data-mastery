@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Rating & Classificação de Crédito — Metodologias, escalas internacionais, rating interno vs externo, impactos - AWS Data Mastery"/>
+  <title>Rating & Classificação de Crédito | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+
+  <!-- CSS Base -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Chart.js for Interactive Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Rating & Classificação de Crédito | AWS Data Mastery"/>
+  <meta property="og:description" content="Escalas globais, metodologias de rating, matriz de transição, IRB, impacto de rating e AWS para analytics"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+
+  <style>
+    .section {
+      scroll-margin-top: 60px;
+    }
+
+    .sec-hdr {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+      align-items: flex-start;
+    }
+
+    .sec-num {
+      font-size: 2.5rem;
+      font-weight: 900;
+      min-width: 60px;
+      color: var(--aws);
+    }
+
+    .sec-title h2 {
+      font-size: 1.8rem;
+      margin: 0 0 8px 0;
+      color: var(--text);
+    }
+
+    .sec-subtitle {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .sec-intro {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--text-dim);
+      margin: 18px 0 24px 0;
+      border-left: 4px solid var(--aws);
+      padding-left: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin: 24px 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--aws);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .card-subtitle {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--aws);
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .formula-box {
+      background: var(--bg-tertiary);
+      border-left: 4px solid var(--aws);
+      padding: 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+      font-family: 'DM Mono', monospace;
+      overflow-x: auto;
+    }
+
+    .example-box {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(10, 132, 99, 0.05) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-left: 4px solid #10b981;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .example-title {
+      font-weight: 600;
+      color: #10b981;
+      margin-bottom: 12px;
+    }
+
+    .info-box {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .warning-box {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-left: 4px solid #f59e0b;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .reference {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin: 16px 0;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-left: 3px solid var(--text-dim);
+      padding-left: 16px;
+    }
+
+    .reference strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 400px;
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .chart-title {
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+    }
+
+    .diagram-container {
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .summary-box {
+      background: linear-gradient(135deg, var(--aws) 0%, rgba(59, 130, 246, 0.8) 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 8px;
+      margin: 30px 0;
+    }
+
+    .summary-box h3 {
+      margin: 0 0 12px 0;
+      font-size: 1.2rem;
+    }
+
+    .summary-box ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .summary-box li {
+      margin: 8px 0;
+    }
+
+    .breadcrumb {
+      margin-bottom: 30px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    .breadcrumb a {
+      color: var(--aws);
+      text-decoration: none;
+    }
+
+    .breadcrumb a:hover {
+      text-decoration: underline;
+    }
+
+    /* Rating table styles */
+    .rating-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 20px 0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .rating-table th {
+      background: var(--bg-tertiary);
+      color: var(--text);
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .rating-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      vertical-align: middle;
+    }
+
+    .rating-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge-ig {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.18);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 4px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-sg {
+      display: inline-block;
+      background: rgba(239, 68, 68, 0.16);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 4px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-def {
+      display: inline-block;
+      background: rgba(107, 114, 128, 0.25);
+      color: #9ca3af;
+      border: 1px solid rgba(107, 114, 128, 0.4);
+      border-radius: 4px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .rating-mono {
+      font-family: 'DM Mono', monospace;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .row-ig td { background: rgba(16, 185, 129, 0.04); }
+    .row-sg td { background: rgba(239, 68, 68, 0.04); }
+    .row-def td { background: rgba(107, 114, 128, 0.08); }
+
+    /* Transition matrix styles */
+    .transition-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      display: block;
+    }
+
+    .transition-table th {
+      background: var(--bg-tertiary);
+      color: var(--text);
+      padding: 8px 6px;
+      text-align: center;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+      border: 1px solid rgba(255,255,255,0.08);
+      white-space: nowrap;
+    }
+
+    .transition-table th.row-header {
+      text-align: left;
+      padding-left: 10px;
+    }
+
+    .transition-table td {
+      padding: 7px 6px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.06);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    /* Heatmap cell helper class */
+    .hm-high   { background: rgba(16, 185, 129, 0.65); color: #fff; font-weight: 700; }
+    .hm-mid    { background: rgba(16, 185, 129, 0.25); color: var(--text); }
+    .hm-low    { background: rgba(245, 158, 11, 0.25); color: var(--text); }
+    .hm-vlow   { background: rgba(239, 68, 68, 0.18); color: var(--text); }
+    .hm-none   { background: transparent; color: var(--text-dim); }
+    .hm-def    { background: rgba(107, 114, 128, 0.4); color: var(--text); font-weight: 700; }
+
+    /* Provisioning table */
+    .prov-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin: 20px 0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .prov-table th {
+      background: var(--bg-tertiary);
+      color: var(--text);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .prov-table td {
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      vertical-align: middle;
+    }
+
+    .prov-table tr:last-child td { border-bottom: none; }
+
+    .prov-pct {
+      font-family: 'DM Mono', monospace;
+      font-weight: 600;
+      color: #f59e0b;
+    }
+
+    .rating-tag {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--bg-tertiary);
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <!-- Hero Section -->
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Gestão de Risco de Crédito</div>
+      <h1>Rating &amp; Classificação de Crédito</h1>
+      <p class="hero-d">Metodologias de atribuição de rating, escalas internacionais (Moody's, S&amp;P, Fitch), rating interno IRB vs externo, matriz de transição, outlooks e impacto no custo de captação.</p>
+      <div class="pills">
+        <span class="pill">Investment Grade</span>
+        <span class="pill">Speculative Grade</span>
+        <span class="pill">IRB Avançado</span>
+        <span class="pill">BACEN 2.682/1999</span>
+        <span class="pill">Matriz de Transição</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- Breadcrumb Navigation -->
+      <div class="breadcrumb">
+        <a href="../../index.html">Início</a>
+        <span>/</span>
+        <a href="#">Finanças</a>
+        <span>/</span>
+        <span>Rating &amp; Classificação de Crédito</span>
+      </div>
+
+      <!-- =========================================================
+           SEÇÃO 01: ESCALAS GLOBAIS DE RATING
+           ========================================================= -->
+      <section class="section" id="escalas-rating">
+        <div class="sec-hdr">
+          <div class="sec-num">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Estrutura Internacional</div>
+            <h2>Escalas Globais de Rating</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          As três principais agências de rating — <strong>Moody's</strong>, <strong>S&amp;P Global Ratings</strong> e <strong>Fitch Ratings</strong>
+          — utilizam escalas alfanuméricas para classificar a qualidade de crédito de emissores e emissões. A fronteira mais crítica
+          separa o <strong>Investment Grade</strong> (grau de investimento) do <strong>Speculative Grade</strong> (grau especulativo),
+          pois determina o universo de investidores institucionais que pode adquirir os títulos e os limites de contraparte em operações estruturadas.
+        </p>
+
+        <!-- Rating Scale Table -->
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Tabela Comparativa das Escalas de Rating
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="rating-table">
+            <thead>
+              <tr>
+                <th>Moody's</th>
+                <th>S&amp;P / Fitch</th>
+                <th>Descrição</th>
+                <th>Grau</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row-ig">
+                <td><span class="rating-mono">Aaa</span></td>
+                <td><span class="rating-mono">AAA</span></td>
+                <td>Mais alta qualidade de crédito. Risco praticamente nulo.</td>
+                <td><span class="badge-ig">Investment Grade</span></td>
+              </tr>
+              <tr class="row-ig">
+                <td><span class="rating-mono">Aa1 / Aa2 / Aa3</span></td>
+                <td><span class="rating-mono">AA+ / AA / AA-</span></td>
+                <td>Alta qualidade. Muito baixo risco de crédito.</td>
+                <td><span class="badge-ig">Investment Grade</span></td>
+              </tr>
+              <tr class="row-ig">
+                <td><span class="rating-mono">A1 / A2 / A3</span></td>
+                <td><span class="rating-mono">A+ / A / A-</span></td>
+                <td>Boa qualidade. Baixo risco de crédito.</td>
+                <td><span class="badge-ig">Investment Grade</span></td>
+              </tr>
+              <tr class="row-ig">
+                <td><span class="rating-mono">Baa1 / Baa2 / Baa3</span></td>
+                <td><span class="rating-mono">BBB+ / BBB / BBB-</span></td>
+                <td>Grau médio superior. Risco de crédito moderado. Limiar crítico.</td>
+                <td><span class="badge-ig">Investment Grade</span></td>
+              </tr>
+              <tr class="row-sg">
+                <td><span class="rating-mono">Ba1 / Ba2 / Ba3</span></td>
+                <td><span class="rating-mono">BB+ / BB / BB-</span></td>
+                <td>Especulativo. Elementos especulativos e risco de crédito substancial.</td>
+                <td><span class="badge-sg">Speculative Grade</span></td>
+              </tr>
+              <tr class="row-sg">
+                <td><span class="rating-mono">B1 / B2 / B3</span></td>
+                <td><span class="rating-mono">B+ / B / B-</span></td>
+                <td>Especulativo. Alto risco de crédito.</td>
+                <td><span class="badge-sg">Speculative Grade</span></td>
+              </tr>
+              <tr class="row-sg">
+                <td><span class="rating-mono">Caa1 / Caa2 / Caa3</span></td>
+                <td><span class="rating-mono">CCC+ / CCC / CCC-</span></td>
+                <td>Substancialmente em risco. Risco de crédito muito alto.</td>
+                <td><span class="badge-sg">Speculative Grade</span></td>
+              </tr>
+              <tr class="row-sg">
+                <td><span class="rating-mono">Ca</span></td>
+                <td><span class="rating-mono">CC</span></td>
+                <td>Extremamente especulativo. Inadimplência altamente provável.</td>
+                <td><span class="badge-sg">Speculative Grade</span></td>
+              </tr>
+              <tr class="row-def">
+                <td><span class="rating-mono">C</span></td>
+                <td><span class="rating-mono">C / D</span></td>
+                <td>Inadimplente (Default). Obrigações em atraso ou reestruturação.</td>
+                <td><span class="badge-def">Default</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Distribution Chart -->
+        <div class="chart-container" style="height: 380px;">
+          <div class="chart-title">Distribuição de Corporações Globais por Rating (S&amp;P, base histórica)</div>
+          <canvas id="chartDistribuicao"></canvas>
+        </div>
+
+        <div class="info-box">
+          <strong>Rating de Emissor vs. Rating de Emissão</strong>
+          <p style="margin: 8px 0 0 0;">
+            O <strong>rating de emissor</strong> (Issuer Credit Rating — ICR) avalia a capacidade creditícia geral da empresa ou banco.
+            Já o <strong>rating de emissão</strong> (Issue Credit Rating) avalia uma dívida específica, podendo diferir do ICR
+            em função da estrutura da dívida, colaterais, subordinação e cláusulas contratuais (covenants).
+            Em geral, emissões seniores garantidas recebem rating igual ou superior ao emissor;
+            subordinadas podem ser rebaixadas de um a dois notches.
+          </p>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 02: METODOLOGIA DE ATRIBUIÇÃO DE RATING
+           ========================================================= -->
+      <section class="section" id="metodologia">
+        <div class="sec-hdr">
+          <div class="sec-num">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Processo de Avaliação</div>
+            <h2>Metodologia de Atribuição de Rating</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O processo de atribuição de rating combina análise <strong>quantitativa</strong> (demonstrações financeiras, índices)
+          e <strong>qualitativa</strong> (gestão, setor, estratégia, governança). Ambas as dimensões alimentam um Comitê de Rating
+          que delibera de forma colegiada, garantindo independência analítica. O resultado final é publicado e monitorado continuamente.
+        </p>
+
+        <!-- Quant vs Qual Cards -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Peso estimado ~ 40%</div>
+            <h4 class="card-title">Análise Quantitativa</h4>
+            <ul style="font-size: 0.9rem; color: var(--text-dim); padding-left: 18px; margin: 0; line-height: 1.8;">
+              <li><strong>Alavancagem:</strong> Dívida / EBITDA, Dívida / PL</li>
+              <li><strong>Liquidez:</strong> Índice corrente, Quick Ratio, caixa livre</li>
+              <li><strong>Cobertura:</strong> EBIT / Juros (ICG), EBITDA / Serviço da dívida</li>
+              <li><strong>Rentabilidade:</strong> ROA, ROE, Margem EBITDA</li>
+              <li><strong>Geração de caixa:</strong> FCO, FCL, conversão de EBITDA em caixa</li>
+              <li><strong>Estrutura da dívida:</strong> Prazo médio, perfil de amortizações</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Peso estimado ~ 60%</div>
+            <h4 class="card-title">Análise Qualitativa</h4>
+            <ul style="font-size: 0.9rem; color: var(--text-dim); padding-left: 18px; margin: 0; line-height: 1.8;">
+              <li><strong>Gestão:</strong> Track record, estratégia, apetite por risco</li>
+              <li><strong>Setor:</strong> Ciclicidade, barreiras de entrada, crescimento</li>
+              <li><strong>Competitividade:</strong> Posição de mercado, vantagens competitivas</li>
+              <li><strong>Governança:</strong> Composição do Conselho, controles internos</li>
+              <li><strong>Regulação:</strong> Exposição regulatória, licenças, ESG</li>
+              <li><strong>Suporte externo:</strong> Grupo controlador, garantias, acesso a capital</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Mermaid Process Diagram -->
+        <div class="diagram-container">
+          <div class="chart-title">Processo de Atribuição de Rating (Agências Externas)</div>
+          <div class="mermaid">
+            graph LR
+            A["Solicitação<br/>do Emissor"] --> B["Coleta de<br/>Informações"]
+            B --> C["Análise<br/>Quantitativa"]
+            C --> D["Análise<br/>Qualitativa"]
+            D --> E["Comitê<br/>de Rating"]
+            E --> F["Publicação<br/>do Rating"]
+            F --> G["Monitoramento<br/>Contínuo"]
+            G -->|"Revisão periódica"| C
+            G -->|"Evento relevante"| E
+          </div>
+        </div>
+
+        <!-- Scoring Example -->
+        <div class="example-box">
+          <div class="example-title">Exemplo Prático: Empresa LogiBrasil S.A. — Pontuação para Atribuição de Rating A-</div>
+          <table style="width: 100%; font-size: 0.88rem; margin-top: 12px; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(16,185,129,0.3);">
+                <th style="padding: 8px; text-align: left; color: var(--text-dim); font-weight: 600;">Critério</th>
+                <th style="padding: 8px; text-align: center; color: var(--text-dim); font-weight: 600;">Peso</th>
+                <th style="padding: 8px; text-align: center; color: var(--text-dim); font-weight: 600;">Score (1-5)</th>
+                <th style="padding: 8px; text-align: center; color: var(--text-dim); font-weight: 600;">Pontos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 8px; color: var(--text);">Alavancagem (Dív/EBITDA = 2,1x)</td>
+                <td style="padding: 8px; text-align: center; color: var(--text-dim);">15%</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">4</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">0,60</td>
+              </tr>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 8px; color: var(--text);">Cobertura de Juros (ICG = 6,3x)</td>
+                <td style="padding: 8px; text-align: center; color: var(--text-dim);">15%</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">5</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">0,75</td>
+              </tr>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 8px; color: var(--text);">Liquidez (Índice corrente = 1,4)</td>
+                <td style="padding: 8px; text-align: center; color: var(--text-dim);">10%</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">3</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">0,30</td>
+              </tr>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 8px; color: var(--text);">Posição de Mercado (Top 3 no setor)</td>
+                <td style="padding: 8px; text-align: center; color: var(--text-dim);">20%</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">4</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">0,80</td>
+              </tr>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 8px; color: var(--text);">Qualidade da Gestão</td>
+                <td style="padding: 8px; text-align: center; color: var(--text-dim);">20%</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">4</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">0,80</td>
+              </tr>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 8px; color: var(--text);">Governança e Transparência</td>
+                <td style="padding: 8px; text-align: center; color: var(--text-dim);">10%</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">3</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">0,30</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; color: var(--text);">Risco Setorial (Logística — moderado)</td>
+                <td style="padding: 8px; text-align: center; color: var(--text-dim);">10%</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">3</td>
+                <td style="padding: 8px; text-align: center; color: #10b981;">0,30</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr style="border-top: 2px solid rgba(16,185,129,0.5);">
+                <td colspan="3" style="padding: 10px 8px; font-weight: 700; color: var(--text);">Score Total (max 5,00)</td>
+                <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #10b981; font-size: 1.1rem;">3,85 → Rating A-</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 03: MATRIZ DE TRANSIÇÃO DE RATING
+           ========================================================= -->
+      <section class="section" id="matriz-transicao">
+        <div class="sec-hdr">
+          <div class="sec-num">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Probabilidade de Migração</div>
+            <h2>Matriz de Transição de Rating</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A <strong>Matriz de Transição de Rating</strong> quantifica a probabilidade de um emissor migrar de um rating
+          para outro ao longo de um período (tipicamente 1 ano). Ela é a base de modelos de risco de crédito (CreditMetrics, KMV)
+          e insumo essencial para cálculos de capital econômico, precificação de derivativos de crédito (CDS) e cálculo de ECL (IFRS 9).
+        </p>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Matriz de Transição Anual — Base Histórica S&amp;P (%) — Heatmap
+        </div>
+
+        <div style="overflow-x: auto; margin: 20px 0;">
+          <table class="transition-table">
+            <thead>
+              <tr>
+                <th class="row-header">De \ Para</th>
+                <th>AAA</th>
+                <th>AA</th>
+                <th>A</th>
+                <th>BBB</th>
+                <th>BB</th>
+                <th>B</th>
+                <th>CCC/C</th>
+                <th>D</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th class="row-header">AAA</th>
+                <td class="hm-high">90,81</td>
+                <td class="hm-mid">8,33</td>
+                <td class="hm-low">0,68</td>
+                <td class="hm-vlow">0,06</td>
+                <td class="hm-none">0,12</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,00</td>
+              </tr>
+              <tr>
+                <th class="row-header">AA</th>
+                <td class="hm-vlow">0,70</td>
+                <td class="hm-high">90,65</td>
+                <td class="hm-mid">7,79</td>
+                <td class="hm-low">0,64</td>
+                <td class="hm-vlow">0,06</td>
+                <td class="hm-none">0,14</td>
+                <td class="hm-none">0,02</td>
+                <td class="hm-none">0,00</td>
+              </tr>
+              <tr>
+                <th class="row-header">A</th>
+                <td class="hm-none">0,09</td>
+                <td class="hm-vlow">2,27</td>
+                <td class="hm-high">91,05</td>
+                <td class="hm-mid">5,52</td>
+                <td class="hm-low">0,74</td>
+                <td class="hm-vlow">0,26</td>
+                <td class="hm-none">0,01</td>
+                <td class="hm-none">0,06</td>
+              </tr>
+              <tr>
+                <th class="row-header">BBB</th>
+                <td class="hm-none">0,02</td>
+                <td class="hm-none">0,33</td>
+                <td class="hm-low">5,95</td>
+                <td class="hm-high">86,93</td>
+                <td class="hm-mid">5,30</td>
+                <td class="hm-low">1,17</td>
+                <td class="hm-vlow">0,12</td>
+                <td class="hm-vlow">0,18</td>
+              </tr>
+              <tr>
+                <th class="row-header">BB</th>
+                <td class="hm-none">0,03</td>
+                <td class="hm-none">0,14</td>
+                <td class="hm-vlow">0,67</td>
+                <td class="hm-low">7,73</td>
+                <td class="hm-high">80,53</td>
+                <td class="hm-mid">8,84</td>
+                <td class="hm-low">1,00</td>
+                <td class="hm-low">1,06</td>
+              </tr>
+              <tr>
+                <th class="row-header">B</th>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,11</td>
+                <td class="hm-none">0,24</td>
+                <td class="hm-vlow">0,43</td>
+                <td class="hm-low">6,48</td>
+                <td class="hm-high">83,46</td>
+                <td class="hm-mid">4,07</td>
+                <td class="hm-mid">5,20</td>
+              </tr>
+              <tr>
+                <th class="row-header">CCC/C</th>
+                <td class="hm-none">0,22</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,22</td>
+                <td class="hm-vlow">1,30</td>
+                <td class="hm-vlow">2,38</td>
+                <td class="hm-mid">11,24</td>
+                <td class="hm-mid">64,86</td>
+                <td class="hm-low">19,79</td>
+              </tr>
+              <tr>
+                <th class="row-header">D</th>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-none">0,00</td>
+                <td class="hm-def">100,00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Legend -->
+        <div style="display: flex; flex-wrap: wrap; gap: 14px; margin: 16px 0; font-size: 0.82rem;">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:rgba(16,185,129,0.65);border-radius:3px;display:inline-block;"></span> &gt; 60%</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:rgba(16,185,129,0.25);border-radius:3px;display:inline-block;"></span> 5% – 60%</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:rgba(245,158,11,0.25);border-radius:3px;display:inline-block;"></span> 1% – 5%</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:rgba(239,68,68,0.18);border-radius:3px;display:inline-block;"></span> 0,01% – 1%</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:3px;display:inline-block;"></span> ~0%</span>
+        </div>
+
+        <div class="info-box">
+          <strong>Implicações para Modelos de Risco e Capital</strong>
+          <ul style="margin: 8px 0 0 0; padding-left: 18px; font-size: 0.9rem; line-height: 1.8;">
+            <li><strong>CreditMetrics (J.P. Morgan):</strong> usa a matriz para simular distribuição de valor futuro da carteira via Monte Carlo.</li>
+            <li><strong>IFRS 9 / ECL:</strong> probabilidade de migração para estágios (Stage 1→2→3) equivale à PD forward-looking.</li>
+            <li><strong>Capital regulatório (Basileia III / IRB):</strong> PD por rating alimenta o cálculo de RWA de crédito.</li>
+            <li><strong>Risco de downgrade:</strong> O segmento BBB merece atenção especial — migração para BB gera "fallen angel" com impacto em mandatos de investidores institucionais.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 04: RATING INTERNO (IRB) VS RATING EXTERNO
+           ========================================================= -->
+      <section class="section" id="irb-externo">
+        <div class="sec-hdr">
+          <div class="sec-num">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Abordagem Regulatória</div>
+            <h2>Rating Interno (IRB) vs Rating Externo</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Bancos podem usar <strong>modelos internos de rating</strong> (Internal Ratings-Based — IRB) aprovados pelo BACEN para calcular
+          requerimentos de capital regulatório, em substituição à abordagem padronizada (SA) baseada em ratings externos.
+          A aprovação IRB potencialmente reduz o consumo de capital por melhor calibração do risco real da carteira.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Agência Externa</div>
+            <h4 class="card-title">Rating Externo</h4>
+            <ul style="font-size: 0.9rem; color: var(--text-dim); padding-left: 18px; margin: 0; line-height: 1.8;">
+              <li>Emitido por Moody's, S&amp;P, Fitch, Fitch BR, Austin</li>
+              <li>Processo público, metodologia transparente</li>
+              <li>Cobre principalmente grandes empresas e governos</li>
+              <li>Periodicidade anual / evento-acionada</li>
+              <li>Custo de manutenção anual (~R$ 200k–600k)</li>
+              <li>Exigido por mandatos de fundos e emissões públicas</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Modelo Interno</div>
+            <h4 class="card-title">Rating Interno (IRB)</h4>
+            <ul style="font-size: 0.9rem; color: var(--text-dim); padding-left: 18px; margin: 0; line-height: 1.8;">
+              <li>Desenvolvido e mantido pela própria instituição</li>
+              <li>Cobre toda a carteira (incluindo PMEs e PF)</li>
+              <li>Atualizado em cada concessão / revisão periódica</li>
+              <li>Exige aprovação e validação periódica do BACEN</li>
+              <li>Permite uso de estimativas próprias de PD, LGD, EAD</li>
+              <li>Base: Resolução CMN 4.193/2013 e Circular BACEN 3.648</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- IRB Foundation vs Advanced -->
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Abordagens IRB para Requerimento de Capital
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle">Basileia III — Padrão</div>
+            <h4 class="card-title">Abordagem Padronizada (SA)</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              Ponderação de risco fixa por tipo de contraparte conforme regulador.
+              Usa ratings externos para corporações. Não exige aprovação especial.
+              Menor flexibilidade mas maior simplicidade operacional.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">IRB — Básico</div>
+            <h4 class="card-title">Foundation IRB (F-IRB)</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              O banco estima a <strong>PD</strong> internamente. LGD e EAD seguem parâmetros
+              supervisórios (BACEN). Exige histórico mínimo de 5 anos e aprovação formal.
+              Redução de capital moderada.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">IRB — Avançado</div>
+            <h4 class="card-title">Advanced IRB (A-IRB)</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              O banco estima <strong>PD, LGD e EAD</strong> próprios. Máxima sensibilidade ao risco real.
+              Exige histórico de 7 anos, validação independente e processos robustos de governança.
+              Maior redução potencial de capital.
+            </p>
+          </div>
+        </div>
+
+        <!-- BACEN Criteria -->
+        <div class="formula-box">
+          <strong>Critérios de Aprovação BACEN para IRB (Circular 3.648/2013)</strong><br/><br/>
+          - Histórico de dados: mínimo 5 anos para F-IRB, 7 anos para A-IRB<br/>
+          - Sistema de rating com no mínimo 7–8 graus de adimplência<br/>
+          - Uso gerencial dos ratings (Use Test): o modelo deve ser usado internamente para decisão<br/>
+          - Processo de validação independente (modelo, dados, processos)<br/>
+          - Documentação completa de metodologia, calibração e backtesting<br/>
+          - Aprovação pelo Comitê de Supervisão do BACEN após auditoria in loco<br/>
+          - Revisão periódica: anual mínimo, com relatório de performance ao BACEN
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 05: IMPACTO DO RATING
+           ========================================================= -->
+      <section class="section" id="impacto-rating">
+        <div class="sec-hdr">
+          <div class="sec-num">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Custo e Acesso a Mercados</div>
+            <h2>Impacto do Rating</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O rating afeta diretamente o <strong>spread de crédito</strong> (prêmio sobre a taxa livre de risco) exigido por investidores,
+          o acesso a mercados de capitais, os limites de contraparte em operações de tesouraria e as taxas obtidas em captações bancárias.
+          Um downgrade pode ter impacto imediato e significativo no custo de funding e na percepção de mercado.
+        </p>
+
+        <!-- Spread Chart -->
+        <div class="chart-container" style="height: 420px;">
+          <div class="chart-title">Spread de Crédito Médio por Rating (bps sobre DI/CDI — referência Brasil)</div>
+          <canvas id="chartSpread"></canvas>
+        </div>
+
+        <!-- Impact Grid -->
+        <div class="grid-3" style="margin-top: 24px;">
+          <div class="card">
+            <div class="card-subtitle">Captação</div>
+            <h4 class="card-title">Custo de Funding</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              Cada notch de rebaixamento aumenta o spread em 15–50bps para emissões investment grade
+              e 50–150bps para especulativo. Emissões long-duration amplificam o impacto em valor presente.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Mercados de Capitais</div>
+            <h4 class="card-title">Acesso a Funding</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              Mandatos de fundos de previdência (EFPC), seguradoras e fundos soberanos
+              restringem-se a emissores investment grade (BBB-/Baa3 ou superior).
+              Fallen angels perdem acesso imediato a esses compradores.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Tesouraria / Derivativos</div>
+            <h4 class="card-title">Limites de Contraparte</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              Políticas de risco de contraparte (ISDA CSA) estabelecem limites de exposição
+              por rating. Downgrade abaixo de BBB-/Baa3 pode acionar cláusulas de margem adicional
+              ou encerramento antecipado de contratos.
+            </p>
+          </div>
+        </div>
+
+        <!-- Case Study -->
+        <div class="example-box">
+          <div class="example-title">Caso Prático: Downgrade de BBB para BB — Empresa PortoChem S.A.</div>
+          <table style="width: 100%; font-size: 0.88rem; margin-top: 12px; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid rgba(16,185,129,0.2);">
+              <td style="padding: 8px; color: var(--text-dim);">Rating anterior</td>
+              <td style="padding: 8px; font-weight: 600; color: var(--text);">BBB (Investment Grade)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(16,185,129,0.2);">
+              <td style="padding: 8px; color: var(--text-dim);">Novo rating pós-downgrade</td>
+              <td style="padding: 8px; font-weight: 600; color: #ef4444;">BB (Speculative Grade)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(16,185,129,0.2);">
+              <td style="padding: 8px; color: var(--text-dim);">Spread anterior (sobre DI)</td>
+              <td style="padding: 8px; font-weight: 600; color: var(--text);">180 bps</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(16,185,129,0.2);">
+              <td style="padding: 8px; color: var(--text-dim);">Spread pós-downgrade</td>
+              <td style="padding: 8px; font-weight: 600; color: #ef4444;">430 bps (+250 bps)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(16,185,129,0.2);">
+              <td style="padding: 8px; color: var(--text-dim);">Dívida afetada</td>
+              <td style="padding: 8px; font-weight: 600; color: var(--text);">R$ 2,4 bi (debentures e CRA)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(16,185,129,0.2);">
+              <td style="padding: 8px; color: var(--text-dim);">Impacto anual de custo adicional</td>
+              <td style="padding: 8px; font-weight: 600; color: #ef4444;">~R$ 60 M/ano (250bps × R$ 2,4bi)</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; color: var(--text-dim);">Impactos adicionais</td>
+              <td style="padding: 8px; font-size: 0.85rem; color: var(--text-dim);">
+                Fundos de previdência tiveram que vender as debentures (mandato IG apenas).
+                Linhas de tesouraria com contraparte bancária foram reduzidas em 40%.
+                Acesso a mercado externo (Bonds USD) suspenso temporariamente.
+              </td>
+            </tr>
+          </table>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 06: OUTLOOKS E WATCH
+           ========================================================= -->
+      <section class="section" id="outlooks-watch">
+        <div class="sec-hdr">
+          <div class="sec-num">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Sinalizadores de Tendência</div>
+            <h2>Outlooks e CreditWatch / Rating Watch</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Além do rating em si, as agências comunicam perspectivas de evolução através de <strong>Outlooks</strong>
+          (horizonte de 12–24 meses) e de <strong>CreditWatch/Rating Watch</strong> (mudança iminente, tipicamente em 90 dias).
+          Esses sinalizadores são antecipadores importantes para o mercado e acionam revisões de limite antes do downgrade formal.
+        </p>
+
+        <!-- Outlook Cards -->
+        <div class="grid-3">
+          <div class="card" style="border-color: rgba(16,185,129,0.4);">
+            <div class="card-subtitle" style="color: #10b981;">Outlook</div>
+            <h4 class="card-title" style="color: #10b981;">Positivo</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              Fatores favoráveis que podem levar a um <strong>upgrade</strong> no médio prazo (12–24 meses).
+              Exemplos: desalavancagem em curso, melhora de margens, fortalecimento de governança,
+              entrada em novo mercado rentável.
+            </p>
+          </div>
+
+          <div class="card" style="border-color: rgba(59,130,246,0.4);">
+            <div class="card-subtitle" style="color: #3b82f6;">Outlook</div>
+            <h4 class="card-title" style="color: #3b82f6;">Estável</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              Expectativa de manutenção do rating atual no horizonte de análise. Não há
+              pressões relevantes de upgrade ou downgrade. Situação mais comum (~65% dos ratings).
+            </p>
+          </div>
+
+          <div class="card" style="border-color: rgba(239,68,68,0.4);">
+            <div class="card-subtitle" style="color: #ef4444;">Outlook</div>
+            <h4 class="card-title" style="color: #ef4444;">Negativo</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              Fatores de pressão que podem levar a um <strong>downgrade</strong> no médio prazo.
+              Exemplos: alavancagem crescente, deterioração de margens, risco regulatório elevado,
+              ambiente macroeconômico adverso.
+            </p>
+          </div>
+        </div>
+
+        <!-- CreditWatch Special Card -->
+        <div class="card" style="border-color: rgba(245,158,11,0.5); background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(217,119,6,0.04) 100%); margin-top: 8px;">
+          <div class="card-subtitle" style="color: #f59e0b;">Sinalização Urgente</div>
+          <h4 class="card-title" style="color: #f59e0b;">CreditWatch / Rating Watch (Mudança Iminente)</h4>
+          <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0 0 12px 0; line-height: 1.7;">
+            Indica que a agência está ativamente revisando o rating e espera tomar uma ação em
+            <strong>até 90 dias</strong>. Pode ser positivo, negativo ou em desenvolvimento (incerto).
+            Acionado por eventos específicos: M&amp;A, mudança regulatória, deterioração financeira abrupta,
+            reestruturação de dívida ou oferta de compra. O CreditWatch Negativo é considerado quase
+            equivalente a um downgrade antecipado para fins de monitoramento de contraparte.
+          </p>
+          <div style="font-size: 0.82rem; color: #f59e0b; font-weight: 600;">
+            Diferença-chave: Outlook = tendência / CreditWatch = ação iminente e revisão ativa
+          </div>
+        </div>
+
+        <!-- Mermaid: Outlook Flow -->
+        <div class="diagram-container">
+          <div class="chart-title">Fluxo de Outlook e Ações de Rating</div>
+          <div class="mermaid">
+            graph TD
+            E["Rating Estável"]
+            E --> P["Outlook Positivo"]
+            E --> N["Outlook Negativo"]
+            P --> CWP["CreditWatch Positivo"]
+            N --> CWN["CreditWatch Negativo"]
+            CWP --> UP["UPGRADE"]
+            CWN --> DW["DOWNGRADE"]
+            UP --> E2["Novo Rating Estável"]
+            DW --> E3["Novo Rating Estável"]
+            E3 --> N2["Outlook Negativo<br/>(se pressões persistem)"]
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 07: RESOLUÇÃO BACEN 2.682/1999 — PCLD
+           ========================================================= -->
+      <section class="section" id="bacen-2682">
+        <div class="sec-hdr">
+          <div class="sec-num">07</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Regulação Prudencial — Brasil</div>
+            <h2>Rating Interno e Resolução CMN 2.682/1999</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A <strong>Resolução CMN 2.682/1999</strong> estabelece os critérios mínimos de classificação de operações de crédito
+          para fins de constituição da Provisão para Créditos de Liquidação Duvidosa (PCLD). Define nove níveis de risco
+          (AA a H) com percentuais mínimos de provisionamento e prazos máximos de permanência em cada nível com base
+          nos dias de atraso.
+        </p>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Níveis de Risco e Provisão Mínima — Resolução CMN 2.682/1999
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="prov-table">
+            <thead>
+              <tr>
+                <th>Nível</th>
+                <th>Provisionamento Mínimo</th>
+                <th>Dias de Atraso (prazo máximo para manutenção)</th>
+                <th>Interpretação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="rating-tag">AA</span></td>
+                <td><span class="prov-pct">0%</span></td>
+                <td>—</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Operações sem atraso, cliente com ótima capacidade de pagamento</td>
+              </tr>
+              <tr>
+                <td><span class="rating-tag">A</span></td>
+                <td><span class="prov-pct">0,5%</span></td>
+                <td>Até 14 dias</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Operações com bom risco, pequeno atraso eventual</td>
+              </tr>
+              <tr>
+                <td><span class="rating-tag">B</span></td>
+                <td><span class="prov-pct">1%</span></td>
+                <td>15 a 30 dias</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Risco reduzido. Atrasos curtos ou algum elemento de atenção</td>
+              </tr>
+              <tr>
+                <td><span class="rating-tag">C</span></td>
+                <td><span class="prov-pct">3%</span></td>
+                <td>31 a 60 dias</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Risco considerável. Atraso entre 31 e 60 dias ou deterioração clara</td>
+              </tr>
+              <tr>
+                <td><span class="rating-tag">D</span></td>
+                <td><span class="prov-pct">10%</span></td>
+                <td>61 a 90 dias</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Risco elevado. Atraso relevante, sinais de dificuldade financeira</td>
+              </tr>
+              <tr>
+                <td><span class="rating-tag">E</span></td>
+                <td><span class="prov-pct">30%</span></td>
+                <td>91 a 120 dias</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Risco alto. Atraso significativo ou insolvência evidenciada</td>
+              </tr>
+              <tr>
+                <td><span class="rating-tag">F</span></td>
+                <td><span class="prov-pct">50%</span></td>
+                <td>121 a 150 dias</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Risco muito alto. Perda substancial provável</td>
+              </tr>
+              <tr>
+                <td><span class="rating-tag">G</span></td>
+                <td><span class="prov-pct">70%</span></td>
+                <td>151 a 180 dias</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Risco altíssimo. Recuperação improvável no curto prazo</td>
+              </tr>
+              <tr>
+                <td><span class="rating-tag">H</span></td>
+                <td><span class="prov-pct">100%</span></td>
+                <td>Acima de 180 dias</td>
+                <td style="color: var(--text-dim); font-size: 0.85rem;">Write-off operacional. Provisão integral. Possível baixa a prejuízo em 360 dias</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="warning-box">
+          <strong>Sanções por Classificação Inadequada (Art. 11 da Res. 2.682/1999)</strong>
+          <p style="margin: 8px 0 0 0; font-size: 0.9rem; line-height: 1.7;">
+            A classificação inadequada (subprovisão) pode resultar em:
+            <strong>(i)</strong> autuação e multa pelo BACEN durante supervisão;
+            <strong>(ii)</strong> exigência de provisionamento adicional e ajuste retroativo;
+            <strong>(iii)</strong> rebaixamento de conceito operacional da instituição;
+            <strong>(iv)</strong> impacto no Índice de Basileia (redução do PR por provisão subestimada);
+            <strong>(v)</strong> responsabilização pessoal de administradores (Lei 4.595/1964, Art. 44).
+          </p>
+        </div>
+
+        <!-- PCLD vs ECL IFRS 9 -->
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          PCLD (Res. 2.682/1999) vs ECL — IFRS 9 (CMN 4.966/2021)
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Norma Brasileira</div>
+            <h4 class="card-title">PCLD — Res. CMN 2.682/1999</h4>
+            <ul style="font-size: 0.88rem; color: var(--text-dim); padding-left: 18px; margin: 0; line-height: 1.8;">
+              <li>Base: atraso observado (incurred loss)</li>
+              <li>Classificação AA-H por atraso em dias</li>
+              <li>Percentuais mínimos fixos por nível</li>
+              <li>Reconhecimento tardio da perda (loss after event)</li>
+              <li>Exigida para fins regulatórios pelo BACEN</li>
+              <li>Mais simples e previsível</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">IFRS 9 / CMN 4.966/2021</div>
+            <h4 class="card-title">ECL — Expected Credit Loss</h4>
+            <ul style="font-size: 0.88rem; color: var(--text-dim); padding-left: 18px; margin: 0; line-height: 1.8;">
+              <li>Base: perda esperada forward-looking (ECL)</li>
+              <li>3 estágios: performing / underperforming / non-performing</li>
+              <li>Incorpora cenários macroeconômicos (PD, LGD, EAD)</li>
+              <li>Reconhecimento antecipado da perda (expected loss)</li>
+              <li>Exigida para demonstrações IFRS (publicação)</li>
+              <li>Mais complexo, maior volatilidade de P&amp;L</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>Atenção: Dupla Apuração</strong>
+          <p style="margin: 8px 0 0 0; font-size: 0.9rem;">
+            Bancos brasileiros são obrigados a manter ambas as apurações: a <strong>PCLD (2.682/1999)</strong> para fins
+            regulatórios e de envio ao BACEN (COSIF), e a <strong>ECL IFRS 9 (CMN 4.966/2021)</strong> para publicação
+            de demonstrações financeiras. As diferenças de provisão entre as normas são registradas como ajustes
+            patrimoniais (OCI — Other Comprehensive Income) ou no resultado, conforme o estágio.
+          </p>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           SEÇÃO 08: AWS PARA RATING ANALYTICS
+           ========================================================= -->
+      <section class="section" id="aws-rating">
+        <div class="sec-hdr">
+          <div class="sec-num">08</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Implementação Cloud</div>
+            <h2>AWS para Rating Analytics</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A AWS oferece um ecossistema de serviços para construir modelos de rating internos, calcular probabilidades de
+          transição, monitorar portfólios em tempo real e automatizar o processo de reclassificação — desde a ingestão
+          dos dados cadastrais e de comportamento até a geração dos scores e publicação nos dashboards regulatórios.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Machine Learning</div>
+            <h4 class="card-title">Amazon SageMaker — Modelos de Rating</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0 0 12px 0; line-height: 1.7;">
+              Treinamento de modelos de PD (Probability of Default) usando XGBoost, Random Forest ou redes neurais.
+              SageMaker Feature Store centraliza variáveis financeiras e comportamentais.
+              SageMaker Model Monitor detecta drift de dados e degeneração de modelos em produção.
+            </p>
+            <ul style="font-size: 0.85rem; color: var(--text-dim); padding-left: 16px; margin: 0; line-height: 1.7;">
+              <li>Scorecard logístico para crédito PF</li>
+              <li>Modelos estruturais para corporates (KMV-like)</li>
+              <li>Pipeline de backtesting e validação automática</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Business Intelligence</div>
+            <h4 class="card-title">Amazon QuickSight — Dashboard de Portfólio</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0 0 12px 0; line-height: 1.7;">
+              Dashboards interativos com distribuição de ratings do portfólio, evolução temporal de migrações,
+              concentração por setor/rating e alertas de deterioração. Integra direto com Redshift e S3.
+            </p>
+            <ul style="font-size: 0.85rem; color: var(--text-dim); padding-left: 16px; margin: 0; line-height: 1.7;">
+              <li>Heatmap de matriz de transição em tempo real</li>
+              <li>Alertas de fallen angels e rising stars</li>
+              <li>Relatórios regulatórios automatizados (BACEN)</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Armazenamento e ETL</div>
+            <h4 class="card-title">S3 + AWS Glue + Redshift</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              S3 como data lake para dados brutos de crédito (histórico de pagamentos, balanços, comportamento transacional).
+              Glue para ETL e catalogação automática. Redshift Serverless para queries OLAP sobre carteiras de milhões de operações.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Automação e Orquestração</div>
+            <h4 class="card-title">Step Functions + Lambda</h4>
+            <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0; line-height: 1.7;">
+              Step Functions orquestra o pipeline de reclassificação periódica: coleta de dados → score → revisão analista
+              → aprovação → atualização em sistemas. Lambda processa eventos de reclassificação e dispara alertas para
+              as áreas de negócio.
+            </p>
+          </div>
+        </div>
+
+        <!-- AWS Architecture Mermaid -->
+        <div class="diagram-container">
+          <div class="chart-title">Arquitetura AWS para Pipeline de Rating de Crédito</div>
+          <div class="mermaid">
+            graph LR
+            A["Dados de Crédito<br/>Core Banking / CRM"] --> B["Amazon S3<br/>Data Lake"]
+            B --> C["AWS Glue<br/>ETL / Catalogação"]
+            C --> D["Amazon Redshift<br/>Feature Engineering"]
+            D --> E["SageMaker<br/>Treinamento PD"]
+            E --> F["Score de Rating<br/>AA–H / AAA–D"]
+            F --> G["S3 — Resultado<br/>Score Batch"]
+            G --> H["Amazon QuickSight<br/>Dashboard Portfólio"]
+            G --> I["Step Functions<br/>Workflow Reclassificação"]
+            I --> J["Analista / Comitê<br/>Aprovação Rating"]
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           RESUMO
+           ========================================================= -->
+      <section class="section" id="resumo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="font-size: 1.8rem;">RESUMO</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conclusão</div>
+            <h2>Pontos-Chave sobre Rating &amp; Classificação de Crédito</h2>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <h3>Takeaways Principais</h3>
+          <ul>
+            <li><strong>A escala global:</strong> AAA a D (S&amp;P/Fitch) ou Aaa a C (Moody's); a fronteira BBB-/Baa3 é o divisor investment grade / speculative grade</li>
+            <li><strong>Metodologia dual:</strong> análise quantitativa (índices financeiros) e qualitativa (gestão, setor, governança) decidem o rating em comitê</li>
+            <li><strong>Matriz de transição:</strong> base para modelos de risco de crédito, ECL IFRS 9 e capital econômico; o diagonal alto indica estabilidade relativa</li>
+            <li><strong>IRB Avançado:</strong> PD + LGD + EAD próprios, com aprovação BACEN, permitem menor consumo de capital e melhor alinhamento risco-capital</li>
+            <li><strong>Impacto financeiro real:</strong> um downgrade de BBB para BB pode elevar o custo de funding em 200–300bps e restringir acesso a investidores institucionais</li>
+            <li><strong>Res. 2.682/1999:</strong> classificação AA-H com provisionamento 0%–100% é obrigatória para carteira de crédito no Brasil; complementada pelo ECL IFRS 9</li>
+            <li><strong>AWS habilita o IRB:</strong> SageMaker para modelos, Redshift para features, QuickSight para monitoramento e Step Functions para automação do processo</li>
+          </ul>
+        </div>
+
+        <!-- Navigation to Related Topics -->
+        <div style="margin-top: 30px;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 14px;">
+            Tópicos Relacionados
+          </div>
+          <div class="grid-2" style="gap: 16px;">
+            <a href="analise-risco-credito.html" style="text-decoration: none;">
+              <div class="card">
+                <h4 class="card-title">Análise de Risco de Crédito</h4>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+                  PD, LGD, EAD, modelos de scoring e estrutura de crédito corporativo.
+                </p>
+              </div>
+            </a>
+            <a href="rwam-ead-pcc.html" style="text-decoration: none;">
+              <div class="card">
+                <h4 class="card-title">RWA, EAD e Cálculo de Capital (PCC)</h4>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+                  Ativos ponderados pelo risco, fórmulas de capital regulatório e IRB avançado.
+                </p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           REFERÊNCIAS
+           ========================================================= -->
+      <section class="section" id="referencias">
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Referências &amp; Conformidade
+        </div>
+
+        <div class="reference">
+          <strong>Resolução CMN 2.682/1999</strong>
+          Classifica as operações de crédito e define regras de constituição de provisão (PCLD) em 9 níveis (AA–H).
+          Documento fundamental para crédito no sistema financeiro brasileiro.
+        </div>
+
+        <div class="reference">
+          <strong>Resolução CMN 4.966/2021 (IFRS 9 no Brasil)</strong>
+          Implementa o modelo de Expected Credit Loss (ECL) para instituições financeiras brasileiras,
+          em convergência com o IFRS 9. Vigente a partir de janeiro de 2025 para bancos S1-S2.
+        </div>
+
+        <div class="reference">
+          <strong>Circular BACEN 3.648/2013 — Abordagem IRB</strong>
+          Define critérios e procedimentos para uso de modelos internos de rating (IRB Foundation e Advanced)
+          para fins de cálculo do Patrimônio de Referência Exigido (PRE) no Brasil.
+        </div>
+
+        <div class="reference">
+          <strong>Moody's Investors Service — Rating Methodology</strong>
+          "Rating Symbols and Definitions" e "Corporate Finance Methodology". Metodologias publicadas para
+          atribuição de ratings de emissor e emissão globais. Disponível em moodys.com.
+        </div>
+
+        <div class="reference">
+          <strong>S&amp;P Global Ratings — Ratings Criteria</strong>
+          "General Criteria: Understanding S&amp;P Global Ratings' Rating Definitions" e "Corporate Methodology".
+          Define escalas, notches e critérios quantitativos e qualitativos. Disponível em spglobal.com/ratings.
+        </div>
+
+        <div class="reference">
+          <strong>Basel Committee on Banking Supervision — Basel III (2017)</strong>
+          "Basel III: Finalising Post-Crisis Reforms". Define abordagens SA e IRB para risco de crédito,
+          incluindo floor de capital e requerimentos para modelos internos.
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Sidebar Loader -->
+  <script src="../../js/sidebar-loader.js"></script>
+
+  <script>
+    function toggleNav() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('active');
+    }
+
+    // -----------------------------------------------------------------------
+    // CHART 01 — Distribuição de corporações por rating (horizontal bar)
+    // -----------------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', function () {
+      const ctxDist = document.getElementById('chartDistribuicao');
+      if (ctxDist) {
+        new Chart(ctxDist, {
+          type: 'bar',
+          data: {
+            labels: ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC/C', 'D'],
+            datasets: [{
+              label: '% de corporações globais',
+              data: [2, 8, 22, 35, 18, 10, 3, 2],
+              backgroundColor: [
+                'rgba(16, 185, 129, 0.85)',
+                'rgba(16, 185, 129, 0.75)',
+                'rgba(16, 185, 129, 0.65)',
+                'rgba(16, 185, 129, 0.55)',
+                'rgba(239, 68, 68, 0.55)',
+                'rgba(239, 68, 68, 0.65)',
+                'rgba(239, 68, 68, 0.75)',
+                'rgba(107, 114, 128, 0.7)'
+              ],
+              borderColor: [
+                'rgba(16, 185, 129, 1)',
+                'rgba(16, 185, 129, 0.9)',
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(16, 185, 129, 0.7)',
+                'rgba(239, 68, 68, 0.7)',
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(239, 68, 68, 0.9)',
+                'rgba(107, 114, 128, 1)'
+              ],
+              borderWidth: 1,
+              borderRadius: 4
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function (ctx) {
+                    return ' ' + ctx.parsed.x + '% das corporações';
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                max: 40,
+                ticks: {
+                  color: '#9ca3af',
+                  callback: function (val) { return val + '%'; }
+                },
+                grid: { color: 'rgba(255,255,255,0.07)' }
+              },
+              y: {
+                ticks: {
+                  color: '#e5e7eb',
+                  font: { family: "'DM Mono', monospace", weight: '600' }
+                },
+                grid: { color: 'rgba(255,255,255,0.04)' }
+              }
+            }
+          }
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // CHART 02 — Spread de crédito por rating (bps sobre taxa livre de risco)
+      // -----------------------------------------------------------------------
+      const ctxSpread = document.getElementById('chartSpread');
+      if (ctxSpread) {
+        const spreads = [50, 70, 100, 180, 350, 600, 1200, 2000];
+        const labels   = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC/C', 'D'];
+
+        const bgColors = [
+          'rgba(16, 185, 129, 0.8)',
+          'rgba(16, 185, 129, 0.7)',
+          'rgba(16, 185, 129, 0.6)',
+          'rgba(16, 185, 129, 0.5)',
+          'rgba(239, 68, 68, 0.5)',
+          'rgba(239, 68, 68, 0.65)',
+          'rgba(239, 68, 68, 0.78)',
+          'rgba(107, 114, 128, 0.75)'
+        ];
+
+        new Chart(ctxSpread, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Spread médio (bps)',
+              data: spreads,
+              backgroundColor: bgColors,
+              borderColor: bgColors.map(c => c.replace(/[\d.]+\)$/, '1)')),
+              borderWidth: 1,
+              borderRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function (ctx) {
+                    const val = ctx.parsed.y;
+                    return ' ' + val + ' bps (' + (val / 100).toFixed(2) + '% a.a.)';
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  color: '#9ca3af',
+                  callback: function (val) { return val + ' bps'; }
+                },
+                grid: { color: 'rgba(255,255,255,0.07)' }
+              },
+              x: {
+                ticks: {
+                  color: '#e5e7eb',
+                  font: { family: "'DM Mono', monospace", weight: '600' }
+                },
+                grid: { color: 'rgba(255,255,255,0.04)' }
+              }
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

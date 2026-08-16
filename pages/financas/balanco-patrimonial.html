@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Balanço Patrimonial, DRE, Fluxo de Caixa e Índices de Liquidez - AWS Data Mastery"/>
+  <title>Balanço Patrimonial & DRE | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+
+  <!-- CSS Base -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Chart.js for Interactive Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Balanço Patrimonial & DRE | AWS Data Mastery"/>
+  <meta property="og:description" content="Estrutura do Balanço Patrimonial, DRE, Fluxo de Caixa, Índices de Liquidez e integração AWS"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+
+  <style>
+    .section {
+      scroll-margin-top: 60px;
+    }
+
+    .sec-hdr {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+      align-items: flex-start;
+    }
+
+    .sec-num {
+      font-size: 2.5rem;
+      font-weight: 900;
+      min-width: 60px;
+      color: var(--aws);
+    }
+
+    .sec-title h2 {
+      font-size: 1.8rem;
+      margin: 0 0 8px 0;
+      color: var(--text);
+    }
+
+    .sec-subtitle {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .sec-intro {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--text-dim);
+      margin: 18px 0 24px 0;
+      border-left: 4px solid var(--aws);
+      padding-left: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin: 24px 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--aws);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .card-subtitle {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--aws);
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .formula-box {
+      background: var(--bg-tertiary);
+      border-left: 4px solid var(--aws);
+      padding: 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+      font-family: 'DM Mono', monospace;
+      overflow-x: auto;
+    }
+
+    .example-box {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(10, 132, 99, 0.05) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-left: 4px solid #10b981;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .example-title {
+      font-weight: 600;
+      color: #10b981;
+      margin-bottom: 12px;
+    }
+
+    .info-box {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .reference {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin: 16px 0;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-left: 3px solid var(--text-dim);
+      padding-left: 16px;
+    }
+
+    .reference strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 420px;
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .chart-title {
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+    }
+
+    .diagram-container {
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .summary-box {
+      background: linear-gradient(135deg, var(--aws) 0%, rgba(59, 130, 246, 0.8) 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 8px;
+      margin: 30px 0;
+    }
+
+    .summary-box h3 {
+      margin: 0 0 12px 0;
+      font-size: 1.2rem;
+    }
+
+    .summary-box ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .summary-box li {
+      margin: 8px 0;
+    }
+
+    .breadcrumb {
+      margin-bottom: 30px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    .breadcrumb a {
+      color: var(--aws);
+      text-decoration: none;
+    }
+
+    .breadcrumb a:hover {
+      text-decoration: underline;
+    }
+
+    /* DRE flow table */
+    .dre-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 16px 0;
+    }
+
+    .dre-table tr {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .dre-table td {
+      padding: 10px 8px;
+    }
+
+    .dre-table .dre-label {
+      color: var(--text-dim);
+      width: 55%;
+    }
+
+    .dre-table .dre-value {
+      color: var(--text);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .dre-table .dre-result {
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .dre-table .dre-result td {
+      color: #10b981;
+      font-weight: 700;
+    }
+
+    .dre-table .dre-deduct td {
+      color: #f87171;
+    }
+
+    /* Liquidity table */
+    .liq-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 16px 0;
+    }
+
+    .liq-table th {
+      background: var(--bg-tertiary);
+      color: var(--aws);
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .liq-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-dim);
+    }
+
+    .liq-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge-green {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-yellow {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-red {
+      display: inline-block;
+      background: rgba(248, 113, 113, 0.15);
+      color: #f87171;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* BP two-column layout */
+    .bp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    @media (max-width: 700px) {
+      .bp-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .bp-col {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .bp-col-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid;
+    }
+
+    .bp-col-title.ativo { color: #3b82f6; border-color: #3b82f6; }
+    .bp-col-title.passivo { color: #f59e0b; border-color: #f59e0b; }
+    .bp-col-title.pl { color: #10b981; border-color: #10b981; }
+
+    .bp-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.88rem;
+    }
+
+    .bp-item:last-child { border-bottom: none; }
+
+    .bp-item .bp-name { color: var(--text-dim); }
+    .bp-item .bp-val  { color: var(--text); font-weight: 600; font-family: 'DM Mono', monospace; }
+
+    .bp-subtotal {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0 4px 0;
+      margin-top: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      border-top: 1px solid var(--border);
+    }
+
+    .bp-total {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0 2px 0;
+      margin-top: 10px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      border-top: 2px solid var(--aws);
+    }
+
+    .bp-total.ativo { color: #3b82f6; }
+    .bp-total.passivo-pl { color: var(--aws); }
+  </style>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <!-- Hero Section -->
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Fundamentos Financeiros</div>
+      <h1>Balanço Patrimonial &amp; DRE</h1>
+      <p class="hero-d">Domine a estrutura do Balanço Patrimonial, a Demonstração de Resultado do Exercício, Fluxo de Caixa e Índices de Liquidez. Compreenda como os dados financeiros são processados na AWS.</p>
+      <div class="pills">
+        <span class="pill">Ativo &amp; Passivo</span>
+        <span class="pill">Índices de Liquidez</span>
+        <span class="pill">DRE</span>
+        <span class="pill">Fluxo de Caixa</span>
+        <span class="pill">COSIF</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <!-- Breadcrumb Navigation -->
+      <div class="breadcrumb">
+        <a href="../../index.html">Início</a>
+        <span>/</span>
+        <a href="#">Finanças</a>
+        <span>/</span>
+        <span>Balanço Patrimonial &amp; DRE</span>
+      </div>
+
+      <!-- ============================================================
+           SEÇÃO 01 — ESTRUTURA DO BALANÇO PATRIMONIAL
+           ============================================================ -->
+      <section class="section" id="balanco-estrutura">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Demonstração Financeira</div>
+            <h2>Estrutura do Balanço Patrimonial</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O Balanço Patrimonial (BP) é a fotografia financeira de uma empresa em uma data específica.
+          Organiza-se em dois lados que devem sempre se equilibrar: à esquerda os <strong>Ativos</strong>
+          (o que a empresa possui ou tem a receber) e à direita os <strong>Passivos</strong> (o que deve a terceiros)
+          mais o <strong>Patrimônio Líquido</strong> (o que pertence aos sócios). No Brasil, é regulamentado pelo
+          CPC 26 e, para instituições financeiras, pelo COSIF do BACEN.
+        </p>
+
+        <!-- Mermaid: BP Hierarchy -->
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Hierarquia do Balanço Patrimonial
+        </div>
+
+        <div class="diagram-container">
+          <div class="chart-title">Estrutura completa: Ativo, Passivo e Patrimônio Líquido</div>
+          <div class="mermaid">
+            graph TD
+            BP["Balanço Patrimonial"]
+
+            BP --> AT["ATIVO TOTAL"]
+            BP --> PP["PASSIVO + PL"]
+
+            AT --> AC["Ativo Circulante"]
+            AT --> ANC["Ativo Não Circulante"]
+
+            AC --> CA["Caixa e Equivalentes"]
+            AC --> CL["Clientes / Contas a Receber"]
+            AC --> ES["Estoques"]
+            AC --> OR["Outros Recebíveis"]
+
+            ANC --> IM["Imobilizado"]
+            ANC --> IN["Intangível"]
+            ANC --> INV["Investimentos LP"]
+            ANC --> RLP["Realizável LP"]
+
+            PP --> PC["Passivo Circulante"]
+            PP --> PNC["Passivo Não Circulante"]
+            PP --> PL["Patrimônio Líquido"]
+
+            PC --> FO["Fornecedores"]
+            PC --> ECP["Empréstimos CP"]
+            PC --> SA["Salários e Encargos"]
+
+            PNC --> ELP["Empréstimos LP"]
+            PNC --> DEB["Debêntures"]
+
+            PL --> CS["Capital Social"]
+            PL --> RE["Reservas"]
+            PL --> LA["Lucros Acumulados"]
+          </div>
+        </div>
+
+        <!-- 3 cards: Ativo, Passivo, PL -->
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle">Lado Esquerdo</div>
+            <h4 class="card-title">Ativo</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0 0 12px 0;">
+              Tudo o que a empresa <strong>possui ou tem direito a receber</strong>. Ordenado
+              por grau de liquidez decrescente: Circulante (realizável em até 12 meses) e
+              Não Circulante (realizável após 12 meses).
+            </p>
+            <div style="font-size: 0.82rem; color: var(--text-dim);">
+              <div style="margin: 4px 0;">• Caixa e equivalentes</div>
+              <div style="margin: 4px 0;">• Contas a receber</div>
+              <div style="margin: 4px 0;">• Estoques</div>
+              <div style="margin: 4px 0;">• Imobilizado e Intangível</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Lado Direito — Obrigações</div>
+            <h4 class="card-title">Passivo</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0 0 12px 0;">
+              Obrigações da empresa com <strong>terceiros</strong>. Também ordenado por exigibilidade:
+              Circulante (vence em até 12 meses) e Não Circulante (vence após 12 meses).
+            </p>
+            <div style="font-size: 0.82rem; color: var(--text-dim);">
+              <div style="margin: 4px 0;">• Fornecedores</div>
+              <div style="margin: 4px 0;">• Empréstimos CP e LP</div>
+              <div style="margin: 4px 0;">• Debêntures e títulos</div>
+              <div style="margin: 4px 0;">• Provisões e contingências</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Lado Direito — Recursos Próprios</div>
+            <h4 class="card-title">Patrimônio Líquido</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0 0 12px 0;">
+              Diferença entre Ativo Total e Passivo Total. Representa a <strong>riqueza dos proprietários</strong>.
+              PL positivo = empresa solvente. PL negativo = insolvência técnica.
+            </p>
+            <div style="font-size: 0.82rem; color: var(--text-dim);">
+              <div style="margin: 4px 0;">• Capital Social</div>
+              <div style="margin: 4px 0;">• Reservas de capital e de lucros</div>
+              <div style="margin: 4px 0;">• Lucros ou prejuízos acumulados</div>
+              <div style="margin: 4px 0;">• Outros resultados abrangentes</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equação fundamental -->
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Equação Fundamental da Contabilidade
+        </div>
+
+        <div class="formula-box">
+          \[
+          \text{Ativo Total} = \text{Passivo Total} + \text{Patrimônio Líquido (PL)}
+          \]
+        </div>
+
+        <!-- Exemplo BP numérico -->
+        <div class="example-box">
+          <div class="example-title">Exemplo Prático: Balanço Patrimonial — Banco Alpha S.A. (31/12/2024)</div>
+          <div class="bp-grid" style="margin-top: 16px;">
+            <!-- ATIVO -->
+            <div class="bp-col">
+              <div class="bp-col-title ativo">ATIVO</div>
+
+              <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #3b82f6; margin: 12px 0 6px 0; letter-spacing: 0.05em;">Ativo Circulante</div>
+              <div class="bp-item"><span class="bp-name">Caixa e Equivalentes</span><span class="bp-val">R$ 1.200 M</span></div>
+              <div class="bp-item"><span class="bp-name">Títulos e Valores Mobiliários</span><span class="bp-val">R$ 2.400 M</span></div>
+              <div class="bp-item"><span class="bp-name">Carteira de Crédito CP</span><span class="bp-val">R$ 3.800 M</span></div>
+              <div class="bp-item"><span class="bp-name">Outros Recebíveis</span><span class="bp-val">R$ 600 M</span></div>
+              <div class="bp-subtotal"><span>Total Circulante</span><span style="color:#3b82f6">R$ 8.000 M</span></div>
+
+              <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #3b82f6; margin: 14px 0 6px 0; letter-spacing: 0.05em;">Ativo Não Circulante</div>
+              <div class="bp-item"><span class="bp-name">Carteira de Crédito LP</span><span class="bp-val">R$ 5.500 M</span></div>
+              <div class="bp-item"><span class="bp-name">Imobilizado</span><span class="bp-val">R$ 1.200 M</span></div>
+              <div class="bp-item"><span class="bp-name">Intangível (Softwares)</span><span class="bp-val">R$ 800 M</span></div>
+              <div class="bp-item"><span class="bp-name">Investimentos Permanentes</span><span class="bp-val">R$ 500 M</span></div>
+              <div class="bp-subtotal"><span>Total Não Circulante</span><span style="color:#3b82f6">R$ 8.000 M</span></div>
+
+              <div class="bp-total ativo"><span>ATIVO TOTAL</span><span>R$ 16.000 M</span></div>
+            </div>
+
+            <!-- PASSIVO + PL -->
+            <div class="bp-col">
+              <div class="bp-col-title passivo">PASSIVO</div>
+
+              <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #f59e0b; margin: 12px 0 6px 0; letter-spacing: 0.05em;">Passivo Circulante</div>
+              <div class="bp-item"><span class="bp-name">Depósitos à Vista</span><span class="bp-val">R$ 2.000 M</span></div>
+              <div class="bp-item"><span class="bp-name">Depósitos a Prazo CP</span><span class="bp-val">R$ 3.000 M</span></div>
+              <div class="bp-item"><span class="bp-name">Empréstimos Interbancários</span><span class="bp-val">R$ 1.500 M</span></div>
+              <div class="bp-item"><span class="bp-name">Fornecedores e Outros</span><span class="bp-val">R$ 500 M</span></div>
+              <div class="bp-subtotal"><span>Total Circulante</span><span style="color:#f59e0b">R$ 7.000 M</span></div>
+
+              <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #f59e0b; margin: 14px 0 6px 0; letter-spacing: 0.05em;">Passivo Não Circulante</div>
+              <div class="bp-item"><span class="bp-name">Depósitos a Prazo LP</span><span class="bp-val">R$ 3.200 M</span></div>
+              <div class="bp-item"><span class="bp-name">Debêntures Emitidas</span><span class="bp-val">R$ 1.800 M</span></div>
+              <div class="bp-item"><span class="bp-name">Outros Passivos LP</span><span class="bp-val">R$ 500 M</span></div>
+              <div class="bp-subtotal"><span>Total Não Circulante</span><span style="color:#f59e0b">R$ 5.500 M</span></div>
+
+              <div class="bp-col-title pl" style="margin-top: 16px;">PATRIMÔNIO LÍQUIDO</div>
+              <div class="bp-item"><span class="bp-name">Capital Social</span><span class="bp-val">R$ 2.000 M</span></div>
+              <div class="bp-item"><span class="bp-name">Reservas de Capital</span><span class="bp-val">R$ 600 M</span></div>
+              <div class="bp-item"><span class="bp-name">Reservas de Lucros</span><span class="bp-val">R$ 700 M</span></div>
+              <div class="bp-item"><span class="bp-name">Lucros Acumulados</span><span class="bp-val">R$ 200 M</span></div>
+              <div class="bp-subtotal"><span>Total PL</span><span style="color:#10b981">R$ 3.500 M</span></div>
+
+              <div class="bp-total passivo-pl"><span>PASSIVO + PL TOTAL</span><span>R$ 16.000 M</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>Norma CPC 26 e COSIF:</strong>
+          <p style="margin: 8px 0 0 0;">
+            O CPC 26 (Apresentação das Demonstrações Contábeis) padroniza a estrutura do BP para empresas abertas.
+            Para bancos, o COSIF (Plano de Contas das Instituições do Sistema Financeiro Nacional) define a
+            codificação específica de contas, com estrutura diferente do padrão IFRS convencional.
+          </p>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           SEÇÃO 02 — ÍNDICES DE LIQUIDEZ
+           ============================================================ -->
+      <section class="section" id="indices-liquidez">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Análise Financeira</div>
+            <h2>Índices de Liquidez</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Os índices de liquidez medem a <strong>capacidade da empresa de honrar seus compromissos financeiros</strong>
+          no curto e médio prazo. São derivados do Balanço Patrimonial e fundamentais na análise de crédito,
+          concessão de financiamentos e avaliação de risco por agências de rating (Moody's, S&P, Fitch).
+        </p>
+
+        <!-- 4 Liquidity Indexes -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Índice 1</div>
+            <h4 class="card-title">Liquidez Corrente (LC)</h4>
+            <div class="formula-box" style="margin-top: 12px; margin-bottom: 0;">
+              \[
+              LC = \frac{\text{Ativo Circulante}}{\text{Passivo Circulante}}
+              \]
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 12px 0 0 0;">
+              Mede a capacidade de pagar obrigações de curto prazo com ativos circulantes.
+              Inclui estoques, que podem ser de difícil liquidação.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Índice 2</div>
+            <h4 class="card-title">Liquidez Seca (LS)</h4>
+            <div class="formula-box" style="margin-top: 12px; margin-bottom: 0;">
+              \[
+              LS = \frac{\text{Ativo Circulante} - \text{Estoques}}{\text{Passivo Circulante}}
+              \]
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 12px 0 0 0;">
+              Exclui estoques (menos líquidos) do numerador. Mais conservadora e preferida
+              por analistas de crédito e bancos.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Índice 3</div>
+            <h4 class="card-title">Liquidez Imediata (LI)</h4>
+            <div class="formula-box" style="margin-top: 12px; margin-bottom: 0;">
+              \[
+              LI = \frac{\text{Disponibilidades}}{\text{Passivo Circulante}}
+              \]
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 12px 0 0 0;">
+              Considera apenas caixa e equivalentes. Índice mais conservador, usado em
+              análises de estresse e simulações de liquidez regulatória (LCR).
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Índice 4</div>
+            <h4 class="card-title">Liquidez Geral (LG)</h4>
+            <div class="formula-box" style="margin-top: 12px; margin-bottom: 0;">
+              \[
+              LG = \frac{\text{AC} + \text{RLP}}{\text{PC} + \text{PNC}}
+              \]
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 12px 0 0 0;">
+              Visão de longo prazo: inclui Realizável a Longo Prazo (RLP) e Passivo Não
+              Circulante (PNC). Avalia a solvência estrutural da empresa.
+            </p>
+          </div>
+        </div>
+
+        <!-- Interpretation table -->
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 28px 0 14px 0;">
+          Tabela de Interpretação dos Índices
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="liq-table">
+            <thead>
+              <tr>
+                <th>Faixa do Índice</th>
+                <th>Classificação</th>
+                <th>Significado</th>
+                <th>Ação Recomendada</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color:#10b981">Acima de 2,0</strong></td>
+                <td><span class="badge-green">Forte</span></td>
+                <td>Empresa tem folga confortável de liquidez</td>
+                <td>Monitorar — pode indicar excesso de caixa ocioso</td>
+              </tr>
+              <tr>
+                <td><strong style="color:#f59e0b">Entre 1,0 e 2,0</strong></td>
+                <td><span class="badge-yellow">Adequado</span></td>
+                <td>Capacidade de pagamento satisfatória</td>
+                <td>Acompanhar tendências e ciclo de caixa</td>
+              </tr>
+              <tr>
+                <td><strong style="color:#f87171">Entre 0,5 e 1,0</strong></td>
+                <td><span class="badge-red">Preocupante</span></td>
+                <td>Risco de dificuldade em cumprir obrigações</td>
+                <td>Revisão urgente de capital de giro</td>
+              </tr>
+              <tr>
+                <td><strong style="color:#ef4444">Abaixo de 0,5</strong></td>
+                <td><span class="badge-red">Crítico</span></td>
+                <td>Alta probabilidade de inadimplência</td>
+                <td>Reestruturação financeira necessária</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Example: Banco Alpha -->
+        <div class="example-box">
+          <div class="example-title">Exemplo Prático: Banco Alpha S.A. — Cálculo dos Índices de Liquidez</div>
+          <p style="font-size: 0.88rem; color: var(--text-dim); margin: 0 0 12px 0;">
+            Usando dados do Balanço da Seção 01: AC = R$ 8.000 M | PC = R$ 7.000 M | Estoques = 0 (banco) | Disponibilidades = R$ 1.200 M | RLP = R$ 5.500 M | PNC = R$ 5.500 M
+          </p>
+          <table style="width:100%; font-size:0.9rem;">
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+              <td style="padding:8px; color:var(--text-dim);">Liquidez Corrente</td>
+              <td style="padding:8px; color:var(--text); font-weight:600; font-family:'DM Mono',monospace;">8.000 / 7.000 = <span style="color:#10b981">1,14</span></td>
+              <td style="padding:8px;"><span class="badge-yellow">Adequado</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+              <td style="padding:8px; color:var(--text-dim);">Liquidez Seca</td>
+              <td style="padding:8px; color:var(--text); font-weight:600; font-family:'DM Mono',monospace;">(8.000 - 0) / 7.000 = <span style="color:#10b981">1,14</span></td>
+              <td style="padding:8px;"><span class="badge-yellow">Adequado</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+              <td style="padding:8px; color:var(--text-dim);">Liquidez Imediata</td>
+              <td style="padding:8px; color:var(--text); font-weight:600; font-family:'DM Mono',monospace;">1.200 / 7.000 = <span style="color:#f59e0b">0,17</span></td>
+              <td style="padding:8px;"><span class="badge-red">Monitorar</span></td>
+            </tr>
+            <tr>
+              <td style="padding:8px; color:var(--text-dim);">Liquidez Geral</td>
+              <td style="padding:8px; color:var(--text); font-weight:600; font-family:'DM Mono',monospace;">(8.000+5.500) / (7.000+5.500) = <span style="color:#10b981">1,08</span></td>
+              <td style="padding:8px;"><span class="badge-yellow">Adequado</span></td>
+            </tr>
+          </table>
+          <p style="margin:12px 0 0 0; font-size:0.85rem; color:var(--text-dim);">
+            <strong>Observacao:</strong> Para bancos, a LI baixa é esperada — o BACEN monitora o LCR (Liquidity Coverage Ratio) como medida regulatória primária de liquidez de curto prazo, conforme Basileia III.
+          </p>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           SEÇÃO 03 — DRE (DEMONSTRAÇÃO DE RESULTADO)
+           ============================================================ -->
+      <section class="section" id="dre">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Demonstração de Resultado</div>
+            <h2>DRE — Demonstração do Resultado do Exercício</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A DRE mostra o <strong>desempenho econômico da empresa em um período</strong> (trimestre ou ano).
+          Diferente do Balanço, que é uma fotografia pontual, a DRE é um filme — registra todas as
+          receitas e despesas ocorridas, chegando ao Lucro ou Prejuízo Líquido. Obrigatória para empresas
+          de capital aberto (Lei das S.A. 6.404/76) e regulamentada pelo CPC 26.
+        </p>
+
+        <!-- DRE Flow Mermaid -->
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Fluxo da DRE: Da Receita Bruta ao Lucro Líquido
+        </div>
+
+        <div class="diagram-container">
+          <div class="chart-title">Estrutura vertical da Demonstração de Resultado</div>
+          <div class="mermaid">
+            graph TD
+            RB["Receita Bruta de Vendas / Serviços"]
+            DED["(-) Deduções: Devoluções, Descontos, Impostos sobre Vendas"]
+            RL["= Receita Líquida"]
+            CMV["(-) CMV / CPV — Custo das Mercadorias/Produtos Vendidos"]
+            LB["= Lucro Bruto"]
+            DESP["(-) Despesas Operacionais: Vendas, G&amp;A, P&amp;D"]
+            EBIT["= EBIT (Lucro Antes de Juros e Impostos)"]
+            DF["(-) Resultado Financeiro: Receitas e Despesas Financeiras"]
+            LAIR["= LAIR — Lucro Antes do IR/CSLL"]
+            IR["(-) IR e CSLL (alíquota efetiva ~34%)"]
+            LL["= Lucro Líquido do Exercício"]
+
+            RB --> DED
+            DED --> RL
+            RL --> CMV
+            CMV --> LB
+            LB --> DESP
+            DESP --> EBIT
+            EBIT --> DF
+            DF --> LAIR
+            LAIR --> IR
+            IR --> LL
+
+            style RB fill:#1e3a5f,color:#90cdf4
+            style LL fill:#064e3b,color:#6ee7b7
+            style LB fill:#1e3a5f,color:#90cdf4
+            style EBIT fill:#1e3a5f,color:#90cdf4
+            style LAIR fill:#1e3a5f,color:#90cdf4
+            style DED fill:#450a0a,color:#fca5a5
+            style CMV fill:#450a0a,color:#fca5a5
+            style DESP fill:#450a0a,color:#fca5a5
+            style DF fill:#450a0a,color:#fca5a5
+            style IR fill:#450a0a,color:#fca5a5
+          </div>
+        </div>
+
+        <!-- Numeric DRE example -->
+        <div class="example-box">
+          <div class="example-title">DRE Completa — Indústria Beta S.A. (Exercício 2024)</div>
+          <table class="dre-table" style="margin-top:14px;">
+            <tr>
+              <td class="dre-label"><strong>Receita Bruta de Vendas</strong></td>
+              <td class="dre-value">R$ 10.000.000</td>
+            </tr>
+            <tr class="dre-deduct">
+              <td class="dre-label">(-) Impostos sobre Vendas (ICMS/PIS/COFINS)</td>
+              <td class="dre-value" style="color:#f87171">R$ (1.500.000)</td>
+            </tr>
+            <tr class="dre-deduct">
+              <td class="dre-label">(-) Devoluções e Abatimentos</td>
+              <td class="dre-value" style="color:#f87171">R$ (200.000)</td>
+            </tr>
+            <tr class="dre-result">
+              <td><strong>= Receita Líquida</strong></td>
+              <td style="font-weight:700; text-align:right; font-family:'DM Mono',monospace;">R$ 8.300.000</td>
+            </tr>
+            <tr class="dre-deduct">
+              <td class="dre-label">(-) Custo dos Produtos Vendidos (CPV)</td>
+              <td class="dre-value" style="color:#f87171">R$ (4.980.000)</td>
+            </tr>
+            <tr class="dre-result">
+              <td><strong>= Lucro Bruto</strong> <span style="font-weight:400; font-size:0.82rem; color:#6ee7b7">(Margem Bruta: 40%)</span></td>
+              <td style="font-weight:700; text-align:right; font-family:'DM Mono',monospace;">R$ 3.320.000</td>
+            </tr>
+            <tr class="dre-deduct">
+              <td class="dre-label">(-) Despesas de Vendas</td>
+              <td class="dre-value" style="color:#f87171">R$ (830.000)</td>
+            </tr>
+            <tr class="dre-deduct">
+              <td class="dre-label">(-) Despesas Gerais e Administrativas</td>
+              <td class="dre-value" style="color:#f87171">R$ (600.000)</td>
+            </tr>
+            <tr class="dre-deduct">
+              <td class="dre-label">(-) Depreciação e Amortização</td>
+              <td class="dre-value" style="color:#f87171">R$ (250.000)</td>
+            </tr>
+            <tr class="dre-result">
+              <td><strong>= EBIT</strong> <span style="font-weight:400; font-size:0.82rem; color:#6ee7b7">(Margem EBIT: 16,3%)</span></td>
+              <td style="font-weight:700; text-align:right; font-family:'DM Mono',monospace;">R$ 1.640.000</td>
+            </tr>
+            <tr class="dre-deduct">
+              <td class="dre-label">(-) Despesas Financeiras Líquidas</td>
+              <td class="dre-value" style="color:#f87171">R$ (240.000)</td>
+            </tr>
+            <tr class="dre-result">
+              <td><strong>= LAIR</strong></td>
+              <td style="font-weight:700; text-align:right; font-family:'DM Mono',monospace;">R$ 1.400.000</td>
+            </tr>
+            <tr class="dre-deduct">
+              <td class="dre-label">(-) IR e CSLL (alíquota 34%)</td>
+              <td class="dre-value" style="color:#f87171">R$ (476.000)</td>
+            </tr>
+            <tr class="dre-result" style="font-size:1rem;">
+              <td><strong>= LUCRO LÍQUIDO</strong> <span style="font-weight:400; font-size:0.82rem; color:#6ee7b7">(Margem Líquida: 9,3%)</span></td>
+              <td style="font-weight:800; text-align:right; color:#10b981; font-family:'DM Mono',monospace;">R$ 924.000</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Margin formulas -->
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 28px 0 14px 0;">
+          Fórmulas de Margem e Rentabilidade
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h4 class="card-title">Margem Bruta</h4>
+            <div class="formula-box" style="margin: 12px 0 8px 0; font-size:0.9rem;">
+              \[
+              MB = \frac{\text{Lucro Bruto}}{\text{Receita Líquida}}
+              \]
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin: 0;">
+              Mede eficiência da produção/compra. Exemplo: 40% = empresa retém R$0,40 de cada R$1,00 de receita líquida após o custo direto.
+            </p>
+          </div>
+
+          <div class="card">
+            <h4 class="card-title">EBITDA</h4>
+            <div class="formula-box" style="margin: 12px 0 8px 0; font-size:0.9rem;">
+              \[
+              EBITDA = EBIT + D\&A
+              \]
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin: 0;">
+              Lucro antes de juros, impostos, depreciação e amortização. Proxy do caixa gerado pelas operações. Amplamente usado em valuation (múltiplo EV/EBITDA).
+            </p>
+          </div>
+
+          <div class="card">
+            <h4 class="card-title">Margem Líquida</h4>
+            <div class="formula-box" style="margin: 12px 0 8px 0; font-size:0.9rem;">
+              \[
+              ML = \frac{\text{Lucro Líquido}}{\text{Receita Líquida}}
+              \]
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin: 0;">
+              Percentual de cada R$1,00 de receita que se converte em lucro após todos os custos, despesas e impostos.
+            </p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           SEÇÃO 04 — FLUXO DE CAIXA (DFC)
+           ============================================================ -->
+      <section class="section" id="fluxo-caixa">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Demonstração de Fluxo de Caixa</div>
+            <h2>Fluxo de Caixa (DFC)</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A Demonstração do Fluxo de Caixa (DFC) revela <strong>de onde o dinheiro veio e para onde foi</strong>.
+          Diferente da DRE (regime de competência), a DFC usa regime de caixa — registra entradas e saídas efetivas.
+          Uma empresa pode ter lucro na DRE e ainda assim ter dificuldades de caixa (lucro x caixa são realidades distintas).
+          Obrigatória para empresas de capital aberto conforme CPC 03 e IAS 7.
+        </p>
+
+        <!-- 3 DFC components -->
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle">Atividades Operacionais</div>
+            <h4 class="card-title">FCO — Fluxo Operacional</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0 0 12px 0;">
+              Geração de caixa das operações principais do negócio. Indicador central de saúde operacional.
+            </p>
+            <div style="font-size:0.82rem; color:var(--text-dim);">
+              <div style="margin:4px 0; color:#10b981">+ Recebimentos de Clientes</div>
+              <div style="margin:4px 0; color:#10b981">+ Receitas Financeiras Recebidas</div>
+              <div style="margin:4px 0; color:#f87171">- Pagamentos a Fornecedores</div>
+              <div style="margin:4px 0; color:#f87171">- Pagamentos de Pessoal</div>
+              <div style="margin:4px 0; color:#f87171">- IR/CSLL pagos</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Atividades de Investimento</div>
+            <h4 class="card-title">FCI — Fluxo de Investimento</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0 0 12px 0;">
+              Aquisições e vendas de ativos de longo prazo. Negativo = empresa investindo em crescimento futuro.
+            </p>
+            <div style="font-size:0.82rem; color:var(--text-dim);">
+              <div style="margin:4px 0; color:#f87171">- Aquisição de Imobilizado (Capex)</div>
+              <div style="margin:4px 0; color:#f87171">- Compra de Participações</div>
+              <div style="margin:4px 0; color:#f87171">- Desenvolvimento de Softwares</div>
+              <div style="margin:4px 0; color:#10b981">+ Venda de Ativos Imobilizados</div>
+              <div style="margin:4px 0; color:#10b981">+ Recebimento de Dividendos</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Atividades de Financiamento</div>
+            <h4 class="card-title">FCF — Fluxo de Financiamento</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0 0 12px 0;">
+              Captações e pagamentos de dívida, distribuição de dividendos e movimentos de capital próprio.
+            </p>
+            <div style="font-size:0.82rem; color:var(--text-dim);">
+              <div style="margin:4px 0; color:#10b981">+ Emissão de Ações</div>
+              <div style="margin:4px 0; color:#10b981">+ Captação de Empréstimos</div>
+              <div style="margin:4px 0; color:#f87171">- Pagamento de Empréstimos</div>
+              <div style="margin:4px 0; color:#f87171">- Pagamento de Dividendos</div>
+              <div style="margin:4px 0; color:#f87171">- Recompra de Ações</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DFC Mermaid -->
+        <div class="diagram-container">
+          <div class="chart-title">Fluxo de Caixa: Fontes e Usos</div>
+          <div class="mermaid">
+            graph LR
+            FC["Saldo Inicial de Caixa"]
+
+            FC --> FCO["FCO — Operacional\n(Lucro + Ajustes não-caixa\n+ Var. Capital de Giro)"]
+            FC --> FCI["FCI — Investimento\n(Capex, M&amp;A,\nDesinvestimentos)"]
+            FC --> FCF2["FCF — Financiamento\n(Dívida, Dividendos,\nEmissão de Ações)"]
+
+            FCO --> SF["= Saldo Final de Caixa"]
+            FCI --> SF
+            FCF2 --> SF
+
+            SF --> FCL["Fluxo de Caixa Livre (FCF)\n= FCO - Capex"]
+            FCL --> VAL["Valuation (DCF)\nDistribuição Acionistas"]
+
+            style FCO fill:#064e3b,color:#6ee7b7
+            style FCI fill:#1e3a5f,color:#90cdf4
+            style FCF2 fill:#451a03,color:#fcd34d
+            style FCL fill:#3b0764,color:#d8b4fe
+          </div>
+        </div>
+
+        <!-- FCF importance -->
+        <div class="formula-box">
+          \[
+          \text{Fluxo de Caixa Livre (FCF)} = \text{FCO} - \text{Capex}
+          \]
+          <div style="margin-top: 12px; font-size: 0.9rem; color: var(--text-dim); font-family: 'DM Sans', sans-serif;">
+            <strong style="color:var(--text)">FCF positivo</strong> indica que a empresa gera caixa suficiente para financiar crescimento e recompensar acionistas.
+            É a base do modelo DCF (Discounted Cash Flow) para valuation.
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>Lucro vs. Caixa — Por que diferem?</strong>
+          <p style="margin: 8px 0 0 0;">
+            Uma empresa pode reportar lucro na DRE e ainda assim ficar sem caixa. Isso ocorre quando: (1) vendas são a prazo
+            mas custo é à vista; (2) estoques crescem muito; (3) Capex elevado consome caixa sem afetar resultado imediato.
+            O monitoramento simultâneo de DRE e DFC é essencial para uma análise financeira robusta.
+          </p>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           SEÇÃO 05 — ANÁLISE DE TENDÊNCIAS
+           ============================================================ -->
+      <section class="section" id="analise-tendencias">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Série Histórica</div>
+            <h2>Análise de Tendências: Ativo vs. Passivo</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A análise de tendências compara os dados do Balanço Patrimonial ao longo dos anos para identificar
+          padrões de crescimento, endividamento e saúde patrimonial. Variações relevantes no mix de financiamento
+          (maior proporção de dívida vs. PL) impactam o risco financeiro e os índices de adequação de capital regulatórios.
+        </p>
+
+        <!-- Chart.js stacked bar -->
+        <div class="chart-container">
+          <div class="chart-title">Evolução do Ativo vs. Passivo + PL — Banco Alpha S.A. (2020–2024) — R$ Milhões</div>
+          <canvas id="chartAtivPassivo" style="max-height:340px;"></canvas>
+        </div>
+
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('chartAtivPassivo');
+            if (!ctx) return;
+
+            const anos = ['2020', '2021', '2022', '2023', '2024'];
+
+            // Ativo
+            const ativoCirculante  = [5200, 5900, 6500, 7100, 8000];
+            const ativoNCirculante = [4800, 5500, 6200, 7200, 8000];
+
+            // Passivo + PL
+            const passivoCirc   = [4500, 5100, 5600, 6200, 7000];
+            const passivoNCirc  = [3200, 3700, 4200, 4800, 5500];
+            const patrimonioLiq = [2300, 2600, 2900, 3300, 3500];
+
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: anos,
+                datasets: [
+                  {
+                    label: 'Ativo Circulante',
+                    data: ativoCirculante,
+                    backgroundColor: 'rgba(59, 130, 246, 0.80)',
+                    stack: 'ativo',
+                  },
+                  {
+                    label: 'Ativo Não Circulante',
+                    data: ativoNCirculante,
+                    backgroundColor: 'rgba(59, 130, 246, 0.40)',
+                    stack: 'ativo',
+                  },
+                  {
+                    label: 'Passivo Circulante',
+                    data: passivoCirc,
+                    backgroundColor: 'rgba(245, 158, 11, 0.80)',
+                    stack: 'passivo',
+                  },
+                  {
+                    label: 'Passivo Não Circulante',
+                    data: passivoNCirc,
+                    backgroundColor: 'rgba(245, 158, 11, 0.45)',
+                    stack: 'passivo',
+                  },
+                  {
+                    label: 'Patrimônio Líquido',
+                    data: patrimonioLiq,
+                    backgroundColor: 'rgba(16, 185, 129, 0.80)',
+                    stack: 'passivo',
+                  },
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    labels: {
+                      color: '#9ca3af',
+                      font: { size: 12 }
+                    }
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: function(ctx) {
+                        return ctx.dataset.label + ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR') + ' M';
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  x: {
+                    ticks: { color: '#9ca3af' },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                  },
+                  y: {
+                    ticks: {
+                      color: '#9ca3af',
+                      callback: function(v) { return 'R$ ' + v.toLocaleString('pt-BR') + ' M'; }
+                    },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                  }
+                }
+              }
+            });
+          });
+        </script>
+
+        <!-- Trend analysis -->
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle">Crescimento de Ativos</div>
+            <h4 class="card-title">+54% em 5 anos</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Ativo Total passou de R$ 10.000 M (2020) para R$ 16.000 M (2024), refletindo expansão
+              da carteira de crédito e base de clientes.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Alavancagem</div>
+            <h4 class="card-title">Passivo/PL: 3,57x</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Em 2024: Passivo Total (R$ 12.500 M) / PL (R$ 3.500 M) = 3,57x.
+              Típico para bancos; monitorado pelo BACEN via Índice de Basileia.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Qualidade do Crescimento</div>
+            <h4 class="card-title">PL cresceu 52%</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              PL evoluiu de R$ 2.300 M para R$ 3.500 M, indicando geração consistente de
+              lucros retidos — sinal positivo de capitalização orgânica.
+            </p>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>Variações que merecem atenção na análise de tendência:</strong>
+          <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.9rem; color: var(--text-dim);">
+            <li style="margin: 6px 0;">Crescimento de Passivo Circulante superior ao crescimento do Ativo Circulante = deterioração de liquidez</li>
+            <li style="margin: 6px 0;">Redução do PL em termos relativos = alavancagem crescente e maior risco regulatório</li>
+            <li style="margin: 6px 0;">Crescimento de Intangível muito acima do Imobilizado = risco de deterioração se não há receita correspondente</li>
+            <li style="margin: 6px 0;">Ativo Circulante crescendo via contas a receber com prazo médio aumentando = possível deterioração de crédito</li>
+          </ul>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           SEÇÃO 06 — INTEGRAÇÃO AWS
+           ============================================================ -->
+      <section class="section" id="aws-integracao">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Implementação de Dados</div>
+            <h2>Integração AWS para Dados de Balanço</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A AWS oferece uma stack completa para ingestão, transformação, armazenamento e visualização de dados
+          de Balanço Patrimonial e DRE. Instituições financeiras utilizam esse pipeline para gerar relatórios
+          regulatórios (COSIF/BACEN), análises internas e dashboards em tempo quase-real para gestores e reguladores.
+        </p>
+
+        <!-- AWS Architecture Mermaid -->
+        <div class="diagram-container">
+          <div class="chart-title">Pipeline AWS para Dados Financeiros (BP e DRE)</div>
+          <div class="mermaid">
+            graph LR
+            CB["Core Banking\n(Sistemas Legados)"]
+            DMS["AWS DMS\nDatabase Migration Service"]
+            S3["Amazon S3\nData Lake\n(Dados Brutos COSIF)"]
+            GLUE["AWS Glue\nETL — Normalização\n+ Regras COSIF"]
+            CAT["Glue Data Catalog\nMetadados e Schema"]
+            RS["Amazon Redshift\nData Warehouse\n(OLAP Financeiro)"]
+            QS["Amazon QuickSight\nDashboards BP/DRE"]
+            SM["AWS SageMaker\nModelos Preditivos"]
+            REP["Relatórios\nBACEN / COSIF\n/ CVM"]
+
+            CB -->|Replicação CDC| DMS
+            DMS -->|Batch/Streaming| S3
+            S3 -->|Jobs ETL| GLUE
+            GLUE -->|Cataloga| CAT
+            GLUE -->|Load| RS
+            RS -->|Queries BI| QS
+            RS -->|Feature Store| SM
+            QS -->|Publica| REP
+            SM -->|Previsões| QS
+          </div>
+        </div>
+
+        <!-- AWS Services Grid -->
+        <div class="grid-2" style="margin-top: 20px;">
+          <div class="card">
+            <div class="card-subtitle">Migração de Dados</div>
+            <h4 class="card-title">AWS DMS — Database Migration Service</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Replica dados de sistemas core banking (Oracle, SQL Server, DB2) para o Data Lake em S3
+              via Change Data Capture (CDC). Garante replicação contínua com latência baixa e sem impacto
+              nos sistemas de origem — fundamental para ambientes 24x7 de bancos.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Transformação e Qualidade</div>
+            <h4 class="card-title">AWS Glue — ETL e Catálogo COSIF</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Jobs PySpark aplicam regras de negócio do COSIF: mapeamento de contas contábeis, cálculo de
+              saldos consolidados, validação de equações (Ativo = Passivo + PL). O Data Catalog mantém
+              o lineage e schema dos dados financeiros auditáveis pelo BACEN.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Armazenamento Analítico</div>
+            <h4 class="card-title">Amazon Redshift — Warehouse Financeiro</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Cluster MPP para queries OLAP sobre dados de Balanço e DRE históricos. Armazena séries
+              históricas de contas COSIF, balancetes mensais, DREs trimestrais. Redshift Spectrum acessa
+              dados brutos no S3 sem ETL adicional para relatórios ad-hoc.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Visualização e BI</div>
+            <h4 class="card-title">Amazon QuickSight — Dashboards BP/DRE</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Dashboards interativos com índices de liquidez, evolução de PL, composição de Ativo e Passivo,
+              margens da DRE e variação de fluxo de caixa. ML Insights detecta anomalias em contas específicas.
+              Compartilhado com gestores, auditores e reguladores via URL segura.
+            </p>
+          </div>
+        </div>
+
+        <div class="example-box">
+          <div class="example-title">Caso de Uso: Geração Automática de Balancete COSIF</div>
+          <p style="font-size:0.9rem; color:var(--text-dim); margin:0 0 10px 0;">
+            Um banco de médio porte implementou o seguinte pipeline para cumprir a obrigação de envio
+            diário do balancete ao BACEN via COSIF:
+          </p>
+          <div style="font-size:0.88rem; color:var(--text-dim);">
+            <div style="margin:6px 0;"><strong style="color:var(--text)">1. DMS</strong> — Replica movimentos contábeis do sistema core banking a cada 15 minutos via CDC</div>
+            <div style="margin:6px 0;"><strong style="color:var(--text)">2. S3</strong> — Armazena eventos brutos em formato Parquet particionado por data/conta</div>
+            <div style="margin:6px 0;"><strong style="color:var(--text)">3. Glue</strong> — Job noturno consolida saldos, aplica regras COSIF, valida equações e gera balancete</div>
+            <div style="margin:6px 0;"><strong style="color:var(--text)">4. Redshift</strong> — Armazena balancetes aprovados e permite queries históricas por conta/período</div>
+            <div style="margin:6px 0;"><strong style="color:var(--text)">5. QuickSight</strong> — Dashboard exibe posição patrimonial em tempo real com alertas de desvio</div>
+          </div>
+          <p style="font-size:0.85rem; color:#10b981; margin:12px 0 0 0;">
+            Resultado: Redução de 80% no tempo de fechamento contábil mensal e eliminou reprocessamento manual do balancete COSIF.
+          </p>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           RESUMO FINAL
+           ============================================================ -->
+      <section class="section" id="resumo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">RESUMO</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conclusão</div>
+            <h2>Pontos-Chave — Balanço Patrimonial &amp; DRE</h2>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <h3>Takeaways Principais</h3>
+          <ul>
+            <li><strong>Equação fundamental:</strong> Ativo Total = Passivo Total + PL — nunca pode falhar, é o princípio da partida dupla</li>
+            <li><strong>Liquidez Corrente e Seca</strong> são os índices mais usados em análise de crédito — valores abaixo de 1,0 acendem alerta</li>
+            <li><strong>DRE vs. Caixa:</strong> lucro contábil e geração de caixa podem divergir significativamente — analise sempre ambos</li>
+            <li><strong>FCF (Fluxo de Caixa Livre)</strong> é a métrica central de valuation — base do modelo DCF</li>
+            <li><strong>Análise de tendência histórica</strong> revela padrões de alavancagem e qualidade de crescimento que balanços pontuais ocultam</li>
+            <li><strong>AWS pipeline</strong> (DMS → S3 → Glue → Redshift → QuickSight) automatiza o ciclo completo de dados financeiros e relatórios COSIF</li>
+          </ul>
+        </div>
+
+        <!-- Navigation -->
+        <div style="margin-top: 30px;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 14px;">
+            Tópicos Relacionados
+          </div>
+          <div class="grid-2" style="gap: 16px;">
+            <a href="capital-estrutura.html" style="text-decoration: none;">
+              <div class="card">
+                <h4 class="card-title">Capital &amp; Estrutura</h4>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+                  Capital próprio, capital de terceiros, alavancagem financeira e Teorema Modigliani-Miller.
+                </p>
+              </div>
+            </a>
+            <a href="metricas-financeiras.html" style="text-decoration: none;">
+              <div class="card">
+                <h4 class="card-title">Métricas Financeiras</h4>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+                  ROE, ROA, ROIC, NIM, eficiência operacional e outros indicadores de rentabilidade.
+                </p>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           REFERÊNCIAS
+           ============================================================ -->
+      <section class="section" id="referencias">
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          Referências &amp; Conformidade
+        </div>
+
+        <div class="reference">
+          <strong>CPC 26 (R1) — Apresentação das Demonstrações Contábeis</strong>
+          Norma do Comitê de Pronunciamentos Contábeis que define estrutura, forma e conteúdo mínimo do Balanço Patrimonial e DRE para empresas abertas no Brasil. Converge com IAS 1.
+        </div>
+
+        <div class="reference">
+          <strong>Resolução BACEN 4.557/2016</strong>
+          Estrutura de Gerenciamento de Riscos e de Capital das Instituições Financeiras. Define requisitos de adequação de capital, liquidez e reporte periódico ao BACEN.
+        </div>
+
+        <div class="reference">
+          <strong>COSIF — Plano de Contas das Instituições do Sistema Financeiro Nacional</strong>
+          Estabelecido pela Circular BACEN 1.273/1987 e continuamente atualizado. Define a codificação padronizada de contas contábeis para bancos, garantindo comparabilidade e supervisão pelo BACEN.
+        </div>
+
+        <div class="reference">
+          <strong>Lei das S.A. 6.404/76 — Lei das Sociedades por Ações</strong>
+          Determina as demonstrações contábeis obrigatórias para sociedades anônimas: Balanço Patrimonial, DRE, Demonstração das Mutações do PL, DFC e Notas Explicativas.
+        </div>
+
+        <div class="reference">
+          <strong>CPC 03 (R2) — Demonstração dos Fluxos de Caixa</strong>
+          Norma que define a estrutura e método de elaboração da DFC (método direto e indireto). Converge com IAS 7 do IASB.
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Sidebar Loader -->
+  <script src="../../js/sidebar-loader.js"></script>
+
+  <script>
+    function toggleNav() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('active');
+    }
+
+    // Notify sidebar that this page has loaded (active link highlighting)
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof sidebarLoaded === 'function') {
+        sidebarLoaded();
+      }
+      window.dispatchEvent(new Event('sidebarLoaded'));
+    });
+  </script>
+</body>
+</html>
