@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Single-Table Design DynamoDB para operações de crédito"/>
+  <title>Single-Table DynamoDB | AWS Data Mastery</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function() {
+    renderMathInElement(document.body, {delimiters: [{left: '\\(', right: '\\)', display: false},{left: '\\[', right: '\\]', display: true}], ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"], throwOnError: false});
+  });</script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../style.css"/>
+  <script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <meta property="og:title" content="Single-Table DynamoDB | AWS Data Mastery"/>
+  <meta property="og:description" content="Modelagem de dados para operações de crédito em DynamoDB"/>
+  <meta property="og:type" content="website"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+  <style>
+    .section { scroll-margin-top: 60px; }
+    .sec-hdr { display: flex; gap: 20px; margin-bottom: 30px; align-items: flex-start; }
+    .sec-num { font-size: 2.5rem; font-weight: 900; min-width: 60px; color: var(--aws); }
+    .sec-title h2 { font-size: 1.8rem; margin: 0 0 8px 0; color: var(--text); }
+    .sec-subtitle { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 6px; }
+    .sec-intro { font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0; border-left: 4px solid var(--aws); padding-left: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 24px 0; }
+    .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 24px; transition: all 0.3s ease; }
+    .card:hover { transform: translateY(-2px); border-color: var(--aws); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+    .card-subtitle { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--aws); letter-spacing: 0.1em; margin-bottom: 8px; }
+    .code-box { background: var(--bg-tertiary); border-left: 4px solid var(--aws); padding: 20px; border-radius: 6px; margin: 20px 0; font-family: 'DM Mono', monospace; overflow-x: auto; font-size: 0.85rem; }
+    .example-box { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(10, 132, 99, 0.05) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .example-title { font-weight: 600; color: #10b981; margin-bottom: 12px; }
+    .info-box { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%); border: 1px solid rgba(59, 130, 246, 0.3); border-left: 4px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .diagram-container { margin: 30px 0; padding: 20px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); }
+    .chart-title { font-weight: 600; color: var(--text); margin-bottom: 20px; font-size: 1.1rem; }
+    .summary-box { background: linear-gradient(135deg, var(--aws) 0%, rgba(59, 130, 246, 0.8) 100%); color: white; padding: 24px; border-radius: 8px; margin: 30px 0; }
+    .summary-box h3 { margin: 0 0 12px 0; font-size: 1.2rem; }
+    .summary-box ul { margin: 0; padding-left: 20px; }
+    .summary-box li { margin: 8px 0; }
+    .breadcrumb { margin-bottom: 30px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-dim); }
+    .breadcrumb a { color: var(--aws); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    table tr { border-bottom: 1px solid var(--border); }
+    table td { padding: 12px; font-size: 0.9rem; }
+    table th { padding: 12px; font-weight: 600; background: var(--bg-secondary); color: var(--aws); text-align: left; }
+  </style>
+</head>
+<body>
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+  <nav id="sidebar"></nav>
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Arquitetura de Dados</div>
+      <h1>Single-Table Design &amp; DynamoDB</h1>
+      <p class="hero-d">Modelagem de dados operacional para crédito em DynamoDB. CreditContractStateStore com GSI, queries otimizadas, e padrões de consistência eventual.</p>
+      <div class="pills">
+        <span class="pill">DynamoDB</span>
+        <span class="pill">Single-Table</span>
+        <span class="pill">GSI</span>
+        <span class="pill">Event Sourcing</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="breadcrumb">
+        <a href="../../index.html">Início</a> <span>/</span> <a href="#">Finanças</a> <span>/</span> <span>DynamoDB</span>
+      </div>
+
+      <!-- SEÇÃO 01: VISÃO GERAL -->
+      <section class="section" id="visao-geral">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Modelagem de Dados</div>
+            <h2>Por que Single-Table Design?</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Single-table design em DynamoDB permite escalabilidade, baixa latência e custos reduzidos.
+          Uma única tabela (CreditContractStateStore) armazena contratos, eventos, provisões e auditoria,
+          acessada via PK, SK e GSI para diferentes padrões de query.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Benefício</div>
+            <h4 class="card-title">✅ Performance</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Latência < 10ms em queries via PK/SK. Sem joins entre tabelas.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Benefício</div>
+            <h4 class="card-title">✅ Escalabilidade</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Cresce para bilhões de items. Sem limite prático.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Benefício</div>
+            <h4 class="card-title">✅ Custo</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Pay-per-request. Sem desperdício com tabelas subutilizadas.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Benefício</div>
+            <h4 class="card-title">✅ Auditoria</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Event sourcing integrado. Histórico completo imutável.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: ESTRUTURA DE TABELA -->
+      <section class="section" id="estrutura-tabela">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Esquema Principal</div>
+            <h2>CreditContractStateStore - Estrutura de Items</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Cada item representa uma entidade diferente usando o padrão PK/SK hierárquico.
+          Exemplos: contrato, evento, provisão, auditoria. Todos em uma única tabela.
+        </p>
+
+        <table>
+          <tr style="background: var(--bg-secondary);">
+            <th>PK (Partition Key)</th>
+            <th>SK (Sort Key)</th>
+            <th>Tipo</th>
+            <th>Descrição</th>
+          </tr>
+          <tr>
+            <td><code>CONTRACT#12345</code></td>
+            <td><code>METADATA#0</code></td>
+            <td>Contrato</td>
+            <td>Dados principais do contrato (cliente, limite, taxa)</td>
+          </tr>
+          <tr>
+            <td><code>CONTRACT#12345</code></td>
+            <td><code>STATE#2026-08-16</code></td>
+            <td>Estado</td>
+            <td>Estado atual do contrato em data específica</td>
+          </tr>
+          <tr>
+            <td><code>CONTRACT#12345</code></td>
+            <td><code>EVENT#2026-08-15T10:30:00Z</code></td>
+            <td>Evento</td>
+            <td>Pagamento, atraso, transição de estado (event sourcing)</td>
+          </tr>
+          <tr>
+            <td><code>CONTRACT#12345</code></td>
+            <td><code>PROVISION#2026-08</code></td>
+            <td>Provisão</td>
+            <td>Provisão ECL calculada para mês específico</td>
+          </tr>
+          <tr>
+            <td><code>CONTRACT#12345</code></td>
+            <td><code>AUDIT#2026-08-16T14:00:00Z</code></td>
+            <td>Auditoria</td>
+            <td>Log imutável de todas as mudanças</td>
+          </tr>
+        </table>
+
+        <div class="example-box">
+          <div class="example-title">💡 Exemplo: Item Completo em JSON</div>
+          <div class="code-box">
+{
+  "PK": "CONTRACT#APP-20260816-001",
+  "SK": "METADATA#0",
+  "contractId": "APP-20260816-001",
+  "customerId": "cust_12345",
+  "customerName": "João Silva",
+  "limitApproved": 10000,
+  "annualRate": 12.5,
+  "state": "ATIVO",
+  "createdAt": "2026-08-16T10:00:00Z",
+  "validityStartDate": "2026-08-16",
+  "validityEndDate": "2027-08-16",
+  "ttl": 1724304000,
+  "gsi1pk": "CUSTOMER#cust_12345",
+  "gsi1sk": "CONTRACT#2026-08-16",
+  "gsi2pk": "STATE#ATIVO",
+  "gsi2sk": "2026-08-16"
+}
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: PADRÕES DE QUERY -->
+      <section class="section" id="padroes-query">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Access Patterns</div>
+            <h2>Padrões de Query Otimizados</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          DynamoDB requires upfront planning of access patterns. Single-table design suporta múltiplos padrões
+          via PK/SK primária e GSIs (Global Secondary Indexes).
+        </p>
+
+        <table>
+          <tr style="background: var(--bg-secondary);">
+            <th>Padrão</th>
+            <th>Query</th>
+            <th>Índice</th>
+            <th>Latência</th>
+          </tr>
+          <tr>
+            <td><strong>Buscar Contrato</strong></td>
+            <td>PK=CONTRACT#123, SK=METADATA#0</td>
+            <td>Primary</td>
+            <td>&lt;5ms</td>
+          </tr>
+          <tr>
+            <td><strong>Histórico de Eventos</strong></td>
+            <td>PK=CONTRACT#123, SK begins_with EVENT#</td>
+            <td>Primary</td>
+            <td>&lt;10ms</td>
+          </tr>
+          <tr>
+            <td><strong>Contratos por Cliente</strong></td>
+            <td>GSI1: PK=CUSTOMER#789, SK begins_with CONTRACT#</td>
+            <td>GSI1</td>
+            <td>&lt;15ms</td>
+          </tr>
+          <tr>
+            <td><strong>Contratos por Estado</strong></td>
+            <td>GSI2: PK=STATE#ATIVO, SK between dates</td>
+            <td>GSI2</td>
+            <td>&lt;20ms</td>
+          </tr>
+          <tr>
+            <td><strong>Listar Atrasados</strong></td>
+            <td>GSI2: PK=STATE#ATRASADO, SK oldest first</td>
+            <td>GSI2</td>
+            <td>&lt;20ms</td>
+          </tr>
+        </table>
+
+        <div class="diagram-container">
+          <div class="chart-title">🔍 Fluxo de Queries DynamoDB</div>
+          <div class="mermaid">
+            graph LR
+            A["Aplicação"] --> B{Tipo de Query?}
+            B --> |Contrato + ID| C["Usar PK<br/>PRIMARY INDEX"]
+            B --> |Eventos do Contrato| D["Usar SK prefix<br/>PRIMARY INDEX"]
+            B --> |Por Cliente| E["Usar GSI1<br/>CUSTOMER#"]
+            B --> |Por Estado + Data| F["Usar GSI2<br/>STATE#"]
+
+            C --> G["DynamoDB<br/>< 5ms"]
+            D --> G
+            E --> H["DynamoDB<br/>< 15ms"]
+            F --> H
+
+            G --> I["Resultado<br/>JSON"]
+            H --> I
+
+            style A fill:#3b82f6,stroke:#1e40af,color:#fff
+            style B fill:#f59e0b,stroke:#d97706,color:#fff
+            style C fill:#8b5cf6,stroke:#6d28d9,color:#fff
+            style D fill:#8b5cf6,stroke:#6d28d9,color:#fff
+            style E fill:#06b6d4,stroke:#0891b2,color:#fff
+            style F fill:#06b6d4,stroke:#0891b2,color:#fff
+            style G fill:#10b981,stroke:#047857,color:#fff
+            style H fill:#10b981,stroke:#047857,color:#fff
+            style I fill:#6366f1,stroke:#4f46e5,color:#fff
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: EVENT SOURCING -->
+      <section class="section" id="event-sourcing">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Arquitetura de Eventos</div>
+            <h2>Event Sourcing integrado ao DynamoDB</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Cada mudança em um contrato é registrada como um evento imutável no DynamoDB.
+          O estado atual é sempre derivado da sequência de eventos (event sourcing).
+        </p>
+
+        <div class="example-box">
+          <div class="example-title">💡 Sequência de Eventos - Jornada Completa</div>
+          <div class="code-box">
+// Item 1: CONTRACT#123 + EVENT#2026-08-16T10:00:00Z
+{
+  "eventType": "ContractCreated",
+  "data": {"customerId": "c789", "limit": 10000},
+  "timestamp": "2026-08-16T10:00:00Z"
+}
+
+// Item 2: CONTRACT#123 + EVENT#2026-08-16T10:30:00Z
+{
+  "eventType": "ContractApproved",
+  "decision": "APPROVED",
+  "timestamp": "2026-08-16T10:30:00Z"
+}
+
+// Item 3: CONTRACT#123 + EVENT#2026-09-05T14:20:00Z
+{
+  "eventType": "PaymentReceived",
+  "amount": 500,
+  "timestamp": "2026-09-05T14:20:00Z"
+}
+
+// Item 4: CONTRACT#123 + EVENT#2026-10-05T00:00:00Z
+{
+  "eventType": "PaymentMissed",
+  "daysLate": 1,
+  "timestamp": "2026-10-05T00:00:00Z"
+}
+
+// Estado Atual Derivado:
+// Todos os eventos acumulados = Estado = {
+//   "state": "ATRASADO",
+//   "daysLate": 1,
+//   "totalPaid": 500,
+//   "balance": 9500,
+//   ...
+// }
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>🎯 Benefícios do Event Sourcing:</strong>
+          <p style="margin: 8px 0 0 0;">
+            Auditoria completa (imutável), replay de eventos para debugging,
+            derivar múltiplas projeções (COSIF, provisão, relatórios),
+            conformidade com regulações (BACEN exige rastreabilidade).
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: RESUMO -->
+      <section class="section" id="resumo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">RESUMO</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conclusão</div>
+            <h2>Single-Table DynamoDB para Crédito</h2>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <h3>🎯 Takeaways Principais</h3>
+          <ul>
+            <li><strong>Uma Tabela:</strong> CreditContractStateStore com 5 tipos de items</li>
+            <li><strong>PK/SK Hierárquicos:</strong> Modelo relacional em NoSQL</li>
+            <li><strong>GSIs:</strong> Suportam queries por cliente, estado, data</li>
+            <li><strong>Event Sourcing:</strong> Cada mudança é um evento imutável</li>
+            <li><strong>Performance:</strong> < 5-20ms para todas as queries</li>
+            <li><strong>Auditoria:</strong> Histórico completo para conformidade BACEN</li>
+          </ul>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="../../js/sidebar-loader.js"></script>
+  <script>
+    function toggleNav() {
+      document.getElementById('sidebar').classList.toggle('active');
+    }
+  </script>
+</body>
+</html>

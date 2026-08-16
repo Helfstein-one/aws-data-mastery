@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Simulador Interativo de Onboarding, SCR BACEN, Decision Engine com arquitetura funcional"/>
+  <title>Simulador Interativo de Onboarding | AWS Data Mastery</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function() {
+    renderMathInElement(document.body, {delimiters: [{left: '\\(', right: '\\)', display: false},{left: '\\[', right: '\\]', display: true}], ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"], throwOnError: false});
+  });</script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../style.css"/>
+  <script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <meta property="og:title" content="Simulador Interativo de Onboarding | AWS Data Mastery"/>
+  <meta property="og:description" content="Simulador funcional de processo de crédito, SCR BACEN, Decision Engine"/>
+  <meta property="og:type" content="website"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+  <style>
+    .section { scroll-margin-top: 60px; }
+    .sec-hdr { display: flex; gap: 20px; margin-bottom: 30px; align-items: flex-start; }
+    .sec-num { font-size: 2.5rem; font-weight: 900; min-width: 60px; color: var(--aws); }
+    .sec-title h2 { font-size: 1.8rem; margin: 0 0 8px 0; color: var(--text); }
+    .sec-subtitle { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 6px; }
+    .sec-intro { font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0; border-left: 4px solid var(--aws); padding-left: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 24px 0; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 24px 0; }
+    .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 24px; transition: all 0.3s ease; }
+    .card:hover { transform: translateY(-2px); border-color: var(--aws); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+    .card-subtitle { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--aws); letter-spacing: 0.1em; margin-bottom: 8px; }
+    .formula-box { background: var(--bg-tertiary); border-left: 4px solid var(--aws); padding: 20px; border-radius: 6px; margin: 20px 0; font-family: 'DM Mono', monospace; overflow-x: auto; }
+    .example-box { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(10, 132, 99, 0.05) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .example-title { font-weight: 600; color: #10b981; margin-bottom: 12px; }
+    .info-box { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%); border: 1px solid rgba(59, 130, 246, 0.3); border-left: 4px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .chart-container { position: relative; height: 400px; margin: 30px 0; padding: 20px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); }
+    .chart-title { font-weight: 600; color: var(--text); margin-bottom: 20px; font-size: 1.1rem; }
+    .diagram-container { margin: 30px 0; padding: 20px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); }
+    .summary-box { background: linear-gradient(135deg, var(--aws) 0%, rgba(59, 130, 246, 0.8) 100%); color: white; padding: 24px; border-radius: 8px; margin: 30px 0; }
+    .summary-box h3 { margin: 0 0 12px 0; font-size: 1.2rem; }
+    .summary-box ul { margin: 0; padding-left: 20px; }
+    .summary-box li { margin: 8px 0; }
+    .breadcrumb { margin-bottom: 30px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-dim); }
+    .breadcrumb a { color: var(--aws); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    /* Simulador Styles */
+    .simulator-container { background: var(--bg-secondary); border: 2px solid var(--aws); border-radius: 12px; padding: 30px; margin: 30px 0; }
+    .step-indicator { display: flex; gap: 10px; margin-bottom: 30px; }
+    .step { flex: 1; padding: 12px; background: var(--bg-tertiary); border-radius: 6px; text-align: center; font-weight: 600; color: var(--text-dim); transition: all 0.3s; }
+    .step.active { background: var(--aws); color: white; }
+    .step.completed { background: #10b981; color: white; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text); }
+    .form-group input, .form-group select { width: 100%; padding: 12px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 1rem; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--aws); box-shadow: 0 0 8px rgba(59, 130, 246, 0.3); }
+    .button { padding: 12px 24px; background: var(--aws); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .button:hover { background: #2563eb; transform: translateY(-2px); }
+    .button:disabled { background: var(--text-dim); cursor: not-allowed; opacity: 0.5; }
+    .result-box { background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(10, 132, 99, 0.08) 100%); border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .result-title { font-size: 1.2rem; font-weight: 700; color: #10b981; margin-bottom: 12px; }
+    .event-log { background: var(--bg-tertiary); border-radius: 6px; padding: 16px; font-family: 'DM Mono', monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; }
+    .event-log-item { padding: 8px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; }
+    .event-log-item .timestamp { color: var(--aws); font-weight: 600; min-width: 120px; }
+    .event-log-item .message { color: var(--text-dim); }
+    .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+    .status-approved { background: #10b981; color: white; }
+    .status-denied { background: #ef4444; color: white; }
+    .status-pending { background: #f59e0b; color: white; }
+
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    table tr { border-bottom: 1px solid var(--border); }
+    table td { padding: 12px; font-size: 0.9rem; }
+    table th { padding: 12px; font-weight: 600; background: var(--bg-secondary); color: var(--aws); text-align: left; }
+  </style>
+</head>
+<body>
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+  <nav id="sidebar"></nav>
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Arquitetura Operacional</div>
+      <h1>Simulador Interativo de Onboarding &amp; Decision Engine</h1>
+      <p class="hero-d">Simule a jornada completa de um cliente pelo processo de crédito: KYC, SCR BACEN, Análise de Risco e Decision Engine em tempo real. Visualize eventos, regras de negócio e fluxos de decisão.</p>
+      <div class="pills">
+        <span class="pill">Simulador Interativo</span>
+        <span class="pill">SCR BACEN</span>
+        <span class="pill">Decision Engine</span>
+        <span class="pill">Event-Driven</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="breadcrumb">
+        <a href="../../index.html">Início</a> <span>/</span> <a href="#">Finanças</a> <span>/</span> <span>Simulador Onboarding</span>
+      </div>
+
+      <!-- SEÇÃO 01: VISÃO GERAL DA JORNADA -->
+      <section class="section" id="visao-geral-jornada">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Arquitetura Funcional</div>
+            <h2>Jornada do Cliente no Processo de Crédito</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O processo de crédito moderno é um orquestrado de múltiplas etapas: Autenticação (KYC), Verificação BACEN (SCR),
+          Análise de Risco (Scoring), Decision Engine (Regras), e Formalização. Cada etapa gera eventos que alimentam o sistema
+          de auditoria e conformidade. Vamos simular isso interativamente.
+        </p>
+
+        <div class="diagram-container">
+          <div class="chart-title">🔄 Fluxo Completo da Jornada de Crédito</div>
+          <div class="mermaid">
+            graph LR
+            A["👤 Cliente<br/>Acessa APP"] --> B["🔐 KYC<br/>Dados Pessoais"]
+            B --> C["🏦 SCR BACEN<br/>Consulta SPC"]
+            C --> D["📊 Risk Engine<br/>Scoring"]
+            D --> E["⚙️ Decision<br/>Regras Negócio"]
+            E --> |Aprovado| F["✅ Contrato<br/>Formalizado"]
+            E --> |Negado| G["❌ Aplicação<br/>Rejeitada"]
+            F --> H["📤 Envio BACEN<br/>Conformidade"]
+            G --> H
+
+            style A fill:#3b82f6,stroke:#1e40af,color:#fff
+            style B fill:#8b5cf6,stroke:#6d28d9,color:#fff
+            style C fill:#ec4899,stroke:#be123c,color:#fff
+            style D fill:#f59e0b,stroke:#d97706,color:#fff
+            style E fill:#06b6d4,stroke:#0891b2,color:#fff
+            style F fill:#10b981,stroke:#047857,color:#fff
+            style G fill:#ef4444,stroke:#dc2626,color:#fff
+            style H fill:#6366f1,stroke:#4f46e5,color:#fff
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>🎯 Objetivo do Simulador:</strong>
+          <p style="margin: 8px 0 0 0;">
+            Entender como cada etapa do processo gera eventos, como as regras de negócio são aplicadas,
+            e como o Decision Engine toma a decisão final de aprovação ou rejeição.
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: SIMULADOR INTERATIVO -->
+      <section class="section" id="simulador-interativo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Experiência Prática</div>
+            <h2>Simulador Interativo - Teste a Jornada</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Preencha os dados abaixo para simular um pedido de crédito. O sistema processará através de cada etapa
+          e exibirá os eventos, decisões e conformidade em tempo real.
+        </p>
+
+        <div class="simulator-container">
+          <!-- Step Indicator -->
+          <div class="step-indicator">
+            <div class="step active" id="step-1">1. KYC</div>
+            <div class="step" id="step-2">2. SCR</div>
+            <div class="step" id="step-3">3. Risk</div>
+            <div class="step" id="step-4">4. Decision</div>
+            <div class="step" id="step-5">5. Result</div>
+          </div>
+
+          <!-- Form -->
+          <form id="simulatorForm">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Nome Completo:</label>
+                <input type="text" id="nomeCliente" value="João Silva Santos" required/>
+              </div>
+              <div class="form-group">
+                <label>CPF:</label>
+                <input type="text" id="cpfCliente" value="12345678901" required/>
+              </div>
+
+              <div class="form-group">
+                <label>Renda Mensal (R$):</label>
+                <input type="number" id="rendaCliente" value="5000" min="0" step="100" required/>
+              </div>
+              <div class="form-group">
+                <label>Limite Solicitado (R$):</label>
+                <input type="number" id="limiteCliente" value="10000" min="0" step="100" required/>
+              </div>
+
+              <div class="form-group">
+                <label>Score de Crédito (0-1000):</label>
+                <input type="number" id="scoreCliente" value="750" min="0" max="1000" step="1" required/>
+              </div>
+              <div class="form-group">
+                <label>Histórico SPC:</label>
+                <select id="historicoSPC" required>
+                  <option value="limpo">Limpo</option>
+                  <option value="risco_baixo">Risco Baixo (1 ocorrência)</option>
+                  <option value="risco_medio">Risco Médio (2-3 ocorrências)</option>
+                  <option value="risco_alto">Risco Alto (>3 ocorrências)</option>
+                  <option value="bloqueado">Bloqueado (Fraude)</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="button" class="button" onclick="executarSimulacao()" style="width: 100%; margin-top: 20px;">
+              ▶️ Executar Simulação Completa
+            </button>
+          </form>
+
+          <!-- Event Log -->
+          <div style="margin-top: 30px;">
+            <div style="font-weight: 600; color: var(--text); margin-bottom: 12px; font-size: 1rem;">
+              📋 Log de Eventos em Tempo Real
+            </div>
+            <div class="event-log" id="eventLog">
+              <div class="event-log-item">
+                <span class="timestamp">Aguardando...</span>
+                <span class="message">Clique em "Executar Simulação" para começar</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Result -->
+          <div id="resultContainer" style="display: none;">
+            <div class="result-box">
+              <div class="result-title">🎯 Decisão Final</div>
+              <div id="resultContent"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: ARQUITETURA DE EVENTOS -->
+      <section class="section" id="arquitetura-eventos">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Event-Driven Architecture</div>
+            <h2>Estrutura de Eventos da Jornada</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Cada passo da jornada emite eventos que são capturados, processados e armazenados para auditoria.
+          Esses eventos formam a base do sistema de conformidade e rastreabilidade.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Evento</div>
+            <h4 class="card-title">KYC.Iniciado</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Cliente acessa formulário de cadastro. Dados pessoais coletados e validados contra CPF/CNPJ.
+              <br/><br/><code style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 4px;">timestamp, customerId, dados</code>
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Evento</div>
+            <h4 class="card-title">SCR.Consultado</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Consulta ao Sistema de Créditos do BACEN. Retorna histórico de operações e inadimplências.
+              <br/><br/><code style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 4px;">status, risco, ocorrências</code>
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Evento</div>
+            <h4 class="card-title">Risk.CalculadoScore</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Risk Engine calcula score de crédito baseado em features (renda, histórico, idade, etc).
+              <br/><br/><code style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 4px;">score, probability_default, features</code>
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Evento</div>
+            <h4 class="card-title">Decision.Finalizada</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">
+              Decision Engine aplica regras de negócio. Resultado: Aprovado, Negado ou Manual.
+              <br/><br/><code style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 4px;">decision, rules_applied, reason</code>
+            </p>
+          </div>
+        </div>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin: 24px 0 14px 0;">
+          📡 Exemplo de Payload de Evento (JSON)
+        </div>
+
+        <div class="formula-box">
+          <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem;">{
+  "eventType": "Decision.Finalizada",
+  "timestamp": "2026-08-16T14:30:45Z",
+  "aggregateId": "APP-20260816-001",
+  "data": {
+    "customerId": "cust_12345",
+    "decision": "APPROVED",
+    "limitApproved": 10000,
+    "annualRate": 12.5,
+    "rulesApplied": ["renda_minima_ok", "scr_limpo", "score_acima_700"],
+    "probabilityDefault": 0.05,
+    "confidenceScore": 0.92
+  },
+  "metadata": {
+    "correlationId": "corr_xyz789",
+    "userId": "analyst_001",
+    "source": "decision-engine-v2"
+  }
+}</pre>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: REGRAS DE DECISÃO -->
+      <section class="section" id="regras-decisao">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Business Rules</div>
+            <h2>Mecanismo de Decision Engine</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O Decision Engine aplica um conjunto de regras para determinar aprovação ou rejeição.
+          Essas regras são configuráveis e auditáveis, com rastreamento completo da decisão.
+        </p>
+
+        <table>
+          <tr style="background: var(--bg-secondary);">
+            <th>Regra</th>
+            <th>Condição</th>
+            <th>Ação</th>
+            <th>Prioridade</th>
+          </tr>
+          <tr>
+            <td><strong>Fraude Detectada</strong></td>
+            <td>SPC bloqueado OU CPF inválido</td>
+            <td>❌ REJEITAR imediatamente</td>
+            <td>🔴 Crítica (1)</td>
+          </tr>
+          <tr>
+            <td><strong>Renda Insuficiente</strong></td>
+            <td>Limite > 10× renda mensal</td>
+            <td>❌ REJEITAR</td>
+            <td>🔴 Crítica (2)</td>
+          </tr>
+          <tr>
+            <td><strong>Risco Alto</strong></td>
+            <td>SPC risco alto E score < 500</td>
+            <td>📋 MANUAL (review)</td>
+            <td>🟡 Alta (3)</td>
+          </tr>
+          <tr>
+            <td><strong>Score Limite</strong></td>
+            <td>500 ≤ score < 700</td>
+            <td>📋 MANUAL + validação adicional</td>
+            <td>🟡 Alta (4)</td>
+          </tr>
+          <tr>
+            <td><strong>Aprovação Automática</strong></td>
+            <td>score ≥ 700 E SPC limpo E renda ok</td>
+            <td>✅ APROVAR</td>
+            <td>🟢 Normal (5)</td>
+          </tr>
+          <tr>
+            <td><strong>Limite Reduzido</strong></td>
+            <td>Risco médio + score 650-700</td>
+            <td>✅ APROVAR limite 50% solicitado</td>
+            <td>🟢 Normal (6)</td>
+          </tr>
+        </table>
+
+        <div class="example-box">
+          <div class="example-title">💡 Exemplo de Decisão Passo a Passo</div>
+          <p style="margin: 0 0 12px 0; font-size: 0.9rem;">
+            <strong>Cliente:</strong> João Silva (CPF válido, Renda R$ 5.000, Score 750)<br/>
+            <strong>SPC:</strong> Limpo (0 ocorrências)<br/>
+            <strong>Limite Solicitado:</strong> R$ 10.000
+          </p>
+          <table style="font-size: 0.9rem; margin: 0;">
+            <tr style="background: rgba(16, 185, 129, 0.1);">
+              <th>Regra Aplicada</th>
+              <th>Resultado</th>
+              <th>Status</th>
+            </tr>
+            <tr>
+              <td>Fraude Detectada?</td>
+              <td>CPF válido, SPC limpo → NÃO</td>
+              <td>✅ Passa</td>
+            </tr>
+            <tr>
+              <td>Renda Insuficiente?</td>
+              <td>R$ 10.000 < 10 × R$ 5.000 → NÃO</td>
+              <td>✅ Passa</td>
+            </tr>
+            <tr>
+              <td>Risco Alto?</td>
+              <td>Score 750 ≥ 700 → NÃO</td>
+              <td>✅ Passa</td>
+            </tr>
+            <tr>
+              <td>Aprovação Automática?</td>
+              <td>score 750 ✓, SPC limpo ✓, renda ok ✓</td>
+              <td>✅ APROVAR!</td>
+            </tr>
+          </table>
+          <p style="margin: 12px 0 0 0; font-size: 0.85rem; color: #10b981; font-weight: 600;">
+            <strong>Decisão Final:</strong> ✅ APROVADO - Limite: R$ 10.000, Taxa: 12,5% a.a.
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: INTEGRAÇÃO SCR BACEN -->
+      <section class="section" id="integracao-scr">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conformidade Regulatória</div>
+            <h2>Integração com SCR BACEN</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O Sistema de Créditos do Banco Central (SCR) é consultado em tempo real para validar histórico de crédito.
+          Toda consulta é registrada e auditada para conformidade com normas BACEN.
+        </p>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle">Dados Consultados</div>
+            <h4 class="card-title">Operações de Crédito</h4>
+            <ul style="font-size: 0.9rem; margin: 0; padding-left: 16px; color: var(--text-dim);">
+              <li>Empréstimos ativos</li>
+              <li>Financiamentos</li>
+              <li>Operações vencidas</li>
+              <li>Limite utilizado</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Indicadores</div>
+            <h4 class="card-title">Risco Calculado</h4>
+            <ul style="font-size: 0.9rem; margin: 0; padding-left: 16px; color: var(--text-dim);">
+              <li>Total de operações</li>
+              <li>Dias em atraso</li>
+              <li>Pessoas relacionadas</li>
+              <li>Score normativo</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Conformidade</div>
+            <h4 class="card-title">Auditoria</h4>
+            <ul style="font-size: 0.9rem; margin: 0; padding-left: 16px; color: var(--text-dim);">
+              <li>Timestamp de consulta</li>
+              <li>Usuário responsável</li>
+              <li>Razão da consulta</li>
+              <li>Resultado obtido</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="diagram-container">
+          <div class="chart-title">🔗 Fluxo de Integração SCR BACEN</div>
+          <div class="mermaid">
+            graph LR
+            A["Sistema de<br/>Crédito Local"] --> |Request<br/>CPF| B["🏦 SCR BACEN<br/>Endpoint"]
+            B --> |Response<br/>JSON| C["Parser &<br/>Validação"]
+            C --> |Dados<br/>Estruturados| D["Risk Engine<br/>Análise"]
+            D --> |Score &<br/>Recomendação| E["Decision<br/>Engine"]
+            E --> |Log &<br/>Auditoria| F["Compliance<br/>Database"]
+
+            style A fill:#3b82f6,stroke:#1e40af,color:#fff
+            style B fill:#ec4899,stroke:#be123c,color:#fff
+            style C fill:#8b5cf6,stroke:#6d28d9,color:#fff
+            style D fill:#f59e0b,stroke:#d97706,color:#fff
+            style E fill:#06b6d4,stroke:#0891b2,color:#fff
+            style F fill:#6366f1,stroke:#4f46e5,color:#fff
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>⚙️ Requisitos Técnicos:</strong>
+          <p style="margin: 8px 0 0 0;">
+            Integração via HTTPS, timeout 5 segundos, retry automático, cache de 24h, log de todas as consultas.
+            Conformidade com Resolução BACEN 4.557/2016 (Art. 11 - Consulta ao SCR).
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 06: RESUMO -->
+      <section class="section" id="resumo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">RESUMO</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conclusão</div>
+            <h2>Arquitetura Funcional do Onboarding</h2>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <h3>🎯 Takeaways Principais</h3>
+          <ul>
+            <li><strong>Jornada Estruturada:</strong> 5 etapas claras com eventos em cada passo</li>
+            <li><strong>Event-Driven:</strong> Cada ação gera eventos auditáveis e rastreáveis</li>
+            <li><strong>Decision Engine:</strong> Regras configuráveis e priorizadas</li>
+            <li><strong>SCR BACEN:</strong> Integração obrigatória para conformidade</li>
+            <li><strong>Arquitetura Moderna:</strong> Escalável, resiliente, auditável</li>
+          </ul>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.1rem; margin-bottom: 14px;">
+            🔗 Próximos Tópicos
+          </div>
+          <div class="grid-2" style="gap: 16px;">
+            <a href="regras-negocio-cosif.html" style="text-decoration: none;">
+              <div class="card">
+                <h4 class="card-title">Regras de Negócio & COSIF</h4>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">FSM Matrix e Governança de Estados.</p>
+              </div>
+            </a>
+            <a href="dynamodb-single-table.html" style="text-decoration: none;">
+              <div class="card">
+                <h4 class="card-title">Single-Table DynamoDB</h4>
+                <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Modelagem de dados operacional.</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="../../js/sidebar-loader.js"></script>
+
+  <script>
+    function toggleNav() {
+      document.getElementById('sidebar').classList.toggle('active');
+    }
+
+    function executarSimulacao() {
+      const nome = document.getElementById('nomeCliente').value;
+      const cpf = document.getElementById('cpfCliente').value;
+      const renda = parseFloat(document.getElementById('rendaCliente').value);
+      const limite = parseFloat(document.getElementById('limiteCliente').value);
+      const score = parseFloat(document.getElementById('scoreCliente').value);
+      const historico = document.getElementById('historicoSPC').value;
+
+      const eventLog = document.getElementById('eventLog');
+      eventLog.innerHTML = '';
+
+      const eventos = [];
+      let timestamp = 0;
+
+      function adicionarEvento(tipo, mensagem) {
+        eventos.push({ tipo, mensagem, timestamp });
+        const item = document.createElement('div');
+        item.className = 'event-log-item';
+        item.innerHTML = `
+          <span class="timestamp">${new Date(Date.now() + timestamp * 100).toLocaleTimeString('pt-BR')}</span>
+          <span class="message">${tipo}: ${mensagem}</span>
+        `;
+        eventLog.appendChild(item);
+        timestamp++;
+        eventLog.scrollTop = eventLog.scrollHeight;
+      }
+
+      // Simular etapas
+      setTimeout(() => {
+        document.getElementById('step-1').classList.add('completed');
+        adicionarEvento('KYC', `Dados cadastrados: ${nome} (CPF: ${cpf})`);
+      }, 500);
+
+      setTimeout(() => {
+        document.getElementById('step-2').classList.add('active');
+        adicionarEvento('SCR', `Consultando BACEN... Histórico: ${historico}`);
+      }, 1500);
+
+      setTimeout(() => {
+        document.getElementById('step-2').classList.add('completed');
+        document.getElementById('step-3').classList.add('active');
+        adicionarEvento('SCR', `Resposta recebida - Risco: ${historico}`);
+        adicionarEvento('RISK', `Score calculado: ${score}`);
+      }, 2500);
+
+      setTimeout(() => {
+        document.getElementById('step-3').classList.add('completed');
+        document.getElementById('step-4').classList.add('active');
+
+        // Lógica de decisão
+        let decision = 'APPROVED';
+        let limiteFinal = limite;
+        let taxa = 12.5;
+        let motivo = '';
+
+        if (historico === 'bloqueado' || cpf === 'invalido') {
+          decision = 'REJECTED';
+          motivo = 'Fraude detectada - CPF inválido ou SPC bloqueado';
+        } else if (limite > 10 * renda) {
+          decision = 'REJECTED';
+          motivo = 'Renda insuficiente para limite solicitado';
+        } else if (historico === 'risco_alto' && score < 500) {
+          decision = 'MANUAL';
+          motivo = 'Risco alto detectado - Revisão manual necessária';
+        } else if (score < 700) {
+          decision = 'MANUAL';
+          motivo = 'Score borderline - Requer validação adicional';
+        } else if (historico === 'risco_medio') {
+          decision = 'APPROVED';
+          limiteFinal = limite * 0.5;
+          taxa = 15.5;
+          motivo = 'Limite reduzido por risco médio detectado';
+        }
+
+        adicionarEvento('DECISION', `Aplicando regras de negócio...`);
+        adicionarEvento('DECISION', `${motivo}`);
+      }, 3500);
+
+      setTimeout(() => {
+        document.getElementById('step-4').classList.add('completed');
+        document.getElementById('step-5').classList.add('active');
+
+        const decision = document.getElementById('resultContainer');
+        const content = document.getElementById('resultContent');
+
+        const historicoBadgeClass =
+          document.getElementById('historicoSPC').value === 'bloqueado' ? 'status-denied' :
+          document.getElementById('historicoSPC').value === 'limpo' ? 'status-approved' :
+          'status-pending';
+
+        let resultText = `
+          <p><strong>Solicitante:</strong> ${document.getElementById('nomeCliente').value}</p>
+          <p><strong>Limite Solicitado:</strong> R$ ${parseFloat(document.getElementById('limiteCliente').value).toFixed(2)}</p>
+          <p><strong>Score:</strong> ${document.getElementById('scoreCliente').value}</p>
+          <p style="margin-top: 16px;">
+            <span class="status-badge ${historicoBadgeClass}">
+              ${document.getElementById('historicoSPC').value.toUpperCase()}
+            </span>
+          </p>
+        `;
+
+        content.innerHTML = resultText;
+        decision.style.display = 'block';
+      }, 4500);
+    }
+  </script>
+</body>
+</html>

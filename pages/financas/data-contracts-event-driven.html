@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Governança de Dados, Data Contracts, JSON Schemas Event-Driven"/>
+  <title>Data Contracts & Event-Driven | AWS Data Mastery</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function() {
+    renderMathInElement(document.body, {delimiters: [{left: '\\(', right: '\\)', display: false},{left: '\\[', right: '\\]', display: true}], ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"], throwOnError: false});
+  });</script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../style.css"/>
+  <script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <meta property="og:title" content="Data Contracts & Event-Driven | AWS Data Mastery"/>
+  <meta property="og:description" content="Schemas de Mensagens, JSON Payloads, Governança de Dados"/>
+  <meta property="og:type" content="website"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+  <style>
+    .section { scroll-margin-top: 60px; }
+    .sec-hdr { display: flex; gap: 20px; margin-bottom: 30px; align-items: flex-start; }
+    .sec-num { font-size: 2.5rem; font-weight: 900; min-width: 60px; color: var(--aws); }
+    .sec-title h2 { font-size: 1.8rem; margin: 0 0 8px 0; color: var(--text); }
+    .sec-subtitle { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 6px; }
+    .sec-intro { font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0; border-left: 4px solid var(--aws); padding-left: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 24px 0; }
+    .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+    .card-subtitle { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--aws); letter-spacing: 0.1em; margin-bottom: 8px; }
+    .code-box { background: var(--bg-tertiary); border-left: 4px solid var(--aws); padding: 20px; border-radius: 6px; margin: 20px 0; font-family: 'DM Mono', monospace; overflow-x: auto; font-size: 0.8rem; }
+    .example-box { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(10, 132, 99, 0.05) 100%); border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .example-title { font-weight: 600; color: #10b981; margin-bottom: 12px; }
+    .info-box { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%); border-left: 4px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .diagram-container { margin: 30px 0; padding: 20px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); }
+    .chart-title { font-weight: 600; color: var(--text); margin-bottom: 20px; font-size: 1.1rem; }
+    .summary-box { background: linear-gradient(135deg, var(--aws) 0%, rgba(59, 130, 246, 0.8) 100%); color: white; padding: 24px; border-radius: 8px; margin: 30px 0; }
+    .summary-box h3 { margin: 0 0 12px 0; font-size: 1.2rem; }
+    .summary-box ul { margin: 0; padding-left: 20px; }
+    .summary-box li { margin: 8px 0; }
+    .breadcrumb { margin-bottom: 30px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-dim); }
+    .breadcrumb a { color: var(--aws); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+  <nav id="sidebar"></nav>
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Governança de Dados</div>
+      <h1>Data Contracts &amp; Schemas Event-Driven</h1>
+      <p class="hero-d">Governança de dados com JSON Schemas, Avro e Protobuf. Contatos explícitos entre produtor e consumidor de eventos.</p>
+      <div class="pills">
+        <span class="pill">JSON Schema</span>
+        <span class="pill">Event Contracts</span>
+        <span class="pill">Validação</span>
+        <span class="pill">Conformidade</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="breadcrumb">
+        <a href="../../index.html">Início</a> <span>/</span> <a href="#">Finanças</a> <span>/</span> <span>Data Contracts</span>
+      </div>
+
+      <!-- SEÇÃO 01: O QUÉ É CONTRATO -->
+      <section class="section" id="o-que-e-contrato">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conceito</div>
+            <h2>Data Contract: O Contato entre Sistemas</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Um Data Contract é uma especificação explícita de como os dados fluem entre sistemas.
+          Define schema, versioning, SLAs, e conformidade. Essencial em arquiteturas event-driven.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Elemento</div>
+            <h4 class="card-title">Schema</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">JSON Schema ou Avro. Define campos obrigatórios, tipos, validações.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Elemento</div>
+            <h4 class="card-title">Versioning</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Versionamento semântico. Compatibilidade retroativa garantida.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Elemento</div>
+            <h4 class="card-title">SLA</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Latência, throughput, disponibilidade esperada.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Elemento</div>
+            <h4 class="card-title">Conformidade</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">GDPR, BACEN, auditoria. Provenance dos dados.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: EXEMPLO SCHEMA CREDIT APPROVED -->
+      <section class="section" id="schema-credit-approved">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Exemplo Prático</div>
+            <h2>Schema JSON: CreditApprovedEvent</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Exemplo real do contrato de dados para evento "Crédito Aprovado".
+          Define todos os campos obrigatórios, opcionais, e validações.
+        </p>
+
+        <div class="example-box">
+          <div class="example-title">📄 JSON Schema Completo</div>
+          <div class="code-box">
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CreditApprovedEvent",
+  "type": "object",
+  "required": [
+    "eventId", "timestamp", "applicationId",
+    "customerId", "limitApproved", "annualRate"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^evt_[a-f0-9]{20}$",
+      "description": "ID único do evento"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC"
+    },
+    "applicationId": {
+      "type": "string",
+      "pattern": "^APP-[0-9]{8}-[0-9]{3}$"
+    },
+    "customerId": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 50
+    },
+    "limitApproved": {
+      "type": "number",
+      "minimum": 100,
+      "maximum": 1000000
+    },
+    "annualRate": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 100
+    },
+    "decisionReason": {
+      "type": "string",
+      "enum": ["AUTOMATED", "MANUAL", "APPEAL"]
+    },
+    "correlationId": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
+          </div>
+        </div>
+
+        <div class="diagram-container">
+          <div class="chart-title">🔄 Fluxo de Validação de Contratos</div>
+          <div class="mermaid">
+            graph LR
+            A["Evento<br/>Produzido"] --> B["Validar<br/>Schema"]
+            B --> |Válido| C["Persistir<br/>Kafka/SQS"]
+            B --> |Inválido| D["❌ Rejeitar<br/>DLQ"]
+            C --> E["Consumidor<br/>Recebe"]
+            E --> F["Validar<br/>Schema Novamente"]
+            F --> |Válido| G["Processar"]
+            F --> |Inválido| H["❌ Erro"]
+
+            style A fill:#3b82f6,stroke:#1e40af,color:#fff
+            style B fill:#f59e0b,stroke:#d97706,color:#fff
+            style C fill:#10b981,stroke:#047857,color:#fff
+            style D fill:#ef4444,stroke:#dc2626,color:#fff
+            style E fill:#8b5cf6,stroke:#6d28d9,color:#fff
+            style F fill:#f59e0b,stroke:#d97706,color:#fff
+            style G fill:#10b981,stroke:#047857,color:#fff
+            style H fill:#ef4444,stroke:#dc2626,color:#fff
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: PAYLOAD EXEMPLO -->
+      <section class="section" id="payload-exemplo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Dados Reais</div>
+            <h2>Exemplo de Payload JSON Válido</h2>
+          </div>
+        </div>
+
+        <div class="example-box">
+          <div class="example-title">📤 Mensagem Publicada no Tópico Kafka</div>
+          <div class="code-box">
+{
+  "eventId": "evt_1a2b3c4d5e6f7g8h9i0j",
+  "timestamp": "2026-08-16T14:30:45.123Z",
+  "applicationId": "APP-20260816-001",
+  "customerId": "cust_12345",
+  "limitApproved": 10000,
+  "annualRate": 12.5,
+  "decisionReason": "AUTOMATED",
+  "correlationId": "corr_xyz789",
+  "metadata": {
+    "version": "1.0.0",
+    "source": "decision-engine-v2",
+    "environment": "production"
+  }
+}
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>📋 Registro de Tópico Kafka:</strong>
+          <p style="margin: 8px 0 0 0;">
+            <strong>Tópico:</strong> credit-approvals<br/>
+            <strong>Partição:</strong> 0 (por customerId hash)<br/>
+            <strong>Retenção:</strong> 30 dias<br/>
+            <strong>Esquema Registry:</strong> credit-approvals-v1.0.0
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: VERSIONAMENTO -->
+      <section class="section" id="versionamento">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Evolução de Contrato</div>
+            <h2>Versionamento Semântico e Retrocompatibilidade</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Dados evoluem. Contratos devem suportar múltiplas versões simultaneamente.
+          Versionamento semântico garante compatibilidade: MAJOR.MINOR.PATCH.
+        </p>
+
+        <table>
+          <tr style="background: var(--bg-secondary);">
+            <th>Versão</th>
+            <th>Mudança</th>
+            <th>Tipo</th>
+            <th>Compatibilidade</th>
+          </tr>
+          <tr>
+            <td>1.0.0</td>
+            <td>Initial release</td>
+            <td>-</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>1.1.0</td>
+            <td>Adicionar campo opcional: riskScore</td>
+            <td>MINOR</td>
+            <td>✅ Retrocompatível</td>
+          </tr>
+          <tr>
+            <td>1.2.0</td>
+            <td>Adicionar campo opcional: approvalTime</td>
+            <td>MINOR</td>
+            <td>✅ Retrocompatível</td>
+          </tr>
+          <tr>
+            <td>2.0.0</td>
+            <td>Remover campo: decisionReason (obrigatório agora)</td>
+            <td>MAJOR</td>
+            <td>❌ Quebra compatibilidade</td>
+          </tr>
+        </table>
+
+        <div class="info-box">
+          <strong>🎯 Regra de Ouro:</strong>
+          <p style="margin: 8px 0 0 0;">
+            Campos novos são sempre OPCIONAIS. Remover ou alterar existentes é MAJOR.
+            Consumidores devem suportar no mínimo 2 versões de um schema.
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: RESUMO -->
+      <section class="section" id="resumo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">RESUMO</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conclusão</div>
+            <h2>Data Contracts para Qualidade</h2>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <h3>🎯 Takeaways Principais</h3>
+          <ul>
+            <li><strong>Contrato Explícito:</strong> Schema define contrato entre produtor/consumidor</li>
+            <li><strong>Validação:</strong> Em múltiplas camadas (publicação, persistência, consumo)</li>
+            <li><strong>Versionamento:</strong> Semântico garante compatibilidade</li>
+            <li><strong>Governança:</strong> Conformidade com BACEN, GDPR, auditoria</li>
+            <li><strong>Qualidade:</strong> Reduz bugs, facilita evolução</li>
+          </ul>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="../../js/sidebar-loader.js"></script>
+  <script>
+    function toggleNav() {
+      document.getElementById('sidebar').classList.toggle('active');
+    }
+  </script>
+</body>
+</html>
