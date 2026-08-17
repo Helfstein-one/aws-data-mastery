@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="RWAM, EAD e PCC — Basileia III Avançado: Cálculos de Ativos Ponderados por Risco, Exposição ao Default e Probabilidade de Crédito — AWS Data Mastery"/>
+  <title>RWAM, EAD & PCC | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+
+  <!-- CSS Base -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Chart.js for Interactive Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="RWAM, EAD & PCC | AWS Data Mastery"/>
+  <meta property="og:description" content="Basileia III Avançado: RWA, EAD, PD, LGD e fórmulas IRB com exemplos práticos e calculadora interativa"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+
+  <style>
+    .section { scroll-margin-top: 60px; }
+
+    .sec-hdr {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+      align-items: flex-start;
+    }
+    .sec-num {
+      font-size: 2.5rem;
+      font-weight: 900;
+      min-width: 60px;
+      color: var(--aws);
+    }
+    .sec-title h2 {
+      font-size: 1.8rem;
+      margin: 0 0 8px 0;
+      color: var(--text);
+    }
+    .sec-subtitle {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .sec-intro {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--text-dim);
+      margin: 18px 0 24px 0;
+      border-left: 4px solid var(--aws);
+      padding-left: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin: 24px 0;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--aws);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    .card-subtitle {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--aws);
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .formula-box {
+      background: var(--bg-tertiary);
+      border-left: 4px solid var(--aws);
+      padding: 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+      font-family: 'DM Mono', monospace;
+      overflow-x: auto;
+    }
+    .example-box {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(10, 132, 99, 0.05) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-left: 4px solid #10b981;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .example-title {
+      font-weight: 600;
+      color: #10b981;
+      margin-bottom: 12px;
+    }
+    .info-box {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .warn-box {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-left: 4px solid #f59e0b;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .reference {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin: 16px 0;
+      padding: 12px 12px 12px 16px;
+      background: var(--bg-secondary);
+      border-left: 3px solid var(--text-dim);
+    }
+    .reference strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .diagram-container {
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .chart-title {
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+    }
+
+    .summary-box {
+      background: linear-gradient(135deg, var(--aws) 0%, rgba(59, 130, 246, 0.8) 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 8px;
+      margin: 30px 0;
+    }
+    .summary-box h3 { margin: 0 0 12px 0; font-size: 1.2rem; }
+    .summary-box ul { margin: 0; padding-left: 20px; }
+    .summary-box li { margin: 8px 0; }
+
+    .breadcrumb {
+      margin-bottom: 30px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+    .breadcrumb a { color: var(--aws); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    /* Data tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 20px 0;
+    }
+    .data-table th {
+      background: var(--bg-tertiary);
+      color: var(--aws);
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid var(--aws);
+    }
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .data-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .data-table .highlight { color: var(--text); font-weight: 600; }
+    .data-table .val-green { color: #10b981; font-weight: 600; }
+    .data-table .val-orange { color: #f59e0b; font-weight: 600; }
+    .data-table .val-red { color: #ef4444; font-weight: 600; }
+
+    /* Calculator */
+    .calc-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px;
+      margin: 24px 0;
+    }
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .calc-field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--aws);
+      margin-bottom: 6px;
+    }
+    .calc-field input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    .calc-field input:focus {
+      outline: none;
+      border-color: var(--aws);
+    }
+    .calc-btn {
+      background: var(--aws);
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .calc-btn:hover { opacity: 0.85; }
+    .calc-result {
+      display: none;
+      margin-top: 24px;
+      padding: 20px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      border-left: 4px solid #10b981;
+    }
+    .calc-result.visible { display: block; }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-label { color: var(--text-dim); font-size: 0.9rem; }
+    .result-value { color: #10b981; font-weight: 700; font-family: 'DM Mono', monospace; font-size: 1rem; }
+
+    .step-list {
+      counter-reset: step-counter;
+      padding: 0;
+      margin: 16px 0;
+      list-style: none;
+    }
+    .step-list li {
+      counter-increment: step-counter;
+      position: relative;
+      padding: 12px 12px 12px 52px;
+      margin-bottom: 10px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.95rem;
+      color: var(--text-dim);
+    }
+    .step-list li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 26px;
+      height: 26px;
+      background: var(--aws);
+      color: white;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <button id="hamburger" onclick="toggleNav()">&#9776;</button>
+  <nav id="sidebar"></nav>
+
+  <div id="main">
+    <!-- Hero -->
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Basileia III Avan&#231;ado</div>
+      <h1>RWAM, EAD &amp; PCC</h1>
+      <p class="hero-d">C&#225;lculos detalhados de Ativos Ponderados por Risco, Exposi&#231;&#227;o ao Default e Probabilidade de Cr&#233;dito. Abordagem Padronizada e IRB completo conforme Basileia III e normas BACEN.</p>
+      <div class="pills">
+        <span class="pill">RWA / RWAM</span>
+        <span class="pill">EAD &amp; CCF</span>
+        <span class="pill">PD / LGD</span>
+        <span class="pill">IRB Avan&#231;ado</span>
+        <span class="pill">Basileia III</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <div class="breadcrumb">
+        <a href="../../index.html">In&#237;cio</a>
+        <span>/</span>
+        <a href="#">Finan&#231;as</a>
+        <span>/</span>
+        <span>RWAM, EAD &amp; PCC</span>
+      </div>
+
+      <!-- ===== SE&#199;&#195;O 01: RWAM ===== -->
+      <section class="section" id="rwam-calculo">
+        <div class="sec-hdr">
+          <div class="sec-num">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Risco de Cr&#233;dito</div>
+            <h2>RWAM &mdash; Risk-Weighted Assets</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          RWA (Risk-Weighted Assets) &#233; a soma de todos os ativos de uma institui&#231;&#227;o financeira ponderados pelo seu
+          risco relativo. Em vez de tratar R$&#160;1 em t&#237;tulo do governo da mesma forma que R$&#160;1 em
+          empr&#233;stimo de cart&#227;o de cr&#233;dito, Basileia III exige que cada ativo seja multiplicado por um
+          <strong>Fator de Pondera&#231;&#227;o de Risco (FP)</strong>, refletindo a probabilidade de perda.
+          O capital regulat&#243;rio &#233; sempre calculado como percentual do RWA total.
+        </p>
+
+        <div class="formula-box">
+          <strong style="color: var(--aws); display: block; margin-bottom: 10px;">F&#243;rmula Base:</strong>
+          \[
+          \text{RWA} = \sum_{i=1}^{n} \text{Ativo}_i \times \text{FP}_i
+          \]
+          <div style="margin-top: 14px; font-size: 0.85rem; color: var(--text-dim);">
+            Onde FP&#160;=&#160;Fator de Pondera&#231;&#227;o de Risco (Risk Weight) conforme Basileia III / BACEN
+          </div>
+        </div>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.05rem; margin: 28px 0 14px 0;">
+          Tabela de Fatores de Pondera&#231;&#227;o &mdash; Abordagem Padronizada (Basileia III)
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Categoria de Ativo</th>
+              <th>Fator de Pondera&#231;&#227;o (FP)</th>
+              <th>Racioc&#237;nio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="highlight">Governo Central / BACEN (moeda local)</td>
+              <td class="val-green">0%</td>
+              <td>Risco soberano; considera-se sem chance de default em moeda pr&#243;pria</td>
+            </tr>
+            <tr>
+              <td class="highlight">Bancos (rating A+ a BBB-)</td>
+              <td class="val-green">20%</td>
+              <td>Alta liquidez e supervis&#227;o regulat&#243;ria</td>
+            </tr>
+            <tr>
+              <td class="highlight">Bancos (rating abaixo de BB-)</td>
+              <td class="val-orange">50%</td>
+              <td>Risco elevado de contrapartes de menor qualidade</td>
+            </tr>
+            <tr>
+              <td class="highlight">Empresas (Investment Grade)</td>
+              <td class="val-orange">75%</td>
+              <td>Risco de cr&#233;dito corporativo moderado</td>
+            </tr>
+            <tr>
+              <td class="highlight">Empresas (Sem Rating / Abaixo de IG)</td>
+              <td class="val-red">100%</td>
+              <td>Maior incerteza e hist&#243;rico de default</td>
+            </tr>
+            <tr>
+              <td class="highlight">Varejo (Pessoa F&#237;sica)</td>
+              <td class="val-orange">75%</td>
+              <td>Portf&#243;lios diversificados com risco individual menor</td>
+            </tr>
+            <tr>
+              <td class="highlight">Hipotecas Residenciais (LTV &le; 80%)</td>
+              <td class="val-green">35%</td>
+              <td>Garantia real de imóvel residencial de qualidade</td>
+            </tr>
+            <tr>
+              <td class="highlight">Hipotecas Residenciais (LTV &gt; 80%)</td>
+              <td class="val-orange">75%</td>
+              <td>Maior alavancagem sobre o im&#243;vel eleva risco</td>
+            </tr>
+            <tr>
+              <td class="highlight">Cart&#227;o de Cr&#233;dito / Cr&#233;dito Pessoal</td>
+              <td class="val-red">75&#8209;150%</td>
+              <td>Sem garantia real; maior volatilidade de inadimpl&#234;ncia</td>
+            </tr>
+            <tr>
+              <td class="highlight">A&#231;&#245;es (Renda Vari&#225;vel)</td>
+              <td class="val-red">100&#8209;250%</td>
+              <td>Exposi&#231;&#227;o a volatilidade de mercado</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="example-box">
+          <div class="example-title">Exemplo Pr&#225;tico: Cart&#234;ira de R$&#160;10 bilh&#245;es</div>
+          <table style="width:100%; font-size: 0.9rem; margin-top: 10px;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.15);">
+                <th style="padding:8px; text-align:left; color: var(--aws);">Ativo</th>
+                <th style="padding:8px; text-align:right; color: var(--aws);">Valor (R$ bi)</th>
+                <th style="padding:8px; text-align:right; color: var(--aws);">FP</th>
+                <th style="padding:8px; text-align:right; color: var(--aws);">RWA (R$ bi)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px; color:var(--text-dim);">T&#237;tulos do Governo</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">3,0</td>
+                <td style="padding:8px; text-align:right; color:#10b981;">0%</td>
+                <td style="padding:8px; text-align:right; color:#10b981;">0,00</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px; color:var(--text-dim);">Empr&#233;stimos Corporativos (IG)</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">3,0</td>
+                <td style="padding:8px; text-align:right; color:#f59e0b;">75%</td>
+                <td style="padding:8px; text-align:right; color:#f59e0b;">2,25</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px; color:var(--text-dim);">Cart&#227;o de Cr&#233;dito Varejo</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">2,0</td>
+                <td style="padding:8px; text-align:right; color:#ef4444;">100%</td>
+                <td style="padding:8px; text-align:right; color:#ef4444;">2,00</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px; color:var(--text-dim);">Hipotecas Residenciais</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">2,0</td>
+                <td style="padding:8px; text-align:right; color:#10b981;">35%</td>
+                <td style="padding:8px; text-align:right; color:#10b981;">0,70</td>
+              </tr>
+              <tr style="border-bottom:2px solid var(--aws);">
+                <td style="padding:8px; color:var(--text-dim);">Empr&#233;stimos PME (sem rating)</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">0,0</td>
+                <td style="padding:8px; text-align:right; color:#ef4444;">100%</td>
+                <td style="padding:8px; text-align:right; color:#ef4444;">0,00</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:700; color:var(--text);">TOTAL</td>
+                <td style="padding:8px; text-align:right; font-weight:700; color:var(--text);">10,0</td>
+                <td style="padding:8px;"></td>
+                <td style="padding:8px; text-align:right; font-weight:700; color:#10b981;">4,95</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-dim);">
+            O banco t&#234;m R$&#160;10 bi em ativos, mas apenas R$&#160;4,95 bi de RWA efetivo &mdash; pois grande parcela est&#225; em t&#237;tulos soberanos (FP&#160;=&#160;0%).
+          </p>
+        </div>
+
+        <div class="formula-box">
+          <strong style="color: var(--aws); display: block; margin-bottom: 10px;">Raz&#227;o de Adequa&#231;&#227;o de Capital (CAR):</strong>
+          \[
+          \text{CAR} = \frac{\text{Capital Regulat&#243;rio}}{\text{RWA}} \geq \text{M&#237;nimo Regulat&#243;rio}
+          \]
+          <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-dim);">
+            Brasil (BACEN): CAR m&#237;nimo de 11,5% (2022 em diante) | Basileia III global: 10,5%
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SE&#199;&#195;O 02: SA vs IRB ===== -->
+      <section class="section" id="sa-vs-irb">
+        <div class="sec-hdr">
+          <div class="sec-num">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Abordagens de Mensura&#231;&#227;o</div>
+            <h2>Padronizada (SA) vs. IRB</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Basileia III oferece duas abordagens para c&#225;lculo de RWA de risco de cr&#233;dito. A
+          <strong>Abordagem Padronizada (SA)</strong> utiliza fatores fixos definidos pelo regulador.
+          A <strong>Abordagem IRB</strong> (Internal Ratings-Based) permite que o banco use seus pr&#243;prios modelos
+          internos de risco, sujeito a aprova&#231;&#227;o e valida&#231;&#227;o continu&#237;da pelo BACEN.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Abordagem Padronizada</div>
+            <h4 class="card-title">SA &mdash; Standardised Approach</h4>
+            <ul style="font-size: 0.9rem; color: var(--text-dim); padding-left: 18px; margin: 0; line-height: 1.8;">
+              <li>Fatores de pondera&#231;&#227;o fixos pelo regulador</li>
+              <li>Usa ratings externos (quando dispon&#237;veis)</li>
+              <li>Menor complexidade operacional</li>
+              <li>N&#227;o requer valida&#231;&#227;o de modelos internos</li>
+              <li>Tende a gerar RWA maior (mais conservador)</li>
+              <li>Obrigat&#243;ria para bancos menores no Brasil</li>
+            </ul>
+            <div class="formula-box" style="margin-top: 16px; margin-bottom: 0;">
+              \[\text{RWA}_{SA} = \sum \text{Ativo}_i \times \text{FP}_{i,\text{regulador}}\]
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Internal Ratings-Based</div>
+            <h4 class="card-title">IRB &mdash; Abordagem Avan&#231;ada</h4>
+            <ul style="font-size: 0.9rem; color: var(--text-dim); padding-left: 18px; margin: 0; line-height: 1.8;">
+              <li><strong>IRB B&#225;sico:</strong> PD interno; LGD e EAD padronizados pelo regulador</li>
+              <li><strong>IRB Avan&#231;ado:</strong> PD, LGD e EAD todos estimados internamente</li>
+              <li>Requer aprova&#231;&#227;o formal do BACEN (Circular 3.648)</li>
+              <li>M&#237;nimo de 7 anos de dados hist&#243;ricos</li>
+              <li>Valida&#231;&#227;o anual e backtesting obrigat&#243;rio</li>
+              <li>Potencial redu&#231;&#227;o significativa de RWA vs SA</li>
+            </ul>
+            <div class="formula-box" style="margin-top: 16px; margin-bottom: 0;">
+              \[\text{RWA}_{IRB} = K \times 12{,}5 \times EAD\]
+            </div>
+          </div>
+        </div>
+
+        <div class="example-box">
+          <div class="example-title">Exemplo Num&#233;rico Simplificado &mdash; SA vs IRB B&#225;sico</div>
+          <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 12px;">
+            Cart&#234;ira Corporativa: R$&#160;100 M | PD&#160;=&#160;1% | LGD&#160;=&#160;45%
+          </p>
+          <table style="width:100%; font-size: 0.9rem;">
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:8px; color:var(--text-dim);">SA (FP&#160;=&#160;75% empresas IG)</td>
+              <td style="padding:8px; text-align:right; color:var(--text); font-weight:600;">RWA&#160;=&#160;R$&#160;75 M</td>
+            </tr>
+            <tr>
+              <td style="padding:8px; color:var(--text-dim);">IRB Avan&#231;ado (K&#160;&asymp;&#160;5,5%)</td>
+              <td style="padding:8px; text-align:right; color:#10b981; font-weight:600;">RWA&#160;=&#160;R$&#160;68,75 M (&#8722;8,3%)</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="info-box">
+          <strong>Fórmula IRB de Capital (Basel III):</strong>
+          \[
+          K = LGD \cdot \left[ N\!\left(\frac{G(PD)}{\sqrt{1-R}} + \sqrt{\frac{R}{1-R}} \cdot G(0{,}999)\right) - PD \right]
+          \]
+          <p style="margin: 12px 0 0 0; font-size: 0.85rem; color: var(--text-dim);">
+            Onde N&#160;=&#160;distribui&#231;&#227;o normal acumulada, G&#160;=&#160;seu inverso, R&#160;=&#160;correla&#231;&#227;o de ativos (fun&#231;&#227;o de PD).
+            Essa f&#243;rmula &#233; derivada do modelo ASRF (Asymptotic Single Risk Factor) do Comit&#234; de Basileia.
+          </p>
+        </div>
+      </section>
+
+      <!-- ===== SE&#199;&#195;O 03: EAD ===== -->
+      <section class="section" id="ead-metodologia">
+        <div class="sec-hdr">
+          <div class="sec-num">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Exposi&#231;&#227;o ao Default</div>
+            <h2>EAD &mdash; Exposure at Default</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          EAD mede <strong>quanto o banco estar&#225; exposto no momento em que o tomador declarar default</strong>.
+          Para produtos com limite fixo (like empr&#233;stimos a prazo), EAD &#233; simplesmente o saldo devedor.
+          Para facilidades com cota rotativa (linhas de cr&#233;dito, derivativos), o banco precisa estimar
+          o quanto do limite ainda n&#227;o utilizado ser&#225; sacado antes do default, usando o
+          <strong>Credit Conversion Factor (CCF)</strong>.
+        </p>
+
+        <div class="formula-box">
+          <strong style="color: var(--aws); display: block; margin-bottom: 10px;">F&#243;rmula B&#225;sica de EAD:</strong>
+          \[
+          EAD = \text{Outstanding} + CCF \times (\text{Committed Limit} - \text{Outstanding})
+          \]
+          <div style="margin-top: 12px; font-size: 0.85rem; color: var(--text-dim);">
+            Outstanding&#160;=&#160;saldo utilizado atual | CCF&#160;=&#160;Credit Conversion Factor | Committed Limit&#160;=&#160;limite contratado total
+          </div>
+        </div>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.05rem; margin: 28px 0 14px 0;">
+          CCF por Produto &mdash; Refer&#234;ncia BACEN / Basileia III
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Produto / Facilidade</th>
+              <th>CCF (SA)</th>
+              <th>Observa&#231;&#227;o</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="highlight">Linhas de cr&#233;dito incondicionalmente cancel&#225;veis</td>
+              <td class="val-green">0%</td>
+              <td>Banco pode cancelar sem aviso pr&#233;vio</td>
+            </tr>
+            <tr>
+              <td class="highlight">Compromissos com prazo original &le; 1 ano</td>
+              <td class="val-green">20%</td>
+              <td>Curto prazo reduz probabilidade de saque antes do default</td>
+            </tr>
+            <tr>
+              <td class="highlight">Linhas de cr&#233;dito n&#227;o utilizadas (&gt; 1 ano)</td>
+              <td class="val-orange">40%</td>
+              <td>Padr&#227;o SA Basileia III revisado (2017)</td>
+            </tr>
+            <tr>
+              <td class="highlight">Garantias de risco de cr&#233;dito emitidas</td>
+              <td class="val-red">100%</td>
+              <td>Obriga&#231;&#227;o total em caso de acionamento</td>
+            </tr>
+            <tr>
+              <td class="highlight">Aceites banc&#225;rios e letras emitidas</td>
+              <td class="val-red">100%</td>
+              <td>Instrumentos com obriga&#231;&#227;o direta</td>
+            </tr>
+            <tr>
+              <td class="highlight">Opera&#231;&#245;es a prazo (NDF, Forwards)</td>
+              <td class="val-orange">20&#8209;50%</td>
+              <td>Varia conforme prazo e volatilidade do ativo subjacente</td>
+            </tr>
+            <tr>
+              <td class="highlight">Derivativos de taxa de juros (IRS)</td>
+              <td class="val-orange">Varia</td>
+              <td>SA-CCR: Replacement Cost + PFE (Potential Future Exposure)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="example-box">
+          <div class="example-title">Exemplo &mdash; C&#225;lculo de EAD para 3 Produtos</div>
+          <table style="width:100%; font-size: 0.9rem; margin-top: 10px;">
+            <thead>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.15);">
+                <th style="padding:8px; text-align:left; color:var(--aws);">Produto</th>
+                <th style="padding:8px; text-align:right; color:var(--aws);">Limite (R$M)</th>
+                <th style="padding:8px; text-align:right; color:var(--aws);">Utilizado (R$M)</th>
+                <th style="padding:8px; text-align:right; color:var(--aws);">CCF</th>
+                <th style="padding:8px; text-align:right; color:var(--aws);">EAD (R$M)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px; color:var(--text-dim);">Conta Garantida (Cheque Especial PJ)</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">10,0</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">4,0</td>
+                <td style="padding:8px; text-align:right; color:#f59e0b;">40%</td>
+                <td style="padding:8px; text-align:right; color:#10b981; font-weight:600;">6,4</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:8px; color:var(--text-dim);">Leasing Equipamento (saldo devedor fixo)</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">5,0</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">5,0</td>
+                <td style="padding:8px; text-align:right; color:var(--text-dim);">N/A</td>
+                <td style="padding:8px; text-align:right; color:#10b981; font-weight:600;">5,0</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; color:var(--text-dim);">Swap de Taxa de Juros (MtM + PFE)</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">&#8212;</td>
+                <td style="padding:8px; text-align:right; color:var(--text);">1,2 (MtM)</td>
+                <td style="padding:8px; text-align:right; color:#f59e0b;">SA-CCR</td>
+                <td style="padding:8px; text-align:right; color:#10b981; font-weight:600;">2,8</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin:14px 0 0 0; font-size:0.85rem; color:var(--text-dim);">
+            Nota: EAD do swap = RC&#160;(1,2) + PFE&#160;(add-on de 1,6 conforme SA-CCR), somando R$&#160;2,8 M.
+          </p>
+        </div>
+
+        <div class="info-box">
+          <strong>Derivativos: CEM vs SA-CCR</strong>
+          <p style="margin:10px 0 0 0; font-size:0.9rem; color:var(--text-dim);">
+            O <strong>Current Exposure Method (CEM)</strong> &mdash; m&#233;todo antigo &mdash; usava add-ons simples por tipo e prazo
+            do derivativo. O <strong>SA-CCR</strong> (Standardised Approach for Counterparty Credit Risk), implementado
+            no Brasil pela Resolu&#231;&#227;o BCB&#160;229/2022, substitui o CEM com uma f&#243;rmula mais sens&#237;vel ao risco:
+          </p>
+          \[
+          EAD_{\text{SA-CCR}} = \alpha \times (RC + PFE)
+          \]
+          <p style="margin:10px 0 0 0; font-size: 0.85rem; color: var(--text-dim);">
+            &alpha;&#160;=&#160;1,4 (multiplicador regulat&#243;rio) | RC&#160;=&#160;Replacement Cost | PFE&#160;=&#160;Potential Future Exposure
+          </p>
+        </div>
+      </section>
+
+      <!-- ===== SE&#199;&#195;O 04: PCC / PD ===== -->
+      <section class="section" id="pcc-modelos">
+        <div class="sec-hdr">
+          <div class="sec-num">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Probabilidade de Default</div>
+            <h2>PD &mdash; Probabilidade de Cr&#233;dito (PCC)</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A <strong>Probabilidade de Default (PD)</strong> representa a chance de um tomador n&#227;o honrar suas obriga&#231;&#245;es
+          dentro do horizonte de um ano. No contexto de Basileia III IRB, a PD deve ser estimada a partir
+          de dados hist&#243;ricos internos (m&#237;nimo 7 anos), refletir um ciclo econ&#244;mico completo (through-the-cycle),
+          e obedecer ao piso m&#237;nimo regulat&#243;rio de 0,03% para expostas corporativas.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Modelo Estat&#237;stico</div>
+            <h4 class="card-title">Regress&#227;o Log&#237;stica (Scorecard)</h4>
+            <p style="font-size:0.9rem; color:var(--text-dim); margin-bottom: 12px;">
+              O modelo log&#237;stico transforma a combina&#231;&#227;o linear de covari&#225;veis em uma probabilidade entre 0 e 1:
+            </p>
+            <div class="formula-box" style="margin:0;">
+              \[
+              P(\text{Default}) = \frac{1}{1 + e^{-z}}
+              \]
+              \[
+              z = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_n X_n
+              \]
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-dim); margin-top:10px; margin-bottom:0;">
+              X&#160;=&#160;vari&#225;veis financeiras (alavancagem, cobertura, liquidez, perfil setor&#183;ial)
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Modelo Estrutural</div>
+            <h4 class="card-title">Modelo de Merton (KMV)</h4>
+            <p style="font-size:0.9rem; color:var(--text-dim); margin-bottom: 12px;">
+              Empresa defaulta quando o valor dos ativos cai abaixo do valor da d&#237;vida. A PD &#233; a probabilidade
+              de isso ocorrer at&#233; a maturidade T:
+            </p>
+            <div class="formula-box" style="margin:0;">
+              \[
+              d_2 = \frac{\ln(A/D) + (r - \tfrac{1}{2}\sigma^2)T}{\sigma\sqrt{T}}
+              \]
+              \[
+              PD = N(-d_2)
+              \]
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-dim); margin-top:10px; margin-bottom:0;">
+              A&#160;=&#160;valor dos ativos | D&#160;=&#160;valor da d&#237;vida | &#963;&#160;=&#160;volatilidade dos ativos | T&#160;=&#160;prazo
+            </p>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>Requisitos de Calibra&#231;&#227;o &mdash; Basileia III (Circular BACEN 3.648)</strong>
+          <ul style="margin:10px 0 0 0; padding-left:18px; font-size:0.9rem; color:var(--text-dim); line-height:1.8;">
+            <li>M&#237;nimo de <strong>7 anos</strong> de dados hist&#243;ricos de default (5 anos em fase inicial)</li>
+            <li>PD deve representar a m&#233;dia de longo prazo (through-the-cycle &mdash; TTC)</li>
+            <li>PD Floor: <strong>0,03%</strong> para expostas Corporate, Soberano e Bancos</li>
+            <li>PD Floor: <strong>0,10%</strong> para expostas de Varejo sem hist&#243;rico suficiente</li>
+            <li>Valida&#231;&#227;o anual com backtesting comparando PD estimada vs. inadimpl&#234;ncia realizada</li>
+            <li>Documenta&#231;&#227;o de metodologia submetida ao BACEN para aprova&#231;&#227;o pr&#233;via</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <div class="example-title">Exemplo &mdash; C&#225;lculo de PD via Scorecard</div>
+          <p style="font-size:0.9rem; color:var(--text-dim); margin-bottom:12px;">
+            Empresa XYZ: D/EBITDA&#160;=&#160;4,0x (X1), Margem EBITDA&#160;=&#160;12% (X2), Setor manufatura (X3&#160;=&#160;1)
+          </p>
+          <div class="formula-box" style="margin:0; font-size:0.9rem;">
+            z = -3,5 + 0,8&#160;&#215;&#160;4,0 + (-0,6)&#160;&#215;&#160;0,12 + 0,4&#160;&#215;&#160;1 = -3,5 + 3,2 &#8722; 0,072 + 0,4 = <strong>0,028</strong><br/>
+            PD = 1&#160;/&#160;(1&#160;+&#160;e<sup>-0,028</sup>) = <strong>1&#160;/&#160;(1&#160;+&#160;0,9724) &#8776; 50,7%</strong>
+          </div>
+          <p style="margin:12px 0 0 0; font-size:0.85rem; color:#f59e0b;">
+            Aten&#231;&#227;o: Esta empresa teria PD &gt; 50% indicando alto risco de cr&#233;dito &mdash; os coeficientes beta s&#227;o hipot&#233;ticos apenas para ilustra&#231;&#227;o.
+          </p>
+        </div>
+      </section>
+
+      <!-- ===== SE&#199;&#195;O 05: F&#211;RMULA IRB COMPLETA ===== -->
+      <section class="section" id="irb-abordagem">
+        <div class="sec-hdr">
+          <div class="sec-num">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">IRB Avan&#231;ado</div>
+            <h2>F&#243;rmula IRB Completa &mdash; Basileia III</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A f&#243;rmula IRB do Comit&#234; de Basileia combina PD, LGD, EAD e Maturidade (M) para calcular o requerimento
+          de capital (K) de cada exposi&#231;&#227;o. O RWA correspondente &#233; obtido multiplicando K por 12,5 (inverso do
+          requerimento m&#237;nimo de 8%) e pelo EAD.
+        </p>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.05rem; margin: 28px 0 14px 0;">
+          Passo 1 &mdash; Correla&#231;&#227;o de Ativos (R)
+        </div>
+        <div class="formula-box">
+          \[
+          R = 0{,}12 \cdot \frac{1 - e^{-50 \cdot PD}}{1 - e^{-50}} + 0{,}24 \cdot \left(1 - \frac{1 - e^{-50 \cdot PD}}{1 - e^{-50}}\right)
+          \]
+          <div style="margin-top:10px; font-size:0.85rem; color:var(--text-dim);">
+            R varia entre 12% (devedores de alto risco, mais idiossincr&#225;ticos) e 24% (devedores de baixo risco, mais correlacionados ao ciclo)
+          </div>
+        </div>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.05rem; margin: 28px 0 14px 0;">
+          Passo 2 &mdash; Ajuste de Maturidade (b)
+        </div>
+        <div class="formula-box">
+          \[
+          b = \left(0{,}11852 - 0{,}05478 \cdot \ln(PD)\right)^2
+          \]
+        </div>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.05rem; margin: 28px 0 14px 0;">
+          Passo 3 &mdash; Requerimento de Capital (K) com Ajuste de Maturidade
+        </div>
+        <div class="formula-box">
+          \[
+          K = LGD \cdot \left[ N\!\left(\frac{G(PD)}{\sqrt{1-R}} + \sqrt{\frac{R}{1-R}} \cdot G(0{,}999)\right) - PD \right] \cdot \frac{1 + (M - 2{,}5) \cdot b}{1 - 1{,}5 \cdot b}
+          \]
+        </div>
+
+        <div style="font-weight: bold; color: var(--text); font-size: 1.05rem; margin: 28px 0 14px 0;">
+          Passo 4 &mdash; RWA
+        </div>
+        <div class="formula-box">
+          \[
+          \text{RWA} = K \times 12{,}5 \times EAD
+          \]
+        </div>
+
+        <div class="example-box">
+          <div class="example-title">Exemplo Passo a Passo &mdash; PD&#160;=&#160;1%, LGD&#160;=&#160;45%, EAD&#160;=&#160;R$&#160;100 M, M&#160;=&#160;2,5 anos</div>
+          <ol class="step-list" style="margin-top:14px;">
+            <li>
+              <strong>Correla&#231;&#227;o R:</strong><br/>
+              R = 0,12 &#215; (1&#8722;e<sup>&#8722;0,5</sup>)/(1&#8722;e<sup>&#8722;50</sup>) + 0,24 &#215; [1 &#8722; (1&#8722;e<sup>&#8722;0,5</sup>)/(1&#8722;e<sup>&#8722;50</sup>)]<br/>
+              R &#8776; 0,12 &#215; 0,3935 + 0,24 &#215; 0,6065 = 0,0472 + 0,1456 = <strong>0,1928 (~19,3%)</strong>
+            </li>
+            <li>
+              <strong>Ajuste de maturidade b</strong> (com M&#160;=&#160;2,5, o fator &#233; neutro):<br/>
+              b = (0,11852 &#8722; 0,05478 &#215; ln(0,01))<sup>2</sup> = (0,11852 + 0,2524)<sup>2</sup> = (0,3709)<sup>2</sup> &#8776; <strong>0,1376</strong>
+            </li>
+            <li>
+              <strong>K sem ajuste de maturidade</strong>:<br/>
+              G(PD&#160;=&#160;1%) = &#8722;2,326 | G(0,999) = 3,090<br/>
+              Argumento N: (&#8722;2,326)&#160;/&#160;&#8730;(0,807) + &#8730;(0,193/0,807) &#215; 3,090<br/>
+              = &#8722;2,590 + 0,489 &#215; 3,090 = &#8722;2,590 + 1,511 = &#8722;1,079<br/>
+              N(&#8722;1,079) &#8776; 0,1402 | K&#8320; = 0,45 &#215; (0,1402 &#8722; 0,01) = <strong>~5,86%</strong>
+            </li>
+            <li>
+              <strong>Ajuste de maturidade</strong> (M&#160;=&#160;2,5 &rarr; fator&#160;=&#160;1,0):<br/>
+              Fator = (1 + (2,5&#8722;2,5) &#215; 0,1376)&#160;/&#160;(1 &#8722; 1,5 &#215; 0,1376) = 1,0 / 0,793 &#8776; 1,261<br/>
+              K_final = 5,86% &#215; 1,261 &#8776; <strong>7,39%</strong>
+            </li>
+            <li>
+              <strong>RWA = K &#215; 12,5 &#215; EAD</strong> = 0,0739 &#215; 12,5 &#215; 100 = <strong>R$&#160;92,4 M</strong>
+            </li>
+            <li>
+              <strong>Capital Requerido (11,5% BACEN)</strong> = 11,5% &#215; R$&#160;92,4 M = <strong>R$&#160;10,6 M</strong>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ===== SE&#199;&#195;O 06: CALCULADORA IRB ===== -->
+      <section class="section" id="calculadora-irb">
+        <div class="sec-hdr">
+          <div class="sec-num">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Ferramenta Interativa</div>
+            <h2>Calculadora IRB Simplificada</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Insira os par&#226;metros de uma exposi&#231;&#227;o corporativa e calcule automaticamente o requerimento de
+          capital IRB, o RWAM e a raz&#227;o de capital correspondente. Os c&#225;lculos seguem a f&#243;rmula
+          do Comit&#234; de Basileia (BIS 2017) com ajuste de maturidade completo.
+        </p>
+
+        <div class="calc-container">
+          <div class="chart-title">Par&#226;metros de Entrada</div>
+          <div class="calc-grid">
+            <div class="calc-field">
+              <label>PD &mdash; Probabilidade de Default (%)</label>
+              <input type="number" id="inp-pd" value="1.0" min="0.03" max="100" step="0.01" placeholder="ex: 1.0"/>
+            </div>
+            <div class="calc-field">
+              <label>LGD &mdash; Loss Given Default (%)</label>
+              <input type="number" id="inp-lgd" value="45" min="0" max="100" step="0.5" placeholder="ex: 45"/>
+            </div>
+            <div class="calc-field">
+              <label>EAD &mdash; Exposi&#231;&#227;o (R$ milh&#245;es)</label>
+              <input type="number" id="inp-ead" value="100" min="0.01" step="0.01" placeholder="ex: 100"/>
+            </div>
+            <div class="calc-field">
+              <label>Maturidade M (anos)</label>
+              <input type="number" id="inp-m" value="2.5" min="1" max="5" step="0.1" placeholder="ex: 2.5"/>
+            </div>
+          </div>
+          <button class="calc-btn" onclick="calcularIRB()">Calcular RWAM</button>
+
+          <div class="calc-result" id="calc-result">
+            <div class="result-row">
+              <span class="result-label">Correla&#231;&#227;o de Ativos (R)</span>
+              <span class="result-value" id="res-r">&#8212;</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Requerimento de Capital (K)</span>
+              <span class="result-value" id="res-k">&#8212;</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">RWAM (R$ milh&#245;es)</span>
+              <span class="result-value" id="res-rwa">&#8212;</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Capital Requerido &mdash; 11,5% BACEN (R$ milh&#245;es)</span>
+              <span class="result-value" id="res-cap">&#8212;</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">P&#234;so de Risco Efetivo (RWA / EAD)</span>
+              <span class="result-value" id="res-rw">&#8212;</span>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          function normInvApprox(p) {
+            // Rational approximation for normal quantile (Beasley-Springer-Moro)
+            var a = [0, -3.969683028665376e+01, 2.209460984245205e+02,
+                    -2.759285104469687e+02, 1.383577518672690e+02,
+                    -3.066479806614716e+01, 2.506628277459239e+00];
+            var b = [0, -5.447609879822406e+01, 1.615858368580409e+02,
+                    -1.556989798598866e+02, 6.680131188771972e+01,
+                    -1.328068155288572e+01];
+            var c = [0, -7.784894002430293e-03, -3.223964580411365e-01,
+                    -2.400758277161838e+00, -2.549732539343734e+00,
+                     4.374664141464968e+00,  2.938163982698783e+00];
+            var d = [0, 7.784695709041462e-03, 3.224671290700398e-01,
+                     2.445134137142996e+00,  3.754408661907416e+00];
+            var pLow = 0.02425, pHigh = 1 - pLow;
+            var q, r;
+            if (p < pLow) {
+              q = Math.sqrt(-2 * Math.log(p));
+              return (((((c[1]*q+c[2])*q+c[3])*q+c[4])*q+c[5])*q+c[6]) /
+                     ((((d[1]*q+d[2])*q+d[3])*q+d[4])*q+1);
+            } else if (p <= pHigh) {
+              q = p - 0.5; r = q*q;
+              return (((((a[1]*r+a[2])*r+a[3])*r+a[4])*r+a[5])*r+a[6])*q /
+                     (((((b[1]*r+b[2])*r+b[3])*r+b[4])*r+b[5])*r+1);
+            } else {
+              q = Math.sqrt(-2 * Math.log(1 - p));
+              return -(((((c[1]*q+c[2])*q+c[3])*q+c[4])*q+c[5])*q+c[6]) /
+                      ((((d[1]*q+d[2])*q+d[3])*q+d[4])*q+1);
+            }
+          }
+
+          function normCDF(x) {
+            var t = 1 / (1 + 0.2316419 * Math.abs(x));
+            var poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+            var pdf = Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+            var cdf = 1 - pdf * poly;
+            return x >= 0 ? cdf : 1 - cdf;
+          }
+
+          function calcularIRB() {
+            var pd  = parseFloat(document.getElementById('inp-pd').value)  / 100;
+            var lgd = parseFloat(document.getElementById('inp-lgd').value) / 100;
+            var ead = parseFloat(document.getElementById('inp-ead').value);
+            var M   = parseFloat(document.getElementById('inp-m').value);
+
+            if (isNaN(pd) || isNaN(lgd) || isNaN(ead) || isNaN(M) || pd <= 0 || lgd < 0 || ead <= 0) {
+              alert('Por favor, verifique os valores inseridos.');
+              return;
+            }
+            // PD floor
+            if (pd < 0.0003) pd = 0.0003;
+
+            // Step 1: Correlation R
+            var e50 = Math.exp(-50);
+            var ePD50 = Math.exp(-50 * pd);
+            var R = 0.12 * (1 - ePD50) / (1 - e50) + 0.24 * (1 - (1 - ePD50) / (1 - e50));
+
+            // Step 2: Maturity adjustment b
+            var b = Math.pow(0.11852 - 0.05478 * Math.log(pd), 2);
+
+            // Step 3: Capital formula
+            var gPD   = normInvApprox(pd);
+            var g999  = normInvApprox(0.999);
+            var arg   = gPD / Math.sqrt(1 - R) + Math.sqrt(R / (1 - R)) * g999;
+            var Ncalc = normCDF(arg);
+            var K_base = lgd * (Ncalc - pd);
+            var matAdj = (1 + (M - 2.5) * b) / (1 - 1.5 * b);
+            var K = K_base * matAdj;
+            if (K < 0) K = 0;
+
+            // Step 4: RWA
+            var rwa = K * 12.5 * ead;
+            var cap = 0.115 * rwa;
+            var rw  = rwa / ead * 100;
+
+            document.getElementById('res-r').textContent   = (R * 100).toFixed(2) + '%';
+            document.getElementById('res-k').textContent   = (K * 100).toFixed(3) + '%';
+            document.getElementById('res-rwa').textContent = 'R$ ' + rwa.toFixed(2) + ' M';
+            document.getElementById('res-cap').textContent = 'R$ ' + cap.toFixed(2) + ' M';
+            document.getElementById('res-rw').textContent  = rw.toFixed(1) + '%';
+
+            var el = document.getElementById('calc-result');
+            el.classList.add('visible');
+          }
+        </script>
+      </section>
+
+      <!-- ===== SE&#199;&#195;O 07: STRESS TESTING ===== -->
+      <section class="section" id="stress-testing">
+        <div class="sec-hdr">
+          <div class="sec-num">07</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Valida&#231;&#227;o de Modelos</div>
+            <h2>Stress Testing &amp; Backtesting</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Al&#233;m do c&#225;lculo base de RWA, Basileia III exige que as institui&#231;&#245;es conduzam <strong>stress tests</strong>
+          regulares para avaliar sua resili&#234;ncia em cen&#225;rios adversos, e <strong>backtesting</strong> cont&#237;nuo
+          para validar a acur&#225;cia dos modelos internos de PD e LGD.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Cen&#225;rios BACEN</div>
+            <h4 class="card-title">Stress Testing</h4>
+            <ul style="font-size:0.9rem; color:var(--text-dim); padding-left:18px; margin:0; line-height:1.8;">
+              <li>Choque de inadimpl&#234;ncia: PD &#215; 3x (crise 2008-2009)</li>
+              <li>Queda de PIB: &#8722;3% a &#8722;5% &rarr; impacto em LGD e EAD</li>
+              <li>Alta de juros: SELIC +400bp &rarr; contrato de derivativos</li>
+              <li>Deprecia&#231;&#227;o cambial: USD/BRL +30% &rarr; exposi&#231;&#245;es em FX</li>
+              <li>Concentra&#231;&#227;o setorial: colapso de setor espec&#237;fico</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Valida&#231;&#227;o</div>
+            <h4 class="card-title">Backtesting</h4>
+            <ul style="font-size:0.9rem; color:var(--text-dim); padding-left:18px; margin:0; line-height:1.8;">
+              <li>Comparar PD estimada vs. inadimpl&#234;ncia observada anualmente</li>
+              <li>Testes estat&#237;sticos: Binomial, Hosmer-Lemeshow, Traffic Light</li>
+              <li>Discrimina&#231;&#227;o: Gini, KS, AUC-ROC</li>
+              <li>Calibra&#231;&#227;o: deviation entre PD prevista e realizada</li>
+              <li>Janela: m&#237;nimo 1 ano completo por coorte</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:0;">
+          <div class="card">
+            <div class="card-subtitle">Risco de Mercado</div>
+            <h4 class="card-title">VaR &mdash; Value at Risk</h4>
+            <div class="formula-box" style="margin-top:12px; margin-bottom:0;">
+              \[
+              VaR_{\alpha,h} = \mu_h - z_\alpha \cdot \sigma_h
+              \]
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-dim); margin-top:10px; margin-bottom:0;">
+              &#945;&#160;=&#160;n&#237;vel de confian&#231;a (99%); h&#160;=&#160;horizonte (10 dias Basileia III);<br/>
+              &sigma;<sub>h</sub>&#160;=&#160;volatilidade do portf&#243;lio no horizonte h
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Medida Coerente</div>
+            <h4 class="card-title">CVaR &mdash; Expected Shortfall</h4>
+            <div class="formula-box" style="margin-top:12px; margin-bottom:0;">
+              \[
+              CVaR_\alpha = -\frac{1}{1-\alpha} \int_\alpha^1 VaR_u\, du
+              \]
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-dim); margin-top:10px; margin-bottom:0;">
+              M&#233;dia das perdas acima do VaR. FRTB adota CVaR (ES) como medida prim&#225;ria,
+              substituindo o VaR para risco de mercado.
+            </p>
+          </div>
+        </div>
+
+        <div class="drawio-wrap" style="margin-top:24px;">
+          <div class="drawio-label"><span class="dot"></span>Ciclo de Valida&#231;&#227;o de Modelos &mdash; BACEN</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#38bdf8", "lightbox": false, "nav": false, "resize": true, "xml": "<mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1740\" pageHeight=\"480\" background=\"#0f172a\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n    <mxCell id=\"t1\" value=\"CICLO DE VALIDAÇÃO DE MODELOS — BACEN\" style=\"text;html=1;align=center;verticalAlign=middle;fontColor=#94a3b8;fontSize=13;fontStyle=1;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"0\" y=\"0\" width=\"1740\" height=\"30\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"a\" value=\"Desenvolvimento&amp;#10;do Modelo\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3b82f6;strokeColor=#1e40af;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"40\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"b\" value=\"Validação&amp;#10;Interna\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#8b5cf6;strokeColor=#6d28d9;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"280\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"c\" value=\"Aprovação&amp;#10;BACEN / IRB\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#f59e0b;strokeColor=#d97706;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"520\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"d\" value=\"Implementação&amp;#10;em Produção\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#6366f1;strokeColor=#4f46e5;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"760\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"e\" value=\"Backtesting&amp;#10;Anual\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#06b6d4;strokeColor=#0891b2;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1000\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"f\" value=\"Aprovado?\" style=\"rhombus;whiteSpace=wrap;html=1;fillColor=#64748b;strokeColor=#475569;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1240\" y=\"190\" width=\"180\" height=\"70\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"h\" value=\"Stress&amp;#10;Testing\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#14b8a6;strokeColor=#0f766e;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1240\" y=\"60\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"i\" value=\"Relatório&amp;#10;Regulatório\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#10b981;strokeColor=#047857;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1480\" y=\"60\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"g\" value=\"Recalibração&amp;#10;ou Redesign\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#ef4444;strokeColor=#dc2626;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1240\" y=\"390\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"eab\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"a\" target=\"b\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"ebc\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"b\" target=\"c\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"ecd\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"c\" target=\"d\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"ede\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"d\" target=\"e\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"eef\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"e\" target=\"f\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"efd\" value=\"Sim\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#22c55e;strokeWidth=1.5;fontColor=#86efac;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"f\" target=\"d\">\n      <mxGeometry relative=\"1\" as=\"geometry\">\n        <Array as=\"points\">\n          <mxPoint x=\"850\" y=\"440\"/>\n        </Array>\n      </mxGeometry>\n    </mxCell>\n    <mxCell id=\"efg\" value=\"Não\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#ef4444;strokeWidth=1.5;fontColor=#fca5a5;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"f\" target=\"g\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"egb\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#f97316;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"g\" target=\"b\">\n      <mxGeometry relative=\"1\" as=\"geometry\">\n        <Array as=\"points\">\n          <mxPoint x=\"370\" y=\"440\"/>\n        </Array>\n      </mxGeometry>\n    </mxCell>\n    <mxCell id=\"eeh\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"e\" target=\"h\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"ehi\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"h\" target=\"i\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n  </root>\n</mxGraphModel>"}'></div>
+        </div>
+        <div class="diagram-legend">
+          Modelos de risco passam por desenvolvimento, valida&#231;&#227;o interna e aprova&#231;&#227;o regulat&#243;ria (BACEN/IRB) antes de irem para produ&#231;&#227;o, onde s&#227;o submetidos a backtesting anual e stress testing cont&#237;nuo. Se o backtesting reprovar o modelo, ele volta para recalibra&#231;&#227;o ou redesign e nova valida&#231;&#227;o interna; os resultados dos testes de estresse alimentam o relat&#243;rio regulat&#243;rio.
+        </div>
+      </section>
+
+      <!-- ===== SE&#199;&#195;O 08: AWS ===== -->
+      <section class="section" id="aws-regulatorio">
+        <div class="sec-hdr">
+          <div class="sec-num">08</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Plataforma AWS</div>
+            <h2>AWS para C&#225;lculos Regulat&#243;rios</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O c&#225;lculo de RWA, EAD e PD em escala requer processamento de milh&#245;es de contratos com
+          atualiza&#231;&#227;o di&#225;ria. A AWS oferece uma stack completa: ingest&#227;o via Kinesis, transforma&#231;&#227;o
+          via Glue, computa&#231;&#227;o via EMR/SageMaker, armazenamento em Redshift e distribui&#231;&#227;o via S3
+          para o reporte regulat&#243;rio ao BACEN.
+        </p>
+
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>Pipeline de C&#225;lculo RWA na AWS</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#38bdf8", "lightbox": false, "nav": false, "resize": true, "xml": "<mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1740\" pageHeight=\"440\" background=\"#0f172a\">\n  <root>\n    <mxCell id=\"0\"/>\n    <mxCell id=\"1\" parent=\"0\"/>\n    <mxCell id=\"t1\" value=\"PIPELINE DE CÁLCULO RWA NA AWS\" style=\"text;html=1;align=center;verticalAlign=middle;fontColor=#94a3b8;fontSize=13;fontStyle=1;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"0\" y=\"0\" width=\"1740\" height=\"30\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"a\" value=\"Core Banking&amp;#10;Dados de Crédito\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#64748b;strokeColor=#475569;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"40\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"b\" value=\"Amazon S3&amp;#10;Data Lake (Raw)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3b82f6;strokeColor=#1e40af;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"280\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"c\" value=\"AWS Glue&amp;#10;ETL &amp;amp; Normalização\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#8b5cf6;strokeColor=#6d28d9;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"520\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"d\" value=\"Amazon Redshift&amp;#10;Exposições normalizadas\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#6366f1;strokeColor=#4f46e5;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"760\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"e\" value=\"EMR / PySpark&amp;#10;Cálculo RWA em escala\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#06b6d4;strokeColor=#0891b2;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1000\" y=\"120\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"f\" value=\"SageMaker&amp;#10;Modelos PD / LGD\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#ec4899;strokeColor=#be185d;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1000\" y=\"300\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"g\" value=\"S3 / Parquet&amp;#10;Resultados RWA\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#14b8a6;strokeColor=#0f766e;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1240\" y=\"120\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"h\" value=\"Relatório&amp;#10;Regulatório BACEN\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#f59e0b;strokeColor=#d97706;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1480\" y=\"40\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"i\" value=\"QuickSight&amp;#10;Dashboard Capital\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#10b981;strokeColor=#047857;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\">\n      <mxGeometry x=\"1480\" y=\"200\" width=\"180\" height=\"50\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"eab\" value=\"Batch diário\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#cbd5e1;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"a\" target=\"b\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"ebc\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"b\" target=\"c\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"ecd\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"c\" target=\"d\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"ede\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"d\" target=\"e\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"edf\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"d\" target=\"f\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"efe\" value=\"Scores PD\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#22c55e;strokeWidth=1.5;fontColor=#86efac;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"f\" target=\"e\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"eeg\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"e\" target=\"g\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"egh\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"g\" target=\"h\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n    <mxCell id=\"egi\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"g\" target=\"i\">\n      <mxGeometry relative=\"1\" as=\"geometry\"/>\n    </mxCell>\n  </root>\n</mxGraphModel>"}'></div>
+        </div>
+        <div class="diagram-legend">
+          Dados de cr&#233;dito do Core Banking s&#227;o carregados em lote di&#225;rio no Data Lake (S3), normalizados pelo Glue e armazenados no Redshift. O EMR/PySpark calcula o RWA em escala usando scores de PD/LGD gerados pelo SageMaker, e os resultados em Parquet no S3 alimentam tanto o relat&#243;rio regulat&#243;rio ao BACEN quanto o dashboard de capital no QuickSight.
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Processamento em Escala</div>
+            <h4 class="card-title">Amazon EMR</h4>
+            <p style="font-size:0.9rem; color:var(--text-dim); margin:0; line-height:1.7;">
+              Clusters Spark gerenciados para c&#225;lculo paralelo de RWA sobre milh&#245;es de contratos.
+              Auto-scaling baseado em volume &mdash; ideal para fechamento mensal de carteira.
+              Integra&#231;&#227;o nativa com S3 e Glue Data Catalog.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Automa&#231;&#227;o</div>
+            <h4 class="card-title">AWS Lambda &amp; EventBridge</h4>
+            <p style="font-size:0.9rem; color:var(--text-dim); margin:0; line-height:1.7;">
+              Triggers autom&#225;ticos para iniciar jobs de c&#225;lculo no fechamento di&#225;rio e mensal.
+              EventBridge Scheduler para agendamentos com horário fixo.
+              Lambda para orquestrar valida&#231;&#245;es e alertas de conformidade.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Modelos de Risco</div>
+            <h4 class="card-title">Amazon SageMaker</h4>
+            <p style="font-size:0.9rem; color:var(--text-dim); margin:0; line-height:1.7;">
+              Treino e deploy de modelos IRB (regressão log&#237;stica, XGBoost, redes neurais) para PD e LGD.
+              Model Registry para controle de vers&#245;es de modelos aprovados pelo BACEN.
+              Feature Store para armazenar vari&#225;veis de risco atualizadas.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Seguran&#231;a &amp; Auditoria</div>
+            <h4 class="card-title">AWS KMS &amp; CloudTrail</h4>
+            <p style="font-size:0.9rem; color:var(--text-dim); margin:0; line-height:1.7;">
+              KMS para criptografia de dados de cr&#233;dito em repouso e tr&#226;nsito (requerido pelo BACEN).
+              CloudTrail para log imut&#225;vel de todas as opera&#231;&#245;es sobre dados regulat&#243;rios.
+              Config Rules para garantir conformidade cont&#237;nua de infraestrutura.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESUMO -->
+      <section class="section" id="resumo">
+        <div class="sec-hdr">
+          <div class="sec-num">RESUMO</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conclus&#227;o</div>
+            <h2>Pontos-Chave &mdash; RWAM, EAD &amp; PCC</h2>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <h3>Takeaways Principais</h3>
+          <ul>
+            <li><strong>RWA &#233; a base do capital regulat&#243;rio:</strong> cada ativo recebe um peso de risco; o capital m&#237;nimo &#233; calculado sobre o RWA total</li>
+            <li><strong>EAD n&#227;o &#233; simplesmente o saldo devedor:</strong> facilidades com limite rotativo requerem CCF para estimar saque antes do default</li>
+            <li><strong>PD deve ser through-the-cycle:</strong> calibrada sobre ciclo econ&#244;mico completo, com m&#237;nimo de 7 anos de dados e piso de 0,03%</li>
+            <li><strong>IRB Avan&#231;ado otimiza capital:</strong> modelos internos de PD, LGD e EAD podem reduzir RWA significativamente vs. SA, mas exigem aprova&#231;&#227;o BACEN</li>
+            <li><strong>Backtesting &#233; obrigat&#243;rio:</strong> valida&#231;&#227;o anual dos modelos &#233; condi&#231;&#227;o para manuten&#231;&#227;o da licen&#231;a IRB</li>
+            <li><strong>AWS escalabilidade:</strong> EMR + SageMaker permitem c&#225;lculo di&#225;rio de RWA sobre carteiras de milh&#245;es de contratos</li>
+          </ul>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <div style="font-weight: bold; color: var(--text); font-size: 1.05rem; margin-bottom: 14px;">T&#243;picos Relacionados</div>
+          <div class="grid-2" style="gap: 16px;">
+            <a href="basileia-iii.html" style="text-decoration: none;">
+              <div class="card">
+                <h4 class="card-title">Basileia III &mdash; Vis&#227;o Geral</h4>
+                <p style="font-size:0.9rem; color:var(--text-dim); margin:0;">
+                  Estrutura completa de Basileia III: Pilares 1, 2 e 3, buffers de capital e liquidez.
+                </p>
+              </div>
+            </a>
+            <a href="conformidade-bacen.html" style="text-decoration: none;">
+              <div class="card">
+                <h4 class="card-title">Conformidade &amp; Normas BACEN</h4>
+                <p style="font-size:0.9rem; color:var(--text-dim); margin:0;">
+                  Resolu&#231;&#245;es CMN, circulares BACEN e cronograma de implementa&#231;&#227;o no Brasil.
+                </p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- REFER&#202;NCIAS -->
+      <section class="section" id="referencias">
+        <div style="font-weight: bold; color: var(--text); font-size: 1.05rem; margin: 24px 0 14px 0;">
+          Refer&#234;ncias &amp; Normativas
+        </div>
+
+        <div class="reference">
+          <strong>BIS (2017) &mdash; Basel III: Finalising Post-Crisis Reforms</strong>
+          Bank for International Settlements. F&#243;rmulas IRB completas, SA-CCR, FRTB e requisitos de capital m&#237;nimo.
+        </div>
+        <div class="reference">
+          <strong>Circular BACEN 3.648/2013 &mdash; Abordagem IRB</strong>
+          Estabelece os crit&#233;rios para uso da abordagem IRB no Brasil: requisitos m&#237;nimos de dados, valida&#231;&#227;o e aprova&#231;&#227;o.
+        </div>
+        <div class="reference">
+          <strong>Resolu&#231;&#227;o CMN 4.193/2013 &mdash; RWA e Requerimento de Capital</strong>
+          Define o c&#225;lculo de RWA (RWACPAD, RWAJUR, RWACOM, RWAOPAD) e os limites m&#237;nimos de capital no Brasil.
+        </div>
+        <div class="reference">
+          <strong>Instru&#231;&#227;o Normativa BACEN 100</strong>
+          Procedimentos para o relat&#243;rio peri&#243;dico de adequa&#231;&#227;o de capital ao BACEN.
+        </div>
+        <div class="reference">
+          <strong>Resolu&#231;&#227;o BCB 229/2022 &mdash; SA-CCR</strong>
+          Implementa o SA-CCR no Brasil, substituindo o m&#233;todo CEM para c&#225;lculo de EAD de derivativos.
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="../../js/sidebar-loader.js"></script>
+  <script>
+    function toggleNav() {
+      document.getElementById('sidebar').classList.toggle('active');
+    }
+  </script>
+  <script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>

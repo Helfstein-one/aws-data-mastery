@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Apache Kafka (Amazon MSK), Apache Flink e o Dual Feature Store (Online/Offline) que sustentam decisões de crédito em milissegundos - AWS Data Mastery"/>
+  <title>Arquitetura Kafka & Feature Store | AWS Data Mastery</title>
+
+  <!-- KaTeX for Math Formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  
+  <!-- CSS Base (Relative from pages/financas/ to root) -->
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid Diagrams -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Arquitetura Kafka & Feature Store | AWS Data Mastery"/>
+  <meta property="og:description" content="Apache Kafka (Amazon MSK), Apache Flink e o Dual Feature Store (Online/Offline) que sustentam decisões de crédito em milissegundos."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+</head>
+<body>
+  <!-- Hamburger Button for Responsive Navigation -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+
+  <!-- Sidebar Component Navigation -->
+  <nav id="sidebar"></nav>
+
+  <!-- Main Content Container -->
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+    <div class="hero-ey">Infraestrutura de Streaming</div>
+      <h1>Arquitetura Streaming para Motor de Crédito</h1>
+      <p class="hero-d">Apache Kafka (Amazon MSK), Apache Flink e o Dual Feature Store (Online/Offline) que sustentam decisões de crédito em milissegundos.</p>
+      <div class="pills">
+        <span class="pill">Amazon MSK</span>
+        <span class="pill">Apache Flink</span>
+        <span class="pill">Feature Store</span>
+        <span class="pill">Dual Store</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+
+      <section class="section" id="arquitetura-streaming">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--alert)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Engenharia de Dados AWS</div>
+            <h2>Arquitetura Kafka Event Streaming & Dual Feature Store (AWS 2026)</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
+          Para viabilizar decisões em milissegundos sem sobrecarregar bancos OLTP transacionais, a arquitetura moderna de onboarding utiliza barramentos de eventos no Apache Kafka (Amazon MSK) e uma dual Feature Store de baixa latência (DynamoDB Online + S3 Iceberg Offline).
+        </p>
+
+        <!-- DIAGRAMA DRAW.IO (ABORDAGEM 2): TOPOLOGIA DE INFRAESTRUTURA CLOUD AWS & LAKEHOUSE -->
+        <div class="drawio-wrap" style="margin-top: 24px; margin-bottom: 24px;">
+          <div class="drawio-label"><span class="dot"></span>Abordagem 2: Topologia de Infraestrutura AWS Cloud — VPC Multi-AZ, Subnets, Security Groups &amp; Governança Lake Formation</div>
+          <div class="mxgraph" style="max-width:100%;background:#080f1e;" data-mxgraph="{&quot;highlight&quot;: &quot;#0ea5e9&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1000\&quot; pageHeight=\&quot;560\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;top_0\&quot;/&gt;&lt;mxCell id=\&quot;top_1\&quot; parent=\&quot;top_0\&quot;/&gt;&lt;mxCell id=\&quot;top_bg\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry width=\&quot;1000\&quot; height=\&quot;560\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_title\&quot; value=\&quot;ABORDAGEM 2: TOPOLOGIA DE INFRAESTRUTURA CLOUD AWS, VPC, SUBNETS &amp;amp; LAKEHOUSE TIERING\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry y=\&quot;10\&quot; width=\&quot;1000\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- OUTER AWS REGION --&gt;&lt;mxCell id=\&quot;top_reg\&quot; value=\&quot;AWS Region (sa-east-1 / S\u00e3o Paulo)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=none;strokeColor=#38bdf8;strokeWidth=2;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;dashed=1;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;45\&quot; width=\&quot;960\&quot; height=\&quot;495\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- AMAZON VPC --&gt;&lt;mxCell id=\&quot;top_vpc\&quot; value=\&quot;Amazon VPC (10.0.0.0/16)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#0f172a;strokeColor=#f59e0b;strokeWidth=2;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;40\&quot; y=\&quot;80\&quot; width=\&quot;920\&quot; height=\&quot;440\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- PUBLIC SUBNET LAYER --&gt;&lt;mxCell id=\&quot;top_pub_sub\&quot; value=\&quot;Public Subnets (Multi-AZ Ingress)\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#0284c7;strokeWidth=1.5;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=top;spacingTop=6;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;115\&quot; width=\&quot;260\&quot; height=\&quot;180\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_igw\&quot; value=\&quot;Internet Gateway\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.internet_gateway;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;80\&quot; y=\&quot;150\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_alb\&quot; value=\&quot;Application Load Balancer\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.application_load_balancer;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;155\&quot; y=\&quot;150\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_apigw\&quot; value=\&quot;API Gateway\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;235\&quot; y=\&quot;150\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_appsync\&quot; value=\&quot;AWS AppSync (Websocket)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.appsync;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;155\&quot; y=\&quot;225\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- PRIVATE SUBNET 1: STREAMING CORE (MSK &amp; FLINK) --&gt;&lt;mxCell id=\&quot;top_priv_stream\&quot; value=\&quot;Private Subnet 1: Real-Time Event Streaming\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#f59e0b;strokeWidth=1.5;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=top;spacingTop=6;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;350\&quot; y=\&quot;115\&quot; width=\&quot;280\&quot; height=\&quot;180\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_msk\&quot; value=\&quot;Amazon MSK&amp;#10;(Broker 3-AZ)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;380\&quot; y=\&quot;150\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_flink\&quot; value=\&quot;Apache Flink&amp;#10;(RocksDB State)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kinesis_data_analytics;fillColor=#10b981;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;470\&quot; y=\&quot;150\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_schema\&quot; value=\&quot;Glue Schema Registry\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=#a855f7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;560\&quot; y=\&quot;150\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- PRIVATE SUBNET 2: DATA LAKEHOUSE &amp; FEATURE STORE --&gt;&lt;mxCell id=\&quot;top_priv_lake\&quot; value=\&quot;Private Subnet 2: Data Lakehouse &amp;amp; Feature Store\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#10b981;strokeWidth=1.5;fontColor=#34d399;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=top;spacingTop=6;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;115\&quot; width=\&quot;270\&quot; height=\&quot;380\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_dynamo\&quot; value=\&quot;DynamoDB&amp;#10;(Online Feature Store)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#3b82f6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;690\&quot; y=\&quot;150\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_s3_iceberg\&quot; value=\&quot;S3 Iceberg&amp;#10;(Offline Feature Store)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;775\&quot; y=\&quot;150\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_lf\&quot; value=\&quot;Lake Formation&amp;#10;(Cell-Level ACL)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lake_formation;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;860\&quot; y=\&quot;150\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_sagemaker\&quot; value=\&quot;SageMaker Endpoint&amp;#10;(XGBoost Engine)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;fillColor=#8b5cf6;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;775\&quot; y=\&quot;260\&quot; width=\&quot;44\&quot; height=\&quot;44\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_eventbridge\&quot; value=\&quot;EventBridge Bus\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fillColor=#ec4899;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;690\&quot; y=\&quot;380\&quot; width=\&quot;40\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- SECURITY &amp; COMPLIANCE BOX --&gt;&lt;mxCell id=\&quot;top_sec_box\&quot; value=\&quot;Security, Compliance &amp;amp; RSFN DirectConnect\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;fillColor=#1e293b;strokeColor=#a855f7;strokeWidth=1.5;fontColor=#c084fc;fontFamily=DM Sans;fontSize=10;align=center;verticalAlign=top;spacingTop=6;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;60\&quot; y=\&quot;315\&quot; width=\&quot;570\&quot; height=\&quot;180\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_kms\&quot; value=\&quot;KMS&amp;#10;(At-Rest Encrypt)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kms;fillColor=#dc2626;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;100\&quot; y=\&quot;360\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_iam\&quot; value=\&quot;IAM Roles&amp;#10;(ABAC / RBAC)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.iam;fillColor=#dc2626;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;195\&quot; y=\&quot;360\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_dx\&quot; value=\&quot;Direct Connect&amp;#10;(RSFN BACEN Link)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.direct_connect;fillColor=#f97316;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;290\&quot; y=\&quot;360\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_vpce\&quot; value=\&quot;VPC Endpoints&amp;#10;(PrivateLink S3)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.vpc;fillColor=#f59e0b;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=9;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;top_1\&quot;&gt;&lt;mxGeometry x=\&quot;385\&quot; y=\&quot;360\&quot; width=\&quot;36\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;!-- EDGES / TOPOLOGY CONNECTIONS --&gt;&lt;mxCell id=\&quot;top_e1\&quot; value=\&quot;HTTPS\&quot; edge=\&quot;1\&quot; parent=\&quot;top_1\&quot; source=\&quot;top_alb\&quot; target=\&quot;top_apigw\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fontColor=#38bdf8;fontSize=8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_e2\&quot; value=\&quot;Privated\&quot; edge=\&quot;1\&quot; parent=\&quot;top_1\&quot; source=\&quot;top_apigw\&quot; target=\&quot;top_msk\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f97316;strokeWidth=1.5;fontColor=#f97316;fontSize=8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_e3\&quot; value=\&quot;Stream\&quot; edge=\&quot;1\&quot; parent=\&quot;top_1\&quot; source=\&quot;top_msk\&quot; target=\&quot;top_flink\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fontColor=#34d399;fontSize=8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_e4\&quot; value=\&quot;Put\&quot; edge=\&quot;1\&quot; parent=\&quot;top_1\&quot; source=\&quot;top_flink\&quot; target=\&quot;top_dynamo\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3b82f6;strokeWidth=1.5;fontColor=#60a5fa;fontSize=8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=\&quot;top_e5\&quot; value=\&quot;Predict\&quot; edge=\&quot;1\&quot; parent=\&quot;top_1\&quot; source=\&quot;top_dynamo\&quot; target=\&quot;top_sagemaker\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#8b5cf6;strokeWidth=1.5;fontColor=#c084fc;fontSize=8;\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&quot;}"></div>
+        </div>
+        <div class="diagram-legend" style="margin-top: 15px; font-size: 0.9em; color: var(--muted); border-left: 4px solid var(--accent); padding: 15px; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; margin-bottom: 24px;">
+          <strong style="color: var(--accent);">Explicação da Topologia de Infraestrutura Cloud (Abordagem 2):</strong>
+          <ul style="margin-top: 8px; padding-left: 20px; line-height: 1.6; margin-bottom: 0;">
+            <li style="margin-bottom: 4px;"><strong>Isolamento de Redes (VPC Multi-AZ):</strong> As subnets públicas abrigam apenas o API Gateway e AWS AppSync para entrada de tráfego de borda. Toda a camada de mensageria (Amazon MSK 3-AZ), processamento (Flink) e motor de crédito roda estritamente isolada em Subnets Privadas sem IP público.</li>
+            <li style="margin-bottom: 4px;"><strong>Segurança &amp; Conexão BACEN:</strong> A comunicação com a Rede do Sistema Financeiro Nacional (RSFN do Banco Central) é realizada via <strong>AWS DirectConnect</strong> dedicado. O tráfego para buckets S3 não trafega na internet pública, operando via VPC Endpoints (PrivateLink).</li>
+            <li><strong>Governança de Dados LGPD:</strong> O AWS Lake Formation gerencia as permissões granulares em nível de célula (Cell-Level Security / Data Filtering) nos buckets S3 Iceberg, enquanto todas as chaves e tokens de PII são encriptados com AWS KMS.</li>
+          </ul>
+        </div>
+
+        <div class="callout callout-info" style="margin-top: 24px;">
+          <strong>Consistência e Resiliência em Pipeline de Onboarding:</strong>
+          <p style="margin-top: 8px;">
+            A arquitetura garante resiliência total a picos de tráfego. Em caso de indisponibilidade momentânea nos bureaus externos (ex: SCR BACEN), o Apache Flink retém o estado da proposta em RocksDB com retenção de janela e dispara re-tentativas com backoff exponencial via Amazon MSK DLQ (Dead Letter Queue).
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--muted)">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Curadoria Técnica &amp; Acadêmica</div>
+            <h2>Referências &amp; Notas de Curadoria</h2>
+          </div>
+        </div>
+        <p class="sec-intro" style="font-size: 1rem; color: var(--text-dim); margin-bottom: 24px;">
+          Documentos regulatórios oficiais, literatura acadêmica clássica e guias de arquitetura cloud utilizados na curadoria deste módulo.
+        </p>
+
+        <div class="grid-2" style="gap: 20px;">
+          <div class="card">
+            <div class="card-lbl">BACEN & CMN - Regulação de Onboarding e SCR</div>
+            <h4>Resolução BCB nº 142 / Resolução CMN nº 4.893</h4>
+            <p>Diretrizes oficiais do Banco Central do Brasil para identificação de clientes (KYC), consulta autorizada ao SCR (Registrato), segurança cibernética e prevenção a lavagem de dinheiro. <a href="https://www.bcb.gov.br/estabilidadefinanceira/regulasfn" style="color: var(--accent); text-decoration: none; font-weight: 600;" target="_blank">Acessar Guia / Documentação</a></p>
+          </div>
+          <div class="card">
+            <div class="card-lbl">JSON Schema Foundation</div>
+            <h4>JSON Schema Draft-07 Specification</h4>
+            <p>Especificação técnica formal utilizada para validação de Data Contracts e garantia de schema evolutivo em barramentos de eventos no Amazon MSK. <a href="https://json-schema.org/draft-07/json-schema-release-notes" style="color: var(--accent); text-decoration: none; font-weight: 600;" target="_blank">Acessar Guia / Documentação</a></p>
+          </div>
+          <div class="card">
+            <div class="card-lbl">AWS Architecture Center</div>
+            <h4>Real-Time Financial Onboarding & Feature Store</h4>
+            <p>Guia de arquitetura de referência para ingestão resiliente com API Gateway, Amazon MSK, Apache Flink e Amazon DynamoDB Online Feature Store. <a href="https://aws.amazon.com/architecture/" style="color: var(--accent); text-decoration: none; font-weight: 600;" target="_blank">Acessar Guia / Documentação</a></p>
+          </div>
+        </div>
+      </section>
+</main>
+  </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollTop" onclick="scrollToTop()">↑</button>
+
+  <!-- Core Platform Scripts (Relative paths for pages/financas/*.html) -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+  <script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+</body>
+</html>

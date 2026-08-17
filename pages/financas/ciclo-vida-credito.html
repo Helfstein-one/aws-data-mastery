@@ -30,12 +30,6 @@
   <!-- CSS Base (Relative from pages/financas/ to root) -->
   <link rel="stylesheet" href="../../style.css"/>
 
-  <!-- Mermaid Diagrams -->
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
-  </script>
-
   <!-- Open Graph & Favicon -->
   <meta property="og:title" content="Ciclo de Vida de Crédito &amp; Arquitetura de Eventos AWS 2026 | AWS Data Mastery"/>
   <meta property="og:description" content="Engenharia de Dados Financeiros: 6 Estágios de Contrato, Event Streaming com Amazon MSK &amp; EventBridge, DynamoDB Single-Table e Apache Iceberg Ledger."/>
@@ -80,6 +74,15 @@
         <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
           Um contrato de crédito bancário não é um mero registro estático em banco de dados SQL. Trata-se de uma entidade financeira viva governada por uma <strong>Máquina de Estados Finitos (FSM - Finite State Machine)</strong>. Cada transição de estado é disparada por eventos de negócio (como formalização da CCB, desembolso via PIX, apropriação pro-rata die, amortização ou atraso) que exigem <strong>lançamentos contábeis em partidas dobradas (Débito/Crédito)</strong> no plano de contas COSIF e persistência determinística no Data Lakehouse.
         </p>
+
+        <div class="abox" style="border-left: 4px solid var(--aws);">
+          <div class="abox-hdr" style="background: var(--navy);">🔗 De Onde Vem o Primeiro Evento: A Jornada de Originação</div>
+          <div class="abox-body">
+            <p style="color:#cbd5e1; margin:0; font-size:0.92rem; line-height:1.7;">
+              Este ciclo de vida começa no evento <code>credit.originated.v1</code>, disparado no exato momento em que a proposta de crédito é aprovada e o contrato formalizado. Tudo o que acontece <em>antes</em> disso — a jornada de originação digital com checagem KYC/AML, biometria facial (Liveness), consulta ao SCR do BACEN e a decisão automatizada do Decision Engine (aprovar/rejeitar a proposta) — está detalhada na página <a href="processo-credito-kyc.html" style="color: var(--aws); text-decoration: none; font-weight: 600;">Processo de Crédito &amp; KYC</a>. Aqui, tratamos exclusivamente do que ocorre <em>a partir</em> da formalização do contrato.
+            </p>
+          </div>
+        </div>
 
         <!-- DIAGRAMA SVG 1: PIPELINE DOS 6 ESTÁGIOS DE VIDA DO CONTRATO -->
         <div class="svg-container" style="margin: 2.5rem 0; text-align: center;">
@@ -171,26 +174,9 @@
 
         <div class="card" style="margin-bottom: 30px; border-top: 4px solid var(--aws);">
           <div class="card-lbl" style="color:var(--aws)">Diagrama de Transição de Estados (Mermaid State Machine)</div>
-          <div class="mermaid" style="text-align: center; margin: 20px 0; background: transparent;">
-            graph TD
-              A[1. Origination<br/>PROPOSAL_APPROVED] --> B[2. Disbursement<br/>CREDIT_DISBURSED]
-              B --> C[3. Accrual<br/>ACCRUAL_CALCULATED]
-              C --> D{Evento Liquidação?}
-              D -- Pagamento Parcela --> E[4. Payment<br/>INSTALLMENT_PAID]
-              E -- Mais parcelas em aberto --> C
-              E -- Última parcela quitada --> F[Contrato Quitado<br/>SETTLED]
-              D -- Atraso (DPD > 0) --> G[5. Delinquency<br/>OVERDUE_STAGE_1_2_3]
-              G -- Renegociação / Acordo --> E
-              G -- Inadimplência > 180d/360d --> H[6. Write-off & Recovery<br/>WRITTEN_OFF_PREJUIZO]
-              H -- Cobrança Pós-Baixa --> I[Recuperação de Crédito<br/>RECOVERY_RECEIVED]
-
-              classDef default fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff;
-              classDef alert fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#fff;
-              classDef ok fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff;
-              classDef warn fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#fff;
-              class G,H alert;
-              class E,F,I ok;
-              class A,B,C warn;
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#38bdf8", "lightbox": false, "nav": false, "resize": true, "xml": "<mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"880\" background=\"#0f172a\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"title\" value=\"DIAGRAMA DE TRANSICAO DE ESTADOS - CICLO DE VIDA DO CREDITO\" style=\"text;html=1;align=center;verticalAlign=middle;fontColor=#94a3b8;fontSize=13;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"26\" as=\"geometry\"/></mxCell><mxCell id=\"A\" value=\"1. Origination&amp;#10;PROPOSAL_APPROVED\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#78350f;strokeColor=#f59e0b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"340\" y=\"70\" width=\"200\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"B\" value=\"2. Disbursement&amp;#10;CREDIT_DISBURSED\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#78350f;strokeColor=#f59e0b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"340\" y=\"180\" width=\"200\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"C\" value=\"3. Accrual&amp;#10;ACCRUAL_CALCULATED\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#78350f;strokeColor=#f59e0b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"340\" y=\"290\" width=\"200\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"D\" value=\"Evento Liquidacao?\" style=\"rhombus;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#3b82f6;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"340\" y=\"410\" width=\"180\" height=\"90\" as=\"geometry\"/></mxCell><mxCell id=\"E\" value=\"4. Payment&amp;#10;INSTALLMENT_PAID\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"140\" y=\"550\" width=\"200\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"G\" value=\"5. Delinquency&amp;#10;OVERDUE_STAGE_1_2_3\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#7f1d1d;strokeColor=#ef4444;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"560\" y=\"550\" width=\"200\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"F\" value=\"Contrato Quitado&amp;#10;SETTLED\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"140\" y=\"680\" width=\"200\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"H\" value=\"6. Write-off &amp;amp; Recovery&amp;#10;WRITTEN_OFF_PREJUIZO\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#7f1d1d;strokeColor=#ef4444;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"560\" y=\"680\" width=\"200\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"I\" value=\"Recuperacao de Credito&amp;#10;RECOVERY_RECEIVED\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"560\" y=\"810\" width=\"200\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"e0\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"A\" target=\"B\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e1\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"B\" target=\"C\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"C\" target=\"D\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e3\" value=\"Pagamento Parcela\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"D\" target=\"E\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e4\" value=\"Mais parcelas em aberto\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"E\" target=\"C\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e5\" value=\"Ultima parcela quitada\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"E\" target=\"F\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e6\" value=\"Atraso (DPD &amp;gt; 0)\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"D\" target=\"G\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e7\" value=\"Renegociacao / Acordo\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"G\" target=\"E\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e8\" value=\"Inadimplencia &amp;gt; 180d/360d\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"G\" target=\"H\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e9\" value=\"Cobranca Pos-Baixa\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;fontColor=#94a3b8;fontSize=9;\" edge=\"1\" parent=\"1\" source=\"H\" target=\"I\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>"}'></div>
+          <div class="diagram-legend">
+            O ciclo de vida do crédito percorre Originação, Desembolso e Apuração (Accrual) até um evento de liquidação: se há pagamento de parcela, o contrato retorna à Apuração (se restam parcelas) ou é quitado (SETTLED); se há atraso (DPD &gt; 0), o contrato entra em Delinquência, podendo ser renegociado (retornando a Payment) ou, em caso de inadimplência prolongada, ser baixado para prejuízo (Write-off) e seguir para Recuperação de Crédito.
           </div>
         </div>
       </section>
@@ -224,7 +210,7 @@
               <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
               <p style="margin-top: 4px; color: #cbd5e1;">Neste momento, antes da entrega efetiva do dinheiro, o crédito é um compromisso extracontábil (Contas de Compensação).</p>
               <ul style="margin-top:5px; padding-left: 18px;">
-                <li style="color:#34d399"><strong>Débito (D):</strong> Operações de Crédito a Libertas (Compensação ⬆) — COSIF 3.0.1.10.x0-1</li>
+                <li style="color:#34d399"><strong>Débito (D):</strong> Operações de Crédito a Liberar (Compensação ⬆) — COSIF 3.0.1.10.x0-1</li>
                 <li style="color:#ef4444"><strong>Crédito (C):</strong> Compromissos de Crédito Contratados (Compensação ⬇) — COSIF 9.0.9.10.x0-8</li>
               </ul>
             </div>
@@ -258,7 +244,7 @@
             <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
               <p><strong>Descrição de Negócio:</strong> Apropriação diária da receita de juros remuneratórios calculados <em>pro-rata die</em> sobre o saldo devedor de curva (Regime de Competência). Sob a Resolução CMN 4.966, se DPD &gt; 90 (Estágio 3), ocorre o <strong>Stop Accrual</strong> (interrupção do reconhecimento de receita em DRE).</p>
               <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#facc15; font-size:12px; border: 1px solid #1e293b;">
-                Event Kafka: credit.accrual.calculated.v1<br/>
+                Event Kafka: credit.accrual.v1<br/>
                 FSM State: ACTIVE_PERFORMING (Atualização Diária)
               </div>
               <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
@@ -277,7 +263,7 @@
             <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
               <p><strong>Descrição de Negócio:</strong> Efetivação do pagamento da parcela pelo tomador via PIX, Boleto ou Débito Automático. Aplicação rígida do <em>Waterfall de Liquidação</em>: 1º Encargos/Impostos (IOF), 2º Multa/Juros de Mora, 3º Juros Remuneratórios Accruados, 4º Amortização do Principal.</p>
               <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#4ade80; font-size:12px; border: 1px solid #1e293b;">
-                Event Kafka: credit.payment.received.v1<br/>
+                Event Kafka: credit.payment.v1<br/>
                 FSM State: ACTIVE_PERFORMING ➔ SETTLED (se última)
               </div>
               <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
@@ -297,7 +283,7 @@
             <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
               <p><strong>Descrição de Negócio:</strong> Inadimplência contratual após o não pagamento na data de vencimento (DPD &gt; 0). Enquadramento nas réguas de cobrança e alocação nos Estágios de Risco de Crédito sob a Resolução CMN 4.966 / IFRS 9 (Estágio 1, Estágio 2 e Estágio 3) com constituição obrigatória de Perda Esperada (ECL).</p>
               <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#fb923c; font-size:12px; border: 1px solid #1e293b;">
-                Event Kafka: credit.delinquency.updated.v1<br/>
+                Event Kafka: credit.delinquency.v1<br/>
                 FSM State: DELINQUENT_STAGE_1 ➔ STAGE_2 ➔ STAGE_3
               </div>
               <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
@@ -315,11 +301,11 @@
             </div>
             <div class="abox-body" style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
               <p><strong>Descrição de Negócio:</strong> 
-                <strong>Write-off:</strong> Desreconhecimento contábil da carteira após atraso prolongado (&gt; 180 a 360 dias) com 100% de provisão acumula. O ativo sai do balanço patrimonial e vai para contas de compensação de prejuízo.<br/>
+                <strong>Write-off:</strong> Desreconhecimento contábil da carteira após atraso prolongado (&gt; 180 a 360 dias) com 100% de provisão acumulada. O ativo sai do balanço patrimonial e vai para contas de compensação de prejuízo.<br/>
                 <strong>Recovery:</strong> Valores recuperados posteriormente via cobrança judicial/extrajudicial são contabilizados diretamente como receita operacional.
               </p>
               <div style="background:#020617; padding:8px 12px; border-radius:4px; font-family:'DM Mono', monospace; margin:10px 0; color:#f87171; font-size:12px; border: 1px solid #1e293b;">
-                Events Kafka: credit.writeoff.executed.v1 &amp; credit.recovery.received.v1<br/>
+                Events Kafka: credit.writeoff.v1 &amp; credit.recovery.received.v1<br/>
                 FSM State: DELINQUENT_STAGE_3 ➔ WRITTEN_OFF ➔ RECOVERED
               </div>
               <strong style="color: #f8fafc;">Regra de Contabilização (COSIF):</strong>
@@ -367,7 +353,7 @@
                 <td style="padding: 10px;"><code>credit.originated.v1</code></td>
                 <td style="padding: 10px;"><code>ORIGINATED</code></td>
                 <td style="padding: 10px;">KYC/AML Aprovado + SCR Validado + Assinatura CCB Hash Validada</td>
-                <td style="padding: 10px;">D: Operações a Libertas (Compensação)<br/>C: Compromissos Contratados (Compensação)</td>
+                <td style="padding: 10px;">D: Operações a Liberar (Compensação)<br/>C: Compromissos Contratados (Compensação)</td>
               </tr>
               <tr style="border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.5);">
                 <td style="padding: 10px; font-weight: bold; color: #06b6d4;">2. Disbursement</td>
@@ -380,7 +366,7 @@
               <tr style="border-bottom: 1px solid #1e293b;">
                 <td style="padding: 10px; font-weight: bold; color: #f59e0b;">3. Accrual</td>
                 <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
-                <td style="padding: 10px;"><code>credit.accrual.calculated.v1</code></td>
+                <td style="padding: 10px;"><code>credit.accrual.v1</code></td>
                 <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
                 <td style="padding: 10px;">Fechamento de dia útil bancário + DPD &le; 90 (Sem Stop Accrual)</td>
                 <td style="padding: 10px;">D: Juros a Receber (Ativo ⬆)<br/>C: Receita de Crédito (DRE ⬆)</td>
@@ -388,7 +374,7 @@
               <tr style="border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.5);">
                 <td style="padding: 10px; font-weight: bold; color: #10b981;">4. Payment</td>
                 <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
-                <td style="padding: 10px;"><code>credit.payment.received.v1</code></td>
+                <td style="padding: 10px;"><code>credit.payment.v1</code></td>
                 <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code> / <code>SETTLED</code></td>
                 <td style="padding: 10px;">Liquidação financeira confirmada na CIP/SPI + Waterfall de amortização</td>
                 <td style="padding: 10px;">D: Disponibilidades / Caixa (Ativo ⬆)<br/>C: Juros a Receber &amp; Carteira Principal (Ativo ⬇)</td>
@@ -396,7 +382,7 @@
               <tr style="border-bottom: 1px solid #1e293b;">
                 <td style="padding: 10px; font-weight: bold; color: #f97316;">5. Delinquency</td>
                 <td style="padding: 10px;"><code>ACTIVE_PERFORMING</code></td>
-                <td style="padding: 10px;"><code>credit.delinquency.updated.v1</code></td>
+                <td style="padding: 10px;"><code>credit.delinquency.v1</code></td>
                 <td style="padding: 10px;"><code>DELINQUENT_STAGE_1_2_3</code></td>
                 <td style="padding: 10px;">Atraso no vencimento (DPD &gt; 0) + Recálculo de Matriz de Transição ECL</td>
                 <td style="padding: 10px;">D: Despesa com Provisão PDD (DRE ⬇)<br/>C: Provisão para Perdas (Redutora Ativo ⬆)</td>
@@ -404,7 +390,7 @@
               <tr style="border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.5);">
                 <td style="padding: 10px; font-weight: bold; color: #ef4444;">6. Write-off</td>
                 <td style="padding: 10px;"><code>DELINQUENT_STAGE_3</code></td>
-                <td style="padding: 10px;"><code>credit.writeoff.executed.v1</code></td>
+                <td style="padding: 10px;"><code>credit.writeoff.v1</code></td>
                 <td style="padding: 10px;"><code>WRITTEN_OFF</code></td>
                 <td style="padding: 10px;">DPD &gt; 180 (ou 360 dias) + 100% de provisão acumulada (CMN 4.966)</td>
                 <td style="padding: 10px;">D: Provisão Acumulada (Redutora Ativo ⬇)<br/>C: Carteira Principal em Atraso (Ativo ⬇)</td>
@@ -659,85 +645,10 @@
 
       </section>
 
-      <!-- SEÇÃO 05: SCHEMAS DE MENSAGENS E DATA CONTRACTS -->
-      <section class="section" id="data-contracts">
-        <div class="sec-hdr">
-          <div class="sec-num" style="color:var(--spark)">05</div>
-          <div class="sec-title">
-            <div class="sec-subtitle">Governança de Dados &amp; Data Contracts</div>
-            <h2>Schemas de Mensagens Event-Driven (JSON Payloads)</h2>
-          </div>
-        </div>
-        <p class="sec-intro" style="font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0;">
-          Para garantir a integridade entre o barramento de eventos Amazon MSK, o motor Flink e o Lakehouse Iceberg, cada evento de transição possui um <strong>Data Contract</strong> estritamente versionado.
-        </p>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 20px;">
-          
-          <!-- Schema 1: credit.disbursed.v1 -->
-          <div>
-            <div style="font-weight: bold; color: #06b6d4; font-size: 13px; margin-bottom: 6px; font-family: 'DM Mono', monospace;">
-              📄 Schema: credit.disbursed.v1
-            </div>
-            <pre style="background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; font-family: 'DM Mono', monospace; font-size: 11px; color: #f8fafc; overflow-x: auto;">
-{
-  "event_id": "evt_9901823a-4421-4f1a-b312",
-  "event_type": "credit.disbursed.v1",
-  "event_timestamp": "2026-07-31T14:30:00.000Z",
-  "correlation_id": "corr_ccb_88912301",
-  "idempotency_key": "idm_disburse_88912301",
-  "contract_id": "CTR-88912",
-  "customer_id": "CUST-9901",
-  "payload": {
-    "disbursement_amount": 50000.00,
-    "currency": "BRL",
-    "payment_method": "PIX",
-    "destination_pix_key": "11999998888",
-    "disbursement_account": "COSIF-4.1.1.10.01",
-    "loan_asset_account": "COSIF-1.6.1.10.02",
-    "accrual_rate_monthly": 0.0195,
-    "total_installments": 36
-  }
-}
-            </pre>
-          </div>
-
-          <!-- Schema 2: credit.payment.received.v1 -->
-          <div>
-            <div style="font-weight: bold; color: #10b981; font-size: 13px; margin-bottom: 6px; font-family: 'DM Mono', monospace;">
-              📄 Schema: credit.payment.received.v1
-            </div>
-            <pre style="background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; font-family: 'DM Mono', monospace; font-size: 11px; color: #f8fafc; overflow-x: auto;">
-{
-  "event_id": "evt_77182390-1120-4a88-9901",
-  "event_type": "credit.payment.received.v1",
-  "event_timestamp": "2026-08-10T09:15:22.000Z",
-  "correlation_id": "corr_pay_77123901",
-  "idempotency_key": "idm_pay_inst_01_CTR88912",
-  "contract_id": "CTR-88912",
-  "payload": {
-    "installment_number": 1,
-    "total_paid_amount": 1850.00,
-    "waterfall_breakdown": {
-      "tax_iof": 0.00,
-      "late_penalty": 0.00,
-      "accrued_interest_cleared": 650.00,
-      "principal_amortization": 1200.00
-    },
-    "remaining_principal_balance": 48800.00,
-    "next_due_date": "2026-09-10"
-  }
-}
-            </pre>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- SEÇÃO 06: FÓRMULAS MATEMÁTICAS E REGULAÇÃO BACEN CMN 4.966 -->
+      <!-- SEÇÃO 05: FÓRMULAS MATEMÁTICAS E REGULAÇÃO BACEN CMN 4.966 -->
       <section class="section" id="regregulacao-matematica">
         <div class="sec-hdr">
-          <div class="sec-num" style="color:var(--aws)">06</div>
+          <div class="sec-num" style="color:var(--aws)">05</div>
           <div class="sec-title">
             <div class="sec-subtitle">Matemática Financeira &amp; CMN 4.966 / IFRS 9</div>
             <h2>Fórmulas de Apropriação Diária e Perda Esperada (ECL)</h2>
@@ -750,13 +661,13 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; margin-top: 24px; align-items: stretch;">
 
           <!-- CARD 1: SPOT ACCRUAL DIÁRIO -->
-          <div class="card" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid rgba(56, 189, 248, 0.35); border-top: 4px solid #0891b2; padding: 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: space-between;">
+          <div class="card" style="background: #0f172a; border: 1px solid #1e293b; border-top: 4px solid #0891b2; padding: 24px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <span style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(56, 189, 248, 0.4); font-family: 'DM Mono', monospace;">Competência Diária</span>
+                <span style="background: #0c4a6e; color: #7dd3fc; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; font-family: 'DM Mono', monospace;">Competência Diária</span>
                 <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #94a3b8;">pro-rata die</span>
               </div>
-              
+
               <h3 style="color: #f8fafc; font-size: 1.15rem; margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px;">
                 <span style="color: #38bdf8;">📈</span> 1. Apropriação Diária de Juros (Spot Accrual)
               </h3>
@@ -765,21 +676,21 @@
                 A receita remuneratória de juros incide diariamente sobre o saldo contábil de curva no fechamento do dia anterior (\(SD_{t-1}\)):
               </p>
 
-              <div style="background: #020617; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 16px; font-size: 1.15rem; font-family: 'DM Mono', monospace;">
+              <div style="background: #020617; border: 1px solid #1e3a5f; border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 16px; font-size: 1.15rem; font-family: 'DM Mono', monospace; color: #e2e8f0;">
                 \[ J_{\text{diário}} = SD_{t-1} \times \left[ (1 + i_{\text{efetiva}})^{\frac{1}{252}} - 1 \right] \]
               </div>
             </div>
 
-            <p style="font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.5; background: rgba(2, 6, 23, 0.5); padding: 10px; border-radius: 6px;">
+            <p style="font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.5; background: #020617; padding: 10px; border-radius: 6px; border: 1px solid #1e293b;">
               Onde \(i_{\text{efetiva}}\) é a Taxa Efetiva de Juros (TIR / EIR) calculada na originação da CCB. O valor apropriado é somado ao saldo devedor de curva e creditado no DRE bancário.
             </p>
           </div>
 
           <!-- CARD 2: FÓRMULA ECL CMN 4.966 -->
-          <div class="card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid rgba(245, 158, 11, 0.35); border-top: 4px solid #d97706; padding: 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: space-between;">
+          <div class="card" style="background: #0f172a; border: 1px solid #1e293b; border-top: 4px solid #d97706; padding: 24px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <span style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.4); font-family: 'DM Mono', monospace;">Modelo Prospectivo</span>
+                <span style="background: #78350f; color: #fde68a; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; font-family: 'DM Mono', monospace;">Modelo Prospectivo</span>
                 <span style="font-family: 'DM Mono', monospace; font-size: 11px; color: #94a3b8;">IFRS 9 / CMN 4.966</span>
               </div>
 
@@ -788,28 +699,28 @@
               </h3>
 
               <p style="color: #cbd5e1; font-size: 13.5px; line-height: 1.6; margin-bottom: 16px;">
-                A provisão PECLD acumulada para perdas esperadas é apurada contratualmente pela multiplicação dos quatro componentes de risco:
+                A provisão de ECL (perda esperada) acumulada é apurada contratualmente pela multiplicação dos quatro componentes de risco:
               </p>
 
-              <div style="background: #020617; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 16px; font-size: 1.15rem; font-family: 'DM Mono', monospace;">
+              <div style="background: #020617; border: 1px solid #4a3410; border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 16px; font-size: 1.15rem; font-family: 'DM Mono', monospace; color: #e2e8f0;">
                 \[ \text{ECL} = \text{PD} \times \text{LGD} \times \text{EAD} \times \text{DF} \]
               </div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-              <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #10b981;">
+              <div style="background: #020617; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #10b981;">
                 <span style="font-size: 11px; font-weight: bold; color: #34d399;">PD (Prob. Default):</span>
-                <span style="font-size: 10.5px; color: #94a3b8; display: block;">Chancela 12m ou Lifetime</span>
+                <span style="font-size: 10.5px; color: #94a3b8; display: block;">Horizonte 12m ou Lifetime</span>
               </div>
-              <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #a855f7;">
+              <div style="background: #020617; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #a855f7;">
                 <span style="font-size: 11px; font-weight: bold; color: #c084fc;">LGD (Loss Given Def.):</span>
-                <span style="font-size: 10.5px; color: #94a3b8; display: block;">% severidade liquida</span>
+                <span style="font-size: 10.5px; color: #94a3b8; display: block;">% severidade líquida</span>
               </div>
-              <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #3b82f6;">
+              <div style="background: #020617; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #3b82f6;">
                 <span style="font-size: 11px; font-weight: bold; color: #60a5fa;">EAD (Expos. Default):</span>
                 <span style="font-size: 10.5px; color: #94a3b8; display: block;">Saldo + juros projetados</span>
               </div>
-              <div style="background: #0f172a; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #fbbf24;">
+              <div style="background: #020617; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #fbbf24;">
                 <span style="font-size: 11px; font-weight: bold; color: #fde047;">DF (Discount Factor):</span>
                 <span style="font-size: 10.5px; color: #94a3b8; display: block;">Fator TIR a valor presente</span>
               </div>
@@ -819,12 +730,12 @@
         </div>
 
         <!-- VISUAL MATRIZ DE ESTÁGIOS CMN 4.966 -->
-        <div class="card" style="margin-top: 24px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid rgba(168, 85, 247, 0.35); border-top: 4px solid #7c3aed; padding: 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+        <div class="card" style="margin-top: 24px; background: #0f172a; border: 1px solid #1e293b; border-top: 4px solid #7c3aed; padding: 24px; border-radius: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
             <h3 style="color: #f8fafc; font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 8px;">
               <span style="color: #c084fc;">🏦</span> 3. Matriz de Estágios de Provisão CMN 4.966 (Staging Rules)
             </h3>
-            <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.4);">Horizonte Temporal &amp; Accrual</span>
+            <span style="background: #3b0764; color: #d8b4fe; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 20px;">Horizonte Temporal &amp; Accrual</span>
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
@@ -859,7 +770,7 @@
               </div>
               <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px; line-height: 1.4;">Atraso &gt; 90 dias ou reestruturação por inadimplência.</p>
               <div style="font-size: 11px; color: #f87171; font-weight: bold;">Provisão: Lifetime ECL</div>
-              <div style="font-size: 11px; color: #fca5a5; margin-top: 4px; font-weight: bold;">Stop Accrual Actived</div>
+              <div style="font-size: 11px; color: #fca5a5; margin-top: 4px; font-weight: bold;">Stop Accrual Activated</div>
             </div>
 
           </div>
@@ -869,7 +780,7 @@
       <!-- SEÇÃO DE REFERÊNCIAS & NOTAS DE CURADORIA DO PROJETO -->
       <section class="section" id="referencias" style="border-top: 1px dashed var(--border); padding-top: 40px; margin-top: 60px;">
         <div class="sec-hdr">
-          <div class="sec-num" style="color:var(--muted)">07</div>
+          <div class="sec-num" style="color:var(--muted)">06</div>
           <div class="sec-title">
             <div class="sec-subtitle">Curadoria Técnica &amp; Acadêmica</div>
             <h2>Referências &amp; Notas de Curadoria</h2>

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Basileia III - Pilares, Razões de Capital, RWA, LCR e NSFR no Brasil (BACEN)"/>
+  <title>Basileia III & Adequação de Capital | AWS Data Mastery</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        ignoredTags: ["script","noscript","style","textarea","pre","code","option","svg"],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+  <meta property="og:title" content="Basileia III & Adequação de Capital | AWS Data Mastery"/>
+  <meta property="og:description" content="Os 3 Pilares de Basileia III, RWA, LCR, NSFR e cronograma de implementação no Brasil"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+
+  <style>
+    .section { scroll-margin-top: 60px; }
+    .sec-hdr { display:flex; gap:20px; margin-bottom:30px; align-items:flex-start; }
+    .sec-num { font-size:2.5rem; font-weight:900; min-width:60px; color:var(--aws); }
+    .sec-title h2 { font-size:1.8rem; margin:0 0 8px 0; color:var(--text); }
+    .sec-subtitle { font-size:0.85rem; text-transform:uppercase; letter-spacing:0.15em; color:var(--text-dim); margin-bottom:6px; }
+    .sec-intro { font-size:1.05rem; line-height:1.7; color:var(--text-dim); margin:18px 0 24px 0; border-left:4px solid var(--aws); padding-left:20px; }
+    .grid-2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; margin:24px 0; }
+    .grid-3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; margin:24px 0; }
+    .card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:10px; padding:24px; transition:all 0.3s; }
+    .card:hover { transform:translateY(-2px); border-color:var(--aws); box-shadow:0 10px 30px rgba(0,0,0,0.2); }
+    .card-title { font-size:1.1rem; font-weight:600; margin-bottom:12px; color:var(--text); }
+    .card-subtitle { font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--aws); letter-spacing:0.1em; margin-bottom:8px; }
+    .formula-box { background:var(--bg-tertiary); border-left:4px solid var(--aws); padding:20px; border-radius:6px; margin:20px 0; font-family:'DM Mono',monospace; overflow-x:auto; }
+    .example-box { background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(10,132,99,0.05)); border:1px solid rgba(16,185,129,0.3); border-left:4px solid #10b981; padding:20px; border-radius:8px; margin:20px 0; }
+    .example-title { font-weight:600; color:#10b981; margin-bottom:12px; }
+    .info-box { background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(37,99,235,0.05)); border:1px solid rgba(59,130,246,0.3); border-left:4px solid #3b82f6; padding:20px; border-radius:8px; margin:20px 0; }
+    .warning-box { background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(220,38,38,0.05)); border:1px solid rgba(239,68,68,0.3); border-left:4px solid #ef4444; padding:20px; border-radius:8px; margin:20px 0; }
+    .reference { font-size:0.9rem; color:var(--text-dim); margin:16px 0; padding:12px 12px 12px 16px; background:var(--bg-secondary); border-left:3px solid var(--text-dim); }
+    .reference strong { color:var(--text); display:block; margin-bottom:4px; }
+    .chart-container { position:relative; height:380px; margin:30px 0; padding:20px; background:var(--bg-secondary); border-radius:8px; border:1px solid var(--border); }
+    .chart-title { font-weight:600; color:var(--text); margin-bottom:16px; font-size:1.05rem; }
+    .diagram-container { margin:30px 0; padding:20px; background:var(--bg-secondary); border-radius:8px; border:1px solid var(--border); }
+    .summary-box { background:linear-gradient(135deg,var(--aws),rgba(59,130,246,0.8)); color:#fff; padding:24px; border-radius:8px; margin:30px 0; }
+    .summary-box h3 { margin:0 0 12px; font-size:1.2rem; }
+    .summary-box ul { margin:0; padding-left:20px; }
+    .summary-box li { margin:8px 0; }
+    .breadcrumb { margin-bottom:30px; padding:16px; background:var(--bg-secondary); border-radius:6px; display:flex; align-items:center; gap:8px; font-size:0.9rem; color:var(--text-dim); }
+    .breadcrumb a { color:var(--aws); text-decoration:none; }
+    .breadcrumb a:hover { text-decoration:underline; }
+    table.data-table { width:100%; border-collapse:collapse; font-size:0.85rem; margin:16px 0; }
+    table.data-table th { background:rgba(255,255,255,0.08); color:var(--text); padding:10px 12px; text-align:left; border-bottom:2px solid var(--border); }
+    table.data-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text-dim); }
+    table.data-table tr:hover td { background:rgba(255,255,255,0.03); }
+    .pillar-card { background:var(--bg-secondary); border-radius:12px; padding:28px; border-top:4px solid; transition:all 0.3s; }
+    .pillar-card:hover { transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,0,0,0.25); }
+    .timeline-item { display:flex; gap:20px; margin-bottom:24px; align-items:flex-start; }
+    .timeline-dot { width:40px; height:40px; min-width:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; }
+    .timeline-content { flex:1; }
+  </style>
+</head>
+<body>
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+  <nav id="sidebar"></nav>
+
+  <div id="main">
+    <div class="hero" style="background-color:var(--navy)">
+      <div class="hero-ey">Regulação Prudencial Internacional</div>
+      <h1>Basileia III &amp; Adequação de Capital</h1>
+      <p class="hero-d">Os 3 Pilares de Basileia III, requerimentos de capital ponderado por risco (RWA), índices de liquidez (LCR e NSFR), e a implementação completa no Brasil pelo BACEN.</p>
+      <div class="pills">
+        <span class="pill">RWA</span>
+        <span class="pill">Tier 1 / Tier 2</span>
+        <span class="pill">LCR</span>
+        <span class="pill">NSFR</span>
+        <span class="pill">IRB Avançado</span>
+        <span class="pill">Res. CMN 4.193/2013</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="breadcrumb">
+        <a href="../../index.html">Início</a><span>/</span>
+        <a href="#">Finanças</a><span>/</span>
+        <span>Basileia III</span>
+      </div>
+
+      <!-- SEÇÃO 01 — CONTEXTO & HISTÓRICO -->
+      <section class="section" id="contexto">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Contexto Histórico</div>
+            <h2>O que é Basileia III e por que ela importa?</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Basileia III é um conjunto de reformas regulatórias bancárias internacionais elaboradas pelo Comitê de Supervisão Bancária de Basileia (BCBS) em resposta à crise financeira de 2008.
+          O acordo reforça os requerimentos de capital, introduz padrões de liquidez e limita a alavancagem — tornando o sistema financeiro global mais resiliente a choques econômicos.
+          No Brasil, o BACEN implementou Basileia III progressivamente via Resolução CMN 4.193/2013.
+        </p>
+
+        <!-- Timeline de Evolução -->
+        <div style="font-weight:bold;color:var(--text);font-size:1.1rem;margin:24px 0 14px 0;">
+          📅 Evolução: Basileia I → II → III
+        </div>
+        <div style="margin:20px 0;">
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:#1e40af;color:#fff;">I</div>
+            <div class="timeline-content">
+              <strong style="color:var(--text);">Basileia I — 1988</strong>
+              <p style="color:var(--text-dim);font-size:0.9rem;margin:4px 0 0;">Capital mínimo de 8% dos ativos ponderados por risco. Ponderações simplificadas (0%, 20%, 50%, 100%). Foco exclusivo em risco de crédito.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:#1d4ed8;color:#fff;">II</div>
+            <div class="timeline-content">
+              <strong style="color:var(--text);">Basileia II — 2004 (vigência 2007)</strong>
+              <p style="color:var(--text-dim);font-size:0.9rem;margin:4px 0 0;">3 Pilares: capital mínimo, supervisão e disciplina de mercado. Inclui risco operacional e de mercado. Permite IRB (Internal Ratings-Based). Brasil: implementação 2008-2012.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:#7c3aed;color:#fff;">III</div>
+            <div class="timeline-content">
+              <strong style="color:var(--text);">Basileia III — 2010/2017 (vigência 2023)</strong>
+              <p style="color:var(--text-dim);font-size:0.9rem;margin:4px 0 0;">Eleva qualidade e quantidade do capital. Adiciona LCR (liquidez 30 dias), NSFR (liquidez 1 ano), Leverage Ratio. Buffers anticíclicos. Brasil: Res. 4.193/2013, implementação até 2019.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02 — TRÊS PILARES -->
+      <section class="section" id="tres-pilares">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Estrutura Regulatória</div>
+            <h2>Os 3 Pilares de Basileia III</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Basileia III mantém a arquitetura de 3 Pilares de Basileia II, mas com exigências significativamente mais rigorosas em cada dimensão — especialmente em qualidade de capital, cobertura de risco e transparência das posições.
+        </p>
+        <div class="grid-3">
+          <div class="pillar-card" style="border-top-color:#3b82f6;">
+            <div class="card-subtitle" style="color:#3b82f6;">Pilar 1</div>
+            <h4 class="card-title">Requerimentos Mínimos de Capital</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0 0 12px;">
+              Define o capital mínimo que as instituições devem manter em relação aos seus ativos ponderados por risco (RWA), cobrindo risco de crédito, mercado e operacional.
+            </p>
+            <ul style="font-size:0.85rem;color:var(--text-dim);padding-left:16px;">
+              <li>Capital Principal ≥ 4,5% do RWA</li>
+              <li>Nível I (Tier 1) ≥ 6,0% do RWA</li>
+              <li>Patrimônio de Referência ≥ 8,0% do RWA</li>
+              <li>Buffer de Conservação: +2,5%</li>
+            </ul>
+          </div>
+          <div class="pillar-card" style="border-top-color:#10b981;">
+            <div class="card-subtitle" style="color:#10b981;">Pilar 2</div>
+            <h4 class="card-title">Processo de Revisão de Supervisão</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0 0 12px;">
+              Garante que cada instituição avalie sua adequação de capital em relação ao seu perfil de risco. O BACEN pode exigir capital adicional além dos mínimos do Pilar 1.
+            </p>
+            <ul style="font-size:0.85rem;color:var(--text-dim);padding-left:16px;">
+              <li>ICAAP (Internal Capital Adequacy Assessment)</li>
+              <li>SREP (Supervisory Review and Evaluation)</li>
+              <li>Stress testing regulatório</li>
+              <li>Res. CMN 4.557/2016 — ORSA no Brasil</li>
+            </ul>
+          </div>
+          <div class="pillar-card" style="border-top-color:#f59e0b;">
+            <div class="card-subtitle" style="color:#f59e0b;">Pilar 3</div>
+            <h4 class="card-title">Disciplina de Mercado</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0 0 12px;">
+              Requer que as instituições divulguem informações sobre capital, exposições e processos de gerenciamento de risco, permitindo que o mercado precifique o risco corretamente.
+            </p>
+            <ul style="font-size:0.85rem;color:var(--text-dim);padding-left:16px;">
+              <li>Relatório de Gerenciamento de Riscos e Capital</li>
+              <li>Divulgação de posições em derivativos</li>
+              <li>Disclosure de modelos internos (IRB)</li>
+              <li>Circular BACEN 3.678/2013</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03 — CAPITAL E RWA -->
+      <section class="section" id="rwa-capital">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Capital Regulatório</div>
+            <h2>Estrutura de Capital e RWA (Risk-Weighted Assets)</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          O capital regulatório em Basileia III é dividido em camadas (Tiers) com critérios rigorosos de qualidade.
+          O RWA pondera cada ativo pelo seu risco relativo — um título público tem peso 0%, enquanto um empréstimo sem colateral pode ter 100-150%.
+        </p>
+
+        <!-- Capital Tiers -->
+        <div style="font-weight:bold;color:var(--text);font-size:1.1rem;margin:24px 0 14px 0;">
+          🏗️ Estrutura de Capital Regulatório (Basileia III)
+        </div>
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>Hierarquia do Patrimônio de Referência</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#38bdf8", "lightbox": false, "nav": false, "resize": true, "xml": "<mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"900\" pageHeight=\"500\" background=\"#0f172a\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/>\n<mxCell id=\"title\" value=\"Hierarquia do Patrimônio de Referência\" style=\"text;html=1;fontSize=16;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"900\" height=\"40\" as=\"geometry\"/></mxCell>\n<mxCell id=\"PR\" value=\"Patrimônio de Referência (PR)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"340\" y=\"60\" width=\"220\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"N1\" value=\"Nível I (Tier 1)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"140\" y=\"200\" width=\"220\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"N2\" value=\"Nível II (Tier 2)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"540\" y=\"200\" width=\"220\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"CP\" value=\"Capital Principal (CET1)&amp;#10;Ações ON, Reservas, Lucros Retidos&amp;#10;Mínimo: 4,5% do RWA\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"360\" width=\"240\" height=\"110\" as=\"geometry\"/></mxCell>\n<mxCell id=\"AT1\" value=\"Capital Adicional Tier 1 (AT1)&amp;#10;Instrumentos híbridos&amp;#10;Nível I ≥ 6% do RWA\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a2a;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"280\" y=\"360\" width=\"240\" height=\"110\" as=\"geometry\"/></mxCell>\n<mxCell id=\"T2\" value=\"Instrumentos Tier 2&amp;#10;Dívida subordinada, provisionamento&amp;#10;PR ≥ 8% do RWA\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3a2a00;strokeColor=#f59e0b;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"560\" y=\"360\" width=\"280\" height=\"110\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e1\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"PR\" target=\"N1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e2\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"PR\" target=\"N2\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e3\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"N1\" target=\"CP\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e4\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"N1\" target=\"AT1\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e5\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"N2\" target=\"T2\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n</root></mxGraphModel>"}'></div>
+        </div>
+        <div class="diagram-legend">
+          O Patrimônio de Referência (PR) se divide em Nível I (Tier 1) e Nível II (Tier 2). O Nível I combina Capital Principal (CET1) — ações, reservas e lucros retidos, mínimo de 4,5% do RWA — com Capital Adicional Tier 1 (AT1), instrumentos híbridos que elevam o Nível I a pelo menos 6% do RWA. O Nível II é composto por instrumentos de dívida subordinada e provisionamento, levando o PR total ao mínimo de 8% do RWA.
+        </div>
+
+        <!-- Capital Ratios Table -->
+        <div style="font-weight:bold;color:var(--text);font-size:1.1rem;margin:24px 0 14px 0;">
+          📊 Razões Mínimas de Capital — Brasil (Res. CMN 4.193/2013)
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Razão</th>
+              <th>Basileia III (BIS)</th>
+              <th>Brasil (BACEN)</th>
+              <th>Com Buffer Conservação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Capital Principal (CET1)</td><td>4,5%</td><td>4,5%</td><td>7,0%</td></tr>
+            <tr><td>Capital Nível I (Tier 1)</td><td>6,0%</td><td>6,0%</td><td>8,5%</td></tr>
+            <tr><td>Patrimônio de Referência</td><td>8,0%</td><td>8,625%</td><td>11,125%</td></tr>
+            <tr><td>Leverage Ratio (Tier 1/Exposição)</td><td>3,0%</td><td>3,0%</td><td>—</td></tr>
+          </tbody>
+        </table>
+
+        <!-- RWA Calculation -->
+        <div style="font-weight:bold;color:var(--text);font-size:1.1rem;margin:24px 0 14px 0;">
+          📐 Fórmula do RWA e Razão de Capital
+        </div>
+        <div class="formula-box">
+          \[
+          \text{RWA} = \sum_{i} (\text{Ativo}_i \times \text{FPR}_i)
+          \]
+          \[
+          \text{Índice de Basileia (IB)} = \frac{\text{Patrimônio de Referência}}{\text{RWA}} \geq 8{,}625\%
+          \]
+        </div>
+
+        <!-- Example -->
+        <div class="example-box">
+          <div class="example-title">💡 Exemplo: Cálculo de RWA — Banco Alfa S.A.</div>
+          <table class="data-table" style="margin:12px 0;">
+            <thead>
+              <tr><th>Ativo</th><th>Valor (R$ M)</th><th>FPR (%)</th><th>RWA (R$ M)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Títulos Públicos Federais</td><td>5.000</td><td>0%</td><td>0</td></tr>
+              <tr><td>Créditos Interbancários</td><td>2.000</td><td>20%</td><td>400</td></tr>
+              <tr><td>Financiamentos Imobiliários</td><td>8.000</td><td>35%</td><td>2.800</td></tr>
+              <tr><td>Crédito Pessoal / PME</td><td>6.000</td><td>75%</td><td>4.500</td></tr>
+              <tr><td>Cartão de Crédito</td><td>4.000</td><td>75%</td><td>3.000</td></tr>
+              <tr><td>Empresas sem Rating</td><td>3.000</td><td>100%</td><td>3.000</td></tr>
+              <tr style="font-weight:600;color:var(--text);"><td>Total</td><td>28.000</td><td>—</td><td>13.700</td></tr>
+            </tbody>
+          </table>
+          <p style="margin:12px 0 4px;"><strong>Patrimônio de Referência:</strong> R$ 1.600 M</p>
+          <p style="margin:4px 0;color:#10b981;font-weight:600;">
+            Índice de Basileia = 1.600 / 13.700 = <strong>11,68%</strong> ✓ (acima do mínimo de 8,625%)
+          </p>
+        </div>
+
+        <!-- Chart: Capital Composition -->
+        <div class="chart-container">
+          <div class="chart-title">📊 Composição do Capital Regulatório — Banco Alfa S.A. (R$ M)</div>
+          <canvas id="capitalChart"></canvas>
+        </div>
+
+      </section>
+
+      <!-- SEÇÃO 04 — BUFFERS DE CAPITAL -->
+      <section class="section" id="buffers">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Capital Adicional</div>
+            <h2>Buffers de Capital e Capital Adicional</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Além dos mínimos do Pilar 1, Basileia III introduziu buffers de capital que criam "colchões" adicionais de proteção.
+          O não cumprimento de um buffer restringe a distribuição de dividendos e bônus — mas não caracteriza insolvência como o mínimo do Pilar 1.
+        </p>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Buffer</div>
+            <h4 class="card-title">Conservação de Capital (ACPConservação)</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0 0 12px;">
+              2,5% do RWA, composto obrigatoriamente por CET1. Seu objetivo é criar reserva em períodos de estresse. Implementado no Brasil entre 2014-2019.
+            </p>
+            <div class="formula-box" style="margin:0;font-size:0.85rem;">
+              Capital Total Mínimo = 8,625% + 2,5% = <strong>11,125%</strong>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Buffer</div>
+            <h4 class="card-title">Capital Anticíclico (ACPContracíclico)</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0 0 12px;">
+              0% a 2,5% do RWA, ativado pelo BACEN em períodos de expansão excessiva do crédito. Obriga bancos a acumularem capital no "bom tempo" para usar no "mau tempo".
+            </p>
+            <div class="formula-box" style="margin:0;font-size:0.85rem;">
+              Definido pelo BACEN conforme ciclo econômico
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Buffer</div>
+            <h4 class="card-title">Systemically Important Banks (D-SIB)</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0 0 12px;">
+              1% a 3,5% adicional para bancos sistemicamente importantes. No Brasil: Itaú, Bradesco, BB, Santander, Caixa. Reduz risco de "too big to fail".
+            </p>
+            <div class="formula-box" style="margin:0;font-size:0.85rem;">
+              Definido pelo BACEN para G-SIBs e D-SIBs domésticos
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Buffer</div>
+            <h4 class="card-title">Leverage Ratio (Índice de Alavancagem)</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0 0 12px;">
+              Razão não ponderada por risco: limita alavancagem total independente de como o ativo é classificado. Evita arbitragem regulatória nos modelos de ponderação.
+            </p>
+            <div class="formula-box" style="margin:0;font-size:0.85rem;">
+              \( \text{IA} = \frac{\text{Nível I}}{\text{Exposição Total}} \geq 3\% \)
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05 — LIQUIDEZ: LCR E NSFR -->
+      <section class="section" id="liquidez">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Padrões de Liquidez</div>
+            <h2>LCR e NSFR — Índices de Liquidez de Basileia III</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Uma inovação chave de Basileia III foi a introdução de padrões quantitativos de liquidez.
+          O LCR garante que bancos tenham ativos líquidos suficientes para sobreviver 30 dias de estresse severo.
+          O NSFR garante estabilidade de funding no horizonte de 1 ano.
+        </p>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Liquidez de Curto Prazo</div>
+            <h4 class="card-title">LCR — Liquidity Coverage Ratio</h4>
+            <div class="formula-box" style="margin:12px 0;">
+              \[
+              \text{LCR} = \frac{\text{HQLA}}{\text{Saídas Líquidas em 30 dias}} \geq 100\%
+              \]
+            </div>
+            <p style="font-size:0.85rem;color:var(--text-dim);margin:0;">
+              <strong>HQLA:</strong> High Quality Liquid Assets (caixa, títulos públicos, LFT)<br/>
+              <strong>Saídas:</strong> Estimativa de retirada de depósitos em cenário de estresse<br/>
+              <strong>Brasil:</strong> Circular 3.749/2015 — vigência 2016
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Liquidez de Longo Prazo</div>
+            <h4 class="card-title">NSFR — Net Stable Funding Ratio</h4>
+            <div class="formula-box" style="margin:12px 0;">
+              \[
+              \text{NSFR} = \frac{\text{Available Stable Funding (ASF)}}{\text{Required Stable Funding (RSF)}} \geq 100\%
+              \]
+            </div>
+            <p style="font-size:0.85rem;color:var(--text-dim);margin:0;">
+              <strong>ASF:</strong> Capital + depósitos de longo prazo + CDB acima de 1 ano<br/>
+              <strong>RSF:</strong> Ativos que requerem funding estável no horizonte 1 ano<br/>
+              <strong>Brasil:</strong> Resolução BCB 174/2022 — vigência 2022
+            </p>
+          </div>
+        </div>
+        <div class="chart-container" style="height:300px;">
+          <div class="chart-title">📊 Composição do HQLA (LCR) — Ativos de Alta Liquidez por Categoria</div>
+          <canvas id="lcrChart"></canvas>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 06 — IRB APROVAÇÃO BACEN -->
+      <section class="section" id="irb-aprovacao">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Modelos Internos</div>
+            <h2>Abordagem IRB — Internal Ratings-Based no Brasil</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          A abordagem IRB permite que bancos aprovados pelo BACEN usem seus próprios modelos internos de risco para calcular o RWA,
+          podendo resultar em requerimentos de capital menores que a abordagem padronizada — mas com obrigações rigorosas de validação e governança.
+        </p>
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>Processo de Aprovação IRB pelo BACEN</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#38bdf8", "lightbox": false, "nav": false, "resize": true, "xml": "<mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1580\" pageHeight=\"380\" background=\"#0f172a\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/>\n<mxCell id=\"title\" value=\"Processo de Aprovação IRB pelo BACEN\" style=\"text;html=1;fontSize=16;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"1580\" height=\"40\" as=\"geometry\"/></mxCell>\n<mxCell id=\"A\" value=\"Banco Solicita&amp;#10;Uso IRB\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"140\" width=\"180\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"B\" value=\"BACEN Avalia&amp;#10;Modelo &amp;amp; Governança\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"240\" y=\"140\" width=\"180\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"C\" value=\"Aprovação?\" style=\"rhombus;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"120\" width=\"150\" height=\"110\" as=\"geometry\"/></mxCell>\n<mxCell id=\"D\" value=\"Uso Parcial IRB&amp;#10;(Parallel Run 3 anos)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"670\" y=\"60\" width=\"200\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"E\" value=\"Adequação&amp;#10;dos Modelos\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"670\" y=\"260\" width=\"200\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"F\" value=\"Validação Contínua&amp;#10;Backtesting Anual\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"930\" y=\"60\" width=\"200\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"G\" value=\"IRB Pleno&amp;#10;Aprovado\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a2a;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1190\" y=\"60\" width=\"180\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"H\" value=\"Redução RWA&amp;#10;e Capital Regulatório\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1a2a0a;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1390\" y=\"60\" width=\"180\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e1\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"A\" target=\"B\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e2\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"B\" target=\"C\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e3\" value=\"Sim\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"C\" target=\"D\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e4\" value=\"Não\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"C\" target=\"E\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e5\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"E\" target=\"B\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e6\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"D\" target=\"F\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e7\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"F\" target=\"G\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e8\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"G\" target=\"H\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n</root></mxGraphModel>"}'></div>
+        </div>
+        <div class="diagram-legend">
+          O banco solicita o uso da abordagem IRB e o BACEN avalia o modelo e a governança. Se aprovado, o banco entra em Parallel Run de 3 anos com validação contínua e backtesting anual até atingir IRB Pleno, reduzindo o RWA e o capital regulatório exigido. Se não aprovado, o banco precisa adequar os modelos e submetê-los novamente à avaliação do BACEN.
+        </div>
+        <div class="info-box">
+          <strong>ℹ️ Requisitos BACEN para IRB (Circular 3.648/2013):</strong>
+          <ul style="margin:8px 0 0;padding-left:20px;font-size:0.9rem;">
+            <li>Mínimo 5 anos de dados históricos (7 anos para LGD)</li>
+            <li>Modelo deve passar no Backtesting (taxa erro < 5%)</li>
+            <li>Parallel Run mínimo de 3 anos antes do uso pleno</li>
+            <li>Validação Independente por área de Controles Internos ou terceiros</li>
+            <li>Aprovação pelo Conselho de Administração e CRO</li>
+            <li>Divulgação pública no Relatório Pilar 3 (Circular 3.678/2013)</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 07 — CRONOGRAMA BRASIL -->
+      <section class="section" id="cronograma-brasil">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">07</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Implementação Local</div>
+            <h2>Basileia III no Brasil — Cronograma BACEN</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          O Brasil seguiu cronograma gradual de implementação de Basileia III, via Res. CMN 4.193/2013 e normas complementares.
+          Bancos brasileiros de grande porte já estavam em conformidade plena em 2019, com exigências mais rigorosas que a média internacional.
+        </p>
+        <div class="chart-container" style="height:340px;">
+          <div class="chart-title">📈 Evolução do Índice de Capital Mínimo — Brasil 2013–2022</div>
+          <canvas id="timelineChart"></canvas>
+        </div>
+        <div class="info-box">
+          <strong>ℹ️ Destaques do Cronograma:</strong>
+          <p style="margin:8px 0 0;font-size:0.9rem;">
+            O Brasil optou por exigências <strong>mais rigorosas que Basileia III</strong> em alguns aspectos — o PR mínimo brasileiro (8,625%) é acima do internacional (8,0%).
+            Os grandes bancos brasileiros terminaram 2022 com Índice de Basileia médio de 16,8% — bem acima dos mínimos exigidos.
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 08 — AWS PARA COMPLIANCE -->
+      <section class="section" id="aws-compliance">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">08</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Implementação de Dados</div>
+            <h2>AWS para Gestão de Adequação de Capital</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Instituições financeiras utilizam a AWS para automatizar o cálculo de RWA, gerar relatórios regulatórios (Pilar 3) e executar stress testing em escala.
+          A combinação de dados, computação e machine learning reduz tempo de reporte de semanas para horas.
+        </p>
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>Arquitetura AWS para Adequação de Capital Regulatório</div>
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#38bdf8", "lightbox": false, "nav": false, "resize": true, "xml": "<mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1650\" pageHeight=\"380\" background=\"#0f172a\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/>\n<mxCell id=\"title\" value=\"Arquitetura AWS para Adequação de Capital Regulatório\" style=\"text;html=1;fontSize=16;fontStyle=1;fontColor=#ffffff;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"0\" y=\"0\" width=\"1650\" height=\"40\" as=\"geometry\"/></mxCell>\n<mxCell id=\"A\" value=\"Sistemas Core&amp;#10;Banking\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"160\" width=\"180\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"B\" value=\"Amazon S3&amp;#10;Data Lake\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"240\" y=\"160\" width=\"180\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"C\" value=\"AWS Glue&amp;#10;ETL &amp;amp; Catalog\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"460\" y=\"160\" width=\"180\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"D\" value=\"Amazon Redshift&amp;#10;RWA Warehouse\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1a3a;strokeColor=#8b5cf6;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"680\" y=\"160\" width=\"200\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"E\" value=\"Amazon EMR&amp;#10;Cálculo RWA em Escala\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"920\" y=\"160\" width=\"200\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"F\" value=\"Amazon S3&amp;#10;Resultados\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1160\" y=\"160\" width=\"180\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"G\" value=\"Amazon QuickSight&amp;#10;Dashboard Basileia III\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a2a;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1400\" y=\"60\" width=\"220\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"H\" value=\"AWS Lambda&amp;#10;Reporte Automático BACEN\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1400\" y=\"260\" width=\"220\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"I\" value=\"SageMaker&amp;#10;Stress Testing ML\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#64748b;fontColor=#ffffff;fontSize=11;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"920\" y=\"280\" width=\"200\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e1\" value=\"diário\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"A\" target=\"B\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e2\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"B\" target=\"C\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e3\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"C\" target=\"D\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e4\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"D\" target=\"E\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e5\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"E\" target=\"F\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e6\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"F\" target=\"G\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e7\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"F\" target=\"H\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e8\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"D\" target=\"I\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e9\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"I\" target=\"F\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n</root></mxGraphModel>"}'></div>
+        </div>
+        <div class="diagram-legend">
+          Dados de sistemas core banking alimentam diariamente um Data Lake em Amazon S3, processado pelo AWS Glue e carregado no Amazon Redshift como RWA Warehouse. O Amazon EMR calcula o RWA em escala e grava os resultados de volta no S3, que alimenta dashboards no Amazon QuickSight e o reporte automático ao BACEN via AWS Lambda. Em paralelo, o SageMaker executa stress testing sobre os dados do Redshift, retroalimentando os resultados no S3.
+        </div>
+        <div class="grid-2" style="margin-top:20px;">
+          <div class="card">
+            <h4 class="card-title">Amazon EMR + Spark</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0;">
+              Calcula RWA para milhões de contratos em paralelo. Reduz de horas para minutos. Suporta abordagem padronizada e IRB.
+            </p>
+          </div>
+          <div class="card">
+            <h4 class="card-title">AWS Lake Formation</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0;">
+              Governa acesso ao data lake financeiro com controles por coluna (PII). Cria trilha de auditoria para Pilar 3.
+            </p>
+          </div>
+          <div class="card">
+            <h4 class="card-title">Amazon EventBridge + Lambda</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0;">
+              Automatiza envio de reportes regulatórios até o 10º dia útil. Orquestra workflows de validação.
+            </p>
+          </div>
+          <div class="card">
+            <h4 class="card-title">AWS Config + CloudTrail</h4>
+            <p style="font-size:0.9rem;color:var(--text-dim);margin:0;">
+              Evidência de controles para auditores e reguladores. Rastreia cada modificação em modelos de RWA.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESUMO -->
+      <section class="section" id="resumo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color:var(--aws)">RESUMO</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Conclusão</div>
+            <h2>Basileia III — Pontos-Chave</h2>
+          </div>
+        </div>
+        <div class="summary-box">
+          <h3>🎯 Takeaways Principais</h3>
+          <ul>
+            <li><strong>3 Pilares:</strong> Capital mínimo (Pilar 1), Supervisão (Pilar 2) e Disciplina de Mercado (Pilar 3)</li>
+            <li><strong>Capital Brasil:</strong> PR ≥ 8,625%; com buffer de conservação ≥ 11,125%</li>
+            <li><strong>RWA:</strong> Cada ativo é ponderado pelo seu risco relativo — 0% (governo) a 150% (cartão de crédito)</li>
+            <li><strong>Liquidez:</strong> LCR ≥ 100% (30 dias) e NSFR ≥ 100% (1 ano) são obrigatórios</li>
+            <li><strong>IRB permite capital menor</strong>, mas exige aprovação BACEN e modelos validados</li>
+            <li><strong>AWS automatiza</strong> cálculo de RWA, stress testing e reporte regulatório</li>
+          </ul>
+        </div>
+        <div style="margin-top:30px;">
+          <div style="font-weight:bold;color:var(--text);font-size:1.1rem;margin-bottom:14px;">🔗 Próximos Tópicos</div>
+          <div class="grid-2">
+            <a href="rwam-ead-pcc.html" style="text-decoration:none;">
+              <div class="card">
+                <h4 class="card-title">RWAM, EAD & PCC Avançado</h4>
+                <p style="font-size:0.9rem;color:var(--text-dim);margin:0;">Cálculos detalhados de IRB, fórmula de capital Basileia III e calculadora interativa.</p>
+              </div>
+            </a>
+            <a href="conformidade-bacen.html" style="text-decoration:none;">
+              <div class="card">
+                <h4 class="card-title">Conformidade & Normas BACEN</h4>
+                <p style="font-size:0.9rem;color:var(--text-dim);margin:0;">Resoluções CMN, SCR, cronograma regulatório e matriz de conformidade.</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- REFERÊNCIAS -->
+      <section class="section" id="referencias">
+        <div style="font-weight:bold;color:var(--text);font-size:1.1rem;margin:24px 0 14px 0;">📚 Referências & Normativas</div>
+        <div class="reference"><strong>Resolução CMN 4.193/2013</strong>Implementação de Basileia III no Brasil — requerimentos de capital mínimo. bacen.gov.br</div>
+        <div class="reference"><strong>Resolução CMN 4.557/2016</strong>Estrutura de Gerenciamento de Riscos e Capital. Define ICAAP e ORSA no Brasil.</div>
+        <div class="reference"><strong>Circular BACEN 3.749/2015</strong>Índice de Liquidez de Curto Prazo (LCR). Vigência a partir de 2016.</div>
+        <div class="reference"><strong>Resolução BCB 174/2022</strong>Net Stable Funding Ratio (NSFR) no Brasil. Vigência 2022.</div>
+        <div class="reference"><strong>Circular BACEN 3.648/2013</strong>Abordagem IRB — aprovação, requisitos e parallel run.</div>
+        <div class="reference"><strong>Basel Committee on Banking Supervision (BIS)</strong>"Basel III: A global regulatory framework" — BIS.org, 2017.</div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="../../js/sidebar-loader.js"></script>
+  <script>
+    function toggleNav() {
+      document.getElementById('sidebar').classList.toggle('active');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Capital Composition Chart
+      const ctx1 = document.getElementById('capitalChart');
+      if (ctx1) {
+        new Chart(ctx1.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: ['CET1 (Capital Principal)', 'AT1 (Adicional Tier 1)', 'Tier 2'],
+            datasets: [{
+              label: 'Capital (R$ M)',
+              data: [1200, 200, 200],
+              backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => ` R$ ${ctx.parsed.y} M — ${((ctx.parsed.y/1600)*100).toFixed(1)}% do PR Total`
+                }
+              }
+            },
+            scales: {
+              x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+              y: {
+                ticks: { color: '#94a3b8', callback: v => `R$ ${v} M` },
+                grid: { color: 'rgba(255,255,255,0.05)' }
+              }
+            }
+          }
+        });
+      }
+
+      // LCR HQLA Breakdown
+      const ctx2 = document.getElementById('lcrChart');
+      if (ctx2) {
+        new Chart(ctx2.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Caixa & Reservas BACEN', 'Títulos Públicos Federais (LFT/NTN)', 'LCI/LCA Nível 2A', 'Outros HQLA'],
+            datasets: [{
+              data: [15, 55, 20, 10],
+              backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b'],
+              borderWidth: 2, borderColor: '#0f172a'
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'right', labels: { color: '#94a3b8', boxWidth: 16 } },
+              tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed}%` } }
+            }
+          }
+        });
+      }
+
+      // Capital Requirements Timeline
+      const ctx3 = document.getElementById('timelineChart');
+      if (ctx3) {
+        new Chart(ctx3.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: ['2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022'],
+            datasets: [
+              {
+                label: 'PR Mínimo (%)',
+                data: [11.0, 11.0, 11.0, 10.5, 10.5, 10.5, 8.625, 8.625, 8.625, 8.625],
+                borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, pointRadius: 5
+              },
+              {
+                label: 'PR com Buffer Conservação (%)',
+                data: [11.0, 11.875, 12.375, 12.375, 12.375, 12.375, 11.125, 11.125, 11.125, 11.125],
+                borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3, pointRadius: 5
+              }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#94a3b8' } },
+              tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y}%` } }
+            },
+            scales: {
+              x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+              y: {
+                min: 7, max: 14,
+                ticks: { color: '#94a3b8', callback: v => `${v}%` },
+                grid: { color: 'rgba(255,255,255,0.05)' }
+              }
+            }
+          }
+        });
+      }
+    });
+  </script>
+  <script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+</body>
+</html>

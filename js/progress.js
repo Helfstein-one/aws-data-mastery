@@ -72,7 +72,7 @@
     // Fase 6
     "business-value": { name: "Valor de Negócio", badge: "Especialista", color: "#db2777", items: ["business-value.html"] },
         // Fase 6 - Conhecimentos Financeiros & Risco
-    "onboarding": { name: "Originação & KYC", badge: "Originação", color: "#3b82f6", items: ["onboarding.html"] },
+    "onboarding": { name: "Originação & KYC", badge: "Originação", color: "#3b82f6", items: ["processo-credito-kyc.html"] },
     "matematica-financeira": { name: "Matemática Financeira", badge: "Quant", color: "#f59e0b", items: ["matematica-financeira.html"] },
     "ciclo-vida-credito": { name: "Ciclo de Crédito", badge: "Crédito", color: "#10b981", items: ["ciclo-vida-credito.html"] },
     "pos-venda-reconciliacao": { name: "Reconciliação & PIX", badge: "Reconciliação", color: "#0ea5e9", items: ["pos-venda-reconciliacao.html"] },
