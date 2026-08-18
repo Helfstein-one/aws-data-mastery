@@ -948,17 +948,17 @@ ho\).
             </div>
             <div style="background: #1e293b; padding: 12px; border-radius: 8px; border-left: 4px solid #f43f5e; text-align: center;">
               <div style="font-size: 0.75rem; color: #94a3b8; font-weight: bold;">VaR (99,9%)</div>
-              <div id="resVar" style="font-size: 1.1rem; font-weight: bold; color: #f43f5e; margin-top: 4px;">R$ 14.180.000,00</div>
+              <div id="resVar" style="font-size: 1.1rem; font-weight: bold; color: #f43f5e; margin-top: 4px;">R$ 10.309.009,00</div>
               <div style="font-size: 0.68rem; color: #64748b; margin-top: 4px;">Percentil 99.9% Estressado</div>
             </div>
             <div style="background: #1e293b; padding: 12px; border-radius: 8px; border-left: 4px solid #f59e0b; text-align: center;">
               <div style="font-size: 0.75rem; color: #94a3b8; font-weight: bold;">Perda Não Esperada (UL)</div>
-              <div id="resUl" style="font-size: 1.1rem; font-weight: bold; color: #f59e0b; margin-top: 4px;">R$ 12.830.000,00</div>
+              <div id="resUl" style="font-size: 1.1rem; font-weight: bold; color: #f59e0b; margin-top: 4px;">R$ 8.959.009,00</div>
               <div style="font-size: 0.68rem; color: #64748b; margin-top: 4px;">Exigência de Capital Mínimo</div>
             </div>
             <div style="background: #1e293b; padding: 12px; border-radius: 8px; border-left: 4px solid #a855f7; text-align: center;">
               <div style="font-size: 0.75rem; color: #94a3b8; font-weight: bold;">RWA Equivalente</div>
-              <div id="resRwa" style="font-size: 1.1rem; font-weight: bold; color: #c084fc; margin-top: 4px;">R$ 160.375.000,00</div>
+              <div id="resRwa" style="font-size: 1.1rem; font-weight: bold; color: #c084fc; margin-top: 4px;">R$ 111.987.613,00</div>
               <div style="font-size: 0.68rem; color: #64748b; margin-top: 4px;">UL / 8,0% (Ativos de Risco)</div>
             </div>
           </div>
@@ -1250,22 +1250,36 @@ ho\).
 
   <!-- Script do Simulador Monte Carlo em JavaScript Nativo (Canvas Rendering & Math) -->
   <script>
-    // Inversa da Distribuição Normal Padronizada (Aproximação de Acklam)
+    // Inversa da Distribuição Normal Padronizada (Aproximação racional de Acklam)
     function normInv(p) {
       if (p <= 0 || p >= 1) return 0;
-      if (p < 0.02425) {
-        var q = Math.sqrt(-2 * Math.log(p));
-        return ((((-7.784695709041462e-03 * q - 3.223964580411365e-01) * q - 2.400758277161838e+00) * q - 2.549732539343734e+00) * q + 4.374664141464968e-01) /
-               ((((7.784695709041462e-03 * q + 3.224671290700398e-01) * q + 2.445134137142996e+00) * q + 3.754408661907416e+00) * q + 1.0);
-      } else if (p <= 0.97575) {
-        var q = p - 0.5;
-        var r = q * q;
-        return ((((-3.969683028665376e+01 * r + 2.209460984245205e+02) * r - 2.759285104469687e+02) * r + 1.383577518672690e+02) * r - 3.066479806614716e+01) * q /
-               ((((-5.447609879822406e+01 * r + 1.615858368580409e+02) * r - 1.556989798598866e+02) * r + 6.680131188771972e+01) * r - 1.328068155288572e+01) * r + 1.0;
+
+      var a1 = -3.969683028665376e+01, a2 =  2.209460984245205e+02, a3 = -2.759285104469687e+02,
+          a4 =  1.383577518672690e+02, a5 = -3.066479806614716e+01, a6 =  2.506628277459239e+00;
+      var b1 = -5.447609879822406e+01, b2 =  1.615858368580409e+02, b3 = -1.556989798598866e+02,
+          b4 =  6.680131188771972e+01, b5 = -1.328068155288572e+01;
+      var c1 = -7.784894002430293e-03, c2 = -3.223964580411365e-01, c3 = -2.400758277161838e+00,
+          c4 = -2.549732539343734e+00, c5 =  4.374664141464968e+00, c6 =  2.938163982698783e+00;
+      var d1 =  7.784695709041462e-03, d2 =  3.224671290700398e-01, d3 =  2.445134137142996e+00,
+          d4 =  3.754408661907416e+00;
+
+      var pLow = 0.02425;
+      var pHigh = 1 - pLow;
+      var q, r;
+
+      if (p < pLow) {
+        q = Math.sqrt(-2 * Math.log(p));
+        return (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
+               ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+      } else if (p <= pHigh) {
+        q = p - 0.5;
+        r = q * q;
+        return (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q /
+               (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1);
       } else {
-        var q = Math.sqrt(-2 * Math.log(1 - p));
-        return -((((-7.784695709041462e-03 * q - 3.223964580411365e-01) * q - 2.400758277161838e+00) * q - 2.549732539343734e+00) * q + 4.374664141464968e-01) /
-                ((((7.784695709041462e-03 * q + 3.224671290700398e-01) * q + 2.445134137142996e+00) * q + 3.754408661907416e+00) * q + 1.0);
+        q = Math.sqrt(-2 * Math.log(1 - p));
+        return -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
+                 ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
       }
     }
 
@@ -1297,6 +1311,7 @@ ho\).
       var losses = new Float64Array(N);
 
       // Simulação estocástica via Box-Muller e Vasicek Conditional Default Rate
+      // (usada apenas para desenhar o histograma — ilustra a forma da distribuição)
       for (var i = 0; i < N; i++) {
         var u1 = Math.random();
         var u2 = Math.random();
@@ -1308,16 +1323,20 @@ ho\).
         losses[i] = ead * condPd * lgd;
       }
 
-      // Ordenar perdas para obter percentis
+      // Ordenar perdas apenas para o range do histograma (min/max)
       losses.sort();
 
-      var sum = 0;
-      for (var i = 0; i < N; i++) sum += losses[i];
-      var el = sum / N;
-
-      var varIndex = Math.floor(0.999 * N);
-      if (varIndex >= N) varIndex = N - 1;
-      var var999 = losses[varIndex];
+      // EL e VaR 99,9% pela fórmula fechada de Vasicek (ASRF/Basileia), não por
+      // percentil empírico da amostra: com N=10.000, o percentil 99,9% depende de
+      // ~10 pontos extremos, cuja posição varia enormemente a cada nova simulação.
+      // Como a perda condicional é função monótona do fator sistêmico Z, o percentil
+      // 99,9% da perda equivale exatamente à perda no percentil 0,1% de Z — um
+      // resultado analítico exato, sem ruído de amostragem, e consistente com as
+      // fórmulas de Basileia III documentadas nesta mesma página.
+      var el = ead * pd * lgd;
+      var zVar = normInv(0.999);
+      var argVar = (invPd + sqrtRho * zVar) / sqrt1Rho;
+      var var999 = ead * lgd * normCdf(argVar);
       var ul = var999 - el;
       var rwa = ul * 12.5;
 
@@ -1343,6 +1362,9 @@ ho\).
       var nBins = 45;
       var minL = losses[0];
       var maxL = losses[losses.length - 1];
+      // Garante que a linha do VaR 99,9% (calculado analiticamente) sempre caiba
+      // no range do histograma, mesmo se a amostra Monte Carlo não a alcançar.
+      if (var999 > maxL) maxL = var999 * 1.05;
       if (maxL === minL) maxL = minL + 1;
 
       var binWidth = (maxL - minL) / nBins;
