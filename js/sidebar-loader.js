@@ -96,6 +96,37 @@ if (typeof document !== 'undefined' && document.addEventListener) {
                 const sidebarEl = document.getElementById('sidebar');
                 if (sidebarEl) {
                     sidebarEl.innerHTML = modifiedHtml;
+
+                    // Automatically determine active page and expand its category accordion
+                    try {
+                        const currentPath = window.location.pathname;
+                        const pageFile = currentPath.substring(currentPath.lastIndexOf('/') + 1) || 'index.html';
+                        const links = sidebarEl.querySelectorAll('.nav-a');
+                        links.forEach(link => {
+                            const dataPage = link.getAttribute('data-page') || '';
+                            const href = link.getAttribute('href') || '';
+                            const pageBase = pageFile.replace('.html', '');
+                            const isMatch = (dataPage && (dataPage === pageBase || (pageBase === 'index' && dataPage === 'index' && !currentPath.includes('/pages/')) || (currentPath.includes('/negocios/') && dataPage === 'negocios-index' && pageBase === 'index'))) ||
+                                            href.endsWith('/' + pageFile) ||
+                                            href.endsWith(pageFile) ||
+                                            (pageFile === 'index.html' && !currentPath.includes('/pages/') && (href.endsWith('index.html') || href === rootAbsUrl));
+                            if (isMatch) {
+                                link.classList.add('active');
+                                const cat = link.closest('.nav-cat-content');
+                                if (cat) {
+                                    cat.classList.add('open', 'expanded');
+                                    const lbl = cat.previousElementSibling;
+                                    if (lbl && lbl.classList.contains('collapsible')) {
+                                        lbl.classList.add('active', 'expanded');
+                                        const arrow = lbl.querySelector('.arrow');
+                                        if (arrow) arrow.innerHTML = '▼';
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('Auto active link resolution notice:', e);
+                    }
                 }
                 // Emit custom event so other scripts (like progress.js) know the sidebar is ready
                 document.dispatchEvent(new Event('sidebarLoaded'));

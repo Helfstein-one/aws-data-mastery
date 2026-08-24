@@ -81,6 +81,7 @@
     "normas-regulatorio": { name: "Normas & BACEN 3040", badge: "Regulatory", color: "#d97706", items: ["normas-regulatorio.html"] },
     "auditoria-dados": { name: "Auditoria & Linhagem", badge: "Data Auditor", color: "#a855f7", items: ["auditoria-dados.html"] },
     "finops-financas": { name: "FinOps Financeiro", badge: "FinOps", color: "#10b981", items: ["finops-financas.html"] },
+    "negocios-fiscal": { name: "Negócios & Fiscal", badge: "Tax Master", color: "#38bdf8", items: ["introducao-tributacao.html", "impostos-instituicoes.html", "tributacao-ativos.html", "reforma-tributaria.html", "arquitetura-plataforma-fiscal.html"] },
     "cases-reais": { name: "Cases Reais: Arq", badge: "Especialista", color: "#db2777", items: ["cases-reais.html"] },
     "cases-ecosistema": { name: "Cases: Ecossistema", badge: "Especialista", color: "#db2777", items: ["cases-ecosistema.html"] },
     "cases-batch-lakehouse": { name: "Cases: Batch", badge: "Especialista", color: "#db2777", items: ["cases-batch-lakehouse.html"] },
@@ -710,6 +711,10 @@
       "finops-financas": { 
         colors: ["#10b981", "#047857"], 
         icon: `<circle cx="32" cy="32" r="12" fill="none" stroke="url(#grad-finops-financas)" stroke-width="2"/><text x="32" y="37" font-size="14" font-weight="bold" text-anchor="middle" fill="url(#grad-finops-financas)">$</text>` 
+      },
+      "negocios-fiscal": { 
+        colors: ["#38bdf8", "#0284c7"], 
+        icon: `<path fill="none" stroke="url(#grad-negocios-fiscal)" stroke-width="2" d="M 16 44 H 48 M 20 44 V 24 L 32 16 L 44 24 V 44 M 26 44 V 32 H 38 V 44"/>` 
       },
       financas: { 
         colors: ["#0284c7", "#0369a1"], 

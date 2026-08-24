@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Arquitetura Lakehouse Fiscal AWS: Medallion Architecture, Apache Iceberg v2, AWS Glue 4.0 Graviton4, PySpark, Lake Formation, Step Functions e SPED."/>
+  <title>Arquitetura da Plataforma Fiscal | AWS Data Mastery</title>
+  
+  <!-- KaTeX Math Rendering (Strict Delimiters) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\(', right: '\)', display: false},
+          {left: '\[', right: '\]', display: true}
+        ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Google Fonts & Stylesheets -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../style.css"/>
+  <link rel="stylesheet" href="../../style-a11y.css"/>
+  <!-- OpenGraph -->
+  <meta property="og:title" content="Arquitetura da Plataforma Fiscal | AWS Data Mastery"/>
+  <meta property="og:description" content="Engenharia de Dados e Lakehouse Fiscal na AWS sa-east-1 com Apache Iceberg v2, Glue Graviton4, Lake Formation e Step Functions."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+  <style>
+    /* Dark Neon & Layout Tokens */
+    :root {
+      --border-dark: #1e293b;
+      --title-contrast: #f8fafc;
+      --accent-neon: #38bdf8;
+    }
+    .table-container { overflow-x: auto; }
+    pre { overflow-x: auto; }
+    .formula-box { background: #0b0f19; }
+  </style>
+</head>
+<body class="light-theme-section">
+  <!-- Botão Hamburger Mobile -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+  
+  <!-- Barra Lateral (Injetada via js/sidebar-loader.js) -->
+  <nav id="sidebar"></nav>
+  
+  <!-- Contêiner Principal -->
+  <div id="main">
+    <main class="main-content">
+      
+      <!-- HERO HEADER -->
+      <div class="hero">
+        <div class="hero-ey">Módulo 04 · Engenharia de Dados &amp; Nuvem AWS</div>
+        <h1>🏗️ Arquitetura da Plataforma Fiscal AWS (Lakehouse)</h1>
+        <p class="lead">
+          Arquitetura corporativa de alta performance no ecossistema <strong>AWS sa-east-1 (São Paulo)</strong>: Ingestão de alta resiliência via <strong>AWS DMS CDC</strong> e <strong>Amazon MSK / Kinesis</strong>, Camada Silver Curada em <strong>Apache Iceberg v2</strong> com processamento em <strong>AWS Glue 4.0 Graviton4</strong> e <strong>PySpark 3.4</strong>, validação de qualidade contínua com <strong>AWS Deequ</strong>, Motores de Cálculo Tributário Distribuído em paralelo, Governança com <strong>AWS Lake Formation LF-TBAC</strong> e <strong>Cell-Level Filtering</strong> para atendimento rigoroso à <strong>LGPD</strong> e ao <strong>Sigilo Bancário (LC 105/2001)</strong>, Orquestração com <strong>AWS Step Functions ASL</strong> e esteiras regulatórias de geração de lotes <strong>SPED (ECF/ECD/EFD)</strong> e <strong>e-Financeira</strong>.
+        </p>
+        <div class="pills">
+          <span class="badge-pill badge-green">AWS Glue 4.0 (Graviton4)</span>
+          <span class="badge-pill badge-blue">Apache Iceberg v2</span>
+          <span class="badge-pill badge-amber">Amazon MSK &amp; DMS CDC</span>
+          <span class="badge-pill badge-purple">AWS Lake Formation LF-TBAC</span>
+          <span class="badge-pill badge-rose">AWS Step Functions ASL</span>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 01: VISÃO MEDALLION NO AWS SA-EAST-1 -->
+      <section class="section" id="visao-arquitetural-medallion"><a id="visao-geral-lakehouse-aws"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Padrão Medallion no AWS sa-east-1</div>
+            <h2>Visão Arquitetural: Bronze, Silver &amp; Gold</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          A plataforma adota o padrão <strong>Medallion Lakehouse</strong> distribuído, dimensionada para processar bilhões de eventos financeiros diários com SLA garantido de fechamento fiscal em <strong>D+1</strong>. Toda a infraestrutura é construída com suporte a transações <strong>ACID</strong> via <strong>Apache Iceberg v2</strong>, criptografia ponta a ponta com <strong>AWS KMS CMK</strong> e retenção imutável por 5 anos em conformidade com o <strong>Art. 173 do Código Tributário Nacional (CTN)</strong> e a <strong>Resolução BCB nº 85/2021</strong>.
+        </p>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle" style="color:#f97316;">Camada Bronze (Raw Landing)</div>
+            <div class="card-title">Ingestão CDC &amp; Streaming Imutável</div>
+            <p>Captura contínua de alterações (CDC) dos bancos relacionais do Core Banking (Aurora PostgreSQL e Oracle) via <strong>AWS DMS</strong> e streaming de mensageria financeira (PIX SPI, B3 FIX e liquidação de cartões) via <strong>Amazon MSK</strong> e Kinesis.</p>
+            <p><strong>Segurança:</strong> Armazenamento bruto com <strong>S3 Object Lock em Modo Compliance</strong> e validação de contratos com <strong>AWS Glue Schema Registry</strong>.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle" style="color:#0ea5e9;">Camada Silver (Curated Data)</div>
+            <div class="card-title">Apache Iceberg v2 &amp; Graviton4</div>
+            <p>Normalização determinística e deduplicação de eventos financeiros executada por jobs <strong>AWS Glue 4.0</strong> rodando em nós <strong>Graviton4</strong> com PySpark 3.4 e suporte a <strong>Merge-on-Read (MoR)</strong>.</p>
+            <p><strong>Qualidade:</strong> Validações automáticas de completude cadastral e integridade referencial via <strong>AWS Deequ</strong> com barreira de erro inferior a 0,05%.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle" style="color:#eab308;">Camada Gold &amp; Marts</div>
+            <div class="card-title">Motores Tributários &amp; SPED</div>
+            <p>Execução concorrente dos motores tributários especializados (IOF, IRRF, Come-Cotas e IVA Dual IBS/CBS) com conciliação contábil-fiscal automatizada contra os saldos do <strong>Razão COSIF</strong>.</p>
+            <p><strong>Serving:</strong> Acesso analítico de alta vazão no <strong>Amazon Redshift Serverless</strong>, <strong>Amazon Athena v3</strong> e geração de arquivos do <strong>SPED ECF/EFD</strong>.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: DIAGRAMA 1 - ARQUITETURA DE REFERÊNCIA AWS 2026 -->
+      <section class="section" id="diagrama-oficial-aws"><a id="diagrama-1-arquitetura-referencia-aws-2026"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Topologia Visual Oficial AWS 2026</div>
+            <h2>Diagrama 1: Arquitetura End-to-End da Plataforma Fiscal AWS</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Diagrama oficial em conformidade com as diretrizes de design visual <strong>AWS 2026</strong>: crachás com ícones oficiais categorizados por serviço (<code>mxgraph.aws4.*</code>), linhas de transporte com protocolos de microrrede (mTLS, Zero-ETL, ACID Iceberg), barramento transversal de segurança bancária e zero dependência de CDNs externas.
+        </p>
+
+        <!-- DRAWIO WRAPPER DIAGRAMA 1 -->
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>Arquitetura de Referência AWS 2026: Plataforma de Dados Fiscal &amp; Regulatória em Escala Corporativa</div>
+          <div class="mxgraph" style="max-width:100%; border:1px solid #1e293b; border-radius:12px; background:#080f1e; overflow:auto;" data-mxgraph="{&quot;highlight&quot;: &quot;#38bdf8&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot; modified=\&quot;2026-08-24T12:00:00.000Z\&quot; agent=\&quot;5.0 (Windows)\&quot; version=\&quot;14.6.13\&quot; type=\&quot;device\&quot;&gt;\n  &lt;diagram id=\&quot;aws-ref-2026\&quot; name=\&quot;Arquitetura de Referência AWS 2026\&quot;&gt;\n    &lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;760\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1200\&quot; pageHeight=\&quot;760\&quot; background=\&quot;#080f1e\&quot;&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\&quot;0\&quot;/&gt;\n        &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;\n        &lt;mxCell id=\&quot;title_banner\&quot; value=\&quot;Arquitetura de Referência AWS 2026: Plataforma de Dados Fiscal &amp;amp; Regulatória em Escala Corporativa (sa-east-1)\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;15\&quot; width=\&quot;1160\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Group 1: Ingestão --&gt;\n        &lt;mxCell id=\&quot;g1\&quot; value=\&quot;1. Ingestão &amp;amp; Streaming\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#020e1a;strokeColor=#38bdf8;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;65\&quot; width=\&quot;200\&quot; height=\&quot;560\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_dms\&quot; value=\&quot;AWS DMS&amp;#xa;CDC Core Banking\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.database_migration_service;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;92\&quot; y=\&quot;110\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_msk\&quot; value=\&quot;Amazon MSK&amp;#xa;Kafka Streaming\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_streaming_for_kafka;fillColor=#e11d48;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;92\&quot; y=\&quot;240\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_eb\&quot; value=\&quot;Amazon EventBridge&amp;#xa;Barramento D+0\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fillColor=#e11d48;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;92\&quot; y=\&quot;370\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_apigw\&quot; value=\&quot;Amazon API Gateway&amp;#xa;Open Finance SPI\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=#e11d48;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;92\&quot; y=\&quot;500\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Group 2: Curadoria Silver --&gt;\n        &lt;mxCell id=\&quot;g2\&quot; value=\&quot;2. Curadoria Silver Iceberg\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#020e1a;strokeColor=#0284c7;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;240\&quot; y=\&quot;65\&quot; width=\&quot;210\&quot; height=\&quot;560\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_glue_cur\&quot; value=\&quot;AWS Glue 4.0&amp;#xa;PySpark Graviton4\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;317\&quot; y=\&quot;110\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_deequ\&quot; value=\&quot;AWS Deequ&amp;#xa;Quality Gate &amp;gt;99.9%\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;fillColor=#e11d48;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;317\&quot; y=\&quot;240\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_s3_silver\&quot; value=\&quot;Amazon S3 Silver&amp;#xa;Iceberg v2 (MoR)\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#059669;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;317\&quot; y=\&quot;370\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_emr\&quot; value=\&quot;EMR Serverless&amp;#xa;Reprocessamento\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.emr;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;317\&quot; y=\&quot;500\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Group 3: Motores Fiscais Gold --&gt;\n        &lt;mxCell id=\&quot;g3\&quot; value=\&quot;3. Motores Fiscais &amp;amp; Gold Marts\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#020e1a;strokeColor=#a855f7;fontColor=#c084fc;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;470\&quot; y=\&quot;65\&quot; width=\&quot;210\&quot; height=\&quot;560\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_sfn\&quot; value=\&quot;AWS Step Functions&amp;#xa;Distributed Map\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;fillColor=#e11d48;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;547\&quot; y=\&quot;110\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_glue_eng\&quot; value=\&quot;AWS Glue Gold&amp;#xa;4 Motores Fiscais\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.glue;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;547\&quot; y=\&quot;240\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_dynamo\&quot; value=\&quot;Amazon DynamoDB&amp;#xa;State &amp;amp; Split Tags\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;547\&quot; y=\&quot;370\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_s3_gold\&quot; value=\&quot;Amazon S3 Gold&amp;#xa;Livros Fiscais Iceberg\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#059669;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;547\&quot; y=\&quot;500\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Group 4: Serving &amp; Analytics --&gt;\n        &lt;mxCell id=\&quot;g4\&quot; value=\&quot;4. Serving, Analytics &amp;amp; Fisco\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#020e1a;strokeColor=#10b981;fontColor=#34d399;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;700\&quot; y=\&quot;65\&quot; width=\&quot;210\&quot; height=\&quot;560\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_athena\&quot; value=\&quot;Amazon Athena v3&amp;#xa;Consultas Ad-hoc\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.athena;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;777\&quot; y=\&quot;110\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_redshift\&quot; value=\&quot;Redshift Serverless&amp;#xa;Gold Data Marts\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.redshift;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;777\&quot; y=\&quot;240\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_quicksight\&quot; value=\&quot;Amazon QuickSight&amp;#xa;Dashboards Executivos\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.quicksight;fillColor=#7c3aed;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;777\&quot; y=\&quot;370\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_sped\&quot; value=\&quot;Gateway SPED&amp;#xa;ECF / ECD / EFD / DIMP\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.transfer_family;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;777\&quot; y=\&quot;500\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Group 5: Governança &amp; Segurança --&gt;\n        &lt;mxCell id=\&quot;g5\&quot; value=\&quot;5. Governança &amp;amp; Segurança\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#020e1a;strokeColor=#f59e0b;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;930\&quot; y=\&quot;65\&quot; width=\&quot;250\&quot; height=\&quot;560\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_lf\&quot; value=\&quot;AWS Lake Formation&amp;#xa;LF-TBAC &amp;amp; Cell-Level\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lake_formation;fillColor=#dc2626;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;1027\&quot; y=\&quot;110\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_kms\&quot; value=\&quot;AWS KMS (CMK)&amp;#xa;Envelope Encryption\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.key_management_service;fillColor=#dc2626;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;1027\&quot; y=\&quot;240\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_macie\&quot; value=\&quot;Amazon Macie&amp;#xa;Classificação PII / LGPD\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.macie;fillColor=#dc2626;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;1027\&quot; y=\&quot;370\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;i_ct\&quot; value=\&quot;CloudTrail Lake&amp;#xa;Auditoria Regulatória\&quot; style=\&quot;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudtrail;fillColor=#dc2626;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;1027\&quot; y=\&quot;500\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Bottom Banner: FinOps &amp; Compliance --&gt;\n        &lt;mxCell id=\&quot;b_finops\&quot; value=\&quot;FinOps &amp;amp; Compliance: S3 Object Lock 5 Anos (Art. 173 CTN / Res. BCB 85/2021) • S3 Glacier Deep Archive (365d) • Graviton4 (20% economia) • Glue Flex (65% off batch)\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#38bdf8;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;645\&quot; width=\&quot;1160\&quot; height=\&quot;38\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Orthogonal Edges --&gt;\n        &lt;mxCell id=\&quot;e1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_dms\&quot; target=\&quot;i_glue_cur\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_msk\&quot; target=\&quot;i_glue_cur\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_glue_cur\&quot; target=\&quot;i_deequ\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e4\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#059669;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_deequ\&quot; target=\&quot;i_s3_silver\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e5\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#c084fc;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_s3_silver\&quot; target=\&quot;i_sfn\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e6\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#c084fc;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_sfn\&quot; target=\&quot;i_glue_eng\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e7\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#059669;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_glue_eng\&quot; target=\&quot;i_s3_gold\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e8\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#34d399;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_s3_gold\&quot; target=\&quot;i_athena\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e9\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#34d399;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_s3_gold\&quot; target=\&quot;i_redshift\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e10\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#34d399;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_s3_gold\&quot; target=\&quot;i_sped\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;e11\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7c3aed;strokeWidth=1.5;\&quot; edge=\&quot;1\&quot; source=\&quot;i_redshift\&quot; target=\&quot;i_quicksight\&quot; parent=\&quot;1\&quot;/&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;&quot;}"></div>
+          <div class="diagram-legend">
+            <strong style="color: #2563eb;">Especificação da Arquitetura AWS 2026:</strong>
+            <p style="margin-top: 6px; margin-bottom: 8px;"><strong>Componentes AWS:</strong> AWS DMS, Amazon MSK, AWS Glue 4.0 Graviton4, Apache Iceberg v2, Amazon Athena v3, Redshift Serverless, Lake Formation, AWS KMS CMK e Amazon Macie.</p>
+            <p style="margin-bottom: 8px;"><strong>Integração:</strong> Ingestão CDC via DMS e streaming via MSK com contratos no Glue Schema Registry, persistência ACID em Iceberg v2 com particionamento oculto e serving analítico via Athena e Redshift.</p>
+            <p style="margin-bottom: 0;"><strong>Contexto:</strong> Plataforma de alta resiliência para processamento tributário corporativo, fechamento fiscal D+1, conformidade com a LGPD (cell-level masking) e retenção legal de 5 anos via S3 Object Lock.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: DIAGRAMA 2 - MOTORES DE CÁLCULO TRIBUTÁRIO -->
+      <section class="section" id="diagrama-motores-tributarios"><a id="diagrama-2-motores-calculo-distribuido"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Fluxo Computacional dos Motores Fiscais</div>
+            <h2>Diagrama 2: Motores de Cálculo Tributário Distribuído</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Mapeamento detalhado dos quatro pipelines de apuração tributária em produção: entradas de dados, algoritmos matemáticos normativos, persistência em livros fiscais Gold do Iceberg v2 e mecanismos de governança e auditoria.
+        </p>
+
+        <!-- DRAWIO WRAPPER DIAGRAMA 2 -->
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>Fluxo Lógico &amp; Computacional: Motores de Cálculo Tributário Distribuído (IOF, Come-Cotas, IRRF e IVA Dual)</div>
+          <div class="mxgraph" style="max-width:100%; border:1px solid #1e293b; border-radius:12px; background:#080f1e; overflow:auto;" data-mxgraph="{&quot;highlight&quot;: &quot;#38bdf8&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot; modified=\&quot;2026-08-24T12:00:00.000Z\&quot; agent=\&quot;5.0 (Windows)\&quot; version=\&quot;14.6.13\&quot; type=\&quot;device\&quot;&gt;\n  &lt;diagram id=\&quot;motores-fiscais\&quot; name=\&quot;Fluxo Lógico &amp;amp; Computacional: Motores de Cálculo Tributário Distribuído\&quot;&gt;\n    &lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;480\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1200\&quot; pageHeight=\&quot;480\&quot; background=\&quot;#080f1e\&quot;&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\&quot;0\&quot;/&gt;\n        &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;\n        &lt;mxCell id=\&quot;m_title\&quot; value=\&quot;Fluxo Lógico &amp;amp; Computacional: Motores de Cálculo Tributário Distribuído (IOF, Come-Cotas, IRRF e IVA Dual)\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;15\&quot; width=\&quot;1160\&quot; height=\&quot;36\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Motor 1: IOF --&gt;\n        &lt;mxCell id=\&quot;col1\&quot; value=\&quot;MOTOR 1: IOF REGRESSIVO&amp;#xa;Decreto nº 6.306/2007 (RIOF)\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#022c22;strokeColor=#10b981;fontColor=#34d399;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;65\&quot; width=\&quot;270\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c1_in\&quot; value=\&quot;Entradas: Posição, Resgate, Dias (d)&amp;#xa;Tabela: 1d=96% ... 29d=3% | 30d+=0%\&quot; style=\&quot;rounded=1;fillColor=#064e3b;strokeColor=#059669;fontColor=#ecfdf5;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;35\&quot; y=\&quot;105\&quot; width=\&quot;240\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c1_calc\&quot; value=\&quot;Lógica PySpark:&amp;#xa;IOF = Rendimento × Alíquota(d)&amp;#xa;Dedução Obrigatória Base IRRF&amp;#xa;IOF Crédito: 0.0082% a.d. + 0.38%\&quot; style=\&quot;rounded=1;fillColor=#022c22;strokeColor=#10b981;fontColor=#a7f3d0;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;35\&quot; y=\&quot;180\&quot; width=\&quot;240\&quot; height=\&quot;90\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c1_out\&quot; value=\&quot;Destino Iceberg:&amp;#xa;silver_financial.daily_accrued_iof&amp;#xa;DARF 1150 (PF) / 6895 (PJ)\&quot; style=\&quot;rounded=1;fillColor=#064e3b;strokeColor=#059669;fontColor=#ecfdf5;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;35\&quot; y=\&quot;285\&quot; width=\&quot;240\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c1_gov\&quot; value=\&quot;Governança: Trava 365d Crédito&amp;#xa;Conciliação D+1 &amp;amp; S3 Object Lock\&quot; style=\&quot;rounded=1;fillColor=#022c22;strokeColor=#34d399;fontColor=#6ee7b7;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;35\&quot; y=\&quot;380\&quot; width=\&quot;240\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Motor 2: Come-Cotas --&gt;\n        &lt;mxCell id=\&quot;col2\&quot; value=\&quot;MOTOR 2: COME-COTAS&amp;#xa;Lei nº 14.754/2023 (Maio/Nov)\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#1e1b4b;strokeColor=#6366f1;fontColor=#818cf8;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;310\&quot; y=\&quot;65\&quot; width=\&quot;270\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c2_in\&quot; value=\&quot;Gatilho Semestral (Último dia Maio/Nov)&amp;#xa;Fundos Abertos &amp;amp; Exclusivos/Fechados&amp;#xa;Perfil: CP (20%) / LP (15%)\&quot; style=\&quot;rounded=1;fillColor=#312e81;strokeColor=#4f46e5;fontColor=#e0e7ff;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;325\&quot; y=\&quot;105\&quot; width=\&quot;240\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c2_calc\&quot; value=\&quot;Dedução de Cotas (Step-Up):&amp;#xa;Rend = max(0, NAV_t - NAV_base)&amp;#xa;Cotas_Devoradas = IRRF / NAV_t&amp;#xa;Novo_NAV_Base = NAV_t (Reset)\&quot; style=\&quot;rounded=1;fillColor=#1e1b4b;strokeColor=#6366f1;fontColor=#c7d2fe;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;325\&quot; y=\&quot;180\&quot; width=\&quot;240\&quot; height=\&quot;90\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c2_out\&quot; value=\&quot;Destino Iceberg:&amp;#xa;gold_fiscal.fund_investor_positions&amp;#xa;DARF 6800 / SPED Reinf R-4010\&quot; style=\&quot;rounded=1;fillColor=#312e81;strokeColor=#4f46e5;fontColor=#e0e7ff;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;325\&quot; y=\&quot;285\&quot; width=\&quot;240\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c2_gov\&quot; value=\&quot;Estoque Lei 14.754: 8% à vista / 15%&amp;#xa;Offshores 15% em 31/12 sem diferimento\&quot; style=\&quot;rounded=1;fillColor=#1e1b4b;strokeColor=#818cf8;fontColor=#c7d2fe;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;325\&quot; y=\&quot;380\&quot; width=\&quot;240\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Motor 3: Retenção IRRF --&gt;\n        &lt;mxCell id=\&quot;col3\&quot; value=\&quot;MOTOR 3: RETENÇÃO IRRF&amp;#xa;Lei nº 11.033/2004 &amp;amp; IN RFB 1.585\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#451a03;strokeColor=#f59e0b;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;600\&quot; y=\&quot;65\&quot; width=\&quot;270\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c3_in\&quot; value=\&quot;Renda Fixa: Regressiva 22.5% a 15%&amp;#xa;Swing Trade: 15% (Isenção ≤ 20k)&amp;#xa;Day Trade: 20% (Sem Isenção)\&quot; style=\&quot;rounded=1;fillColor=#78350f;strokeColor=#b45309;fontColor=#fef3c7;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;615\&quot; y=\&quot;105\&quot; width=\&quot;240\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c3_calc\&quot; value=\&quot;Dedo-Duro &amp;amp; Incomunicabilidade:&amp;#xa;Swing Dedo-Duro: 0.005% Alienação&amp;#xa;Day Trade Dedo-Duro: 1.00% Ganho&amp;#xa;FII/FIAGRO: 20% Alienação\&quot; style=\&quot;rounded=1;fillColor=#451a03;strokeColor=#f59e0b;fontColor=#fde68a;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;615\&quot; y=\&quot;180\&quot; width=\&quot;240\&quot; height=\&quot;90\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c3_out\&quot; value=\&quot;Destino Iceberg:&amp;#xa;gold_fiscal.withholding_tax_ledger&amp;#xa;DARF 3426 / 8468 / 6015 / 5232\&quot; style=\&quot;rounded=1;fillColor=#78350f;strokeColor=#b45309;fontColor=#fef3c7;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;615\&quot; y=\&quot;285\&quot; width=\&quot;240\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c3_gov\&quot; value=\&quot;Isenções PF: LCI/LCA/CRI/CRA&amp;#xa;Auditoria Lastro Res. CMN 5.118/2024\&quot; style=\&quot;rounded=1;fillColor=#451a03;strokeColor=#fbbf24;fontColor=#fde68a;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;615\&quot; y=\&quot;380\&quot; width=\&quot;240\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Motor 4: IVA Dual --&gt;\n        &lt;mxCell id=\&quot;col4\&quot; value=\&quot;MOTOR 4: IVA DUAL (IBS/CBS)&amp;#xa;EC 132/2023 &amp;amp; PLP 68/24 / LC 214/25\&quot; style=\&quot;rounded=1;dashed=1;fillColor=#4a044e;strokeColor=#e879f9;fontColor=#f0abfc;fontFamily=DM Sans;fontSize=11;fontStyle=1;verticalAlign=top;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;890\&quot; y=\&quot;65\&quot; width=\&quot;290\&quot; height=\&quot;400\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c4_in\&quot; value=\&quot;Serviços Financeiros: Spread &amp;amp; Tarifas&amp;#xa;Margem = Receitas - Funding - Perdas&amp;#xa;Princípio do Destino (UF/IBGE Tomador)\&quot; style=\&quot;rounded=1;fillColor=#701a75;strokeColor=#a21caf;fontColor=#fae8ff;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;905\&quot; y=\&quot;105\&quot; width=\&quot;260\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c4_calc\&quot; value=\&quot;Apuração Dual &amp;amp; Split Payment:&amp;#xa;CBS Federal (~8.8%) ➔ RFB&amp;#xa;IBS Subnacional (~17.7%) ➔ CG-IBS&amp;#xa;Split Payment Instantâneo (SPLIT_UUID)\&quot; style=\&quot;rounded=1;fillColor=#4a044e;strokeColor=#e879f9;fontColor=#fae8ff;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;905\&quot; y=\&quot;180\&quot; width=\&quot;260\&quot; height=\&quot;90\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c4_out\&quot; value=\&quot;Destino Iceberg:&amp;#xa;gold_fiscal.ibs_cbs_dual_tax_register&amp;#xa;Repasse Comitê Gestor IBS &amp;amp; RFB\&quot; style=\&quot;rounded=1;fillColor=#701a75;strokeColor=#a21caf;fontColor=#fae8ff;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;905\&quot; y=\&quot;285\&quot; width=\&quot;260\&quot; height=\&quot;80\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;c4_gov\&quot; value=\&quot;Transição Constitucional (2026-2033)&amp;#xa;2026 Piloto 1% ➔ 2027 CBS ➔ 2033 IVA Pleno\&quot; style=\&quot;rounded=1;fillColor=#4a044e;strokeColor=#f0abfc;fontColor=#f5d0fe;fontFamily=DM Sans;fontSize=10;verticalAlign=middle;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;905\&quot; y=\&quot;380\&quot; width=\&quot;260\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;&quot;}"></div>
+          <div class="diagram-legend">
+            <strong style="color: #2563eb;">Especificação dos Motores Tributários Distribuídos:</strong>
+            <p style="margin-top: 6px; margin-bottom: 8px;"><strong>Componentes AWS:</strong> AWS Glue 4.0 Graviton4, AWS Lambda, Amazon DynamoDB, Apache Iceberg v2, AWS Step Functions e Amazon SNS.</p>
+            <p style="margin-bottom: 8px;"><strong>Integração:</strong> Eventos de liquidação acionam regras em DynamoDB e jobs PySpark distribuídos com atomicidade ACID em tabelas Gold do catálogo Iceberg.</p>
+            <p style="margin-bottom: 0;"><strong>Contexto:</strong> Automação integral dos cálculos de IOF Regressivo (Dec. 6.306/07), Come-Cotas Semestral (Lei 14.754/23), Retenção IRRF / Dedo-Duro (Lei 11.033/04) e apuração dual de CBS/IBS com Split Payment (EC 132/23 e LC 214/25).</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: SCHEMAS DDL APACHE ICEBERG V2 & MODELAGEM UML -->
+      <section class="section" id="ddls-iceberg-producao"><a id="ddl-apache-iceberg-v2"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Metadados &amp; Particionamento Oculto</div>
+            <h2>DDLs Apache Iceberg v2 &amp; Modelagem UML de Produção</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Especificação formal das tabelas analíticas no catálogo <strong>AWS Glue Data Catalog</strong> com suporte a transações ACID, isolamento de snapshots e particionamento inteligente em <strong>Apache Iceberg v2</strong> com compressão <strong>Zstandard</strong>.
+        </p>
+
+        <!-- DRAWIO WRAPPER MODELAGEM UML DDL -->
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot"></span>MODELAGEM DE DADOS FISCAIS: SCHEMAS APACHE ICEBERG V2 (CATÁLOGO AWS GLUE)</div>
+          <div class="mxgraph" style="max-width:100%; border:1px solid #1e293b; border-radius:12px; background:#080f1e; overflow:auto;" data-mxgraph="{&quot;highlight&quot;: &quot;#38bdf8&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot; modified=\&quot;2026-08-24T12:00:00.000Z\&quot; agent=\&quot;5.0 (Windows)\&quot; version=\&quot;14.6.13\&quot; type=\&quot;device\&quot;&gt;\n  &lt;diagram id=\&quot;uml-iceberg-ddls\&quot; name=\&quot;Modelagem UML de Dados Fiscais: Apache Iceberg v2\&quot;&gt;\n    &lt;mxGraphModel dx=\&quot;1200\&quot; dy=\&quot;620\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1200\&quot; pageHeight=\&quot;620\&quot; background=\&quot;#080f1e\&quot;&gt;\n      &lt;root&gt;\n        &lt;mxCell id=\&quot;0\&quot;/&gt;\n        &lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;\n        &lt;mxCell id=\&quot;uml_title\&quot; value=\&quot;MODELAGEM DE DADOS FISCAIS: ESQUEMAS RELACIONAIS APACHE ICEBERG V2 (AWS GLUE CATALOG)\&quot; style=\&quot;rounded=1;fillColor=#0f172a;strokeColor=#1e293b;fontColor=#f8fafc;fontFamily=DM Sans;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;15\&quot; width=\&quot;1160\&quot; height=\&quot;32\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;!-- Table 1: silver_financial.transaction_events --&gt;\n        &lt;mxCell id=\&quot;t_events\&quot; value=\&quot;glue_catalog.silver_financial.transaction_events\&quot; style=\&quot;swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;fillColor=#0c4a6e;fontColor=#bae6fd;strokeColor=#0284c7;fontFamily=DM Sans;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;20\&quot; y=\&quot;65\&quot; width=\&quot;260\&quot; height=\&quot;240\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c1\&quot; value=\&quot;PK event_id : STRING (UUID v4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#38bdf8;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;26\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c2\&quot; value=\&quot;   transaction_id : STRING\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;46\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c3\&quot; value=\&quot;   account_id : STRING\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;66\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c4\&quot; value=\&quot;   customer_tax_id : STRING (Masked)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;86\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c5\&quot; value=\&quot;   product_type : STRING (CDB, LF, RV, FUND)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;106\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c6\&quot; value=\&quot;   gross_amount : DECIMAL(18, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;126\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c7\&quot; value=\&quot;   holding_days : INT\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;146\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c8\&quot; value=\&quot;PART event_time : TIMESTAMP [days]\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#fbbf24;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;166\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_events_c9\&quot; value=\&quot;PART product_type : STRING\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#fbbf24;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_events\&quot;&gt;\n          &lt;mxGeometry y=\&quot;186\&quot; width=\&quot;260\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n\n        &lt;!-- Table 2: gold_fiscal.withholding_tax_ledger --&gt;\n        &lt;mxCell id=\&quot;t_wtl\&quot; value=\&quot;glue_catalog.gold_fiscal.withholding_tax_ledger\&quot; style=\&quot;swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;fillColor=#422006;fontColor=#fef08a;strokeColor=#f59e0b;fontFamily=DM Sans;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;310\&quot; y=\&quot;65\&quot; width=\&quot;270\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c1\&quot; value=\&quot;PK tax_event_id : STRING (UUID v4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#f59e0b;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;26\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c2\&quot; value=\&quot;FK transaction_id : STRING\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#38bdf8;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;46\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c3\&quot; value=\&quot;   customer_tax_id : STRING (Masked)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;66\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c4\&quot; value=\&quot;   tax_type : STRING (IOF, IRRF_RF, IRRF_RV)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;86\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c5\&quot; value=\&quot;   gross_financial_amount : DECIMAL(18, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;106\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c6\&quot; value=\&quot;   iof_deduction_amount : DECIMAL(18, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;126\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c7\&quot; value=\&quot;   taxable_basis_amount : DECIMAL(18, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;146\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c8\&quot; value=\&quot;   applicable_rate : DECIMAL(7, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;166\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c9\&quot; value=\&quot;   withheld_tax_amount : DECIMAL(18, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;186\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c10\&quot; value=\&quot;   darf_revenue_code : STRING (3426, 6800, 8468)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;206\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c11\&quot; value=\&quot;PART event_timestamp : TIMESTAMP [days]\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#fbbf24;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;226\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_wtl_c12\&quot; value=\&quot;PART tax_type : STRING\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#fbbf24;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_wtl\&quot;&gt;\n          &lt;mxGeometry y=\&quot;246\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n\n        &lt;!-- Table 3: gold_fiscal.fund_investor_positions --&gt;\n        &lt;mxCell id=\&quot;t_fip\&quot; value=\&quot;glue_catalog.gold_fiscal.fund_investor_positions\&quot; style=\&quot;swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;fillColor=#3b0764;fontColor=#f5d0fe;strokeColor=#a855f7;fontFamily=DM Sans;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;610\&quot; y=\&quot;65\&quot; width=\&quot;270\&quot; height=\&quot;260\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c1\&quot; value=\&quot;PK position_id : STRING (UUID v4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#c084fc;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;26\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c2\&quot; value=\&quot;BUCK account_id : STRING [bucket(16)]\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#38bdf8;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;46\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c3\&quot; value=\&quot;   customer_tax_id : STRING\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;66\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c4\&quot; value=\&quot;   fund_ticker : STRING (ANBIMA/B3)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;86\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c5\&quot; value=\&quot;   current_quota_count : DECIMAL(18, 8)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;106\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c6\&quot; value=\&quot;   last_quota_cost_basis : DECIMAL(18, 8)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;126\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c7\&quot; value=\&quot;   current_nav_price : DECIMAL(18, 8)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;146\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c8\&quot; value=\&quot;   last_come_cotas_date : DATE\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;166\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c9\&quot; value=\&quot;   is_fia_exempt : BOOLEAN\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;186\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_fip_c10\&quot; value=\&quot;PART fund_duration_profile : STRING (CP, LP)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#fbbf24;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_fip\&quot;&gt;\n          &lt;mxGeometry y=\&quot;206\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n\n        &lt;!-- Table 4: gold_fiscal.ibs_cbs_dual_tax_register --&gt;\n        &lt;mxCell id=\&quot;t_dual\&quot; value=\&quot;glue_catalog.gold_fiscal.ibs_cbs_dual_tax_register\&quot; style=\&quot;swimlane;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;fillColor=#022c22;fontColor=#a7f3d0;strokeColor=#10b981;fontFamily=DM Sans;fontSize=10;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;\n          &lt;mxGeometry x=\&quot;910\&quot; y=\&quot;65\&quot; width=\&quot;270\&quot; height=\&quot;280\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c1\&quot; value=\&quot;PK dual_tax_id : STRING (UUID v4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#34d399;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;26\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c2\&quot; value=\&quot;FK transaction_id : STRING\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#38bdf8;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;46\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c3\&quot; value=\&quot;   split_payment_uuid : STRING (SPI/B3)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;66\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c4\&quot; value=\&quot;   destination_ibge_code : STRING (7 dig)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;86\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c5\&quot; value=\&quot;   service_modality : STRING (SPREAD/FEE)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;106\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c6\&quot; value=\&quot;   cbs_rate : DECIMAL(7, 4) (~8.80%)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;126\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c7\&quot; value=\&quot;   cbs_amount : DECIMAL(18, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;146\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c8\&quot; value=\&quot;   ibs_state_amount : DECIMAL(18, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;166\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c9\&quot; value=\&quot;   ibs_muni_amount : DECIMAL(18, 4)\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#cbd5e1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;186\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c10\&quot; value=\&quot;PART destination_uf : STRING [UF]\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#fbbf24;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;206\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n        &lt;mxCell id=\&quot;t_dual_c11\&quot; value=\&quot;PART fiscal_period : DATE [months]\&quot; style=\&quot;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontColor=#fbbf24;fontStyle=1;fontFamily=DM Mono;fontSize=9;\&quot; vertex=\&quot;1\&quot; parent=\&quot;t_dual\&quot;&gt;\n          &lt;mxGeometry y=\&quot;226\&quot; width=\&quot;270\&quot; height=\&quot;20\&quot; as=\&quot;geometry\&quot;/&gt;\n        &lt;/mxCell&gt;\n\n        &lt;!-- ER Connectors --&gt;\n        &lt;mxCell id=\&quot;er1\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=1.5;startArrow=ERone;endArrow=ERmany;\&quot; edge=\&quot;1\&quot; source=\&quot;t_events\&quot; target=\&quot;t_wtl\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;er2\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#c084fc;strokeWidth=1.5;startArrow=ERone;endArrow=ERmany;\&quot; edge=\&quot;1\&quot; source=\&quot;t_events\&quot; target=\&quot;t_fip\&quot; parent=\&quot;1\&quot;/&gt;\n        &lt;mxCell id=\&quot;er3\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#34d399;strokeWidth=1.5;startArrow=ERone;endArrow=ERmany;\&quot; edge=\&quot;1\&quot; source=\&quot;t_events\&quot; target=\&quot;t_dual\&quot; parent=\&quot;1\&quot;/&gt;\n      &lt;/root&gt;\n    &lt;/mxGraphModel&gt;\n  &lt;/diagram&gt;\n&lt;/mxfile&gt;&quot;}"></div>
+          <div class="diagram-legend">
+            <strong style="color: #2563eb;">Modelo de Entidade-Relacionamento e Metadados do Lakehouse Fiscal:</strong>
+            <p style="margin-top: 6px; margin-bottom: 8px;"><strong>Arquitetura Medallion:</strong> A tabela Silver <code>silver_financial.transaction_events</code> centraliza os lançamentos core banking e mensageria SPI/B3, alimentando as tabelas Gold especializadas por fato gerador.</p>
+            <p style="margin-bottom: 8px;"><strong>Particionamento Oculto Iceberg v2:</strong> Particionamento diário via <code>days(event_timestamp)</code> para retenção na fonte e mensal via <code>months(fiscal_period)</code> com alocação federativa <code>destination_uf</code> para apuração de IBS/CBS per Princípio do Destino.</p>
+            <p style="margin-bottom: 0;"><strong>Governança de Dados:</strong> Tipagem monetária de alta precisão <code>DECIMAL(18, 4)</code> e precisão fracionária de cotas <code>DECIMAL(18, 8)</code> em conformidade com as diretrizes CVM 175/22 e RFB.</p>
+          </div>
+        </div>
+
+        <pre><code class="language-sql">-- 1. Tabela Silver: Transações e Eventos Financeiros Brutos Normalizados
+CREATE TABLE IF NOT EXISTS glue_catalog.silver_financial.transaction_events (
+    event_id                STRING          COMMENT 'UUID v4 do evento',
+    transaction_id          STRING          COMMENT 'ID da transacao core banking',
+    account_id              STRING          COMMENT 'Conta do cliente',
+    customer_tax_id         STRING          COMMENT 'CPF/CNPJ (LGPD Masked)',
+    product_type            STRING          COMMENT 'CDB, LCI, LCA, RV_SWING, DAY_TRADE, FUND',
+    gross_amount            DECIMAL(18, 4)  COMMENT 'Valor bruto da operacao em BRL',
+    principal_amount        DECIMAL(18, 4)  COMMENT 'Valor principal aplicado',
+    application_date        DATE            COMMENT 'Data de aplicacao inicial',
+    settlement_date         DATE            COMMENT 'Data de liquidacao/resgate',
+    holding_days            INT             COMMENT 'Dias corridos de permanencia',
+    event_time              TIMESTAMP       COMMENT 'Timestamp UTC do evento'
+)
+USING iceberg
+PARTITIONED BY (days(event_time), product_type)
+LOCATION 's3://bank-lakehouse-silver-sa-east-1-123456789012/financial/transaction_events/'
+TBLPROPERTIES (
+    'table_type' = 'ICEBERG',
+    'format-version' = '2',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd'
+);
+
+-- 2. Tabela Silver: Apropriação Diária e Retenção de IOF-TVM (Decreto nº 6.306/2007)
+CREATE TABLE IF NOT EXISTS glue_catalog.silver_financial.daily_accrued_iof (
+    accrual_id              STRING          COMMENT 'UUID do calculo de IOF',
+    transaction_id          STRING          COMMENT 'ID da transacao vinculada',
+    customer_tax_id         STRING          COMMENT 'CPF/CNPJ do investidor',
+    gross_yield_amount      DECIMAL(18, 4)  COMMENT 'Rendimento bruto nominal',
+    elapsed_days            INT             COMMENT 'Dias decorridos (1 a 29)',
+    iof_rate                DECIMAL(5, 4)   COMMENT 'Aliquota IOF aplicada (0.9600 a 0.0300)',
+    iof_withheld_amount     DECIMAL(18, 4)  COMMENT 'Valor retido de IOF em BRL',
+    darf_code               STRING          COMMENT 'Codigo DARF 1150/6895',
+    accrual_date            DATE            COMMENT 'Data de apuracao do IOF'
+)
+USING iceberg
+PARTITIONED BY (months(accrual_date))
+LOCATION 's3://bank-lakehouse-silver-sa-east-1-123456789012/financial/daily_accrued_iof/'
+TBLPROPERTIES (
+    'table_type' = 'ICEBERG',
+    'format-version' = '2',
+    'write.parquet.compression-codec' = 'zstd'
+);
+
+-- 3. Tabela Gold: Livro Consolidado de Retenções na Fonte e DARFs (Lei nº 11.033/2004)
+CREATE TABLE IF NOT EXISTS glue_catalog.gold_fiscal.withholding_tax_ledger (
+    tax_event_id            STRING          COMMENT 'UUID v4 do evento fiscal',
+    transaction_id          STRING          COMMENT 'ID da transacao core banking',
+    account_id              STRING          COMMENT 'Conta corrente / custodia',
+    customer_tax_id         STRING          COMMENT 'CPF/CNPJ do beneficiario',
+    tax_type                STRING          COMMENT 'IOF_TVM, IRRF_RF, IRRF_RV, IRRF_DAY_TRADE, IRRF_COME_COTAS',
+    gross_financial_amount  DECIMAL(18, 4)  COMMENT 'Valor bruto total da operacao',
+    iof_deduction_amount    DECIMAL(18, 4)  COMMENT 'Valor de IOF deduzido da base',
+    taxable_basis_amount    DECIMAL(18, 4)  COMMENT 'Base de calculo efetiva do IRRF',
+    applicable_rate         DECIMAL(7, 4)   COMMENT 'Aliquota nominal aplicada',
+    withheld_tax_amount     DECIMAL(18, 4)  COMMENT 'Valor retido na fonte em BRL',
+    darf_revenue_code       STRING          COMMENT 'Codigo de Receita DARF (3426, 6800, 8468, 6015)',
+    is_cmn_5118_compliant   BOOLEAN         COMMENT 'Flag de conformidade de lastro CMN 5.118',
+    sped_reinf_event        STRING          COMMENT 'Evento SPED Reinf (ex: R-4010, R-4020)',
+    event_timestamp         TIMESTAMP       COMMENT 'Timestamp da liquidacao financeira',
+    created_at              TIMESTAMP       COMMENT 'Timestamp de gravacao no Iceberg'
+)
+USING iceberg
+PARTITIONED BY (days(event_timestamp), tax_type)
+LOCATION 's3://bank-lakehouse-gold-sa-east-1-123456789012/fiscal/withholding_tax_ledger/'
+TBLPROPERTIES (
+    'table_type' = 'ICEBERG',
+    'format-version' = '2',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'history.expire.max-snapshot-age-ms' = '604800000'
+);
+
+-- 4. Tabela Gold: Controle Semestral de Come-Cotas em Fundos (Lei nº 14.754/2023)
+CREATE TABLE IF NOT EXISTS glue_catalog.gold_fiscal.fund_investor_positions (
+    position_id             STRING          COMMENT 'UUID v4 da posicao do cotista',
+    account_id              STRING          COMMENT 'Conta corrente do investidor',
+    customer_tax_id         STRING          COMMENT 'CPF ou CNPJ do cotista',
+    fund_ticker             STRING          COMMENT 'Codigo ANBIMA / B3 do fundo',
+    fund_duration_profile   STRING          COMMENT 'CURTO_PRAZO (20%) ou LONGO_PRAZO (15%)',
+    current_quota_count     DECIMAL(18, 8)  COMMENT 'Quantidade de cotas detidas com 8 decimais',
+    last_quota_cost_basis   DECIMAL(18, 8)  COMMENT 'Valor da cota historico ajustado pelo ultimo come-cotas',
+    current_nav_price       DECIMAL(18, 8)  COMMENT 'Valor da cota no fechamento semestral',
+    last_come_cotas_date    DATE            COMMENT 'Data da ultima apuracao de come-cotas (YYYY-MM-DD)',
+    is_fia_exempt           BOOLEAN         COMMENT 'Flag indicando se fundo de acoes e isento',
+    updated_at              TIMESTAMP       COMMENT 'Timestamp UTC da atualizacao'
+)
+USING iceberg
+PARTITIONED BY (fund_duration_profile, bucket(16, account_id))
+LOCATION 's3://bank-lakehouse-gold-sa-east-1-123456789012/fiscal/fund_investor_positions/'
+TBLPROPERTIES (
+    'table_type' = 'ICEBERG',
+    'format-version' = '2',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd'
+);
+
+-- 5. Tabela Gold: Registro Dual de IVA (IBS / CBS / Split Payment / Destino)
+CREATE TABLE IF NOT EXISTS glue_catalog.gold_fiscal.ibs_cbs_dual_tax_register (
+    dual_tax_id             STRING          COMMENT 'UUID v4 do registro dual',
+    transaction_id          STRING          COMMENT 'ID da transacao de servico financeiro',
+    split_payment_uuid      STRING          COMMENT 'Identificador unico do Split Payment no SPI/B3',
+    customer_tax_id         STRING          COMMENT 'CPF/CNPJ do tomador',
+    destination_uf          STRING          COMMENT 'UF do tomador (Principio do Destino)',
+    destination_ibge_code   STRING          COMMENT 'Codigo IBGE de 7 digitos do municipio tomador',
+    service_modality        STRING          COMMENT 'SPREAD_INTERMEDIACAO ou FEE_BASED_TARIFA',
+    gross_service_value     DECIMAL(18, 4)  COMMENT 'Valor bruto da base de servico/margem',
+    cbs_rate                DECIMAL(7, 4)   COMMENT 'Aliquota federal da CBS',
+    cbs_amount              DECIMAL(18, 4)  COMMENT 'Valor devido da CBS em BRL',
+    ibs_state_rate          DECIMAL(7, 4)   COMMENT 'Aliquota estadual do IBS',
+    ibs_state_amount        DECIMAL(18, 4)  COMMENT 'Valor devido do IBS estadual',
+    ibs_muni_rate           DECIMAL(7, 4)   COMMENT 'Aliquota municipal do IBS',
+    ibs_muni_amount         DECIMAL(18, 4)  COMMENT 'Valor devido do IBS municipal',
+    split_payment_status    STRING          COMMENT 'SETTLED, PENDING, EXEMPT',
+    fiscal_period           DATE            COMMENT 'Competencia fiscal (YYYY-MM-01)'
+)
+USING iceberg
+PARTITIONED BY (months(fiscal_period), destination_uf)
+LOCATION 's3://bank-lakehouse-gold-sa-east-1-123456789012/fiscal/ibs_cbs_dual_tax_register/'
+TBLPROPERTIES (
+    'table_type' = 'ICEBERG',
+    'format-version' = '2',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd'
+);</code></pre>
+      </section>
+
+      <!-- SEÇÃO 05: MOTORES FISCAIS EM PYSPARK -->
+      <section class="section" id="pyspark-motores-calculo"><a id="motor-regras-step-functions"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Processamento Distribuído no AWS Glue 4.0 Graviton4</div>
+            <h2>Motores Fiscais em PySpark &amp; Conciliação COSIF</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Implementação em <strong>PySpark 3.4</strong> para execução distribuída em nós <strong>Graviton4</strong>, cobrindo o motor de apuração de PIS/COFINS sobre spread bancário (Lei nº 9.718/1998), perdas efetivas com inadimplência (Lei nº 14.467/2022) e a conciliação automática com o Razão Contábil COSIF (Classes 5 e 6).
+        </p>
+
+        <pre><code class="language-python"># Motor PySpark: Apuração de PIS/COFINS sobre Spread Bancário (Lei nº 9.718/1998)
+from pyspark.sql import functions as F
+from pyspark.sql.types import DecimalType
+
+df_pis_cofins = df_intermediation.groupBy("fiscal_month", "institution_cnpj") \
+    .agg(
+        F.sum("gross_credit_revenue").alias("tot_credit_rev"),
+        F.sum("gross_securities_yield").alias("tot_sec_yield"),
+        F.sum("fx_operational_gains").alias("tot_fx_gains"),
+        F.sum("fee_service_revenue").alias("tot_fee_rev"),
+        F.sum("funding_interest_expenses").alias("tot_funding_exp"),
+        F.sum("realized_securities_losses").alias("tot_sec_losses"),
+        F.sum("borrowing_transfer_expenses").alias("tot_transfer_exp")
+    ) \
+    .withColumn("gross_operational_revenue",
+        F.col("tot_credit_rev") + F.col("tot_sec_yield") + F.col("tot_fx_gains") + F.col("tot_fee_rev")
+    ) \
+    .withColumn("allowable_statutory_deductions",
+        F.col("tot_funding_exp") + F.col("tot_sec_losses") + F.col("tot_transfer_exp")
+    ) \
+    .withColumn("taxable_spread_margin_base",
+        F.greatest(F.lit(0.0), F.col("gross_operational_revenue") - F.col("allowable_statutory_deductions"))
+    ) \
+    .withColumn("pis_due_amount",
+        (F.col("taxable_spread_margin_base") * F.lit(0.0065)).cast(DecimalType(18, 4))
+    ) \
+    .withColumn("cofins_due_amount",
+        (F.col("taxable_spread_margin_base") * F.lit(0.0400)).cast(DecimalType(18, 4))
+    ) \
+    .withColumn("total_pis_cofins_due",
+        (F.col("pis_due_amount") + F.col("cofins_due_amount")).cast(DecimalType(18, 4))
+    )
+</code></pre>
+      </section>
+
+      <!-- SEÇÃO 06: ORQUESTRAÇÃO COM AWS STEP FUNCTIONS -->
+      <section class="section" id="orquestracao-step-functions">
+        <div class="sec-hdr">
+          <div class="sec-num">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Orquestração Resiliente de Fechamento Fiscal</div>
+            <h2>AWS Step Functions Distributed Map (ASL State Machine)</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Definição da máquina de estados em <strong>Amazon States Language (ASL)</strong> para governança do fechamento mensal: orquestra a curadoria Silver, dispara checagens de qualidade <strong>AWS Deequ</strong>, executa em paralelo os 4 motores fiscais e gera os lotes magnéticos do <strong>SPED</strong>.
+        </p>
+
+        <!-- DRAWIO WRAPPER STEP FUNCTIONS MERMAID -->
+        <div class="drawio-wrap">
+          <div class="drawio-label"><span class="dot" style="background:#ea580c"></span>FLUXO DE ESTADOS: AWS STEP FUNCTIONS DISTRIBUTED MAP (ASL STATE MACHINE)</div>
+          <div class="mermaid" style="background:#080f1e; padding:24px; border-radius:8px; display:flex; justify-content:center; overflow-x:auto;">
+flowchart TD
+    Start([Início: Disparo Fechamento Fiscal]) --> S1[Task: TriggerBronzeToSilverETL<br/><i>glue-silver-financial-curation</i>]
+    
+    S1 -->|Sucesso: Curation Complete| S2[Task: RunDataQualityDeequChecks<br/><i>glue-deequ-fiscal-validation</i>]
+    S1 -.->|Catch: States.ALL| Fail[Task: NotifyFiscalFailureSNS<br/><i>Alerta Crítico PagerDuty</i>]
+    
+    S2 -->|Quality Score &gt; 99.99%| S3[Parallel: RunParallelFiscalEngines]
+    S2 -.->|Erro nos Gates DQ| Fail
+    
+    subgraph ParallelEngines [Execução Paralela dos 4 Motores Fiscais PySpark]
+        direction TB
+        B1[Branch 1: RunIOFEngine<br/><i>glue-gold-iof-engine</i>]
+        B2[Branch 2: RunIRRFWithholdingEngine<br/><i>glue-gold-irrf-engine</i>]
+        B3[Branch 3: RunComeCotasEngine<br/><i>glue-gold-come-cotas-engine</i>]
+        B4[Branch 4: RunDualVATReformaEngine<br/><i>glue-gold-dual-vat-engine</i>]
+    end
+    
+    S3 --> ParallelEngines
+    S4 -->|Conciliação COSIF/DTA Aprovada| S5[Task: GenerateRegulatorySpedBatches<br/><i>glue-regulatory-sped-exporter</i>]
+    ParallelEngines -->|Todos os 4 Motores OK| S4[Task: RunAccountingTaxReconciliation<br/><i>glue-gold-tax-accounting-reconciliation</i>]
+    ParallelEngines -.->|Falha em Qualquer Branch| Fail
+    
+    S4 -.->|Divergência Contábil| Fail
+    
+    S5 -->|Lotes SPED Gerados| S6[Task: NotifyFiscalSuccessSNS<br/><i>Notificação Sucesso Fechamento</i>]
+    S5 -.->|Erro Exportação| Fail
+    
+    S6 --> SuccessEnd([Fim: Fechamento Fiscal Homologado])
+    Fail --> FailureEnd([Fim: Falha e Rollback Acionado])
+    
+    classDef taskNode fill:#1e293b,stroke:#0284c7,stroke-width:1.5px,color:#f8fafc,font-family:'DM Sans';
+    classDef parallelNode fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#f8fafc,font-family:'DM Sans';
+    classDef failNode fill:#450a0a,stroke:#ef4444,stroke-width:2px,color:#fca5a5,font-family:'DM Sans';
+    classDef successNode fill:#022c22,stroke:#10b981,stroke-width:2px,color:#6ee7b7,font-family:'DM Sans';
+    
+    class S1,S2,S4,S5,B1,B2,B3,B4 taskNode;
+    class S3 parallelNode;
+    class Fail,FailureEnd failNode;
+    class S6,SuccessEnd successNode;
+          </div>
+          <div class="diagram-legend">
+            <strong style="color: #2563eb;">Explicação da Orquestração Step Functions:</strong>
+            <p style="margin-top: 6px; margin-bottom: 8px;"><strong>Controle de Fluxo:</strong> Execução sequencial da curadoria Silver e validação Deequ, seguida pela ramificação paralela (Distributed Map) dos 4 motores fiscais no AWS Glue 4.0.</p>
+            <p style="margin-bottom: 8px;"><strong>Resiliência e Governança:</strong> Tratamento global de exceções via bloco <code>Catch: ["States.ALL"]</code> direcionando falhas para tópicos de alerta no Amazon SNS integrado ao PagerDuty.</p>
+            <p style="margin-bottom: 0;"><strong>Conclusão Contábil:</strong> Após a conciliação automática com o Razão COSIF e verificação de DTA, exporta os arquivos magnéticos para transmissão aos sistemas SPED e BACEN.</p>
+          </div>
+        </div>
+
+        <pre><code class="language-json">{
+  "Comment": "Orquestracao End-to-End do Fechamento Fiscal Mensal na AWS",
+  "StartAt": "TriggerBronzeToSilverETL",
+  "States": {
+    "TriggerBronzeToSilverETL": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "glue-silver-financial-curation",
+        "Arguments": {
+          "--enable-metrics": "true",
+          "--conf": "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+        }
+      },
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "NotifyFiscalFailureSNS"
+        }
+      ],
+      "Next": "RunDataQualityDeequChecks"
+    },
+    "RunDataQualityDeequChecks": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "glue-deequ-fiscal-validation"
+      },
+      "Next": "RunParallelFiscalEngines"
+    },
+    "RunParallelFiscalEngines": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "RunIOFEngine",
+          "States": {
+            "RunIOFEngine": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": { "JobName": "glue-gold-iof-engine" },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "RunIRRFWithholdingEngine",
+          "States": {
+            "RunIRRFWithholdingEngine": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": { "JobName": "glue-gold-irrf-engine" },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "RunComeCotasEngine",
+          "States": {
+            "RunComeCotasEngine": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": { "JobName": "glue-gold-come-cotas-engine" },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "RunDualVATReformaEngine",
+          "States": {
+            "RunDualVATReformaEngine": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": { "JobName": "glue-gold-dual-vat-engine" },
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "RunAccountingTaxReconciliation"
+    },
+    "RunAccountingTaxReconciliation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "glue-gold-tax-accounting-reconciliation"
+      },
+      "Next": "GenerateRegulatorySpedBatches"
+    },
+    "GenerateRegulatorySpedBatches": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "glue-regulatory-sped-exporter"
+      },
+      "Next": "NotifyFiscalSuccessSNS"
+    },
+    "NotifyFiscalSuccessSNS": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:sa-east-1:123456789012:fiscal-closing-success",
+        "Message": "Fechamento Fiscal Mensal concluído com sucesso e arquivos SPED gerados."
+      },
+      "End": true
+    },
+    "NotifyFiscalFailureSNS": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:sa-east-1:123456789012:fiscal-closing-alerts",
+        "Message": "FALHA CRÍTICA no Fechamento Fiscal Mensal. Inspecione os logs no CloudWatch."
+      },
+      "End": true
+    }
+  }
+}</code></pre>
+      </section>
+
+      <!-- SEÇÃO 07: GOVERNANÇA, SEGURANÇA BANCÁRIA & FINOPS -->
+      <section class="section" id="governanca-seguranca"><a id="seguranca-lake-formation-governance"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">07</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">LGPD, Sigilo Bancário &amp; Eficiência em Nuvem</div>
+            <h2>Governança com Lake Formation, KMS CMK &amp; Estratégia FinOps</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          A proteção dos dados fiscais e a conformidade regulatória no <strong>AWS sa-east-1</strong> combinam isolamento criptográfico, auditoria contínua e políticas ativas de otimização de custo (FinOps).
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Segurança &amp; LGPD</div>
+            <div class="card-title">AWS Lake Formation &amp; KMS CMK</div>
+            <p>O <strong>AWS Lake Formation</strong> implementa controle de acesso baseado em tags (LF-TBAC) e <strong>Cell-Level Filtering</strong>: analistas de dados visualizam CPFs ofuscados (<code>***.123.456-**</code>), enquanto processos regulatórios acessam dados completos via IAM Roles autenticadas.</p>
+            <p><strong>Criptografia:</strong> Chaves gerenciadas pelo cliente no <strong>AWS KMS (CMK)</strong> com Envelope Encryption (AES-256) e varredura contínua de PII via <strong>Amazon Macie</strong>.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Compliance &amp; FinOps</div>
+            <div class="card-title">Retenção de 5 Anos &amp; Graviton4</div>
+            <p>O <strong>S3 Object Lock em Modo Compliance</strong> garante imutabilidade legal de 5 anos (Art. 173 CTN), com transição automática pelo S3 Lifecycle para <strong>S3 Glacier Deep Archive</strong> após 365 dias (economia de até 95% em storage).</p>
+            <p><strong>FinOps em Processamento:</strong> Instâncias <strong>Graviton4</strong> reduzem custos em 20%, enquanto o <strong>AWS Glue Flex</strong> reduz em 65% o custo de processamentos batch noturnos não críticos.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SEÇÃO 08: REFERÊNCIAS NORMATIVAS E FONTES DE COMPLIANCE -->
+      <!-- ============================================================ -->
+      <section class="section" id="referencias-normativas"><a id="secao-08-referencias-normativas"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">08</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Fundamentação Legal &amp; Normas Técnicas</div>
+            <h2>Referências Normativas e Fontes de Compliance</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Diplomas legais, resoluções normativas e padrões regulatórios aplicados na modelagem contábil, tributária e arquitetural da plataforma (ABNT NBR 6023:2018):
+        </p>
+
+        <div class="grid-2">
+          <!-- Bloco 1: Legislação Federal e Constitucional -->
+          <div class="card">
+            <div class="card-subtitle" style="color:#f59e0b;">Legislação Federal &amp; Constitucional</div>
+            <div class="card-title">Atos Legislativos do Congresso Nacional</div>
+            <ul style="padding-left: 20px; color: #334155; line-height: 1.7; font-size: 0.85rem;">
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm" target="_blank" rel="noopener noreferrer"><em>Constituição da República Federativa do Brasil de 1988 (CF/88)</em></a>. Brasília, DF: Presidência da República, 1988.</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/constituicao/emendas/emc/emc132.htm" target="_blank" rel="noopener noreferrer"><em>Emenda Constitucional nº 132, de 20 de dezembro de 2023 (EC 132/23)</em></a>. Altera o Sistema Tributário Nacional para instituir a Reforma Tributária do Consumo e o IVA Dual (IBS/CBS).</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm" target="_blank" rel="noopener noreferrer"><em>Lei Complementar nº 214, de 2025 (LC 214/25) / PLP nº 68, de 2024</em></a>. Institui o Imposto sobre Bens e Serviços (IBS), a Contribuição Social sobre Bens e Serviços (CBS) e o Imposto Seletivo (IS).</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/lei/l14754.htm" target="_blank" rel="noopener noreferrer"><em>Lei nº 14.754, de 12 de dezembro de 2023 (Lei 14.754/23)</em></a>. Dispõe sobre a tributação de aplicações em fundos de investimento fechados/exclusivos e de renda no exterior (offshores).</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/_ato2004-2006/2004/lei/l11033.htm" target="_blank" rel="noopener noreferrer"><em>Lei nº 11.033, de 21 de dezembro de 2004 (Lei 11.033/04)</em></a>. Altera a tributação dos mercados financeiro e de capitais, instituindo tabelas regressivas e retenção IRRF na fonte.</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/leis/l9718.htm" target="_blank" rel="noopener noreferrer"><em>Lei nº 9.718, de 27 de novembro de 1998 (Lei 9.718/98)</em></a>. Altera a legislação tributária federal relativa às contribuições para o PIS/PASEP e COFINS devidas pelas instituições financeiras.</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/leis/l9249.htm" target="_blank" rel="noopener noreferrer"><em>Lei nº 9.249, de 26 de dezembro de 1995 (Lei 9.249/95)</em></a>. Altera a legislação do imposto de renda das pessoas jurídicas e da contribuição social sobre o lucro líquido (instituição do JCP).</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/leis/l7689.htm" target="_blank" rel="noopener noreferrer"><em>Lei nº 7.689, de 15 de dezembro de 1988 (Lei 7.689/88)</em></a>. Institui a Contribuição Social sobre o Lucro Líquido (CSLL) das pessoas jurídicas.</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2022/lei/l14467.htm" target="_blank" rel="noopener noreferrer"><em>Lei nº 14.467, de 6 de dezembro de 2022 (Lei 14.467/22)</em></a>. Dispõe sobre o tratamento tributário das perdas decorrentes de inadimplemento em operações de crédito e ativos fiscais diferidos (DTA).</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/_ato2007-2010/2007/decreto/d6306.htm" target="_blank" rel="noopener noreferrer"><em>Decreto nº 6.306, de 14 de dezembro de 2007 (Dec. 6.306/07 - RIOF)</em></a>. Regulamenta o Imposto sobre Operações de Crédito, Câmbio e Seguro, ou relativas a Títulos ou Valores Mobiliários.</li>
+              <li><strong>BRASIL.</strong> <a href="https://www.planalto.gov.br/ccivil_03/leis/l5172compilado.htm" target="_blank" rel="noopener noreferrer"><em>Lei nº 5.172, de 25 de outubro de 1966</em></a>. Código Tributário Nacional (CTN), art. 173 (Prazo decadencial de 5 anos para guarda de registros fiscais).</li>
+            </ul>
+          </div>
+
+          <!-- Bloco 2: Atos Infralegais, BACEN, CVM e Padrões Contábeis -->
+          <div class="card">
+            <div class="card-subtitle" style="color:#0284c7;">Atos Regulatórios, BACEN, CVM &amp; IFRS</div>
+            <div class="card-title">Instruções Normativas, Resoluções &amp; Contabilidade</div>
+            <ul style="padding-left: 20px; color: #334155; line-height: 1.7; font-size: 0.85rem;">
+              <li><strong>BANCO CENTRAL DO BRASIL / CMN.</strong> <a href="https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20CMN&amp;numero=4966" target="_blank" rel="noopener noreferrer"><em>Resolução CMN nº 4.966, de 25 de novembro de 2020 (Res. CMN 4.966/20)</em></a>. Estabelece conceitos e critérios contábeis aplicáveis a instrumentos financeiros (convergência IFRS 9 / NBC TG 48).</li>
+              <li><strong>BANCO CENTRAL DO BRASIL / CMN.</strong> <a href="https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20CMN&amp;numero=5118" target="_blank" rel="noopener noreferrer"><em>Resolução CMN nº 5.118, de 1º de fevereiro de 2024 (Res. CMN 5.118/24)</em></a>. Disciplina o lastro para emissão de títulos incentivados (LCI, LCA, CRI e CRA).</li>
+              <li><strong>BANCO CENTRAL DO BRASIL.</strong> <a href="https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&amp;numero=352" target="_blank" rel="noopener noreferrer"><em>Resolução BCB nº 352, de 23 de novembro de 2023 (Res. BCB 352/23)</em></a>. Consolida as normas gerais do Plano Contábil das Instituições do SFN (COSIF).</li>
+              <li><strong>RECEITA FEDERAL DO BRASIL.</strong> <a href="http://normas.receita.fazenda.gov.br/sijut2consulta/link.action?idAto=67493" target="_blank" rel="noopener noreferrer"><em>Instrução Normativa RFB nº 1.585, de 31 de agosto de 2015 (IN RFB 1.585/15)</em></a>. Dispõe sobre o imposto de renda sobre rendimentos e ganhos líquidos nos mercados financeiro e de capitais.</li>
+              <li><strong>BANCO CENTRAL DO BRASIL.</strong> <a href="https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolu%C3%A7%C3%A3o%20BCB&amp;numero=85" target="_blank" rel="noopener noreferrer"><em>Resolução BCB nº 85, de 8 de abril de 2021</em></a>. Dispõe sobre a política de segurança cibernética e requisitos para serviços em nuvem.</li>
+              <li><strong>COMISSÃO DE VALORES MOBILIÁRIOS.</strong> <a href="https://conteudo.cvm.gov.br/legislacao/resolucoes/resolu175.html" target="_blank" rel="noopener noreferrer"><em>Resolução CVM nº 175, de 23 de dezembro de 2022</em></a>. Marco Regulatório dos Fundos de Investimento no Brasil.</li>
+              <li><strong>AMAZON WEB SERVICES.</strong> <a href="https://aws.amazon.com/financial-services/" target="_blank" rel="noopener noreferrer"><em>AWS Financial Services Cloud Compliance &amp; Well-Architected Framework: Financial Services Industry Lens</em></a>. Seattle: AWS, 2026.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- NAVEGAÇÃO ENTRE MÓDULOS (FOOTER) -->
+      <div class="module-nav">
+        <a href="reforma-tributaria.html" class="module-nav-btn">← Módulo 03: Reforma Tributária (IBS/CBS)</a>
+        <a href="introducao-tributacao.html" class="module-nav-btn">Voltar ao Hub Negócios &amp; Fiscal →</a>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Scripts Globais Obrigatórios -->
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/a11y.js"></script>
+  <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof mermaid !== 'undefined') {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'dark',
+          themeVariables: {
+            darkMode: true,
+            background: '#080f1e',
+            primaryColor: '#1e293b',
+            primaryTextColor: '#f8fafc',
+            primaryBorderColor: '#38bdf8',
+            lineColor: '#38bdf8',
+            secondaryColor: '#0f172a',
+            tertiaryColor: '#1e1b4b'
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

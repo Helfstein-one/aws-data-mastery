@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Reforma Tributária EC 132/2023 &amp; PLP 68/2024 / LC 214/2025: IVA Dual (IBS/CBS), Regime Específico para Serviços Financeiros, Split Payment e cronograma 2026-2033."/>
+  <title>Reforma Tributária (IBS/CBS) | AWS Data Mastery</title>
+  
+  <!-- KaTeX Math Rendering (Strict Delimiters) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option", "svg"],
+        throwOnError: false
+      });
+    });
+  </script>
+
+  <!-- Draw.io Viewer Script -->
+  <!-- Google Fonts & Stylesheets -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../style.css"/>
+  <link rel="stylesheet" href="../../style-a11y.css"/>
+  
+  <!-- OpenGraph -->
+  <meta property="og:title" content="Reforma Tributária (IBS/CBS) | AWS Data Mastery"/>
+  <meta property="og:description" content="IVA Dual no Sistema Financeiro: CBS Federal, IBS Subnacional, Split Payment em Tempo Real e Transição 2026-2033."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="../../assets/og-image.jpg"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+
+  <style>
+    /* Dark Neon & Layout Tokens */
+    :root {
+      --border-dark: #1e293b;
+      --title-contrast: #f8fafc;
+      --accent-neon: #38bdf8;
+    }
+    .table-container { overflow-x: auto; }
+    pre { overflow-x: auto; }
+    .formula-box { background: #0b0f19; }
+  </style>
+</head>
+<body class="light-theme-section">
+  <!-- Botão Hamburger Mobile -->
+  <button id="hamburger" onclick="toggleNav()">☰</button>
+  
+  <!-- Barra Lateral (Injetada via js/sidebar-loader.js) -->
+  <nav id="sidebar"></nav>
+  
+  <!-- Contêiner Principal -->
+  <div id="main">
+    <main class="main-content">
+      
+      <!-- HERO HEADER -->
+      <div class="hero">
+        <div class="hero-ey">Módulo 03 · Marco Regulatório Constitucional</div>
+        <h1>⚖️ Reforma Tributária EC 132/2023 &amp; IVA Dual no SFN</h1>
+        <p class="lead">
+          Análise exaustiva da reestruturação tributária nacional promulgada pela <strong>Emenda Constitucional nº 132/2023</strong> e regulamentada pelo <strong>PLP 68/2024 / LC 214/2025</strong>. Aborda a transição do modelo cumulativo para o <strong>IVA Dual (CBS e IBS)</strong>, a extinção de cinco tributos arcaicos (PIS, COFINS, IPI, ICMS e ISS), o Regime Específico para Serviços Financeiros (margem/spread vs tarifas fee-based), a não incidência sobre atos cooperativos, o Princípio do Destino federativo (5.570 municípios e 27 estados), o mecanismo de <strong>Split Payment Inteligente em tempo real</strong> e a modelagem distribuída com <strong>Apache Iceberg v2</strong> e <strong>PySpark 3.4 Structured Streaming</strong>.
+        </p>
+        <div class="pills">
+          <span class="badge-pill badge-rose">EC 132/2023</span>
+          <span class="badge-pill badge-purple">PLP 68/2024 / LC 214/2025</span>
+          <span class="badge-pill badge-blue">IVA Dual (IBS / CBS)</span>
+          <span class="badge-pill badge-amber">Split Payment em Tempo Real</span>
+          <span class="badge-pill badge-green">Princípio do Destino (IBGE)</span>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 01: NOVA MATRIZ TRIBUTÁRIA E IVA DUAL -->
+      <section class="section" id="iva-dual-conceito"><a id="ec-132-iva-dual"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Marco Constitucional do Consumo</div>
+            <h2>Nova Matriz Tributária do Consumo &amp; Estrutura do IVA Dual</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          A <strong>Emenda Constitucional nº 132/2023</strong> extingue o sistema cumulativo e fragmentado de tributação sobre o consumo no Brasil, substituindo cinco tributos históricos (<strong>PIS/PASEP</strong>, <strong>COFINS</strong>, <strong>IPI</strong>, <strong>ICMS</strong> e <strong>ISS</strong>) por um modelo unificado de <strong>Imposto sobre Valor Agregado (IVA) Dual</strong>, baseado na não-cumulatividade ampla, desoneração integral de investimentos e exportações, e arrecadação no <strong>Princípio do Destino</strong>.
+        </p>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle">Competência Federal (União)</div>
+            <div class="card-title">CBS (Contribuição sobre Bens e Serviços)</div>
+            <p>Substitui o PIS/PASEP e a COFINS federais. Administrada diretamente pela <strong>Receita Federal do Brasil (RFB)</strong> com alíquota de referência federal uniforme estimada em ~8,80%.</p>
+            <p><strong>Foco:</strong> Não-cumulatividade plena nota a nota, gerando créditos imediatos na aquisição de bens de capital e insumos corporativos.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Competência Subnacional (Estados &amp; Municípios)</div>
+            <div class="card-title">IBS (Imposto sobre Bens e Serviços)</div>
+            <p>Substitui o ICMS estadual e o ISS municipal. Arrecadado e gerido de forma compartilhada pelo <strong>Comitê Gestor do IBS (CG-IBS)</strong> com alíquota combinada estimada em ~17,70% a 19,17%.</p>
+            <p><strong>Foco:</strong> Eliminação completa da guerra fiscal interestadual e partilha direta ao município e estado de domicílio do tomador.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Competência Federal Extrafiscal</div>
+            <div class="card-title">Imposto Seletivo (IS — "Imposto do Pecado")</div>
+            <p>Previsto no <strong>art. 153, VIII da CF/88</strong>, incide exclusivamente sobre a produção, extração ou comercialização de bens e serviços prejudiciais à saúde humana ou ao meio ambiente.</p>
+            <p><strong>Imunidade Financeira:</strong> Os serviços bancários, operações de crédito, câmbio, seguros e mercado de capitais são <strong>estritamente imunes e isentos</strong> do Imposto Seletivo.</p>
+          </div>
+        </div>
+
+        <div class="formula-box">
+          \[ \text{Alíquota Padrão Consolidada do IVA Dual} = \text{CBS}_{\text{Federal}} + \text{IBS}_{\text{Estadual}} + \text{IBS}_{\text{Municipal}} \approx 26{,}50\% \text{ a } 27{,}97\% \]
+          \[ \text{Tributo Líquido a Recolher} = \text{Débito Fiscal sobre Saídas} - \sum \text{Créditos Fiscais sobre Insumos e Investimentos} \]
+        </div>
+
+        <div class="info-box">
+          <div class="info-title">Diferença Estrutural: Cumulatividade vs Não-Cumulatividade Plena</div>
+          <p style="color:#cbd5e1; margin-bottom:0;">
+            No modelo anterior, as instituições financeiras estavam restritas ao regime cumulativo da <strong>Lei nº 9.718/1998</strong> (PIS 0,65% e COFINS 4,00%) sem direito a crédito sobre despesas operacionais e custos de TI. Sob a <strong>EC 132/2023</strong> e a <strong>LC 214/2025</strong>, todas as aquisições de tecnologia em nuvem (AWS), data centers, softwares e serviços de terceiros passam a gerar créditos financeiros de CBS e IBS aproveitáveis na apuração fiscal.
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 02: REGIME ESPECÍFICO DE SERVIÇOS FINANCEIROS -->
+      <section class="section" id="regime-especifico-ifs"><a id="regime-especifico-servicos-financeiros"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Regulamentação Complementar PLP 68/2024 / LC 214/2025</div>
+            <h2>Regime Específico para Serviços Financeiros no SFN</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Reconhecendo a impossibilidade fática de segregar o crédito fiscal físico nota a nota em contratos de mútuo e captação no atacado, o <strong>art. 156-A, § 5º, V da CF/88</strong> determinou a criação de um <strong>Regime Específico de Tributação para Serviços Financeiros</strong>, estruturado nos arts. 165 a 210 do <strong>PLP nº 68/2024 / LC 214/2025</strong>.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Modalidade 1: Intermediação Financeira (Spread / Margem)</div>
+            <div class="card-title">Tributação sobre a Margem Financeira Líquida</div>
+            <p>Aplica-se a operações de crédito, financiamento, câmbio, arrendamento mercantil (leasing) e títulos de renda fixa. A base de cálculo é a margem bruta de intermediação deduzida dos custos estatutários:</p>
+            <div class="formula-box">
+              \[ \text{Base Margem} = (\text{Receitas de Crédito} + \text{Juros de Títulos} + \text{Ganhos Cambiais}) - (\text{Despesas de Captação} + \text{Perdas Inadimplência}) \]
+            </div>
+            <p><strong>Deduções Autorizadas:</strong> Juros pagos sobre CDBs, LCIs, LCAs, LFs, poupança, repasses do BNDES e perdas efetivas com inadimplência nos termos da <strong>Lei nº 14.467/2022</strong>.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Modalidade 2: Serviços Remunerados por Tarifas (Fee-Based)</div>
+            <div class="card-title">Tributação sobre Preço Cheio com Crédito Pleno</div>
+            <p>Aplica-se a receitas de prestação de serviços com valor determinado em contrato ou tabela de tarifas:</p>
+            <ul style="color:#94a3b8; font-size:0.94rem; padding-left:20px; line-height:1.6; margin-bottom:12px;">
+              <li>Administração e custódia qualificada de fundos de investimento;</li>
+              <li>Manutenção de contas correntes, transferências e liquidação de pagamentos;</li>
+              <li>Corretagem de valores mobiliários, estruturação de dívida e underwriting;</li>
+              <li>Anuidade de cartões e processamento de adquirência.</li>
+            </ul>
+            <p><strong>Creditamento Amplo:</strong> Clientes pessoas jurídicas contribuintes do IVA apropriam <strong>100% de crédito fiscal</strong> destacado na nota fiscal ou fatura do serviço bancário.</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Segmento Financeiro</th>
+                <th>Base de Cálculo Legal</th>
+                <th>Regime de Apuração</th>
+                <th>Direito a Crédito pelo Tomador PJ</th>
+                <th>Fundamentação Legal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Operações de Crédito &amp; Financiamentos</strong></td>
+                <td>Margem Financeira Líquida (Receita de Juros - Custo de Captação - Perdas)</td>
+                <td>Regime Específico de Spread</td>
+                <td><span class="badge-pill badge-green">Crédito Presumido PJ</span></td>
+                <td>PLP 68/2024 art. 168 / LC 214</td>
+              </tr>
+              <tr>
+                <td><strong>Tarifas Bancárias &amp; Gestão de Recursos</strong></td>
+                <td>Preço Integral do Serviço Faturado (Tarifa / Comissão)</td>
+                <td>Regime Geral Não-Cumulativo</td>
+                <td><span class="badge-pill badge-blue">Crédito Integral Direto (100%)</span></td>
+                <td>PLP 68/2024 art. 175 / LC 214</td>
+              </tr>
+              <tr>
+                <td><strong>Seguros Privados &amp; Capitalização</strong></td>
+                <td>Prêmios Ganhos deduzidos de Sinistros Pagos e Provisões Técnicas</td>
+                <td>Regime Específico de Seguros</td>
+                <td><span class="badge-pill badge-amber">Crédito Parcial PJ</span></td>
+                <td>PLP 68/2024 art. 182 / LC 214</td>
+              </tr>
+              <tr>
+                <td><strong>Previdência Complementar (PGBL / VGBL)</strong></td>
+                <td>Taxa de Carregamento e Taxa de Gestão / Administração</td>
+                <td>Regime Específico Previdenciário</td>
+                <td><span class="badge-pill badge-purple">Isento na Aplicação</span></td>
+                <td>PLP 68/2024 art. 190 / LC 214</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 03: CRÉDITO PRESUMIDO PJ E COOPERATIVAS -->
+      <section class="section" id="credito-presumido-cooperativas">
+        <div class="sec-hdr">
+          <div class="sec-num">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Neutralidade Produtiva &amp; Sociedades Cooperativas</div>
+            <h2>Crédito Presumido para Tomadores PJ &amp; Cooperativas de Crédito</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Para evitar que a tributação de spread sobrecarregue os custos de capital produtivo no Brasil, o <strong>PLP 68/2024 / LC 214/2025</strong> introduziu a sistemática do <strong>Crédito Presumido sobre Financiamentos</strong> para empresas tomadoras de crédito, além de blindar as operações das cooperativas de crédito.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Crédito Presumido PJ</div>
+            <div class="card-title">Apropriação Fiscal pelas Empresas Tomadoras</div>
+            <p>As pessoas jurídicas tributadas pelo regime regular do IVA Dual que contratarem empréstimos, financiamentos ou capital de giro com instituições do SFN têm direito a apropriar crédito presumido de CBS e IBS calculado sobre os juros e encargos contratuais incorridos:</p>
+            <div class="formula-box">
+              \[ \text{Crédito Presumido}_{\text{PJ}} = \text{Juros Pagos no Período} \times (\text{Alíquota CBS} + \text{Alíquota IBS}) \]
+            </div>
+            <p>Essa mecânica garante a <strong>neutralidade tributária</strong> do investimento empresarial, impedindo a cumulatividade oculta no custo da dívida bancária corporativa.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Cooperativas do SFN</div>
+            <div class="card-title">Regime dos Atos Cooperativos Típicos</div>
+            <p>O texto constitucional (art. 146, III, 'c') e a lei complementar consagram a não incidência do IVA Dual sobre os <strong>atos cooperativos típicos</strong> realizados entre a cooperativa de crédito e seus cooperados (depósitos, concessão de crédito aos associados e sobras líquidas):</p>
+            <ul style="color:#94a3b8; font-size:0.94rem; padding-left:20px; line-height:1.6; margin-bottom:12px;">
+              <li><strong>Ato Cooperativo Típico:</strong> Alíquota zero / Não-incidência de IBS e CBS;</li>
+              <li><strong>Ato Não Cooperativo (com Terceiros):</strong> Incidência normal do regime financeiro sobre margem de intermediação ou tarifas.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 04: PRINCÍPIO DO DESTINO E COMITÊ GESTOR -->
+      <section class="section" id="principio-destino-comite-gestor">
+        <div class="sec-hdr">
+          <div class="sec-num">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Federalismo Fiscal &amp; Partilha Automatizada</div>
+            <h2>Princípio do Destino &amp; Comitê Gestor do IBS (CG-IBS)</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          O <strong>Princípio do Destino</strong> encerra definitivamente mais de quatro décadas de guerra fiscal entre estados e municípios. Toda a receita do IBS pertence ao estado e município onde o consumidor ou tomador do serviço reside ou está estabelecido. A distribuição é coordenada pelo <strong>Comitê Gestor do IBS (CG-IBS)</strong>, entidade pública sob regime especial com representação paritária dos 27 estados e dos 5.570 municípios brasileiros.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Governança Federativa</div>
+            <div class="card-title">Comitê Gestor do IBS (CG-IBS)</div>
+            <p>Responsável por uniformizar a regulamentação do IBS, arrecadar o tributo centralizadamente, calcular e realizar a partilha dos repasses aos 5.570 municípios e 27 estados, e harmonizar o contencioso administrativo tributário nacional.</p>
+            <div class="formula-box">
+              \[ \text{IBS}_{\text{Total}} = \text{Base} \times \Big(\text{Alíquota Estado Destino} + \text{Alíquota Município Destino}\Big) \]
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Engenharia de Dados &amp; Georreferenciamento</div>
+            <div class="card-title">Mapeamento por Código IBGE de 7 Dígitos</div>
+            <p>Nas plataformas de dados bancários, cada evento de liquidação, empréstimo ou cobrança de tarifa deve registrar compulsoriamente os atributos de domicílio fiscal do tomador:</p>
+            <ul style="color:#94a3b8; font-size:0.94rem; padding-left:20px; line-height:1.6; margin-bottom:12px;">
+              <li><code>destination_state_uf</code>: UF do estado de destino (ex: SP, RJ, MG);</li>
+              <li><code>destination_muni_ibge</code>: Código IBGE de 7 dígitos do município;</li>
+              <li><code>split_payment_id</code>: Código de rastreabilidade único no SPI do BACEN.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 05: SPLIT PAYMENT EM TEMPO REAL -->
+      <section class="section" id="split-payment"><a id="split-payment-tempo-real"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Inovação Tecnológica na Arrecadação</div>
+            <h2>Mecanismo de Split Payment Inteligente em Tempo Real</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Regulado expressamente pelos <strong>arts. 49 a 53 do PLP nº 68/2024 / LC 214/2025</strong>, o <strong>Split Payment Inteligente</strong> representa a maior transformação operacional da história tributária brasileira. No exato instante em que uma transação eletrônica é liquidada (via <strong>Pix / SPI</strong>, <strong>TED</strong>, cartões de crédito/débito ou câmaras de liquidação da B3), o sistema segregador retém automaticamente os valores devidos a título de CBS e IBS, creditando diretamente as contas da Receita Federal e do Comitê Gestor do IBS, liberando ao vendedor apenas o valor financeiro líquido.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Mecânica Operacional</div>
+            <div class="card-title">Retenção no Ato da Liquidação (SPI / Pix)</div>
+            <p>A instituição participante do SPI (Banco ou Adquirente) consulta em tempo real o motor fiscal, calcula as alíquotas aplicáveis e divide a ordem de pagamento em dois fluxos instantâneos:</p>
+            <div class="formula-box">
+              \[ \text{Tributo Retido} = \text{Valor Bruto} \times (\text{Alíquota CBS} + \text{Alíquota IBS}) \]
+              \[ \text{Crédito Líquido ao Vendedor} = \text{Valor Bruto da Operação} - \text{Tributo Retido} \]
+            </div>
+            <p>O evento recebe a tag de status <code>RETAINED_AT_SETTLEMENT</code>, eliminando integralmente o risco de inadimplência e a necessidade de apuração manual retroativa.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-subtitle">Benefícios Estruturais</div>
+            <div class="card-title">Impacto no Sistema Financeiro &amp; Compliance</div>
+            <ul style="color:#94a3b8; font-size:0.94rem; padding-left:20px; line-height:1.6; margin-bottom:12px;">
+              <li><strong>Fim da Inadimplência Tributária:</strong> O imposto é recolhido no ato da liquidação, sem formação de passivo fiscal;</li>
+              <li><strong>Eliminação da Substituição Tributária (ST):</strong> Simplificação radical do faturamento de mercadorias e serviços;</li>
+              <li><strong>Conformidade Contínua:</strong> Emissão de comprovante fiscal digital simultâneo à liquidação financeira;</li>
+              <li><strong>Redução de Contencioso:</strong> Impossibilidade fática de divergência entre a base declarada e o valor liquidado.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 06: CRONOGRAMA DE TRANSIÇÃO GRADUAL (2026-2033) -->
+      <section class="section" id="cronograma-transicao"><a id="transicao-2026-2033"></a>
+        <div class="sec-hdr">
+          <div class="sec-num">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Transição Constitucional de 8 Anos</div>
+            <h2>Cronograma Completo de Transição Gradual (2026 – 2033)</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          A transição do sistema tributário anterior para o IVA Dual ocorre de forma escalonada ao longo de 8 anos (2026 a 2033), permitindo a adaptação dos sistemas bancários, a calibração das alíquotas de referência e a substituição progressiva das obrigações acessórias.
+        </p>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Ano</th>
+                <th>Etapa Federal (CBS &amp; União)</th>
+                <th>Etapa Subnacional (IBS &amp; Estados/Municípios)</th>
+                <th>Situação dos Tributos Anteriores</th>
+                <th>Impacto em TI &amp; Engenharia de Dados</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>2026</strong></td>
+                <td>Ano Piloto: Alíquota teste de <strong>0,90% CBS</strong></td>
+                <td>Ano Piloto: Alíquota teste de <strong>0,10% IBS</strong></td>
+                <td>PIS, COFINS, IPI, ICMS e ISS vigentes (compensação do piloto)</td>
+                <td>Homologação dos motores de cálculo e testes do Split Payment no SPI</td>
+              </tr>
+              <tr>
+                <td><strong>2027</strong></td>
+                <td><strong>Vigência Plena da CBS (~8,80%)</strong></td>
+                <td>Alíquota teste mantida em <strong>0,10% IBS</strong></td>
+                <td><strong>Extinção definitiva de PIS e COFINS</strong>; IPI reduzido a zero</td>
+                <td>Entrada em produção da CBS e desativação do SPED PIS/COFINS</td>
+              </tr>
+              <tr>
+                <td><strong>2028</strong></td>
+                <td>CBS Plena Vigente</td>
+                <td>Fixação das alíquotas subnacionais pelo Comitê Gestor</td>
+                <td>ICMS e ISS com alíquotas integrais</td>
+                <td>Calibração de regras por código IBGE nos 5.570 municípios</td>
+              </tr>
+              <tr>
+                <td><strong>2029</strong></td>
+                <td>CBS Plena</td>
+                <td>Início da transição: <strong>10% IBS</strong></td>
+                <td>Redução proporcional de <strong>10% no ICMS e ISS</strong></td>
+                <td>Convivência de sistemas: apuração híbrida (90% antigo + 10% novo)</td>
+              </tr>
+              <tr>
+                <td><strong>2030</strong></td>
+                <td>CBS Plena</td>
+                <td>Transição: <strong>20% IBS</strong></td>
+                <td>Redução proporcional de <strong>20% no ICMS e ISS</strong></td>
+                <td>Operação contínua do Split Payment em larga escala</td>
+              </tr>
+              <tr>
+                <td><strong>2031</strong></td>
+                <td>CBS Plena</td>
+                <td>Transição: <strong>30% IBS</strong></td>
+                <td>Redução proporcional de <strong>30% no ICMS e ISS</strong></td>
+                <td>Ajuste fino de créditos presumidos de financiamento PJ</td>
+              </tr>
+              <tr>
+                <td><strong>2032</strong></td>
+                <td>CBS Plena</td>
+                <td>Transição: <strong>40% IBS</strong></td>
+                <td>Redução proporcional de <strong>40% no ICMS e ISS</strong></td>
+                <td>Fase final de desativação dos módulos legados de ICMS/ISS</td>
+              </tr>
+              <tr>
+                <td><strong>2033</strong></td>
+                <td><strong>CBS Plena Unificada</strong></td>
+                <td><strong>Vigência Plena do IBS (100% Subnacional)</strong></td>
+                <td><strong>Extinção definitiva e irreversível do ICMS e ISS</strong></td>
+                <td>Operação 100% nativa em Lakehouse Iceberg v2 com IVA Dual integral</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      
+
+        <div class="drawio-wrap">
+  <div class="drawio-label"><span class="dot"></span>CRONOGRAMA DE TRANSIÇÃO DO IVA DUAL (2026 – 2033)</div>
+  <svg viewBox="0 0 1400 480" width="100%" height="100%" class="responsive-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cronograma de Transição do IVA Dual 2026-2033" style="max-width: 100%; height: auto; background: #080f1e; border-radius: 8px;">
+    <defs><linearGradient id="tlBg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#080f1e"/></linearGradient></defs>
+    <rect width="1400" height="480" fill="url(#tlBg)" stroke="#1e293b" stroke-width="1.5" rx="12"/>
+    <text x="700" y="38" text-anchor="middle" fill="#f8fafc" font-family="'DM Sans', sans-serif" font-size="17" font-weight="700" letter-spacing="0.5">CRONOGRAMA DE TRANSIÇÃO DO IVA DUAL (EC 132/2023)</text>
+    <text x="700" y="60" text-anchor="middle" fill="#94a3b8" font-family="'DM Sans', sans-serif" font-size="11.5">Ano Teste (2026) → CBS Plena (2027) → Alíquota Ref. (2028) → Transição (2029–2032) → Vigência Plena (2033)</text>
+
+    <!-- Fase 1: 2026 – ANO TESTE -->
+    <g transform="translate(25, 85)">
+      <rect width="210" height="360" rx="8" fill="#0f172a" stroke="#0284c7" stroke-width="1.5"/>
+      <rect width="210" height="34" rx="8" fill="#0284c7" fill-opacity="0.2"/>
+      <text x="105" y="22" text-anchor="middle" fill="#38bdf8" font-family="'DM Sans', sans-serif" font-size="11.5" font-weight="700">2026 · ANO TESTE</text>
+
+      <rect x="15" y="48" width="180" height="85" rx="6" fill="#1e293b"/>
+      <text x="25" y="70" fill="#38bdf8" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">🧪 Piloto Compensável</text>
+      <text x="25" y="90" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• CBS + IBS a 1% (compensável)</text>
+      <text x="25" y="106" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• PIS/COFINS/IPI/ICMS/ISS vigentes</text>
+      <text x="25" y="122" fill="#38bdf8" font-family="'DM Mono', monospace" font-size="9">Teste do Split Payment SPI</text>
+
+      <rect x="15" y="142" width="180" height="85" rx="6" fill="#1e293b"/>
+      <text x="25" y="164" fill="#38bdf8" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">⚙️ Infraestrutura</text>
+      <text x="25" y="184" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Homologação motores de cálculo</text>
+      <text x="25" y="200" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Testes Split Payment no SPI</text>
+      <text x="25" y="216" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Validação de escrituração</text>
+
+      <rect x="15" y="246" width="180" height="95" rx="6" fill="#1e1b4b" stroke="#0284c7"/>
+      <text x="25" y="268" fill="#f8fafc" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">💻 Ação Engenharia</text>
+      <text x="25" y="288" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Setup Glue + Iceberg Bronze</text>
+      <text x="25" y="304" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Ingestão NF-e / EFD piloto</text>
+      <text x="25" y="324" fill="#38bdf8" font-family="'DM Mono', monospace" font-size="9.5" font-weight="700">Sandbox Dual-Rate Engine</text>
+    </g>
+
+    <!-- Fase 2: 2027 – CBS PLENA -->
+    <g transform="translate(250, 85)">
+      <rect width="210" height="360" rx="8" fill="#0f172a" stroke="#7c3aed" stroke-width="1.5"/>
+      <rect width="210" height="34" rx="8" fill="#7c3aed" fill-opacity="0.2"/>
+      <text x="105" y="22" text-anchor="middle" fill="#c084fc" font-family="'DM Sans', sans-serif" font-size="11.5" font-weight="700">2027 · CBS PLENA</text>
+
+      <rect x="15" y="48" width="180" height="85" rx="6" fill="#1e293b"/>
+      <text x="25" y="70" fill="#c084fc" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">🏛️ CBS Plena Federal</text>
+      <text x="25" y="90" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• Alíquota Federal: ~8,80%</text>
+      <text x="25" y="106" fill="#ef4444" font-family="'DM Sans', sans-serif" font-size="9.5">• Extinção PIS e COFINS</text>
+      <text x="25" y="122" fill="#34d399" font-family="'DM Mono', monospace" font-size="9.5" font-weight="700">IPI Zerado (exceto ZFM)</text>
+
+      <rect x="15" y="142" width="180" height="95" rx="6" fill="#1e293b"/>
+      <text x="25" y="164" fill="#c084fc" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">💳 Créditos Plenos</text>
+      <text x="25" y="184" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Não-cumulatividade ampla</text>
+      <text x="25" y="200" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Créditos financeiros imediatos</text>
+      <text x="25" y="216" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Ressarcimento em 60 dias</text>
+      <text x="25" y="232" fill="#c084fc" font-family="'DM Mono', monospace" font-size="8.5">IBS Teste mantido a 0,10%</text>
+
+      <rect x="15" y="246" width="180" height="95" rx="6" fill="#1e1b4b" stroke="#7c3aed"/>
+      <text x="25" y="268" fill="#f8fafc" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">💻 Ação Engenharia</text>
+      <text x="25" y="288" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Desativação EFD-PIS/COFINS</text>
+      <text x="25" y="304" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Livro Fiscal CBS Iceberg</text>
+      <text x="25" y="324" fill="#c084fc" font-family="'DM Mono', monospace" font-size="9.5" font-weight="700">Contratos Glue Avro</text>
+    </g>
+
+    <!-- Fase 3: 2028 -->
+    <g transform="translate(475, 85)">
+      <rect width="210" height="360" rx="8" fill="#0f172a" stroke="#d97706" stroke-width="1.5"/>
+      <rect width="210" height="34" rx="8" fill="#d97706" fill-opacity="0.2"/>
+      <text x="105" y="22" text-anchor="middle" fill="#fbbf24" font-family="'DM Sans', sans-serif" font-size="11.5" font-weight="700">2028 · ALÍQUOTA REF.</text>
+      
+      <rect x="15" y="48" width="180" height="85" rx="6" fill="#1e293b"/>
+      <text x="25" y="70" fill="#fbbf24" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">🏛️ Comitê Gestor IBS</text>
+      <text x="25" y="90" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• Fixação das Alíquotas de Referência Subnacionais</text>
+      <text x="25" y="112" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• 27 Estados + 5.570 Mun.</text>
+      <text x="25" y="128" fill="#38bdf8" font-family="'DM Mono', monospace" font-size="9">CG-IBS Operacional</text>
+
+      <rect x="15" y="142" width="180" height="95" rx="6" fill="#1e293b"/>
+      <text x="25" y="164" fill="#fbbf24" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">🗺️ Tabela IBGE</text>
+      <text x="25" y="184" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Mapeamento CEP → IBGE</text>
+      <text x="25" y="200" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Regra de domicílio tomador</text>
+      <text x="25" y="216" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Princípio do Destino</text>
+      <text x="25" y="232" fill="#f59e0b" font-family="'DM Mono', monospace" font-size="8.5">Fim da Guerra Fiscal</text>
+
+      <rect x="15" y="246" width="180" height="95" rx="6" fill="#1e1b4b" stroke="#d97706"/>
+      <text x="25" y="268" fill="#f8fafc" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">💻 Ação Engenharia</text>
+      <text x="25" y="288" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Tabela Dimensão IBGE</text>
+      <text x="25" y="304" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Particionamento Iceberg</text>
+      <text x="25" y="324" fill="#fbbf24" font-family="'DM Mono', monospace" font-size="9.5" font-weight="700">destination_state_uf</text>
+    </g>
+
+    <!-- Fase 4: 2029-2032 -->
+    <g transform="translate(720, 85)">
+      <rect width="220" height="360" rx="8" fill="#0f172a" stroke="#ea580c" stroke-width="1.5"/>
+      <rect width="220" height="34" rx="8" fill="#ea580c" fill-opacity="0.2"/>
+      <text x="110" y="22" text-anchor="middle" fill="#fb923c" font-family="'DM Sans', sans-serif" font-size="11.5" font-weight="700">2029–2032 · TRANSIÇÃO</text>
+      
+      <rect x="15" y="48" width="190" height="95" rx="6" fill="#1e293b"/>
+      <text x="25" y="70" fill="#fb923c" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">📉 Redução ICMS / ISS</text>
+      <text x="25" y="90" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• 2029: 90% ICMS/ISS + 10% IBS</text>
+      <text x="25" y="106" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• 2030: 80% ICMS/ISS + 20% IBS</text>
+      <text x="25" y="122" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• 2031: 70% ICMS/ISS + 30% IBS</text>
+      <text x="25" y="138" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• 2032: 60% ICMS/ISS + 40% IBS</text>
+
+      <rect x="15" y="152" width="190" height="85" rx="6" fill="#1e293b"/>
+      <text x="25" y="174" fill="#fb923c" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">⚡ Split Payment Escala</text>
+      <text x="25" y="194" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Retenção em 100% dos Pix</text>
+      <text x="25" y="210" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Repasse instantâneo CG-IBS</text>
+      <text x="25" y="226" fill="#34d399" font-family="'DM Mono', monospace" font-size="9">Liquidação D+0</text>
+
+      <rect x="15" y="246" width="190" height="95" rx="6" fill="#1e1b4b" stroke="#ea580c"/>
+      <text x="25" y="268" fill="#f8fafc" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">💻 Ação Engenharia</text>
+      <text x="25" y="288" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Motores duplos concorrentes</text>
+      <text x="25" y="304" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Reconciliação ISS vs IBS</text>
+      <text x="25" y="324" fill="#fb923c" font-family="'DM Mono', monospace" font-size="9.5" font-weight="700">Step Functions Dual</text>
+    </g>
+
+    <!-- Fase 5: 2033 -->
+    <g transform="translate(960, 85)">
+      <rect width="210" height="360" rx="8" fill="#0f172a" stroke="#059669" stroke-width="1.5"/>
+      <rect width="210" height="34" rx="8" fill="#059669" fill-opacity="0.2"/>
+      <text x="105" y="22" text-anchor="middle" fill="#34d399" font-family="'DM Sans', sans-serif" font-size="11.5" font-weight="700">2033 · VIGÊNCIA PLENA</text>
+      
+      <rect x="15" y="48" width="180" height="95" rx="6" fill="#1e293b"/>
+      <text x="25" y="70" fill="#34d399" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">🏆 IVA Dual Integral</text>
+      <text x="25" y="90" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• Extinção ICMS e ISS</text>
+      <text x="25" y="106" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• IBS Pleno: <tspan fill="#34d399" font-weight="700">~17,70%</tspan></text>
+      <text x="25" y="122" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9.5">• CBS Plena: <tspan fill="#38bdf8" font-weight="700">~8,80%</tspan></text>
+      <text x="25" y="138" fill="#34d399" font-family="'DM Mono', monospace" font-size="9">Total IVA ~26,50%</text>
+
+      <rect x="15" y="152" width="180" height="85" rx="6" fill="#1e293b"/>
+      <text x="25" y="174" fill="#34d399" font-family="'DM Sans', sans-serif" font-size="10.5" font-weight="700">✨ Desoneração Total</text>
+      <text x="25" y="194" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Exportações Alíquota Zero</text>
+      <text x="25" y="210" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Bens de Capital Desonerados</text>
+      <text x="25" y="226" fill="#10b981" font-family="'DM Mono', monospace" font-size="9">Créditos Financeiros</text>
+
+      <rect x="15" y="246" width="180" height="95" rx="6" fill="#022c22" stroke="#059669"/>
+      <text x="25" y="268" fill="#f8fafc" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700">💻 Estado Final AWS</text>
+      <text x="25" y="288" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• 100% Nativo em Lakehouse</text>
+      <text x="25" y="304" fill="#cbd5e1" font-family="'DM Sans', sans-serif" font-size="9">• Iceberg v2 + Athena Serverless</text>
+      <text x="25" y="324" fill="#34d399" font-family="'DM Mono', monospace" font-size="9.5" font-weight="700">Zero Débito Legado</text>
+    </g>
+  </svg>
+  <div class="diagram-legend">
+    <strong>Explicação do Cronograma de Transição do IVA Dual:</strong>
+    <ul>
+      <li><strong>Componentes:</strong> Ano Teste (2026 com 1% piloto compensável), CBS Federal Plena (2027 com extinção do PIS/COFINS), Alíquotas de Referência (2028), Transição Subnacional gradual (2029 a 2032 com decréscimo progressivo do ICMS/ISS) e Vigência Plena (2033).</li>
+      <li><strong>Integração:</strong> O cronograma dita as etapas de refatoração dos pipelines de engenharia de dados, exigindo que os sistemas operem com motores tributários híbridos durante a janela de transição de 2029 a 2032.</li>
+      <li><strong>Contexto:</strong> A Emenda Constitucional nº 132/2023 substitui a cumulatividade de 5 tributos arcaicos pelo IVA Dual com não-cumulatividade plena, desonerando integralmente investimentos em infraestrutura e tecnologia.</li>
+    </ul>
+  </div>
+</div>
+      </section>
+
+      <!-- SEÇÃO 07: ENGENHARIA DE DADOS & SCHEMAS EM PRODUÇÃO -->
+      <section class="section" id="engenharia-dados-schemas">
+        <div class="sec-hdr">
+          <div class="sec-num">07</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Implementação no AWS Lakehouse</div>
+            <h2>DDL Apache Iceberg v2 &amp; Motor PySpark Structured Streaming</h2>
+          </div>
+        </div>
+        <p class="sec-intro">
+          Especificação formal dos metadados da tabela Gold em <strong>Apache Iceberg v2</strong> e do script <strong>PySpark 3.4 Structured Streaming</strong> responsável pelo processamento em tempo real dos eventos de Split Payment consumidos do cluster <strong>Amazon MSK</strong>.
+        </p>
+
+        <pre><code class="language-sql">-- DDL: Livro Fiscal Gold de Apuração Dual IVA (IBS/CBS) e Split Payment
+CREATE TABLE IF NOT EXISTS glue_catalog.gold_fiscal.reforma_tributaria_dual_vat_ledger (
+    event_id                STRING          COMMENT 'UUID v4 exclusivo do evento fiscal',
+    competence_date         DATE            COMMENT 'Competencia fiscal (YYYY-MM-01)',
+    institution_cnpj        STRING          COMMENT 'CNPJ da Instituicao Financeira liquidante',
+    customer_tax_id         STRING          COMMENT 'CPF ou CNPJ do tomador / cliente',
+    operation_modality      STRING          COMMENT 'SPREAD_INTERMEDIACAO, TARIFA_SERVICOS, GESTAO_RECURSOS, SEGUROS',
+    gross_revenue_base      DECIMAL(18, 4)  COMMENT 'Receita bruta da operacao em BRL',
+    funding_deductions      DECIMAL(18, 4)  COMMENT 'Despesas de captacao dedutiveis (PLP 68/2024)',
+    bad_debt_loss_deduction DECIMAL(18, 4)  COMMENT 'Perdas efetivas com inadimplencia (Lei 14.467/2022)',
+    net_taxable_margin_base DECIMAL(18, 4)  COMMENT 'Base de calculo tributavel liquida do IVA Dual em BRL',
+    federal_cbs_rate        DECIMAL(7, 4)   COMMENT 'Aliquota federal da CBS (ex: 0.0880)',
+    cbs_debit_amount        DECIMAL(18, 4)  COMMENT 'Debito bruto apurado de CBS em BRL',
+    destination_state_uf    STRING          COMMENT 'UF do Estado de destino do tomador (ex: SP, RJ, MG)',
+    destination_state_rate  DECIMAL(7, 4)   COMMENT 'Componente estadual da aliquota do IBS (ex: 0.1200)',
+    destination_muni_ibge   STRING          COMMENT 'Codigo IBGE de 7 digitos do Municipio de destino',
+    destination_muni_rate   DECIMAL(7, 4)   COMMENT 'Componente municipal da aliquota do IBS (ex: 0.0570)',
+    combined_ibs_rate       DECIMAL(7, 4)   COMMENT 'Aliquota combinada do IBS (Estado + Municipio)',
+    ibs_debit_amount        DECIMAL(18, 4)  COMMENT 'Debito bruto apurado de IBS em BRL',
+    input_tax_credit_cbs    DECIMAL(18, 4)  COMMENT 'Credito fiscal de entrada apropriado contra a CBS',
+    input_tax_credit_ibs    DECIMAL(18, 4)  COMMENT 'Credito fiscal de entrada apropriado contra o IBS',
+    cbs_net_payable         DECIMAL(18, 4)  COMMENT 'Valor liquido de CBS a recolher a Receita Federal',
+    ibs_net_payable         DECIMAL(18, 4)  COMMENT 'Valor liquido de IBS a repassar ao Comite Gestor IBS',
+    split_payment_id        STRING          COMMENT 'Identificador da liquidacao no SPI do BACEN (SPLIT-UUID)',
+    split_payment_status    STRING          COMMENT 'RETAINED_AT_SETTLEMENT, DIRECT_SETTLEMENT',
+    created_at              TIMESTAMP       COMMENT 'Timestamp UTC de processamento do job'
+)
+USING iceberg
+PARTITIONED BY (months(competence_date), destination_state_uf)
+LOCATION 's3://bank-lakehouse-gold-sa-east-1-123456789012/fiscal/reforma_tributaria_dual_vat_ledger/'
+TBLPROPERTIES (
+    'table_type' = 'ICEBERG',
+    'format-version' = '2',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'history.expire.max-snapshot-age-ms' = '604800000'
+);</code></pre>
+
+        <pre><code class="language-python"># Motor PySpark 3.4 Structured Streaming: Split Payment em Tempo Real sobre Eventos Pix
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, DecimalType, TimestampType
+
+spark = SparkSession.builder \
+    .appName("PySpark-Split-Payment-Engine-RealTime") \
+    .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
+    .config("spark.sql.catalog.glue_catalog", "org.apache.iceberg.spark.SparkCatalog") \
+    .getOrCreate()
+
+pix_schema = StructType([
+    StructField("transaction_id", StringType(), False),
+    StructField("customer_tax_id", StringType(), False),
+    StructField("merchant_tax_id", StringType(), False),
+    StructField("transaction_gross_amount", DecimalType(18, 4), False),
+    StructField("state_ibs_rate", DecimalType(7, 4), False),
+    StructField("muni_ibs_rate", DecimalType(7, 4), False),
+    StructField("federal_cbs_rate", DecimalType(7, 4), False),
+    StructField("destination_state_uf", StringType(), False),
+    StructField("destination_muni_ibge", StringType(), False),
+    StructField("event_time", TimestampType(), False)
+])
+
+df_pix_streaming = spark.readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "msk-cluster.sa-east-1.amazonaws.com:9098") \
+    .option("subscribe", "financial.pix.settlement.events") \
+    .option("startingOffsets", "latest") \
+    .load()
+
+df_split_payment = df_pix_streaming \
+    .selectExpr("CAST(value AS STRING) as json_payload") \
+    .select(F.from_json("json_payload", pix_schema).alias("data")) \
+    .select("data.*") \
+    .withColumn("combined_vat_rate", (F.col("state_ibs_rate") + F.col("muni_ibs_rate") + F.col("federal_cbs_rate")).cast(DecimalType(7, 4))) \
+    .withColumn("withheld_cbs_amount", (F.col("transaction_gross_amount") * F.col("federal_cbs_rate")).cast(DecimalType(18, 4))) \
+    .withColumn("withheld_ibs_amount", (F.col("transaction_gross_amount") * (F.col("state_ibs_rate") + F.col("muni_ibs_rate"))).cast(DecimalType(18, 4))) \
+    .withColumn("total_withheld_vat", (F.col("withheld_cbs_amount") + F.col("withheld_ibs_amount")).cast(DecimalType(18, 4))) \
+    .withColumn("net_merchant_credit", (F.col("transaction_gross_amount") - F.col("total_withheld_vat")).cast(DecimalType(18, 4))) \
+    .withColumn("split_payment_id", F.concat(F.lit("SPLIT-"), F.expr("uuid()"))) \
+    .withColumn("split_payment_status", F.lit("RETAINED_AT_SETTLEMENT")) \
+    .withColumn("processed_at", F.current_timestamp())
+
+query = df_split_payment.writeStream \
+    .format("iceberg") \
+    .outputMode("append") \
+    .trigger(processingTime="1 second") \
+    .option("checkpointLocation", "s3://bank-lakehouse-checkpoints-sa-east-1/split_payment/") \
+    .toTable("glue_catalog.gold_fiscal.reforma_tributaria_dual_vat_ledger")
+</code></pre>
+      </section>
+
+      <div class="drawio-wrap">
+  <div class="drawio-label"><span class="dot"></span>MOTOR DE SPLIT PAYMENT EM TEMPO REAL E LIQUIDAÇÃO FINANCEIRA NA AWS</div>
+  <div class="mxgraph" style="max-width:100%; border:1px solid #334155; border-radius:12px; background:#080f1e; overflow:auto;" data-mxgraph="{&quot;highlight&quot;: &quot;#FF6B00&quot;, &quot;lightbox&quot;: false, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;page&quot;: 0, &quot;xml&quot;: &quot;&lt;mxfile host=\&quot;app.diagrams.net\&quot;&gt;&lt;diagram name=\&quot;Page-1\&quot; id=\&quot;d1\&quot;&gt;&lt;mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;0\&quot; gridSize=\&quot;10\&quot; guides=\&quot;0\&quot; tooltips=\&quot;1\&quot; connect=\&quot;0\&quot; arrows=\&quot;0\&quot; fold=\&quot;0\&quot; page=\&quot;0\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1100\&quot; pageHeight=\&quot;480\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;&gt;&lt;root&gt;&lt;mxCell id=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/&gt;&lt;mxCell id=\&quot;bg4\&quot; value=\&quot;\&quot; style=\&quot;labelBackgroundColor=none;rounded=0;fillColor=#080f1e;strokeColor=none;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;0\&quot; width=\&quot;1100\&quot; height=\&quot;480\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;t4\&quot; value=\&quot;MOTOR DE SPLIT PAYMENT EM TEMPO REAL E LIQUIDA\u00c7\u00c3O FINANCEIRA NA AWS\&quot; style=\&quot;labelBackgroundColor=none;text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=11;fontStyle=1;letterSpacing=1.5;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;0\&quot; y=\&quot;8\&quot; width=\&quot;1100\&quot; height=\&quot;24\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;g4_1\&quot; value=\&quot;ORIGEM DO PAGAMENTO\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#020e1a;strokeColor=#0284c7;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#38bdf8;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;20\&quot; y=\&quot;45\&quot; width=\&quot;160\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_pix\&quot; value=\&quot;Pagamento PIX / TEF (SPI BACEN)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#38bdf8;fontColor=#ffffff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;35\&quot; y=\&quot;80\&quot; width=\&quot;130\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_apigw\&quot; value=\&quot;API Gateway (Ingress Transa\u00e7\u00e3o)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;70\&quot; y=\&quot;165\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;g4_2\&quot; value=\&quot;ORQUESTRA\u00c7\u00c3O E RETEN\u00c7\u00c3O\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#020e1a;strokeColor=#ea580c;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#fb923c;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;210\&quot; y=\&quot;45\&quot; width=\&quot;200\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_step\&quot; value=\&quot;Step Functions (Orquestrador Split)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;280\&quot; y=\&quot;75\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_lambda\&quot; value=\&quot;AWS Lambda (C\u00e1lculo Al\u00edquotas)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#ea580c;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;240\&quot; y=\&quot;175\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_ddb\&quot; value=\&quot;DynamoDB (Ledger Transacional)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;330\&quot; y=\&quot;175\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;g4_3\&quot; value=\&quot;SEGREGA\u00c7\u00c3O DE LIQUIDA\u00c7\u00c3O\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#020e1a;strokeColor=#f59e0b;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#fbbf24;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;440\&quot; y=\&quot;45\&quot; width=\&quot;190\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_fisco\&quot; value=\&quot;Conta \u00danica Fisco (Comit\u00ea IBS + RFB CBS)\&quot; style=\&quot;rounded=1;fillColor=#1e1b4b;strokeColor=#ef4444;fontColor=#ffffff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;80\&quot; width=\&quot;150\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_merch\&quot; value=\&quot;Conta do Fornecedor (Valor L\u00edquido D+0)\&quot; style=\&quot;rounded=1;fillColor=#022c22;strokeColor=#10b981;fontColor=#ffffff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;165\&quot; width=\&quot;150\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_audit\&quot; value=\&quot;Comprovante Split (Token UUID / SPI)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#38bdf8;fontColor=#ffffff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;460\&quot; y=\&quot;250\&quot; width=\&quot;150\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;g4_4\&quot; value=\&quot;LAKEHOUSE FISCAL GOLD\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#020e1a;strokeColor=#16a34a;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#34d399;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;660\&quot; y=\&quot;45\&quot; width=\&quot;190\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_s3\&quot; value=\&quot;S3 Gold Lakehouse (Iceberg v2 Ledger)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#16a34a;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;725\&quot; y=\&quot;75\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_athena\&quot; value=\&quot;Amazon Athena (Reconcilia\u00e7\u00e3o SPI)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.athena;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;725\&quot; y=\&quot;165\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_qs\&quot; value=\&quot;Amazon QuickSight (Arrecada\u00e7\u00e3o Real-Time)\&quot; style=\&quot;labelBackgroundColor=none;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.quicksight;fillColor=#0284c7;strokeColor=none;fontColor=#e2e8f0;fontFamily=DM Sans;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;725\&quot; y=\&quot;255\&quot; width=\&quot;56\&quot; height=\&quot;56\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;g4_5\&quot; value=\&quot;GOVERNAN\u00c7A E FISCO\&quot; style=\&quot;labelBackgroundColor=none;rounded=1;arcSize=3;fillColor=#020e1a;strokeColor=#475569;strokeWidth=1.5;dashed=1;verticalAlign=top;align=center;fontColor=#94a3b8;fontFamily=DM Sans;fontSize=10;fontStyle=1;spacingTop=4;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;880\&quot; y=\&quot;45\&quot; width=\&quot;190\&quot; height=\&quot;300\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_cg\&quot; value=\&quot;Comit\u00ea Gestor IBS (Partilha Estados/Mun)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#f59e0b;fontColor=#ffffff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;905\&quot; y=\&quot;80\&quot; width=\&quot;140\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_rfb\&quot; value=\&quot;Receita Federal CBS (Auditoria D+0)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#38bdf8;fontColor=#ffffff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;905\&quot; y=\&quot;165\&quot; width=\&quot;140\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;n4_bacen\&quot; value=\&quot;BACEN / SPI (Liquida\u00e7\u00e3o Segregada)\&quot; style=\&quot;rounded=1;fillColor=#1e293b;strokeColor=#34d399;fontColor=#ffffff;fontFamily=DM Sans;fontSize=10;fontStyle=1;align=center;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry x=\&quot;905\&quot; y=\&quot;250\&quot; width=\&quot;140\&quot; height=\&quot;50\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_pix_gw\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_pix\&quot; target=\&quot;n4_apigw\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_gw_step\&quot; value=\&quot;Execute\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_apigw\&quot; target=\&quot;n4_step\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_step_lam\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_step\&quot; target=\&quot;n4_lambda\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_step_ddb\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_step\&quot; target=\&quot;n4_ddb\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_step_fisco\&quot; value=\&quot;Reten\u00e7\u00e3o Tributo\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ef4444;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_step\&quot; target=\&quot;n4_fisco\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_step_merch\&quot; value=\&quot;L\u00edquido Vendedor\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#10b981;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_step\&quot; target=\&quot;n4_merch\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_ddb_s3\&quot; value=\&quot;Async Sync\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#34d399;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_ddb\&quot; target=\&quot;n4_s3\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_s3_ath\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_s3\&quot; target=\&quot;n4_athena\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_fisco_cg\&quot; value=\&quot;Repasse IBS\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f59e0b;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_fisco\&quot; target=\&quot;n4_cg\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_fisco_rfb\&quot; value=\&quot;Repasse CBS\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#38bdf8;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_fisco\&quot; target=\&quot;n4_rfb\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_merch_bacen\&quot; value=\&quot;SPI Liquida\u00e7\u00e3o\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#34d399;strokeWidth=1.5;fillColor=none;fontColor=#cbd5e1;fontFamily=DM Sans;fontSize=9;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_merch\&quot; target=\&quot;n4_bacen\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt; &lt;mxCell id=\&quot;e4_s3_qs\&quot; value=\&quot;\&quot; style=\&quot;edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=none;\&quot; edge=\&quot;1\&quot; source=\&quot;n4_s3\&quot; target=\&quot;n4_qs\&quot; parent=\&quot;1\&quot;&gt;&lt;mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}"></div>
+  <div class="diagram-legend">
+    <strong>Explicação do Motor de Split Payment na AWS:</strong>
+    <ul>
+      <li><strong>Componentes:</strong> Ingress via API Gateway, AWS Step Functions (orquestrador de transações segregadas), AWS Lambda (cálculo de alíquotas IBS por código IBGE de destino e CBS), Amazon DynamoDB (ledger de alta velocidade), Amazon S3 (Apache Iceberg v2 Gold), Amazon Athena e Amazon QuickSight.</li>
+      <li><strong>Integração:</strong> No momento do pagamento Pix ou cartão, o Step Functions aciona o cálculo tributário, retém instantaneamente o IBS/CBS direcionando para a conta única do Fisco e credita o valor líquido na conta do vendedor, persistindo os registros no Iceberg para conciliação bancária.</li>
+      <li><strong>Contexto:</strong> O Split Payment Inteligente elimina a inadimplência tributária no consumo ao reter e recolher os tributos no ato da liquidação financeira da operação, cumprindo a diretriz central da EC 132/2023.</li>
+    </ul>
+  </div>
+</div>
+
+      <!-- NAVEGAÇÃO ENTRE MÓDULOS (FOOTER) -->
+      <div class="module-nav">
+        <a href="tributacao-ativos.html" class="module-nav-btn">← Módulo 02: Tributação de Ativos &amp; Investimentos</a>
+        <a href="arquitetura-plataforma-fiscal.html" class="module-nav-btn">Módulo 04: Arquitetura Lakehouse Fiscal AWS →</a>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Scripts Globais Obrigatórios -->
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/a11y.js"></script>
+  <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="author" content="Mauricio Helfstein"/>
+  <meta name="description" content="Plataforma de Dados Fiscais na AWS - Arquitetura SPED, Pipelines de Apuração Tributária, Compliance, DynamoDB, Step Functions, e-Financeira"/>
+  <title>Plataforma Fiscal AWS | AWS Data Mastery</title>
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function() {
+    renderMathInElement(document.body, {delimiters: [{left: '\\(', right: '\\)', display: false},{left: '\\[', right: '\\]', display: true}], ignoredTags: ["script","noscript","style","textarea","pre","code","option","svg"], throwOnError: false});
+  });</script>
+
+  <!-- Draw.io Viewer -->
+  <script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../style.css"/>
+
+  <!-- Mermaid -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+  <!-- Open Graph & Favicon -->
+  <meta property="og:title" content="Plataforma Fiscal AWS | AWS Data Mastery"/>
+  <meta property="og:description" content="Arquitetura de dados para compliance fiscal em instituicoes financeiras na AWS"/>
+  <meta property="og:type" content="website"/>
+  <link rel="icon" type="image/x-icon" href="../../assets/favicon.ico"/>
+
+  <style>
+    .section { scroll-margin-top: 60px; }
+    .sec-hdr { display: flex; gap: 20px; margin-bottom: 30px; align-items: flex-start; }
+    .sec-num { font-size: 2.5rem; font-weight: 900; min-width: 60px; color: var(--aws); }
+    .sec-title h2 { font-size: 1.8rem; margin: 0 0 8px 0; color: var(--text); }
+    .sec-subtitle { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 6px; }
+    .sec-intro { font-size: 1.05rem; line-height: 1.7; color: var(--text-dim); margin: 18px 0 24px 0; border-left: 4px solid var(--aws); padding-left: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 24px 0; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 24px 0; }
+    .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; padding: 24px; transition: all 0.3s ease; }
+    .card:hover { transform: translateY(-2px); border-color: var(--aws); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+    .card-subtitle { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--aws); letter-spacing: 0.1em; margin-bottom: 8px; }
+    .formula-box { background: var(--bg-tertiary); color: var(--text); padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; font-size: 1.1rem; }
+    .example-box { background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(10,132,99,0.05) 100%); border: 1px solid rgba(16,185,129,0.3); border-left: 4px solid #10b981; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .example-title { font-weight: 600; color: #10b981; margin-bottom: 12px; }
+    .info-box { background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(37,99,235,0.05) 100%); border: 1px solid rgba(59,130,246,0.3); border-left: 4px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .warning-box { background: linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(217,119,6,0.05) 100%); border: 1px solid rgba(245,158,11,0.3); border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .diagram-container { margin: 30px 0; padding: 20px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); }
+    .chart-container { margin: 30px 0; }
+    .chart-title { font-weight: 600; color: var(--text); margin-bottom: 20px; font-size: 1.1rem; }
+    .summary-box { background: linear-gradient(135deg, var(--aws) 0%, rgba(59,130,246,0.8) 100%); color: white; padding: 24px; border-radius: 8px; margin: 30px 0; }
+    .summary-box h3 { margin: 0 0 12px 0; font-size: 1.2rem; }
+    .summary-box ul { margin: 0; padding-left: 20px; }
+    .summary-box li { margin: 8px 0; }
+    .breadcrumb { margin-bottom: 30px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-dim); }
+    .breadcrumb a { color: var(--aws); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .code-box { background: var(--bg-tertiary); border-left: 4px solid var(--aws); padding: 20px; border-radius: 6px; margin: 20px 0; font-family: 'DM Mono', monospace; overflow-x: auto; font-size: 0.85rem; white-space: pre; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    table tr { border-bottom: 1px solid var(--border); }
+    table td, table th { padding: 12px; font-size: 0.9rem; text-align: left; }
+    table th { font-weight: 600; background: var(--bg-secondary); color: var(--aws); }
+    .diagram-legend { margin-top: 15px; font-size: 0.9em; color: var(--text-dim); border-left: 4px solid var(--aws); padding: 15px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <button id="hamburger" onclick="toggleNav()">&#9776;</button>
+  <nav id="sidebar"></nav>
+
+  <div id="main">
+    <div class="hero" style="background-color: var(--navy)">
+      <div class="hero-ey">Trilha de Compliance Fiscal &amp; Engenharia de Dados</div>
+      <h1>Plataforma de <em>Dados Fiscais na AWS</em></h1>
+      <p class="hero-d">Arquitetura de referencia completa para plataformas fiscais em instituicoes financeiras: integracao SPED, pipelines de apuracao PIS/COFINS/IRPJ/CSLL com Glue e EMR, orquestracao de fechamento fiscal com Step Functions, controle de obrigacoes acessorias em DynamoDB, e-Financeira, monitoramento com CloudWatch e dashboards QuickSight.</p>
+      <div class="pills">
+        <span class="pill">S3 Data Lake</span>
+        <span class="pill">Glue ETL</span>
+        <span class="pill">EMR Spark</span>
+        <span class="pill">Step Functions</span>
+        <span class="pill">DynamoDB</span>
+        <span class="pill">SPED / e-Financeira</span>
+        <span class="pill">CloudWatch</span>
+        <span class="pill">QuickSight</span>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="breadcrumb">
+        <a href="../../index.html">Inicio</a> <span>/</span> <a href="#">Financas</a> <span>/</span> <span>Plataforma Fiscal AWS</span>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 01: VISAO GERAL -->
+      <!-- ============================================================ -->
+      <section class="section" id="visao-geral">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">01</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Fundamentos &amp; Motivacao</div>
+            <h2>Visao Geral - Plataforma de Dados Fiscais</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Instituicoes financeiras brasileiras enfrentam um cenario tributario de alta complexidade: mais de 90 obrigacoes acessorias, prazos rigidos da Receita Federal, e volumes que podem ultrapassar milhoes de transacoes diarias. Uma plataforma de dados fiscais dedicada na AWS permite automatizar apuracoes, garantir rastreabilidade completa e eliminar riscos de multas por atraso ou inconsistencia nos reportes regulatorios.
+        </p>
+
+        <h3 style="color: var(--text); margin: 24px 0 16px;">Desafios das Instituicoes Financeiras</h3>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Volume</div>
+            <h4 class="card-title">Milhoes de transacoes/dia</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Core banking, tesouraria, cambio e cartoes geram volume massivo. Cada transacao precisa de classificacao tributaria correta (CFOP, CST, NCM).</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Prazos</div>
+            <h4 class="card-title">Deadlines regulatorios</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">EFD-Contribuicoes ate o 10o dia util. DCTF mensal. e-Financeira semestral. Atraso gera multas de 0,5% a 3% da receita bruta.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Complexidade</div>
+            <h4 class="card-title">Multi-tributo e multi-regime</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">PIS, COFINS, IRPJ, CSLL, IOF, ISS, IRRF. Regime cumulativo e nao-cumulativo coexistem. Creditos tributarios exigem rastreabilidade.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Auditoria</div>
+            <h4 class="card-title">Rastreabilidade total</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">A Receita Federal exige que toda apuracao seja reconstituivel. Dados devem ser retidos por no minimo 5 anos (CTN art. 173/174).</p>
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Dominios de Dados</h3>
+        <table>
+          <thead>
+            <tr><th>Dominio</th><th>Descricao</th><th>Servicos AWS</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Transacional</strong></td><td>Lancamentos contabeis, notas fiscais, pagamentos, recebimentos</td><td>Kinesis, S3, Glue</td></tr>
+            <tr><td><strong>Cadastral (Master Data)</strong></td><td>Clientes, fornecedores, plano de contas, tabelas fiscais (CFOP, CST)</td><td>DynamoDB, S3, Glue Catalog</td></tr>
+            <tr><td><strong>Regulatorio</strong></td><td>Layouts SPED, schemas e-Financeira, regras RFB</td><td>S3, Lambda, Step Functions</td></tr>
+            <tr><td><strong>Analitico</strong></td><td>Apuracoes consolidadas, dashboards de compliance, KPIs fiscais</td><td>Athena, QuickSight, Redshift</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Servicos AWS por Camada</h3>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle">Ingestao</div>
+            <h4 class="card-title">Kinesis Data Streams</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Streaming de transacoes em tempo real do core banking. Retencao de 7 dias para replay.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Ingestao</div>
+            <h4 class="card-title">AWS DMS</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">CDC (Change Data Capture) de bancos relacionais legados (Oracle, DB2) para o data lake.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Armazenamento</div>
+            <h4 class="card-title">Amazon S3</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Data lake com zonas raw/curated/serving. Lifecycle para Glacier apos retencao ativa.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Processamento</div>
+            <h4 class="card-title">AWS Glue + EMR</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Glue para ETL de dados cadastrais. EMR Spark para calculos tributarios de alto volume.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Orquestracao</div>
+            <h4 class="card-title">Step Functions</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Workflow de fechamento fiscal mensal com retries, paralelismo e tratamento de erros.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Consulta &amp; Analytics</div>
+            <h4 class="card-title">Athena + QuickSight</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Athena para queries ad-hoc sobre dados fiscais. QuickSight para dashboards de compliance.</p>
+          </div>
+        </div>
+
+        <div class="formula-box">
+          <strong>Custo de nao-compliance (estimativa):</strong><br/><br/>
+          \[ C_{multa} = R_{bruta} \times 0{,}02 + \text{juros SELIC acumulados} + \text{custos de defesa administrativa} \]
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 02: ARQUITETURA DE REFERENCIA - DRAW.IO -->
+      <!-- ============================================================ -->
+      <section class="section" id="arquitetura-referencia">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">02</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Diagrama de Arquitetura</div>
+            <h2>Arquitetura de Referencia - Plataforma Fiscal AWS</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A arquitetura de referencia segue o padrao de data lake em camadas, com pipelines de ingestao em tempo real e batch, processamento distribuido para calculos tributarios, e camada de servico para geracao de obrigacoes acessorias. Todos os componentes sao serverless ou gerenciados, minimizando overhead operacional.
+        </p>
+
+        <div class="diagram-container">
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#38bdf8", "lightbox": false, "nav": false, "resize": true, "xml": "<mxGraphModel dx=\"1400\" dy=\"900\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1600\" pageHeight=\"700\" background=\"#0f172a\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/>\n<mxCell id=\"title\" value=\"Plataforma de Dados Fiscais - Arquitetura AWS\" style=\"text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontColor=#94a3b8;fontSize=14;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"10\" width=\"1560\" height=\"30\" as=\"geometry\"/></mxCell>\n<mxCell id=\"grpSrc\" value=\"Sistemas Fonte\" style=\"text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#f59e0b;fontSize=11;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"50\" width=\"140\" height=\"20\" as=\"geometry\"/></mxCell>\n<mxCell id=\"src1\" value=\"Core Banking&amp;#10;(Transacoes)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"80\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"src2\" value=\"ERP Contabil&amp;#10;(Lancamentos)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"160\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"src3\" value=\"Notas Fiscais&amp;#10;(XML NF-e/NFS-e)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"240\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"src4\" value=\"SPED Legado&amp;#10;(Arquivos TXT)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"320\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"grpIng\" value=\"Camada de Ingestao\" style=\"text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#f59e0b;fontSize=11;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"220\" y=\"50\" width=\"160\" height=\"20\" as=\"geometry\"/></mxCell>\n<mxCell id=\"kinesis\" value=\"Kinesis&amp;#10;Data Streams\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"220\" y=\"80\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"dms\" value=\"AWS DMS&amp;#10;(CDC)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"220\" y=\"160\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"apigw\" value=\"API Gateway&amp;#10;(Recepcao NF-e)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"220\" y=\"240\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"sftp\" value=\"Transfer Family&amp;#10;(SFTP SPED)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"220\" y=\"320\" width=\"140\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"grpLake\" value=\"Data Lake S3 (Camadas)\" style=\"text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#f59e0b;fontSize=11;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"430\" y=\"50\" width=\"200\" height=\"20\" as=\"geometry\"/></mxCell>\n<mxCell id=\"s3raw\" value=\"S3 Raw Zone&amp;#10;Dados brutos&amp;#10;Parquet / JSON\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#052e16;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"430\" y=\"80\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"s3cur\" value=\"S3 Curated Zone&amp;#10;Dados enriquecidos&amp;#10;Iceberg tables\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#052e16;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"430\" y=\"170\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"s3srv\" value=\"S3 Serving Zone&amp;#10;Tabelas otimizadas&amp;#10;Agregacoes fiscais\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#052e16;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"430\" y=\"260\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"catalog\" value=\"Glue Data Catalog&amp;#10;(Metadados)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#052e16;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"430\" y=\"350\" width=\"160\" height=\"50\" as=\"geometry\"/></mxCell>\n<mxCell id=\"grpProc\" value=\"Processamento\" style=\"text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#f59e0b;fontSize=11;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"50\" width=\"160\" height=\"20\" as=\"geometry\"/></mxCell>\n<mxCell id=\"glue\" value=\"AWS Glue ETL&amp;#10;PySpark Jobs&amp;#10;(Classificacao fiscal)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#8b5cf6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"80\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"emr\" value=\"EMR Spark&amp;#10;Apuracao PIS/COFINS&amp;#10;IRPJ/CSLL\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#8b5cf6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"170\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"lambda\" value=\"Lambda&amp;#10;Validacao XML&amp;#10;Geracao SPED\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#8b5cf6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"260\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"gluedq\" value=\"Glue DQ&amp;#10;(Data Quality)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#8b5cf6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"660\" y=\"350\" width=\"160\" height=\"50\" as=\"geometry\"/></mxCell>\n<mxCell id=\"grpOrch\" value=\"Orquestracao &amp; Serving\" style=\"text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#f59e0b;fontSize=11;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"890\" y=\"50\" width=\"180\" height=\"20\" as=\"geometry\"/></mxCell>\n<mxCell id=\"sfn\" value=\"Step Functions&amp;#10;Workflow de&amp;#10;Fechamento Fiscal\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3b2904;strokeColor=#f59e0b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"890\" y=\"80\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"athena\" value=\"Athena&amp;#10;Queries ad-hoc&amp;#10;Consultas fiscais\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"890\" y=\"170\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"dynamo\" value=\"DynamoDB&amp;#10;Controle Obrigacoes&amp;#10;Acessorias\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"890\" y=\"260\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"eventbr\" value=\"EventBridge&amp;#10;Scheduler\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"890\" y=\"350\" width=\"160\" height=\"50\" as=\"geometry\"/></mxCell>\n<mxCell id=\"grpOut\" value=\"Saida / Regulatorio\" style=\"text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#f59e0b;fontSize=11;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1120\" y=\"50\" width=\"180\" height=\"20\" as=\"geometry\"/></mxCell>\n<mxCell id=\"sped\" value=\"Arquivos SPED&amp;#10;EFD-Contribuicoes&amp;#10;ECD / ECF\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3b1a1a;strokeColor=#ef4444;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1120\" y=\"80\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"efin\" value=\"e-Financeira&amp;#10;XML para RFB&amp;#10;Semestral\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3b1a1a;strokeColor=#ef4444;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1120\" y=\"170\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"dctf\" value=\"DCTF / DIRF&amp;#10;Declaracoes&amp;#10;Mensais\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3b1a1a;strokeColor=#ef4444;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1120\" y=\"260\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"qs\" value=\"QuickSight&amp;#10;Dashboards&amp;#10;Compliance\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1120\" y=\"350\" width=\"160\" height=\"60\" as=\"geometry\"/></mxCell>\n<mxCell id=\"grpMon\" value=\"Monitoramento\" style=\"text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#f59e0b;fontSize=11;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1350\" y=\"50\" width=\"140\" height=\"20\" as=\"geometry\"/></mxCell>\n<mxCell id=\"cw\" value=\"CloudWatch&amp;#10;Metricas &amp; Logs&amp;#10;Alarmes\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1350\" y=\"80\" width=\"140\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"sns\" value=\"SNS&amp;#10;Notificacoes&amp;#10;Alertas deadline\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1350\" y=\"170\" width=\"140\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"ct\" value=\"CloudTrail&amp;#10;Auditoria&amp;#10;Compliance\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1350\" y=\"260\" width=\"140\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"kms\" value=\"KMS&amp;#10;Criptografia\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;fontColor=#e2e8f0;fontSize=10;align=center;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1350\" y=\"350\" width=\"140\" height=\"50\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e01\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"src1\" target=\"kinesis\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e02\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"src2\" target=\"dms\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e03\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"src3\" target=\"apigw\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e04\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"src4\" target=\"sftp\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e05\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"kinesis\" target=\"s3raw\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e06\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"dms\" target=\"s3raw\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e07\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"apigw\" target=\"s3raw\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e08\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"sftp\" target=\"s3raw\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e09\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"s3raw\" target=\"glue\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e10\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"glue\" target=\"s3cur\"><mxGeometry relative=\"1\" as=\"geometry\"><Array as=\"points\"><mxPoint x=\"640\" y=\"205\"/><mxPoint x=\"640\" y=\"205\"/></Array></mxGeometry></mxCell>\n<mxCell id=\"e11\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"s3cur\" target=\"emr\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e12\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"emr\" target=\"s3srv\"><mxGeometry relative=\"1\" as=\"geometry\"><Array as=\"points\"><mxPoint x=\"640\" y=\"295\"/><mxPoint x=\"640\" y=\"295\"/></Array></mxGeometry></mxCell>\n<mxCell id=\"e13\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"sfn\" target=\"glue\"><mxGeometry relative=\"1\" as=\"geometry\"><Array as=\"points\"><mxPoint x=\"860\" y=\"115\"/><mxPoint x=\"860\" y=\"115\"/></Array></mxGeometry></mxCell>\n<mxCell id=\"e14\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"sfn\" target=\"emr\"><mxGeometry relative=\"1\" as=\"geometry\"><Array as=\"points\"><mxPoint x=\"860\" y=\"205\"/><mxPoint x=\"860\" y=\"205\"/></Array></mxGeometry></mxCell>\n<mxCell id=\"e15\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"sfn\" target=\"lambda\"><mxGeometry relative=\"1\" as=\"geometry\"><Array as=\"points\"><mxPoint x=\"860\" y=\"295\"/><mxPoint x=\"860\" y=\"295\"/></Array></mxGeometry></mxCell>\n<mxCell id=\"e16\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"s3srv\" target=\"athena\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e17\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"lambda\" target=\"sped\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e18\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"lambda\" target=\"efin\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e19\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"lambda\" target=\"dctf\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e20\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"sfn\" target=\"dynamo\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e21\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"sfn\" target=\"sns\"><mxGeometry relative=\"1\" as=\"geometry\"><Array as=\"points\"><mxPoint x=\"1100\" y=\"115\"/><mxPoint x=\"1100\" y=\"205\"/></Array></mxGeometry></mxCell>\n<mxCell id=\"e22\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"athena\" target=\"qs\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"e23\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"eventbr\" target=\"sfn\"><mxGeometry relative=\"1\" as=\"geometry\"><Array as=\"points\"><mxPoint x=\"970\" y=\"420\"/><mxPoint x=\"970\" y=\"420\"/></Array></mxGeometry></mxCell>\n</root></mxGraphModel>"}'></div>
+        </div>
+        <div class="diagram-legend">
+          A arquitetura mostra o fluxo completo: sistemas fonte (Core Banking, ERP, NF-e, SPED) alimentam a camada de ingestao (Kinesis, DMS, API Gateway, Transfer Family), que deposita dados brutos no S3. O processamento (Glue ETL, EMR Spark, Lambda) enriquece e calcula tributos. Step Functions orquestra o fechamento fiscal, DynamoDB controla obrigacoes, e a saida gera arquivos SPED, e-Financeira e DCTF. CloudWatch, SNS, CloudTrail e KMS garantem monitoramento, alertas e seguranca.
+        </div>
+
+        <!-- Segundo diagrama: Fluxo de dados detalhado dentro do Data Lake -->
+        <h3 style="color: var(--text); margin: 40px 0 16px;">Fluxo Interno do Data Lake Tributario</h3>
+        <div class="diagram-container">
+          <div class="mxgraph" style="max-width:100%;background:#0f172a;" data-mxgraph='{"highlight": "#38bdf8", "lightbox": false, "nav": false, "resize": true, "xml": "<mxGraphModel dx=\"1200\" dy=\"600\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1400\" pageHeight=\"500\" background=\"#0f172a\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/>\n<mxCell id=\"t2\" value=\"Fluxo de Dados no Data Lake Tributario\" style=\"text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontColor=#94a3b8;fontSize=13;fontStyle=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"10\" width=\"1360\" height=\"30\" as=\"geometry\"/></mxCell>\n<mxCell id=\"raw1\" value=\"s3://fiscal-raw/&amp;#10;transacoes/&amp;#10;dt=2024-01-15/\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"60\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"raw2\" value=\"s3://fiscal-raw/&amp;#10;notas-fiscais/&amp;#10;dt=2024-01-15/\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"150\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"raw3\" value=\"s3://fiscal-raw/&amp;#10;plano-contas/&amp;#10;versao=v3/\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"240\" width=\"160\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"crawler\" value=\"Glue Crawler&amp;#10;Schema Discovery&amp;#10;Particoes auto\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#8b5cf6;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"270\" y=\"100\" width=\"150\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"dq\" value=\"Glue DQ Rules&amp;#10;Completude &gt; 99%&amp;#10;CNPJ valido&amp;#10;Valor &gt; 0\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3b2904;strokeColor=#f59e0b;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"270\" y=\"200\" width=\"150\" height=\"80\" as=\"geometry\"/></mxCell>\n<mxCell id=\"enrich\" value=\"Glue ETL&amp;#10;Enriquecimento&amp;#10;+ CFOP/CST/NCM&amp;#10;+ Regime tributario\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#8b5cf6;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"490\" y=\"100\" width=\"160\" height=\"80\" as=\"geometry\"/></mxCell>\n<mxCell id=\"cur\" value=\"s3://fiscal-curated/&amp;#10;fato_tributario/&amp;#10;Iceberg table&amp;#10;Partitioned by (ano, mes, tributo)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#052e16;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"490\" y=\"220\" width=\"160\" height=\"90\" as=\"geometry\"/></mxCell>\n<mxCell id=\"calc\" value=\"EMR Spark&amp;#10;Apuracao&amp;#10;PIS/COFINS/IRPJ&amp;#10;(nao-cumulativo)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#ef4444;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"720\" y=\"100\" width=\"160\" height=\"80\" as=\"geometry\"/></mxCell>\n<mxCell id=\"srv\" value=\"s3://fiscal-serving/&amp;#10;apuracao_consolidada/&amp;#10;Parquet otimizado&amp;#10;Partitioned by (competencia)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#052e16;strokeColor=#10b981;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"720\" y=\"220\" width=\"160\" height=\"90\" as=\"geometry\"/></mxCell>\n<mxCell id=\"ath\" value=\"Athena&amp;#10;SQL queries&amp;#10;sobre apuracoes\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"950\" y=\"100\" width=\"150\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"gen\" value=\"Lambda&amp;#10;Geracao de&amp;#10;arquivos SPED&amp;#10;(EFD/ECD/ECF)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a5f;strokeColor=#3b82f6;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"950\" y=\"220\" width=\"150\" height=\"80\" as=\"geometry\"/></mxCell>\n<mxCell id=\"out\" value=\"Transmissao&amp;#10;Receita Federal&amp;#10;Validador SPED\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#3b1a1a;strokeColor=#ef4444;fontColor=#e2e8f0;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"1170\" y=\"160\" width=\"150\" height=\"70\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f1\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"raw1\" target=\"crawler\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f2\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"raw2\" target=\"crawler\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f3\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"raw3\" target=\"dq\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f4\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"crawler\" target=\"enrich\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f5\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"dq\" target=\"enrich\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f6\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"enrich\" target=\"cur\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f7\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"enrich\" target=\"calc\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f8\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"calc\" target=\"srv\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f9\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"srv\" target=\"ath\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f10\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"srv\" target=\"gen\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f11\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"ath\" target=\"out\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n<mxCell id=\"f12\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#64748b;strokeWidth=1.5;\" edge=\"1\" parent=\"1\" source=\"gen\" target=\"out\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell>\n</root></mxGraphModel>"}'></div>
+        </div>
+        <div class="diagram-legend">
+          Dados brutos (transacoes, notas fiscais, plano de contas) passam por Glue Crawler e Data Quality, sao enriquecidos com classificacao fiscal (CFOP/CST/NCM), armazenados como Iceberg tables na curated zone, processados pelo EMR para apuracao tributaria, e finalmente servidos via Athena para consultas e Lambda para geracao de arquivos SPED transmitidos a Receita Federal.
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 03: DATA LAKE TRIBUTARIO -->
+      <!-- ============================================================ -->
+      <section class="section" id="data-lake">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">03</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Armazenamento em Camadas</div>
+            <h2>Data Lake Tributario - Camadas S3</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O data lake tributario segue a arquitetura medallion (Bronze/Silver/Gold) adaptada para o contexto fiscal. Cada camada tem propositos distintos, politicas de retencao e formatos otimizados. O particionamento e desenhado para os padroes de acesso mais comuns: por competencia (ano/mes), tipo de tributo e entidade (CNPJ).
+        </p>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-subtitle">Bronze / Raw</div>
+            <h4 class="card-title">Dados Brutos</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Transacoes brutas do core banking, XMLs de NF-e/NFS-e, extratos, arquivos SPED legados. Formato original preservado (JSON, CSV, XML). Imutavel - nunca deletar ou sobrescrever.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Silver / Curated</div>
+            <h4 class="card-title">Dados Enriquecidos</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Dados limpos, validados e enriquecidos com codigos fiscais (CFOP, CST, NCM). Schema-on-write com Iceberg. Deduplicacao e merge de fontes multiplas.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Gold / Serving</div>
+            <h4 class="card-title">Dados Otimizados</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Tabelas pre-agregadas para apuracao fiscal. Parquet otimizado com Zstandard. Particionado por competencia para queries eficientes via Athena.</p>
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Estrutura de Buckets S3</h3>
+        <table>
+          <thead>
+            <tr><th>Bucket / Prefixo</th><th>Conteudo</th><th>Formato</th><th>Retencao</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>s3://fiscal-raw/transacoes/dt=YYYY-MM-DD/</code></td><td>Lancamentos do core banking</td><td>JSON / Parquet</td><td>7 anos (legal)</td></tr>
+            <tr><td><code>s3://fiscal-raw/notas-fiscais/dt=YYYY-MM-DD/</code></td><td>XMLs de NF-e e NFS-e</td><td>XML</td><td>5 anos</td></tr>
+            <tr><td><code>s3://fiscal-raw/sped-legado/periodo=YYYY-MM/</code></td><td>Arquivos SPED historicos</td><td>TXT</td><td>10 anos</td></tr>
+            <tr><td><code>s3://fiscal-curated/fato_tributario/ano=YYYY/mes=MM/</code></td><td>Fatos tributarios enriquecidos</td><td>Iceberg/Parquet</td><td>7 anos</td></tr>
+            <tr><td><code>s3://fiscal-curated/dim_entidade/</code></td><td>Dimensao de entidades (CNPJ)</td><td>Iceberg/Parquet</td><td>Permanente</td></tr>
+            <tr><td><code>s3://fiscal-serving/apuracao/competencia=YYYY-MM/</code></td><td>Apuracao consolidada por tributo</td><td>Parquet (Zstd)</td><td>7 anos</td></tr>
+            <tr><td><code>s3://fiscal-serving/obrigacoes/tipo=EFD/</code></td><td>Arquivos SPED gerados</td><td>TXT</td><td>10 anos</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Terraform - Infraestrutura S3 com Lifecycle</h3>
+        <div class="code-box">
+# terraform/modules/fiscal-datalake/main.tf
+
+resource "aws_s3_bucket" "fiscal_raw" {
+  bucket = "fiscal-raw-${var.account_id}-${var.region}"
+  tags   = { Environment = var.env, Domain = "fiscal", Layer = "raw" }
+}
+
+resource "aws_s3_bucket_versioning" "fiscal_raw" {
+  bucket = aws_s3_bucket.fiscal_raw.id
+  versioning_configuration { status = "Enabled" }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "fiscal_raw" {
+  bucket = aws_s3_bucket.fiscal_raw.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = var.kms_key_arn
+    }
+    bucket_key_enabled = true
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "fiscal_raw" {
+  bucket = aws_s3_bucket.fiscal_raw.id
+
+  rule {
+    id     = "archive-after-1year"
+    status = "Enabled"
+    filter { prefix = "transacoes/" }
+    transition {
+      days          = 365
+      storage_class = "GLACIER"
+    }
+    transition {
+      days          = 730
+      storage_class = "DEEP_ARCHIVE"
+    }
+  }
+
+  rule {
+    id     = "retain-nfe-5years"
+    status = "Enabled"
+    filter { prefix = "notas-fiscais/" }
+    transition {
+      days          = 180
+      storage_class = "INTELLIGENT_TIERING"
+    }
+    expiration { days = 1825 }  # 5 anos
+  }
+}
+
+resource "aws_s3_bucket" "fiscal_curated" {
+  bucket = "fiscal-curated-${var.account_id}-${var.region}"
+  tags   = { Environment = var.env, Domain = "fiscal", Layer = "curated" }
+}
+
+resource "aws_s3_bucket" "fiscal_serving" {
+  bucket = "fiscal-serving-${var.account_id}-${var.region}"
+  tags   = { Environment = var.env, Domain = "fiscal", Layer = "serving" }
+}
+
+# Glue Catalog Database
+resource "aws_glue_catalog_database" "fiscal" {
+  name = "fiscal_${var.env}"
+}
+
+# Glue Crawler para Raw Zone
+resource "aws_glue_crawler" "fiscal_raw" {
+  database_name = aws_glue_catalog_database.fiscal.name
+  name          = "fiscal-raw-crawler"
+  role          = var.glue_role_arn
+
+  s3_target {
+    path = "s3://${aws_s3_bucket.fiscal_raw.bucket}/transacoes/"
+  }
+
+  schema_change_policy {
+    delete_behavior = "LOG"
+    update_behavior = "UPDATE_IN_DATABASE"
+  }
+
+  recrawl_policy { recrawl_behavior = "CRAWL_NEW_FOLDERS_ONLY" }
+  schedule = "cron(0 6 * * ? *)"  # 06:00 UTC diario
+}</div>
+
+        <div class="info-box">
+          <strong>Object Lock para compliance:</strong> Para dados que precisam de retencao legal obrigatoria (ex: 5 anos para documentos fiscais conforme CTN), utilize S3 Object Lock no modo COMPLIANCE. Isso impede que ate mesmo o root account delete os objetos antes do prazo.
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 04: PIPELINE DE APURACAO FISCAL -->
+      <!-- ============================================================ -->
+      <section class="section" id="pipeline-apuracao">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">04</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Glue &amp; EMR Spark</div>
+            <h2>Pipeline de Apuracao Fiscal</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Os pipelines de apuracao fiscal utilizam AWS Glue para ETL de classificacao e enriquecimento, e Amazon EMR com PySpark para os calculos tributarios de alto volume. A apuracao de PIS/COFINS no regime nao-cumulativo, por exemplo, exige rastreamento de creditos por operacao, calculo de base tributavel com exclusoes, e aplicacao de aliquotas diferenciadas por tipo de receita.
+        </p>
+
+        <h3 style="color: var(--text); margin: 24px 0 16px;">Pipeline ETL - Mermaid</h3>
+        <div class="diagram-container">
+          <div class="mermaid">
+graph LR
+    A[S3 Raw Zone] --> B[Glue Crawler]
+    B --> C[Glue Data Catalog]
+    C --> D{Glue DQ Rules}
+    D -->|Pass| E[Glue ETL Job]
+    D -->|Fail| F[SNS Alert + DLQ]
+    E --> G[Enriquecimento CFOP/CST]
+    G --> H[S3 Curated Zone - Iceberg]
+    H --> I[EMR Spark - Apuracao PIS/COFINS]
+    H --> J[EMR Spark - Apuracao IRPJ/CSLL]
+    H --> K[EMR Spark - Calculo IRRF]
+    I --> L[S3 Serving Zone]
+    J --> L
+    K --> L
+    L --> M[Athena Queries]
+    L --> N[Lambda - Geracao SPED]
+    style A fill:#1e293b,stroke:#10b981,color:#e2e8f0
+    style H fill:#052e16,stroke:#10b981,color:#e2e8f0
+    style L fill:#052e16,stroke:#10b981,color:#e2e8f0
+    style F fill:#3b1a1a,stroke:#ef4444,color:#e2e8f0
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">PySpark - Apuracao PIS/COFINS (Regime Nao-Cumulativo)</h3>
+        <div class="formula-box">
+          \[ \text{PIS a Recolher} = (\text{Receita Bruta} - \text{Exclusoes}) \times 1{,}65\% - \text{Creditos PIS} \]
+          \[ \text{COFINS a Recolher} = (\text{Receita Bruta} - \text{Exclusoes}) \times 7{,}6\% - \text{Creditos COFINS} \]
+        </div>
+
+        <div class="code-box">
+# jobs/apuracao_pis_cofins.py - EMR Spark Job
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder \
+    .appName("ApuracaoPISCOFINS") \
+    .config("spark.sql.catalog.glue_catalog", "org.apache.iceberg.spark.SparkCatalog") \
+    .config("spark.sql.catalog.glue_catalog.catalog-impl",
+            "org.apache.iceberg.aws.glue.GlueCatalog") \
+    .config("spark.sql.catalog.glue_catalog.warehouse",
+            "s3://fiscal-curated-123456789-us-east-1/") \
+    .getOrCreate()
+
+# Parametros do job
+competencia = spark.conf.get("spark.job.competencia")  # "2024-01"
+ano, mes = competencia.split("-")
+
+# 1. Ler fatos tributarios da curated zone (Iceberg)
+fatos = spark.read.format("iceberg") \
+    .load("glue_catalog.fiscal_prod.fato_tributario") \
+    .filter(
+        (F.col("ano") == int(ano)) &
+        (F.col("mes") == int(mes))
+    )
+
+# 2. Classificar receitas e creditos
+receitas = fatos.filter(F.col("natureza") == "RECEITA") \
+    .withColumn("tipo_receita",
+        F.when(F.col("cst_pis").isin("01", "02"), "TRIBUTADA")
+         .when(F.col("cst_pis") == "06", "ALIQUOTA_ZERO")
+         .when(F.col("cst_pis") == "07", "ISENTA")
+         .otherwise("NAO_TRIBUTADA")
+    )
+
+creditos = fatos.filter(F.col("natureza") == "DESPESA") \
+    .filter(F.col("cst_pis").isin("50", "51", "52", "53", "54", "55", "56")) \
+    .withColumn("credito_pis", F.col("valor_base") * F.lit(0.0165)) \
+    .withColumn("credito_cofins", F.col("valor_base") * F.lit(0.076))
+
+# 3. Apuracao por CNPJ e tipo de receita
+apuracao_receita = receitas \
+    .filter(F.col("tipo_receita") == "TRIBUTADA") \
+    .groupBy("cnpj_estabelecimento") \
+    .agg(
+        F.sum("valor_base").alias("receita_bruta"),
+        F.sum(
+            F.when(F.col("cfop").isin("5102", "6102"), F.col("valor_desconto"))
+             .otherwise(0)
+        ).alias("exclusoes"),
+    ) \
+    .withColumn("base_calculo",
+        F.col("receita_bruta") - F.col("exclusoes")) \
+    .withColumn("pis_debito",
+        F.col("base_calculo") * F.lit(0.0165)) \
+    .withColumn("cofins_debito",
+        F.col("base_calculo") * F.lit(0.076))
+
+apuracao_credito = creditos \
+    .groupBy("cnpj_estabelecimento") \
+    .agg(
+        F.sum("credito_pis").alias("total_credito_pis"),
+        F.sum("credito_cofins").alias("total_credito_cofins"),
+    )
+
+# 4. Consolidacao: debito - credito = valor a recolher
+apuracao_final = apuracao_receita \
+    .join(apuracao_credito, "cnpj_estabelecimento", "left") \
+    .fillna(0) \
+    .withColumn("pis_a_recolher",
+        F.greatest(F.col("pis_debito") - F.col("total_credito_pis"), F.lit(0))) \
+    .withColumn("cofins_a_recolher",
+        F.greatest(F.col("cofins_debito") - F.col("total_credito_cofins"), F.lit(0))) \
+    .withColumn("competencia", F.lit(competencia)) \
+    .withColumn("dt_apuracao", F.current_timestamp())
+
+# 5. Gravar na serving zone
+apuracao_final.write \
+    .mode("overwrite") \
+    .partitionBy("competencia") \
+    .parquet(f"s3://fiscal-serving-123456789-us-east-1/apuracao/pis_cofins/")
+
+print(f"Apuracao PIS/COFINS competencia {competencia} concluida.")
+print(f"Registros processados: {apuracao_final.count()}")
+spark.stop()</div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">PySpark - Calculo de IRRF em Lote</h3>
+        <div class="code-box">
+# jobs/calculo_irrf_batch.py - EMR Spark Job
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
+spark = SparkSession.builder \
+    .appName("CalculoIRRFBatch") \
+    .getOrCreate()
+
+competencia = spark.conf.get("spark.job.competencia")
+
+# Tabela de aliquotas IRRF (rendimentos financeiros)
+# Vigente conforme IN RFB 1.585/2015
+ALIQUOTAS_IRRF = {
+    "RENDA_FIXA_ATE_180":     0.225,  # 22,5%
+    "RENDA_FIXA_181_360":     0.20,   # 20%
+    "RENDA_FIXA_361_720":     0.175,  # 17,5%
+    "RENDA_FIXA_ACIMA_720":   0.15,   # 15%
+    "FUNDO_CURTO_PRAZO":      0.225,  # 22,5%
+    "FUNDO_LONGO_PRAZO":      0.15,   # 15%
+    "SWAP":                    0.15,   # 15%
+    "DAY_TRADE":               0.20,   # 20%
+}
+
+# Ler rendimentos financeiros
+rendimentos = spark.read.parquet(
+    f"s3://fiscal-curated-123456789-us-east-1/rendimentos_financeiros/"
+    f"competencia={competencia}/"
+)
+
+# Calcular dias de aplicacao e classificar faixa
+rendimentos_classificados = rendimentos \
+    .withColumn("dias_aplicacao",
+        F.datediff(F.col("dt_resgate"), F.col("dt_aplicacao"))) \
+    .withColumn("faixa_irrf",
+        F.when(F.col("tipo_produto") == "DAY_TRADE", "DAY_TRADE")
+         .when(F.col("tipo_produto").startswith("FUNDO"),
+               F.when(F.col("prazo_fundo") == "CP", "FUNDO_CURTO_PRAZO")
+                .otherwise("FUNDO_LONGO_PRAZO"))
+         .when(F.col("dias_aplicacao") <= 180, "RENDA_FIXA_ATE_180")
+         .when(F.col("dias_aplicacao") <= 360, "RENDA_FIXA_181_360")
+         .when(F.col("dias_aplicacao") <= 720, "RENDA_FIXA_361_720")
+         .otherwise("RENDA_FIXA_ACIMA_720")
+    )
+
+# Broadcast de aliquotas e calcular IRRF
+aliquotas_df = spark.createDataFrame(
+    [(k, v) for k, v in ALIQUOTAS_IRRF.items()],
+    ["faixa_irrf", "aliquota"]
+)
+
+irrf_calculado = rendimentos_classificados \
+    .join(F.broadcast(aliquotas_df), "faixa_irrf") \
+    .withColumn("rendimento_bruto", F.col("valor_resgate") - F.col("valor_aplicacao")) \
+    .withColumn("irrf_retido", F.col("rendimento_bruto") * F.col("aliquota")) \
+    .withColumn("rendimento_liquido",
+        F.col("rendimento_bruto") - F.col("irrf_retido")) \
+    .select(
+        "cpf_cnpj_beneficiario", "tipo_produto", "faixa_irrf",
+        "rendimento_bruto", "aliquota", "irrf_retido",
+        "rendimento_liquido", "dt_resgate"
+    )
+
+# DARF consolidado por beneficiario
+darf_consolidado = irrf_calculado \
+    .groupBy("cpf_cnpj_beneficiario") \
+    .agg(
+        F.sum("irrf_retido").alias("total_irrf"),
+        F.count("*").alias("qtd_operacoes"),
+    ) \
+    .withColumn("codigo_receita", F.lit("1708"))  # IRRF s/ aplicacoes
+    .withColumn("competencia", F.lit(competencia))
+
+# Gravar resultados
+irrf_calculado.write.mode("overwrite") \
+    .partitionBy("faixa_irrf") \
+    .parquet(f"s3://fiscal-serving-123456789-us-east-1/irrf/detalhado/competencia={competencia}/")
+
+darf_consolidado.write.mode("overwrite") \
+    .parquet(f"s3://fiscal-serving-123456789-us-east-1/irrf/darf/competencia={competencia}/")
+
+spark.stop()</div>
+
+        <div class="example-box">
+          <div class="example-title">Data Quality Rules (Glue DQ)</div>
+          <p style="font-size: 0.9rem; margin: 0;">As regras de qualidade sao executadas antes de cada job de apuracao:</p>
+          <ul style="font-size: 0.9rem; margin: 8px 0 0 0;">
+            <li><strong>Completude:</strong> <code>Completeness "cnpj" > 0.99</code> - CNPJ preenchido em 99%+ dos registros</li>
+            <li><strong>Unicidade:</strong> <code>Uniqueness "id_transacao" = 1.0</code> - Sem duplicatas</li>
+            <li><strong>Validade:</strong> <code>ColumnValues "valor_base" > 0</code> - Valores positivos</li>
+            <li><strong>Referencial:</strong> <code>ReferentialIntegrity "cfop" IN dim_cfop."codigo"</code> - CFOP valido</li>
+            <li><strong>Freshness:</strong> <code>Freshness "dt_transacao" <= 2 days</code> - Dados recentes</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 05: ORQUESTRACAO DE FECHAMENTO FISCAL -->
+      <!-- ============================================================ -->
+      <section class="section" id="orquestracao">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">05</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Step Functions Workflow</div>
+            <h2>Orquestracao de Fechamento Fiscal</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O fechamento fiscal mensal e orquestrado por uma state machine do AWS Step Functions. O workflow executa as apuracoes em paralelo (PIS/COFINS, IRPJ/CSLL, IRRF sao independentes), consolida os resultados, gera os arquivos SPED, valida e atualiza o controle de obrigacoes em DynamoDB. Alertas SNS sao disparados em cada transicao critica.
+        </p>
+
+        <h3 style="color: var(--text); margin: 24px 0 16px;">State Machine - Mermaid</h3>
+        <div class="diagram-container">
+          <div class="mermaid">
+stateDiagram-v2
+    [*] --> ValidarPreRequisitos
+    ValidarPreRequisitos --> DataQualityCheck
+    DataQualityCheck --> ApuracaoParalela : DQ Pass
+    DataQualityCheck --> AlertaFalha : DQ Fail
+
+    state ApuracaoParalela {
+        [*] --> PIS_COFINS
+        [*] --> IRPJ_CSLL
+        [*] --> IRRF
+        PIS_COFINS --> [*]
+        IRPJ_CSLL --> [*]
+        IRRF --> [*]
+    }
+
+    ApuracaoParalela --> Consolidacao
+    Consolidacao --> GeracaoSPED
+    GeracaoSPED --> ValidacaoSPED
+    ValidacaoSPED --> AtualizarDynamoDB : Validacao OK
+    ValidacaoSPED --> RetryGeracaoSPED : Erro
+    RetryGeracaoSPED --> GeracaoSPED
+    AtualizarDynamoDB --> NotificacaoSucesso
+    NotificacaoSucesso --> [*]
+    AlertaFalha --> [*]
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Step Functions ASL - Definicao da State Machine</h3>
+        <div class="code-box">
+{
+  "Comment": "Fechamento Fiscal Mensal - Workflow Completo",
+  "StartAt": "ValidarPreRequisitos",
+  "States": {
+    "ValidarPreRequisitos": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:123456789:function:fiscal-validar-prereqs",
+      "Parameters": {
+        "competencia.$": "$.competencia",
+        "checks": ["dados_completos", "crawler_executado", "dq_rules_atualizadas"]
+      },
+      "Retry": [{"ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 60, "MaxAttempts": 2}],
+      "Next": "DataQualityCheck"
+    },
+    "DataQualityCheck": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "fiscal-data-quality",
+        "Arguments": {"--competencia.$": "$.competencia"}
+      },
+      "Catch": [{
+        "ErrorEquals": ["States.TaskFailed"],
+        "Next": "AlertaFalha",
+        "ResultPath": "$.error"
+      }],
+      "Next": "ApuracaoParalela"
+    },
+    "ApuracaoParalela": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "ApuracaoPISCOFINS",
+          "States": {
+            "ApuracaoPISCOFINS": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::emr:addStep.sync",
+              "Parameters": {
+                "ClusterId.$": "$.emr_cluster_id",
+                "Step": {
+                  "Name": "ApuracaoPISCOFINS",
+                  "ActionOnFailure": "CONTINUE",
+                  "HadoopJarStep": {
+                    "Jar": "command-runner.jar",
+                    "Args": ["spark-submit", "--deploy-mode", "cluster",
+                      "s3://fiscal-jobs/apuracao_pis_cofins.py",
+                      "--conf", {"Fn.Format": "spark.job.competencia={}",
+                        "Args": ["$.competencia"]}]
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "ApuracaoIRPJCSLL",
+          "States": {
+            "ApuracaoIRPJCSLL": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::emr:addStep.sync",
+              "Parameters": {
+                "ClusterId.$": "$.emr_cluster_id",
+                "Step": {
+                  "Name": "ApuracaoIRPJCSLL",
+                  "ActionOnFailure": "CONTINUE",
+                  "HadoopJarStep": {
+                    "Jar": "command-runner.jar",
+                    "Args": ["spark-submit", "--deploy-mode", "cluster",
+                      "s3://fiscal-jobs/apuracao_irpj_csll.py",
+                      "--conf", {"Fn.Format": "spark.job.competencia={}",
+                        "Args": ["$.competencia"]}]
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "CalculoIRRF",
+          "States": {
+            "CalculoIRRF": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::emr:addStep.sync",
+              "Parameters": {
+                "ClusterId.$": "$.emr_cluster_id",
+                "Step": {
+                  "Name": "CalculoIRRF",
+                  "ActionOnFailure": "CONTINUE",
+                  "HadoopJarStep": {
+                    "Jar": "command-runner.jar",
+                    "Args": ["spark-submit", "--deploy-mode", "cluster",
+                      "s3://fiscal-jobs/calculo_irrf_batch.py",
+                      "--conf", {"Fn.Format": "spark.job.competencia={}",
+                        "Args": ["$.competencia"]}]
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Consolidacao"
+    },
+    "Consolidacao": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:123456789:function:fiscal-consolidar",
+      "Next": "GeracaoSPED"
+    },
+    "GeracaoSPED": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:123456789:function:fiscal-gerar-sped",
+      "Parameters": {
+        "competencia.$": "$.competencia",
+        "tipos": ["EFD_CONTRIBUICOES", "ECD", "ECF"]
+      },
+      "Retry": [{"ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 120, "MaxAttempts": 3}],
+      "Next": "ValidacaoSPED"
+    },
+    "ValidacaoSPED": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:123456789:function:fiscal-validar-sped",
+      "Catch": [{
+        "ErrorEquals": ["ValidationError"],
+        "Next": "GeracaoSPED",
+        "ResultPath": "$.validationError"
+      }],
+      "Next": "AtualizarDynamoDB"
+    },
+    "AtualizarDynamoDB": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "FiscalObrigacoes",
+        "Item": {
+          "PK": {"S.$": "States.Format('OBLIGATION#EFD#{}', $.competencia)"},
+          "SK": {"S": "STATUS"},
+          "status": {"S": "GERADO"},
+          "dt_geracao": {"S.$": "$$.State.EnteredTime"},
+          "s3_path": {"S.$": "$.sped_output_path"}
+        }
+      },
+      "Next": "NotificacaoSucesso"
+    },
+    "NotificacaoSucesso": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:123456789:fiscal-notifications",
+        "Subject": "Fechamento Fiscal Concluido",
+        "Message.$": "States.Format('Fechamento fiscal {} concluido com sucesso.', $.competencia)"
+      },
+      "End": true
+    },
+    "AlertaFalha": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:123456789:fiscal-alerts-critical",
+        "Subject": "ALERTA: Falha no Fechamento Fiscal",
+        "Message.$": "States.Format('Falha no fechamento fiscal {}. Erro: {}', $.competencia, $.error)"
+      },
+      "End": true
+    }
+  }
+}</div>
+
+        <div class="warning-box">
+          <strong>Deadline Management:</strong> O EventBridge Scheduler dispara a state machine no dia 1 de cada mes as 02:00 UTC. Se a execucao falhar, o SNS notifica a equipe fiscal imediatamente. O prazo da EFD-Contribuicoes e o 10o dia util do mes subsequente - o workflow tem margem de 5 dias uteis para retries e correcoes manuais.
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 06: DYNAMODB - CONTROLE DE OBRIGACOES -->
+      <!-- ============================================================ -->
+      <section class="section" id="dynamodb-obrigacoes">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">06</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Single-Table Design</div>
+            <h2>DynamoDB - Controle de Obrigacoes Acessorias</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O controle de obrigacoes acessorias utiliza DynamoDB com single-table design. Uma unica tabela <code>FiscalObrigacoes</code> armazena obrigacoes, filings, deadlines e historico de status. A PK/SK permite queries eficientes por tipo de obrigacao e competencia, enquanto o GSI habilita consultas por deadline.
+        </p>
+
+        <h3 style="color: var(--text); margin: 24px 0 16px;">Padroes de Acesso (Access Patterns)</h3>
+        <table>
+          <thead>
+            <tr><th>Access Pattern</th><th>PK</th><th>SK</th><th>Indice</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Obrigacao por tipo + competencia</td><td><code>OBLIGATION#EFD#2024-01</code></td><td><code>STATUS</code></td><td>Table</td></tr>
+            <tr><td>Historico de filing</td><td><code>FILING#EFD#2024-01</code></td><td><code>ATTEMPT#001</code></td><td>Table</td></tr>
+            <tr><td>Todas obrigacoes de uma competencia</td><td><code>COMP#2024-01</code></td><td><code>OBLIGATION#*</code></td><td>Table</td></tr>
+            <tr><td>Obrigacoes por deadline (proximos 30 dias)</td><td><code>DEADLINE#2024-02</code></td><td><code>DT#2024-02-10</code></td><td>GSI1</td></tr>
+            <tr><td>Obrigacoes pendentes (global)</td><td>-</td><td>-</td><td>GSI2 (status=PENDENTE)</td></tr>
+            <tr><td>Audit trail de uma obrigacao</td><td><code>OBLIGATION#DCTF#2024-01</code></td><td><code>AUDIT#2024-02-01T10:30:00Z</code></td><td>Table</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Modelo de Dados - Tipos de Item</h3>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Obrigacao</div>
+            <h4 class="card-title">OBLIGATION Item</h4>
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin: 0; font-family: 'DM Mono', monospace;">
+              PK: OBLIGATION#EFD#2024-01<br/>
+              SK: STATUS<br/>
+              tipo: EFD_CONTRIBUICOES<br/>
+              competencia: 2024-01<br/>
+              status: GERADO | TRANSMITIDO | ACEITO<br/>
+              deadline: 2024-02-15<br/>
+              s3_path: s3://fiscal-serving/...<br/>
+              GSI1PK: DEADLINE#2024-02<br/>
+              GSI1SK: DT#2024-02-15
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Filing Attempt</div>
+            <h4 class="card-title">FILING Item</h4>
+            <p style="font-size: 0.85rem; color: var(--text-dim); margin: 0; font-family: 'DM Mono', monospace;">
+              PK: FILING#EFD#2024-01<br/>
+              SK: ATTEMPT#001<br/>
+              dt_tentativa: 2024-02-08T14:30:00Z<br/>
+              resultado: SUCESSO | ERRO<br/>
+              protocolo_rfb: 123456789<br/>
+              hash_arquivo: sha256:abc123...<br/>
+              usuario: fiscal-bot@company.com<br/>
+              TTL: 1739404800 (expira 2025-02)
+            </p>
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Python boto3 - Gestao de Obrigacoes</h3>
+        <div class="code-box">
+# fiscal_obligations/dynamodb_manager.py
+import boto3
+from datetime import datetime, timedelta
+from boto3.dynamodb.conditions import Key, Attr
+
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table("FiscalObrigacoes")
+
+def registrar_obrigacao(tipo: str, competencia: str, deadline: str):
+    """Registra nova obrigacao acessoria no DynamoDB."""
+    deadline_mes = deadline[:7].replace("-", "-")  # "2024-02"
+    table.put_item(Item={
+        "PK": f"OBLIGATION#{tipo}#{competencia}",
+        "SK": "STATUS",
+        "tipo": tipo,
+        "competencia": competencia,
+        "status": "PENDENTE",
+        "deadline": deadline,
+        "dt_criacao": datetime.utcnow().isoformat(),
+        "GSI1PK": f"DEADLINE#{deadline_mes}",
+        "GSI1SK": f"DT#{deadline}",
+        "GSI2PK": "STATUS#PENDENTE",
+        "GSI2SK": f"{deadline}#{tipo}",
+    })
+
+def atualizar_status(tipo: str, competencia: str, novo_status: str,
+                     s3_path: str = None, protocolo: str = None):
+    """Atualiza status de uma obrigacao e registra audit trail."""
+    agora = datetime.utcnow().isoformat()
+
+    # Atualizar status principal
+    update_expr = "SET #st = :status, dt_atualizacao = :dt"
+    expr_values = {":status": novo_status, ":dt": agora}
+
+    if s3_path:
+        update_expr += ", s3_path = :path"
+        expr_values[":path"] = s3_path
+    if protocolo:
+        update_expr += ", protocolo_rfb = :proto"
+        expr_values[":proto"] = protocolo
+
+    # Remover do GSI2 de pendentes se nao for mais PENDENTE
+    if novo_status != "PENDENTE":
+        update_expr += " REMOVE GSI2PK, GSI2SK"
+
+    table.update_item(
+        Key={"PK": f"OBLIGATION#{tipo}#{competencia}", "SK": "STATUS"},
+        UpdateExpression=update_expr,
+        ExpressionAttributeNames={"#st": "status"},
+        ExpressionAttributeValues=expr_values,
+    )
+
+    # Registrar audit trail
+    table.put_item(Item={
+        "PK": f"OBLIGATION#{tipo}#{competencia}",
+        "SK": f"AUDIT#{agora}",
+        "acao": f"STATUS_CHANGE_TO_{novo_status}",
+        "usuario": "fiscal-workflow",
+        "detalhes": {"s3_path": s3_path, "protocolo": protocolo},
+        "TTL": int((datetime.utcnow() + timedelta(days=365*5)).timestamp()),
+    })
+
+def obrigacoes_proximas(dias: int = 30):
+    """Consulta obrigacoes com deadline nos proximos N dias via GSI1."""
+    hoje = datetime.utcnow().date()
+    limite = hoje + timedelta(days=dias)
+    mes_atual = hoje.strftime("%Y-%m")
+    mes_limite = limite.strftime("%Y-%m")
+
+    resultados = []
+    for mes in set([mes_atual, mes_limite]):
+        resp = table.query(
+            IndexName="GSI1-deadline-index",
+            KeyConditionExpression=(
+                Key("GSI1PK").eq(f"DEADLINE#{mes}") &
+                Key("GSI1SK").between(
+                    f"DT#{hoje.isoformat()}",
+                    f"DT#{limite.isoformat()}"
+                )
+            ),
+        )
+        resultados.extend(resp["Items"])
+    return sorted(resultados, key=lambda x: x.get("deadline", ""))
+
+def obrigacoes_pendentes():
+    """Lista todas obrigacoes pendentes via GSI2."""
+    return table.query(
+        IndexName="GSI2-status-index",
+        KeyConditionExpression=Key("GSI2PK").eq("STATUS#PENDENTE"),
+    )["Items"]
+
+# Exemplo de uso:
+# registrar_obrigacao("EFD_CONTRIBUICOES", "2024-01", "2024-02-15")
+# registrar_obrigacao("DCTF", "2024-01", "2024-02-25")
+# registrar_obrigacao("E_FINANCEIRA", "2024-S1", "2024-08-31")
+# atualizar_status("EFD_CONTRIBUICOES", "2024-01", "TRANSMITIDO",
+#                  protocolo="RFB-2024-987654")</div>
+
+        <div class="info-box">
+          <strong>TTL para compliance:</strong> O DynamoDB TTL remove automaticamente registros de filing attempts apos 5 anos (retencao legal minima). Os items de obrigacao (OBLIGATION) nao possuem TTL, permanecendo como registro permanente. Isso garante compliance com o CTN art. 173 sem custo de armazenamento excessivo.
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 07: MONITORAMENTO & ALERTAS -->
+      <!-- ============================================================ -->
+      <section class="section" id="monitoramento">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">07</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Observabilidade &amp; Alertas</div>
+            <h2>Monitoramento &amp; Alertas</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          O monitoramento da plataforma fiscal combina CloudWatch para metricas de pipeline, SNS/SES para alertas de deadlines, EventBridge para schedulers automaticos e QuickSight para dashboards de compliance. O objetivo e garantir visibilidade total do status de cada obrigacao e deteccao imediata de falhas.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">CloudWatch</div>
+            <h4 class="card-title">Metricas de Pipeline</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Tempo de execucao por job Glue/EMR, taxa de erro, volume de registros processados, latencia end-to-end do fechamento fiscal.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">SNS / SES</div>
+            <h4 class="card-title">Alertas de Deadline</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Notificacoes T-7, T-3 e T-1 dias antes do vencimento. Escalacao automatica se obrigacao nao transmitida ate T-2.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">EventBridge</div>
+            <h4 class="card-title">Schedulers</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Cron rules para disparar crawlers diarios, fechamento mensal, e checks semanais de obrigacoes pendentes.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">QuickSight</div>
+            <h4 class="card-title">Dashboard Fiscal</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Visao consolidada: status de obrigacoes, valores apurados por tributo, tendencias mensais, compliance rate.</p>
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Dashboard de Metricas Fiscais</h3>
+
+        <!-- Chart 1: Valores apurados por tributo -->
+        <div class="chart-container">
+          <div class="chart-title">Valores Apurados por Tributo (R$ milhoes) - Ultimos 6 Meses</div>
+          <canvas id="chartTributos" height="120"></canvas>
+        </div>
+
+        <!-- Chart 2: Compliance rate -->
+        <div class="chart-container" style="max-width: 400px;">
+          <div class="chart-title">Taxa de Compliance - Obrigacoes Acessorias 2024</div>
+          <canvas id="chartCompliance" height="200"></canvas>
+        </div>
+
+        <!-- Chart 3: Tempo de processamento -->
+        <div class="chart-container">
+          <div class="chart-title">Tempo de Processamento do Pipeline (minutos) por Etapa</div>
+          <canvas id="chartProcessamento" height="120"></canvas>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 08: e-FINANCEIRA & REPORTES REGULATORIOS -->
+      <!-- ============================================================ -->
+      <section class="section" id="e-financeira">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">08</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Reportes para Receita Federal</div>
+            <h2>e-Financeira &amp; Reportes Regulatorios</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          A e-Financeira e a obrigacao acessoria que instituicoes financeiras devem entregar semestralmente a Receita Federal, contendo informacoes de saldos e movimentacoes financeiras de clientes. O pipeline na AWS automatiza a geracao do XML conforme o schema da RFB, incluindo validacao, assinatura digital e controle de envio.
+        </p>
+
+        <h3 style="color: var(--text); margin: 24px 0 16px;">Obrigacoes Acessorias Principais</h3>
+        <table>
+          <thead>
+            <tr><th>Obrigacao</th><th>Periodicidade</th><th>Prazo</th><th>Conteudo</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>EFD-Contribuicoes</strong></td><td>Mensal</td><td>10o dia util do 2o mes</td><td>Apuracao PIS/COFINS</td></tr>
+            <tr><td><strong>ECD (SPED Contabil)</strong></td><td>Anual</td><td>Ultimo dia util de maio</td><td>Livros contabeis digitais</td></tr>
+            <tr><td><strong>ECF</strong></td><td>Anual</td><td>Ultimo dia util de julho</td><td>IRPJ/CSLL e lucro</td></tr>
+            <tr><td><strong>DCTF</strong></td><td>Mensal</td><td>15o dia util do 2o mes</td><td>Debitos e creditos tributarios</td></tr>
+            <tr><td><strong>e-Financeira</strong></td><td>Semestral</td><td>Ultimo dia util do mes seguinte</td><td>Saldos e movimentacoes acima de R$ 2.000</td></tr>
+            <tr><td><strong>DIRF</strong></td><td>Anual</td><td>Ultimo dia util de fevereiro</td><td>IR retido na fonte</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Fluxo de Geracao de Reportes - Mermaid</h3>
+        <div class="diagram-container">
+          <div class="mermaid">
+graph TB
+    A[S3 Serving Zone - Apuracoes] --> B[Lambda: Leitura de dados]
+    B --> C{Tipo de Obrigacao}
+    C -->|EFD| D[Gerador EFD-Contribuicoes]
+    C -->|ECD| E[Gerador SPED Contabil]
+    C -->|ECF| F[Gerador ECF]
+    C -->|e-Financeira| G[Gerador XML e-Financeira]
+    C -->|DCTF| H[Gerador DCTF]
+    D --> I[Validador SPED - PVA]
+    E --> I
+    F --> I
+    G --> J[Validador XML Schema RFB]
+    H --> I
+    I --> K{Validacao OK?}
+    J --> K
+    K -->|Sim| L[S3: Arquivo Assinado]
+    K -->|Nao| M[SNS: Alerta de Erro]
+    M --> N[Correcao Manual / Retry]
+    N --> B
+    L --> O[DynamoDB: Status PRONTO]
+    O --> P[Lambda: Transmissao RFB]
+    P --> Q[DynamoDB: Status TRANSMITIDO]
+    Q --> R[SNS: Confirmacao]
+    style A fill:#052e16,stroke:#10b981,color:#e2e8f0
+    style L fill:#052e16,stroke:#10b981,color:#e2e8f0
+    style M fill:#3b1a1a,stroke:#ef4444,color:#e2e8f0
+    style R fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">e-Financeira - Estrutura do XML</h3>
+        <div class="example-box">
+          <div class="example-title">Schema e-Financeira (simplificado)</div>
+          <p style="font-size: 0.9rem; margin: 0;">O XML da e-Financeira segue o schema definido pela RFB (IN 1.571/2015) e contem:</p>
+          <ul style="font-size: 0.9rem; margin: 8px 0 0 0;">
+            <li><strong>Cabecalho:</strong> CNPJ declarante, semestre de referencia, tipo de envio (original/retificadora)</li>
+            <li><strong>Movimento Operacao Financeira:</strong> Para cada cliente com saldo >= R$ 2.000 ou movimentacao mensal >= R$ 2.000</li>
+            <li><strong>Dados do Declarado:</strong> CPF/CNPJ, nome, pais de residencia (CRS/FATCA)</li>
+            <li><strong>Saldos:</strong> Saldo em 31/dez e 30/jun, por tipo de conta (corrente, poupanca, investimento)</li>
+            <li><strong>Rendimentos:</strong> Rendimentos brutos pagos ou creditados no periodo</li>
+            <li><strong>Pagamentos:</strong> Valores de aquisicao de bens/direitos (quando aplicavel)</li>
+          </ul>
+        </div>
+
+        <div class="warning-box">
+          <strong>Retificacao e-Financeira:</strong> Em caso de erro detectado apos transmissao, e possivel enviar uma e-Financeira retificadora ate 5 anos apos o fato gerador. O sistema deve manter o hash SHA-256 do arquivo original e do retificador para auditoria. O DynamoDB armazena cada tentativa como um FILING item separado.
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 09: SEGURANCA & COMPLIANCE -->
+      <!-- ============================================================ -->
+      <section class="section" id="seguranca">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">09</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Protecao de Dados Fiscais</div>
+            <h2>Seguranca &amp; Compliance</h2>
+          </div>
+        </div>
+
+        <p class="sec-intro">
+          Dados fiscais sao classificados como dados sensiveis regulados. A plataforma implementa defesa em profundidade: criptografia em repouso e em transito, controle de acesso granular com IAM e Lake Formation, auditoria completa com CloudTrail, e politicas de retencao alinhadas aos requisitos legais brasileiros.
+        </p>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-subtitle">Criptografia</div>
+            <h4 class="card-title">KMS + TLS 1.2+</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Todos os buckets S3 com SSE-KMS (chave gerenciada pela organizacao). DynamoDB com criptografia at-rest (CMK). Todas comunicacoes via TLS 1.2 minimo. Bucket keys habilitadas para reduzir custos de KMS.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Acesso</div>
+            <h4 class="card-title">IAM + Lake Formation</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Roles dedicadas por pipeline (fiscal-glue-role, fiscal-emr-role). Lake Formation para controle column-level: equipe fiscal ve todos os campos, auditoria ve apenas metadados, BI ve apenas agregados.</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Auditoria</div>
+            <h4 class="card-title">CloudTrail + S3 Access Logs</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">CloudTrail com log integrity validation habilitado. S3 access logs para rastreamento de acesso a dados fiscais. Retencao de logs: 7 anos (alinhado com CTN).</p>
+          </div>
+          <div class="card">
+            <div class="card-subtitle">Retencao</div>
+            <h4 class="card-title">Politicas Legais</h4>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">CTN art. 173/174: 5 anos para documentos fiscais. Lei 8.212/91: 10 anos para folha de pagamento. Resolucao BACEN: 5 anos para documentos financeiros. Object Lock no modo COMPLIANCE.</p>
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Matriz de Permissoes - Lake Formation</h3>
+        <table>
+          <thead>
+            <tr><th>Role / Persona</th><th>Database</th><th>Tabela</th><th>Colunas</th><th>Acoes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>fiscal-pipeline-role</td><td>fiscal_prod</td><td>Todas</td><td>Todas</td><td>SELECT, INSERT, DELETE</td></tr>
+            <tr><td>fiscal-analista-role</td><td>fiscal_prod</td><td>apuracao_*</td><td>Todas</td><td>SELECT</td></tr>
+            <tr><td>fiscal-bi-role</td><td>fiscal_prod</td><td>serving_*</td><td>Exceto CPF/CNPJ</td><td>SELECT</td></tr>
+            <tr><td>auditoria-role</td><td>fiscal_prod</td><td>Todas</td><td>Metadados only</td><td>DESCRIBE</td></tr>
+            <tr><td>compliance-role</td><td>fiscal_prod</td><td>obrigacoes_*</td><td>Todas</td><td>SELECT</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <strong>VPC Endpoints:</strong> Todos os servicos (S3, DynamoDB, Glue, KMS) sao acessados via VPC Interface Endpoints ou Gateway Endpoints, garantindo que o trafego de dados fiscais nunca transita pela internet publica. Security groups restringem acesso apenas aos CIDRs das subnets de processamento.
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SECAO 10: RESUMO & REFERENCIAS -->
+      <!-- ============================================================ -->
+      <section class="section" id="resumo">
+        <div class="sec-hdr">
+          <div class="sec-num" style="color: var(--aws)">10</div>
+          <div class="sec-title">
+            <div class="sec-subtitle">Consolidacao</div>
+            <h2>Resumo &amp; Referencias</h2>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <h3>Principios Arquiteturais da Plataforma Fiscal</h3>
+          <ul>
+            <li><strong>Imutabilidade:</strong> Dados brutos nunca sao alterados ou deletados. Toda transformacao gera novos datasets.</li>
+            <li><strong>Rastreabilidade:</strong> Cada apuracao e reconstituivel: do resultado final ate a transacao original.</li>
+            <li><strong>Automacao:</strong> Zero intervencao manual no fluxo padrao. Step Functions orquestra todo o fechamento.</li>
+            <li><strong>Deadline-driven:</strong> EventBridge + SNS garantem que nenhum prazo da RFB seja perdido.</li>
+            <li><strong>Seguranca by design:</strong> Criptografia KMS, Lake Formation, VPC endpoints, CloudTrail.</li>
+            <li><strong>Custo otimizado:</strong> Serverless (Glue, Lambda, Athena), S3 lifecycle para Glacier, DynamoDB on-demand.</li>
+            <li><strong>Escalavel:</strong> De milhares a bilhoes de transacoes sem redesenho arquitetural.</li>
+          </ul>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Topicos Relacionados</h3>
+        <div class="grid-3">
+          <div class="card">
+            <a href="dynamodb-single-table.html" style="text-decoration: none;">
+              <div class="card-subtitle">Arquitetura de Dados</div>
+              <h4 class="card-title" style="color: var(--aws);">Single-Table DynamoDB</h4>
+              <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Modelagem de dados operacional com PK/SK e GSI.</p>
+            </a>
+          </div>
+          <div class="card">
+            <a href="finops-financas.html" style="text-decoration: none;">
+              <div class="card-subtitle">Governanca</div>
+              <h4 class="card-title" style="color: var(--aws);">FinOps &amp; Otimizacao</h4>
+              <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Otimizacao de custos com Iceberg, S3 lifecycle, EMR Spot.</p>
+            </a>
+          </div>
+          <div class="card">
+            <a href="data-contracts-event-driven.html" style="text-decoration: none;">
+              <div class="card-subtitle">Engenharia</div>
+              <h4 class="card-title" style="color: var(--aws);">Data Contracts</h4>
+              <p style="font-size: 0.9rem; color: var(--text-dim); margin: 0;">Contratos de dados e arquitetura event-driven.</p>
+            </a>
+          </div>
+        </div>
+
+        <h3 style="color: var(--text); margin: 30px 0 16px;">Referencias</h3>
+        <div class="info-box">
+          <ul style="font-size: 0.9rem; margin: 0; padding-left: 20px;">
+            <li>AWS Well-Architected Framework - Financial Services Lens</li>
+            <li>Receita Federal do Brasil - Manual de Orientacao da EFD-Contribuicoes</li>
+            <li>IN RFB 1.571/2015 - e-Financeira</li>
+            <li>Codigo Tributario Nacional (CTN) - Lei 5.172/1966</li>
+            <li>Lei 10.637/2002 (PIS nao-cumulativo) e Lei 10.833/2003 (COFINS nao-cumulativo)</li>
+            <li>SPED - Sistema Publico de Escrituracao Digital (portal sped.rfb.gov.br)</li>
+            <li>AWS Glue - Developer Guide: Data Quality</li>
+            <li>AWS Step Functions - Developer Guide: Service Integrations</li>
+            <li>Amazon DynamoDB - Best Practices: Single-Table Design</li>
+            <li>AWS Lake Formation - Fine-Grained Access Control</li>
+          </ul>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../js/progress.js"></script>
+  <script src="../../js/sidebar-loader.js"></script>
+  <script src="../../js/a11y.js"></script>
+
+  <!-- Chart.js Initialization -->
+  <script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Chart 1: Valores por tributo (stacked bar)
+    const ctxTributos = document.getElementById("chartTributos");
+    if (ctxTributos) {
+      new Chart(ctxTributos, {
+        type: "bar",
+        data: {
+          labels: ["Jul/24", "Ago/24", "Set/24", "Out/24", "Nov/24", "Dez/24"],
+          datasets: [
+            {
+              label: "PIS",
+              data: [4.2, 4.5, 4.1, 4.8, 5.0, 5.3],
+              backgroundColor: "rgba(59, 130, 246, 0.8)",
+              borderColor: "#3b82f6",
+              borderWidth: 1
+            },
+            {
+              label: "COFINS",
+              data: [19.4, 20.1, 18.9, 22.0, 23.1, 24.5],
+              backgroundColor: "rgba(139, 92, 246, 0.8)",
+              borderColor: "#8b5cf6",
+              borderWidth: 1
+            },
+            {
+              label: "IRPJ",
+              data: [12.0, 13.2, 11.5, 14.0, 15.5, 16.2],
+              backgroundColor: "rgba(245, 158, 11, 0.8)",
+              borderColor: "#f59e0b",
+              borderWidth: 1
+            },
+            {
+              label: "CSLL",
+              data: [5.4, 5.9, 5.2, 6.3, 7.0, 7.3],
+              backgroundColor: "rgba(16, 185, 129, 0.8)",
+              borderColor: "#10b981",
+              borderWidth: 1
+            },
+            {
+              label: "IRRF",
+              data: [8.1, 8.7, 7.9, 9.2, 9.8, 10.5],
+              backgroundColor: "rgba(239, 68, 68, 0.8)",
+              borderColor: "#ef4444",
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: "#94a3b8" } }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: "#94a3b8" },
+              grid: { color: "rgba(148, 163, 184, 0.1)" }
+            },
+            y: {
+              stacked: true,
+              ticks: { color: "#94a3b8", callback: function(v) { return "R$ " + v + "M"; } },
+              grid: { color: "rgba(148, 163, 184, 0.1)" }
+            }
+          }
+        }
+      });
+    }
+
+    // Chart 2: Compliance rate (doughnut)
+    const ctxCompliance = document.getElementById("chartCompliance");
+    if (ctxCompliance) {
+      new Chart(ctxCompliance, {
+        type: "doughnut",
+        data: {
+          labels: ["No prazo", "Atrasadas", "Pendentes"],
+          datasets: [{
+            data: [92, 3, 5],
+            backgroundColor: [
+              "rgba(16, 185, 129, 0.8)",
+              "rgba(239, 68, 68, 0.8)",
+              "rgba(245, 158, 11, 0.8)"
+            ],
+            borderColor: ["#10b981", "#ef4444", "#f59e0b"],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: "#94a3b8" }, position: "bottom" },
+            title: {
+              display: true,
+              text: "92% de compliance",
+              color: "#10b981",
+              font: { size: 16, weight: "bold" }
+            }
+          }
+        }
+      });
+    }
+
+    // Chart 3: Tempo de processamento (horizontal bar)
+    const ctxProc = document.getElementById("chartProcessamento");
+    if (ctxProc) {
+      new Chart(ctxProc, {
+        type: "bar",
+        data: {
+          labels: ["Glue Crawler", "Data Quality", "Glue ETL (Enriquecimento)", "EMR PIS/COFINS", "EMR IRPJ/CSLL", "EMR IRRF", "Lambda (Geracao SPED)", "Validacao SPED"],
+          datasets: [
+            {
+              label: "Tempo medio (min)",
+              data: [8, 12, 25, 45, 38, 20, 15, 5],
+              backgroundColor: [
+                "rgba(59, 130, 246, 0.7)",
+                "rgba(245, 158, 11, 0.7)",
+                "rgba(139, 92, 246, 0.7)",
+                "rgba(239, 68, 68, 0.7)",
+                "rgba(239, 68, 68, 0.6)",
+                "rgba(239, 68, 68, 0.5)",
+                "rgba(16, 185, 129, 0.7)",
+                "rgba(16, 185, 129, 0.5)"
+              ],
+              borderColor: [
+                "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444",
+                "#ef4444", "#ef4444", "#10b981", "#10b981"
+              ],
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              ticks: { color: "#94a3b8", callback: function(v) { return v + " min"; } },
+              grid: { color: "rgba(148, 163, 184, 0.1)" }
+            },
+            y: {
+              ticks: { color: "#94a3b8", font: { size: 11 } },
+              grid: { color: "rgba(148, 163, 184, 0.1)" }
+            }
+          }
+        }
+      });
+    }
+  });
+  </script>
+</body>
+</html>
