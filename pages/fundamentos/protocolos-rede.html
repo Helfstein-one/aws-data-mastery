@@ -1,167 +1,138 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-  <meta name="author" content="Mauricio Helfstein">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Deep Dive em protocolos de rede TCP, UDP, SCTP e a mecânica completa do HTTPS e TLS Handshake na AWS.">
-  <title>Protocolos de Rede e TLS | AWS Data Mastery</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../style.css">
-
-  <meta property="og:title" content="Protocolos de Rede e TLS | AWS Data Mastery">
-  <meta property="og:description" content="Deep Dive em protocolos de rede TCP, UDP, SCTP e a mecânica completa do HTTPS e TLS Handshake na AWS.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="../../assets/og-image.jpg">
-  <link rel="icon" href="../../assets/favicon.ico" type="image/x-icon">
+<meta content="Mauricio Helfstein" name="author"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="Deep Dive em protocolos de rede TCP, UDP, SCTP e a mecânica completa do HTTPS e TLS Handshake na AWS." name="description"/>
+<title>Protocolos de Rede e TLS | AWS Data Mastery</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;0,900;1,300&amp;family=DM+Mono:wght@400;500&amp;family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="../../style.css" rel="stylesheet"/>
+<meta content="Protocolos de Rede e TLS | AWS Data Mastery" property="og:title"/>
+<meta content="Deep Dive em protocolos de rede TCP, UDP, SCTP e a mecânica completa do HTTPS e TLS Handshake na AWS." property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="../../assets/og-image.jpg" property="og:image"/>
+<link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/>
 </head>
 <body>
-
 <button id="hamburger" onclick="toggleNav()">☰</button>
-
 <nav id="sidebar"></nav>
-
 <div id="main">
-  <main class="main-content">
-    <div class="hero">
-      <div class="hero-ey">Módulo: Infra, Redes & Segurança</div>
-      <h1>Protocolos de Rede e TLS</h1>
-      <p class="hero-d">Domine a comunicação em rede desde o controle de transporte (TCP/SCTP) até a segurança da camada de aplicação com HTTPS e a mecânica completa do TLS Handshake.</p>
-    </div>
+<div class="hero">
+<div class="hero-ey">Módulo: Infra, Redes &amp; Segurança</div>
+<h1>Protocolos de Rede e TLS</h1>
+<p class="hero-d">Domine a comunicação em rede desde o controle de transporte (TCP/SCTP) até a segurança da camada de aplicação com HTTPS e a mecânica completa do TLS Handshake.</p>
+</div><main class="main-content">
 
-    <!-- SEÇÃO 1: TRANSPORTE -->
-    <section id="transporte-tcp" class="section">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">01</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>Camada de Transporte (L4)</h2>
-        </div>
-      </div>
-      
-      <p>A Camada de Transporte (Layer 4 do Modelo OSI) é a responsável por pegar os pacotes brutos roteados pelo IP (Layer 3) e transformá-los em conexões lógicas úteis para as aplicações. É aqui que decidimos entre <strong>garantia de entrega</strong> e <strong>velocidade</strong>.</p>
-
-      <ul style="list-style-type: none; margin-left: 0; padding-left: 0; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;">
-        <li style="margin-bottom: 12px;"><strong style="color:var(--spark)">1. TCP (Transmission Control Protocol):</strong> É o protocolo mais usado na internet (navegação web, banco de dados, emails). O TCP é "Orientado à Conexão", o que significa que ele executa um "aperto de mãos" de três vias (<em>Three-Way Handshake</em>: SYN, SYN-ACK, ACK) antes de enviar qualquer dado. Ele garante que os pacotes cheguem na ordem certa e sem perdas, mas tem alta latência inicial.</li>
-        <li style="margin-bottom: 12px;"><strong style="color:var(--emr)">2. UDP (User Datagram Protocol):</strong> É "Connectionless". Ele simplesmente "atira" os pacotes para o destino sem checar se chegaram, sem handshake e sem ordem. É a escolha primária para Streaming de Vídeo, VoIP e Jogos Online, onde perder um *frame* é aceitável, mas esperar (lag) não é.</li>
-        <li style="margin-bottom: 12px;"><strong style="color:var(--arch)">3. SCTP (Stream Control Transmission Protocol):</strong> Um protocolo avançado que funde as garantias do TCP com a agilidade baseada em mensagens do UDP. Ele brilha em ambientes de Telecom e 5G porque suporta <em>Multi-homing</em> (um endpoint pode ter múltiplos endereços IP ativos simultaneamente) e evita o problema de bloqueio de linha (<em>Head-of-line blocking</em>), permitindo fluxos de dados paralelos dentro de uma mesma conexão.</li>
-      </ul>
-    </section>
-
-    <!-- SEÇÃO 2: APLICAÇÃO -->
-    <section id="aplicacao-http" class="section">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">02</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>Camada de Aplicação (HTTP vs HTTPS)</h2>
-        </div>
-      </div>
-
-      <p>Sobre as fundações sólidas do TCP, trafega a linguagem universal da Web: o <strong>HTTP (Hypertext Transfer Protocol)</strong>.</p>
-      <p>Em sua forma natural, o HTTP transmite dados em <em>Cleartext</em> (texto puro). Se um atacante interceptar o tráfego da rede (ataque <em>Man-in-the-Middle</em>), ele poderá ler abertamente senhas, tokens de API e PII. A evolução óbvia foi adicionar uma camada blindada, criando o <strong>HTTPS (HTTP Secure)</strong>. O HTTPS não é um protocolo novo em si, mas sim o tráfego HTTP tradicional encapsulado dentro de um túnel encriptado (o protocolo <strong>TLS</strong>).</p>
-
-    </section>
-
-    <!-- SEÇÃO 3: TLS -->
-    <section id="tls-handshake" class="section">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">03</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>Deep Dive: TLS Handshake & AWS</h2>
-        </div>
-      </div>
-      
-      <p>O <strong>TLS (Transport Layer Security)</strong> — que substituiu o antigo SSL — é uma obra-prima criptográfica. A dificuldade da criptografia em redes abertas é o "Problema da Troca de Chaves": como o cliente e o servidor concordam com uma senha para criptografar os dados, sem que alguém copie essa senha no exato momento em que eles a estão combinando?</p>
-
-      <div class="alert alert-info" style="margin-top:24px; display:flex; gap:16px; background-color:rgba(14, 165, 233, 0.1); border:1px solid rgba(14, 165, 233, 0.2); padding:16px; border-radius:8px; margin-bottom: 24px;">
-        <span style="font-size:24px;">🔐</span>
-        <div>
-          <strong style="color:#0ea5e9; display:block; margin-bottom:4px;">Criptografia Assimétrica vs Simétrica</strong>
-          <span style="color:var(--text-2); font-size:0.95rem;">
+<!-- SEÇÃO 1: TRANSPORTE -->
+<section class="section" id="transporte-tcp">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#06b6d4">01</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#06b6d4"></div>
+<h2>Camada de Transporte (L4)</h2>
+</div>
+</div>
+<p>A Camada de Transporte (Layer 4 do Modelo OSI) é a responsável por pegar os pacotes brutos roteados pelo IP (Layer 3) e transformá-los em conexões lógicas úteis para as aplicações. É aqui que decidimos entre <strong>garantia de entrega</strong> e <strong>velocidade</strong>.</p>
+<ul style="list-style-type: none; margin-left: 0; padding-left: 0; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;">
+<li style="margin-bottom: 12px;"><strong style="color:var(--spark)">1. TCP (Transmission Control Protocol):</strong> É o protocolo mais usado na internet (navegação web, banco de dados, emails). O TCP é "Orientado à Conexão", o que significa que ele executa um "aperto de mãos" de três vias (<em>Three-Way Handshake</em>: SYN, SYN-ACK, ACK) antes de enviar qualquer dado. Ele garante que os pacotes cheguem na ordem certa e sem perdas, mas tem alta latência inicial.</li>
+<li style="margin-bottom: 12px;"><strong style="color:var(--emr)">2. UDP (User Datagram Protocol):</strong> É "Connectionless". Ele simplesmente "atira" os pacotes para o destino sem checar se chegaram, sem handshake e sem ordem. É a escolha primária para Streaming de Vídeo, VoIP e Jogos Online, onde perder um *frame* é aceitável, mas esperar (lag) não é.</li>
+<li style="margin-bottom: 12px;"><strong style="color:var(--arch)">3. SCTP (Stream Control Transmission Protocol):</strong> Um protocolo avançado que funde as garantias do TCP com a agilidade baseada em mensagens do UDP. Ele brilha em ambientes de Telecom e 5G porque suporta <em>Multi-homing</em> (um endpoint pode ter múltiplos endereços IP ativos simultaneamente) e evita o problema de bloqueio de linha (<em>Head-of-line blocking</em>), permitindo fluxos de dados paralelos dentro de uma mesma conexão.</li>
+</ul>
+</section>
+<!-- SEÇÃO 2: APLICAÇÃO -->
+<section class="section" id="aplicacao-http">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#06b6d4">02</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#06b6d4"></div>
+<h2>Camada de Aplicação (HTTP vs HTTPS)</h2>
+</div>
+</div>
+<p>Sobre as fundações sólidas do TCP, trafega a linguagem universal da Web: o <strong>HTTP (Hypertext Transfer Protocol)</strong>.</p>
+<p>Em sua forma natural, o HTTP transmite dados em <em>Cleartext</em> (texto puro). Se um atacante interceptar o tráfego da rede (ataque <em>Man-in-the-Middle</em>), ele poderá ler abertamente senhas, tokens de API e PII. A evolução óbvia foi adicionar uma camada blindada, criando o <strong>HTTPS (HTTP Secure)</strong>. O HTTPS não é um protocolo novo em si, mas sim o tráfego HTTP tradicional encapsulado dentro de um túnel encriptado (o protocolo <strong>TLS</strong>).</p>
+</section>
+<!-- SEÇÃO 3: TLS -->
+<section class="section" id="tls-handshake">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#06b6d4">03</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#06b6d4"></div>
+<h2>Deep Dive: TLS Handshake &amp; AWS</h2>
+</div>
+</div>
+<p>O <strong>TLS (Transport Layer Security)</strong> — que substituiu o antigo SSL — é uma obra-prima criptográfica. A dificuldade da criptografia em redes abertas é o "Problema da Troca de Chaves": como o cliente e o servidor concordam com uma senha para criptografar os dados, sem que alguém copie essa senha no exato momento em que eles a estão combinando?</p>
+<div class="alert alert-info" style="margin-top:24px; display:flex; gap:16px; background-color:rgba(14, 165, 233, 0.1); border:1px solid rgba(14, 165, 233, 0.2); padding:16px; border-radius:8px; margin-bottom: 24px;">
+<span style="font-size:24px;">🔐</span>
+<div>
+<strong style="color:#0ea5e9; display:block; margin-bottom:4px;">Criptografia Assimétrica vs Simétrica</strong>
+<span style="color:var(--text-2); font-size:0.95rem;">
             O TLS resolve o impasse unindo o melhor dos dois mundos. Ele usa <strong>Criptografia Assimétrica</strong> (Par de Chaves Pública/Privada - lentas) estritamente para que o cliente e o servidor concordem de forma segura e invisível sobre uma <strong>Chave Simétrica</strong> temporária (muito mais rápida). Após esse acordo, o túnel é fechado e os dados massivos trafegam sob a chave simétrica.
           </span>
-        </div>
-      </div>
-
-      <p>Esse acordo seguro é chamado de <strong>TLS Handshake</strong>, ilustrado no diagrama da arquitetura AWS abaixo.</p>
-
-      <!-- DIAGRAM WILL BE INJECTED HERE -->
-
-<div class="drawio-wrap">
-<div class="mxgraph" style="margin-top: 32px; margin-bottom: 32px; max-width:100%;background:#080f1e;border-radius:12px;overflow:hidden;border:1px solid #1e293b;" data-mxgraph='{&quot;highlight&quot;: &quot;#f43f5e&quot;, &quot;nav&quot;: false, &quot;resize&quot;: true, &quot;toolbar&quot;: &quot;zoom&quot;, &quot;xml&quot;: &quot;<mxGraphModel background=\&quot;#080f1e\&quot; dx=\&quot;1\&quot; dy=\&quot;1\&quot; grid=\&quot;1\&quot; gridSize=\&quot;10\&quot; guides=\&quot;1\&quot; tooltips=\&quot;1\&quot; connect=\&quot;1\&quot; arrows=\&quot;1\&quot; fold=\&quot;1\&quot; page=\&quot;1\&quot; pageScale=\&quot;1\&quot; pageWidth=\&quot;1200\&quot; pageHeight=\&quot;400\&quot; math=\&quot;0\&quot; shadow=\&quot;0\&quot;>  <root>    <mxCell id=\&quot;0\&quot;/>    <mxCell id=\&quot;1\&quot; parent=\&quot;0\&quot;/>    <!-- ZONES -->    <!-- Internet Zone -->    <mxCell id=\&quot;zone_internet\&quot; value=\&quot;Internet Pública\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#475569;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontColor=#94a3b8;fontStyle=1;fontSize=14;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;20\&quot; y=\&quot;20\&quot; width=\&quot;370\&quot; height=\&quot;350\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- AWS Zone -->    <mxCell id=\&quot;zone_aws\&quot; value=\&quot;Rede Global AWS\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#f59e0b;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontColor=#f59e0b;fontStyle=1;fontSize=14;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;410\&quot; y=\&quot;20\&quot; width=\&quot;230\&quot; height=\&quot;350\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- VPC Zone -->    <mxCell id=\&quot;zone_vpc\&quot; value=\&quot;AWS VPC (Private)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#10b981;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontColor=#10b981;fontStyle=1;fontSize=14;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;660\&quot; y=\&quot;20\&quot; width=\&quot;480\&quot; height=\&quot;350\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- NODES -->    <!-- Client / Browser -->    <mxCell id=\&quot;client\&quot; value=\&quot;&amp;lt;b style=&amp;quot;color:#a78bfa;font-size:16px;&amp;quot;&amp;gt;Cliente (Browser)&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;&amp;lt;i style=&amp;quot;color:#d8b4fe;font-size:12px;&amp;quot;&amp;gt;Mobile / Web&amp;lt;/i&amp;gt;\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#2e1065;strokeColor=#a78bfa;strokeWidth=2;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;40\&quot; y=\&quot;80\&quot; width=\&quot;160\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- CloudFront Edge -->    <mxCell id=\&quot;cloudfront\&quot; value=\&quot;&amp;lt;b style=&amp;quot;color:#f43f5e;font-size:16px;&amp;quot;&amp;gt;CloudFront&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;&amp;lt;div style=&amp;quot;text-align:center;font-size:12px;color:#fecdd3;line-height:1.5;margin-top:4px;&amp;quot;&amp;gt;TLS Offloading (Borda)&amp;lt;br&amp;gt;AWS Shield (DDoS)&amp;lt;/div&amp;gt;\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#4c0519;strokeColor=#f43f5e;strokeWidth=2;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;430\&quot; y=\&quot;80\&quot; width=\&quot;180\&quot; height=\&quot;70\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- ACM Certificate -->    <mxCell id=\&quot;acm\&quot; value=\&quot;Certificado Público&amp;lt;br&amp;gt;AWS ACM (RSA/ECDSA)\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#94a3b8;strokeWidth=1;align=center;verticalAlign=middle;fontColor=#cbd5e1;fontSize=11;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;445\&quot; y=\&quot;260\&quot; width=\&quot;150\&quot; height=\&quot;40\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <mxCell id=\&quot;e_acm\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;acm\&quot; target=\&quot;cloudfront\&quot; style=\&quot;endArrow=none;html=1;strokeColor=#94a3b8;strokeWidth=2;dashed=1;\&quot;>      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- ALB -->    <mxCell id=\&quot;alb\&quot; value=\&quot;&amp;lt;b style=&amp;quot;color:#38bdf8;font-size:14px;&amp;quot;&amp;gt;Application LB&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;&amp;lt;div style=&amp;quot;text-align:center;font-size:11px;color:#e0f2fe;line-height:1.4;margin-top:4px;&amp;quot;&amp;gt;Port 80 (HTTP)&amp;lt;/div&amp;gt;\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#082f49;strokeColor=#38bdf8;strokeWidth=2;align=center;verticalAlign=middle;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;700\&quot; y=\&quot;85\&quot; width=\&quot;150\&quot; height=\&quot;60\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- ECS / Backend -->    <mxCell id=\&quot;ecs\&quot; value=\&quot;&amp;lt;b style=&amp;quot;color:#10b981;font-size:16px;&amp;quot;&amp;gt;Backend ECS&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;&amp;lt;div style=&amp;quot;text-align:left;font-size:12px;color:#d1fae5;line-height:1.5;margin-top:8px;&amp;quot;&amp;gt;&amp;amp;bull; Subnet Privada&amp;lt;br&amp;gt;&amp;amp;bull; FastMCP Server&amp;lt;br&amp;gt;&amp;amp;bull; Custo Zero Cripto&amp;lt;/div&amp;gt;\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#10b981;strokeWidth=2;align=center;verticalAlign=top;spacingTop=12;spacingLeft=16;spacingRight=16;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;940\&quot; y=\&quot;70\&quot; width=\&quot;170\&quot; height=\&quot;90\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- EDGES -->    <!-- CloudFront -> ALB -->    <mxCell id=\&quot;e_cf_alb\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;cloudfront\&quot; target=\&quot;alb\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#f59e0b;strokeWidth=2;labelBackgroundColor=#080f1e;fontColor=#f59e0b;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;fontStyle=1;\&quot; value=\&quot;HTTPS Interno\&quot;>      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- ALB -> ECS -->    <mxCell id=\&quot;e_alb_ecs\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; source=\&quot;alb\&quot; target=\&quot;ecs\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#10b981;strokeWidth=2;labelBackgroundColor=#080f1e;fontColor=#10b981;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;fontStyle=1;\&quot; value=\&quot;HTTP (Cleartext)\&quot;>      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;/>    </mxCell>    <!-- HANDSHAKE SEQUENCE LINES -->        <!-- 1. TCP Handshake -->    <mxCell id=\&quot;hs_tcp\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=1;labelBackgroundColor=#080f1e;fontColor=#cbd5e1;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;\&quot; value=\&quot;[1] TCP Handshake (SYN, SYN-ACK)\&quot;>      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>        <mxPoint x=\&quot;200\&quot; y=\&quot;70\&quot; as=\&quot;sourcePoint\&quot;/>        <mxPoint x=\&quot;430\&quot; y=\&quot;70\&quot; as=\&quot;targetPoint\&quot;/>      </mxGeometry>    </mxCell>        <!-- 2. Client Hello -->    <mxCell id=\&quot;hs_ch\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#38bdf8;strokeWidth=1;labelBackgroundColor=#080f1e;fontColor=#38bdf8;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=none;\&quot; value=\&quot;[2] Client Hello (Protocolos suportados)\&quot;>      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>        <mxPoint x=\&quot;200\&quot; y=\&quot;100\&quot; as=\&quot;sourcePoint\&quot;/>        <mxPoint x=\&quot;430\&quot; y=\&quot;100\&quot; as=\&quot;targetPoint\&quot;/>      </mxGeometry>    </mxCell>    <!-- 3. Server Hello -->    <mxCell id=\&quot;hs_sh\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; style=\&quot;endArrow=none;html=1;strokeColor=#f43f5e;strokeWidth=1;labelBackgroundColor=#080f1e;fontColor=#f43f5e;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;\&quot; value=\&quot;[3] Server Hello + Chave Pública ACM\&quot;>      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>        <mxPoint x=\&quot;200\&quot; y=\&quot;130\&quot; as=\&quot;sourcePoint\&quot;/>        <mxPoint x=\&quot;430\&quot; y=\&quot;130\&quot; as=\&quot;targetPoint\&quot;/>      </mxGeometry>    </mxCell>    <!-- 4. Key Exchange -->    <mxCell id=\&quot;hs_ke\&quot; edge=\&quot;1\&quot; parent=\&quot;1\&quot; style=\&quot;endArrow=classic;html=1;strokeColor=#fbbf24;strokeWidth=1;labelBackgroundColor=#080f1e;fontColor=#fbbf24;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;\&quot; value=\&quot;[4] Key Exchange (Chave Simétrica Gerada)\&quot;>      <mxGeometry relative=\&quot;1\&quot; as=\&quot;geometry\&quot;>        <mxPoint x=\&quot;200\&quot; y=\&quot;160\&quot; as=\&quot;sourcePoint\&quot;/>        <mxPoint x=\&quot;430\&quot; y=\&quot;160\&quot; as=\&quot;targetPoint\&quot;/>      </mxGeometry>    </mxCell>        <!-- TLS Tunnel Visual Wrapper -->    <mxCell id=\&quot;tls_tunnel\&quot; value=\&quot;Túnel HTTPS Seguro\&quot; style=\&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#10b981;strokeWidth=2;dashed=1;fontColor=#10b981;align=center;verticalAlign=bottom;spacingBottom=6;fontStyle=1;fontSize=12;\&quot; vertex=\&quot;1\&quot; parent=\&quot;1\&quot;>      <mxGeometry x=\&quot;110\&quot; y=\&quot;50\&quot; width=\&quot;300\&quot; height=\&quot;130\&quot; as=\&quot;geometry\&quot;/>    </mxCell>  </root></mxGraphModel>&quot;}'></div>
 </div>
-
-      <h3 style="color:var(--code);font-size:1.4rem;font-weight:600;margin-bottom:16px;">O Processo na Nuvem AWS</h3>
-      <p>Ao criar uma arquitetura moderna na AWS, gerenciar essas chaves complexas é brutal. Por isso, utilizamos o <strong>AWS ACM (Certificate Manager)</strong> para emitir e rotacionar Certificados X.509 automaticamente.</p>
-      
-      <p>A melhor prática de arquitetura (ilustrada acima) é a <strong>Terminação TLS na Borda (TLS Offloading)</strong>. O AWS CloudFront ou o Application Load Balancer (ALB) recebe o tráfego pesado e o pesado custo computacional de realizar o TLS Handshake com o cliente da internet. Uma vez que o tráfego está dentro da VPC (onde a AWS garante a segurança da rede subjacente), o ALB encaminha as requisições como HTTP em texto puro para os containers ECS, economizando CPU das suas aplicações.</p>
-
-    </section>
-  
-    <!-- SEÇÃO 4: TCP INTERNALS -->
-    <section id="tcp-internals" class="section">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">04</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>TCP Internals: Flow & Congestion Control</h2>
-        </div>
-      </div>
-      
-      <p>Para engenheiros de infraestrutura, entender que o TCP "garante entrega" não é suficiente. É preciso entender <em>como</em> ele faz isso sem sobrecarregar a rede mundial.</p>
-
-      <ul style="list-style-type: none; margin-left: 0; padding-left: 0; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;">
-        <li style="margin-bottom: 12px;"><strong style="color:var(--spark)">Sliding Window (Controle de Fluxo):</strong> É o mecanismo onde o receptor avisa ao transmissor quanto espaço de buffer ele ainda tem disponível (o tamanho da "janela"). Se o receptor estiver sobrecarregado processando dados (ex: gargalo de CPU num banco de dados recebendo ingestão massiva), ele diminui o tamanho da janela até chegar a zero, forçando o remetente (cliente) a pausar o envio. Isso evita que pacotes sejam descartados na porta do receptor.</li>
-        <li style="margin-bottom: 12px;"><strong style="color:var(--emr)">Congestion Control (Slow Start & Congestion Avoidance):</strong> O TCP assume que qualquer pacote perdido é culpa de "congestionamento" nos roteadores intermediários. Quando uma conexão começa, ele inicia o algoritmo <strong>Slow Start</strong>, mandando poucos pacotes e dobrando a quantidade a cada <em>Round Trip Time (RTT)</em>. Se houver perda, ele entra em <em>Congestion Avoidance</em>, cortando drasticamente a velocidade pela metade. É por isso que você nunca atinge a banda máxima da sua internet no exato milissegundo inicial de um download.</li>
-      </ul>
-    </section>
-
-    <!-- SEÇÃO 5: A REVOLUÇÃO DO UDP -->
-    <section id="quic-http3" class="section">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">05</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>A Revolução do UDP: QUIC e HTTP/3</h2>
-        </div>
-      </div>
-      
-      <p>O TCP reinou absoluto na web por 40 anos, mas seu maior defeito arquitetural é o <strong>Head-of-Line Blocking</strong> (Bloqueio de Cabeceira). Como o TCP garante ordem estrita, se você estiver baixando 10 imagens simultaneamente e o pacote da Imagem 1 se perder na rede, o protocolo paralisa o fluxo inteiro (mesmo que os pacotes da Imagem 2 e 3 já tenham chegado) até retransmitir a Imagem 1.</p>
-
-      <div class="alert alert-warning" style="margin-top:24px; display:flex; gap:16px; background-color:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.2); padding:16px; border-radius:8px; margin-bottom: 24px;">
-        <span style="font-size:24px;">⚡</span>
-        <div>
-          <strong style="color:#f59e0b; display:block; margin-bottom:4px;">O Protocolo QUIC (Criado pelo Google)</strong>
-          <span style="color:var(--text-2); font-size:0.95rem;">
+</div>
+<p>Esse acordo seguro é chamado de <strong>TLS Handshake</strong>, ilustrado no diagrama da arquitetura AWS abaixo.</p>
+<!-- DIAGRAM WILL BE INJECTED HERE -->
+<div class="drawio-wrap">
+<div class="mxgraph" data-mxgraph='{"highlight": "#f43f5e", "nav": false, "resize": true, "toolbar": "zoom", "xml": "&lt;mxGraphModel background=\"#080f1e\" dx=\"1\" dy=\"1\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1200\" pageHeight=\"400\" math=\"0\" shadow=\"0\"&gt;  &lt;root&gt;    &lt;mxCell id=\"0\"/&gt;    &lt;mxCell id=\"1\" parent=\"0\"/&gt;    &lt;!-- ZONES --&gt;    &lt;!-- Internet Zone --&gt;    &lt;mxCell id=\"zone_internet\" value=\"Internet Pública\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#475569;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontColor=#94a3b8;fontStyle=1;fontSize=14;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"20\" y=\"20\" width=\"370\" height=\"350\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- AWS Zone --&gt;    &lt;mxCell id=\"zone_aws\" value=\"Rede Global AWS\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#f59e0b;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontColor=#f59e0b;fontStyle=1;fontSize=14;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"410\" y=\"20\" width=\"230\" height=\"350\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- VPC Zone --&gt;    &lt;mxCell id=\"zone_vpc\" value=\"AWS VPC (Private)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#10b981;strokeWidth=2;dashed=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontColor=#10b981;fontStyle=1;fontSize=14;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"660\" y=\"20\" width=\"480\" height=\"350\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- NODES --&gt;    &lt;!-- Client / Browser --&gt;    &lt;mxCell id=\"client\" value=\"&amp;lt;b style=&amp;quot;color:#a78bfa;font-size:16px;&amp;quot;&amp;gt;Cliente (Browser)&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;&amp;lt;i style=&amp;quot;color:#d8b4fe;font-size:12px;&amp;quot;&amp;gt;Mobile / Web&amp;lt;/i&amp;gt;\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#2e1065;strokeColor=#a78bfa;strokeWidth=2;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"40\" y=\"80\" width=\"160\" height=\"70\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- CloudFront Edge --&gt;    &lt;mxCell id=\"cloudfront\" value=\"&amp;lt;b style=&amp;quot;color:#f43f5e;font-size:16px;&amp;quot;&amp;gt;CloudFront&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;&amp;lt;div style=&amp;quot;text-align:center;font-size:12px;color:#fecdd3;line-height:1.5;margin-top:4px;&amp;quot;&amp;gt;TLS Offloading (Borda)&amp;lt;br&amp;gt;AWS Shield (DDoS)&amp;lt;/div&amp;gt;\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#4c0519;strokeColor=#f43f5e;strokeWidth=2;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"430\" y=\"80\" width=\"180\" height=\"70\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- ACM Certificate --&gt;    &lt;mxCell id=\"acm\" value=\"Certificado Público&amp;lt;br&amp;gt;AWS ACM (RSA/ECDSA)\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#94a3b8;strokeWidth=1;align=center;verticalAlign=middle;fontColor=#cbd5e1;fontSize=11;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"445\" y=\"260\" width=\"150\" height=\"40\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;mxCell id=\"e_acm\" edge=\"1\" parent=\"1\" source=\"acm\" target=\"cloudfront\" style=\"endArrow=none;html=1;strokeColor=#94a3b8;strokeWidth=2;dashed=1;\"&gt;      &lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- ALB --&gt;    &lt;mxCell id=\"alb\" value=\"&amp;lt;b style=&amp;quot;color:#38bdf8;font-size:14px;&amp;quot;&amp;gt;Application LB&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;&amp;lt;div style=&amp;quot;text-align:center;font-size:11px;color:#e0f2fe;line-height:1.4;margin-top:4px;&amp;quot;&amp;gt;Port 80 (HTTP)&amp;lt;/div&amp;gt;\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#082f49;strokeColor=#38bdf8;strokeWidth=2;align=center;verticalAlign=middle;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"700\" y=\"85\" width=\"150\" height=\"60\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- ECS / Backend --&gt;    &lt;mxCell id=\"ecs\" value=\"&amp;lt;b style=&amp;quot;color:#10b981;font-size:16px;&amp;quot;&amp;gt;Backend ECS&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;&amp;lt;div style=&amp;quot;text-align:left;font-size:12px;color:#d1fae5;line-height:1.5;margin-top:8px;&amp;quot;&amp;gt;&amp;amp;bull; Subnet Privada&amp;lt;br&amp;gt;&amp;amp;bull; FastMCP Server&amp;lt;br&amp;gt;&amp;amp;bull; Custo Zero Cripto&amp;lt;/div&amp;gt;\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#10b981;strokeWidth=2;align=center;verticalAlign=top;spacingTop=12;spacingLeft=16;spacingRight=16;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"940\" y=\"70\" width=\"170\" height=\"90\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- EDGES --&gt;    &lt;!-- CloudFront -&gt; ALB --&gt;    &lt;mxCell id=\"e_cf_alb\" edge=\"1\" parent=\"1\" source=\"cloudfront\" target=\"alb\" style=\"endArrow=classic;html=1;strokeColor=#f59e0b;strokeWidth=2;labelBackgroundColor=#080f1e;fontColor=#f59e0b;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;fontStyle=1;\" value=\"HTTPS Interno\"&gt;      &lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- ALB -&gt; ECS --&gt;    &lt;mxCell id=\"e_alb_ecs\" edge=\"1\" parent=\"1\" source=\"alb\" target=\"ecs\" style=\"endArrow=classic;html=1;strokeColor=#10b981;strokeWidth=2;labelBackgroundColor=#080f1e;fontColor=#10b981;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;fontStyle=1;\" value=\"HTTP (Cleartext)\"&gt;      &lt;mxGeometry relative=\"1\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;    &lt;!-- HANDSHAKE SEQUENCE LINES --&gt;        &lt;!-- 1. TCP Handshake --&gt;    &lt;mxCell id=\"hs_tcp\" edge=\"1\" parent=\"1\" style=\"endArrow=classic;html=1;strokeColor=#94a3b8;strokeWidth=1;labelBackgroundColor=#080f1e;fontColor=#cbd5e1;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;\" value=\"[1] TCP Handshake (SYN, SYN-ACK)\"&gt;      &lt;mxGeometry relative=\"1\" as=\"geometry\"&gt;        &lt;mxPoint x=\"200\" y=\"70\" as=\"sourcePoint\"/&gt;        &lt;mxPoint x=\"430\" y=\"70\" as=\"targetPoint\"/&gt;      &lt;/mxGeometry&gt;    &lt;/mxCell&gt;        &lt;!-- 2. Client Hello --&gt;    &lt;mxCell id=\"hs_ch\" edge=\"1\" parent=\"1\" style=\"endArrow=classic;html=1;strokeColor=#38bdf8;strokeWidth=1;labelBackgroundColor=#080f1e;fontColor=#38bdf8;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=none;\" value=\"[2] Client Hello (Protocolos suportados)\"&gt;      &lt;mxGeometry relative=\"1\" as=\"geometry\"&gt;        &lt;mxPoint x=\"200\" y=\"100\" as=\"sourcePoint\"/&gt;        &lt;mxPoint x=\"430\" y=\"100\" as=\"targetPoint\"/&gt;      &lt;/mxGeometry&gt;    &lt;/mxCell&gt;    &lt;!-- 3. Server Hello --&gt;    &lt;mxCell id=\"hs_sh\" edge=\"1\" parent=\"1\" style=\"endArrow=none;html=1;strokeColor=#f43f5e;strokeWidth=1;labelBackgroundColor=#080f1e;fontColor=#f43f5e;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;\" value=\"[3] Server Hello + Chave Pública ACM\"&gt;      &lt;mxGeometry relative=\"1\" as=\"geometry\"&gt;        &lt;mxPoint x=\"200\" y=\"130\" as=\"sourcePoint\"/&gt;        &lt;mxPoint x=\"430\" y=\"130\" as=\"targetPoint\"/&gt;      &lt;/mxGeometry&gt;    &lt;/mxCell&gt;    &lt;!-- 4. Key Exchange --&gt;    &lt;mxCell id=\"hs_ke\" edge=\"1\" parent=\"1\" style=\"endArrow=classic;html=1;strokeColor=#fbbf24;strokeWidth=1;labelBackgroundColor=#080f1e;fontColor=#fbbf24;fontSize=11;edgeStyle=orthogonalEdgeStyle;startArrow=classic;\" value=\"[4] Key Exchange (Chave Simétrica Gerada)\"&gt;      &lt;mxGeometry relative=\"1\" as=\"geometry\"&gt;        &lt;mxPoint x=\"200\" y=\"160\" as=\"sourcePoint\"/&gt;        &lt;mxPoint x=\"430\" y=\"160\" as=\"targetPoint\"/&gt;      &lt;/mxGeometry&gt;    &lt;/mxCell&gt;        &lt;!-- TLS Tunnel Visual Wrapper --&gt;    &lt;mxCell id=\"tls_tunnel\" value=\"Túnel HTTPS Seguro\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#10b981;strokeWidth=2;dashed=1;fontColor=#10b981;align=center;verticalAlign=bottom;spacingBottom=6;fontStyle=1;fontSize=12;\" vertex=\"1\" parent=\"1\"&gt;      &lt;mxGeometry x=\"110\" y=\"50\" width=\"300\" height=\"130\" as=\"geometry\"/&gt;    &lt;/mxCell&gt;  &lt;/root&gt;&lt;/mxGraphModel&gt;"}' style="margin-top: 32px; margin-bottom: 32px; max-width:100%;background:#080f1e;border-radius:12px;overflow:hidden;border:1px solid #1e293b;"></div>
+</div>
+<h3 style="color:var(--code);font-size:1.4rem;font-weight:600;margin-bottom:16px;">O Processo na Nuvem AWS</h3>
+<p>Ao criar uma arquitetura moderna na AWS, gerenciar essas chaves complexas é brutal. Por isso, utilizamos o <strong>AWS ACM (Certificate Manager)</strong> para emitir e rotacionar Certificados X.509 automaticamente.</p>
+<p>A melhor prática de arquitetura (ilustrada acima) é a <strong>Terminação TLS na Borda (TLS Offloading)</strong>. O AWS CloudFront ou o Application Load Balancer (ALB) recebe o tráfego pesado e o pesado custo computacional de realizar o TLS Handshake com o cliente da internet. Uma vez que o tráfego está dentro da VPC (onde a AWS garante a segurança da rede subjacente), o ALB encaminha as requisições como HTTP em texto puro para os containers ECS, economizando CPU das suas aplicações.</p>
+</section>
+<!-- SEÇÃO 4: TCP INTERNALS -->
+<section class="section" id="tcp-internals">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#06b6d4">04</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#06b6d4"></div>
+<h2>TCP Internals: Flow &amp; Congestion Control</h2>
+</div>
+</div>
+<p>Para engenheiros de infraestrutura, entender que o TCP "garante entrega" não é suficiente. É preciso entender <em>como</em> ele faz isso sem sobrecarregar a rede mundial.</p>
+<ul style="list-style-type: none; margin-left: 0; padding-left: 0; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;">
+<li style="margin-bottom: 12px;"><strong style="color:var(--spark)">Sliding Window (Controle de Fluxo):</strong> É o mecanismo onde o receptor avisa ao transmissor quanto espaço de buffer ele ainda tem disponível (o tamanho da "janela"). Se o receptor estiver sobrecarregado processando dados (ex: gargalo de CPU num banco de dados recebendo ingestão massiva), ele diminui o tamanho da janela até chegar a zero, forçando o remetente (cliente) a pausar o envio. Isso evita que pacotes sejam descartados na porta do receptor.</li>
+<li style="margin-bottom: 12px;"><strong style="color:var(--emr)">Congestion Control (Slow Start &amp; Congestion Avoidance):</strong> O TCP assume que qualquer pacote perdido é culpa de "congestionamento" nos roteadores intermediários. Quando uma conexão começa, ele inicia o algoritmo <strong>Slow Start</strong>, mandando poucos pacotes e dobrando a quantidade a cada <em>Round Trip Time (RTT)</em>. Se houver perda, ele entra em <em>Congestion Avoidance</em>, cortando drasticamente a velocidade pela metade. É por isso que você nunca atinge a banda máxima da sua internet no exato milissegundo inicial de um download.</li>
+</ul>
+</section>
+<!-- SEÇÃO 5: A REVOLUÇÃO DO UDP -->
+<section class="section" id="quic-http3">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#06b6d4">05</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#06b6d4"></div>
+<h2>A Revolução do UDP: QUIC e HTTP/3</h2>
+</div>
+</div>
+<p>O TCP reinou absoluto na web por 40 anos, mas seu maior defeito arquitetural é o <strong>Head-of-Line Blocking</strong> (Bloqueio de Cabeceira). Como o TCP garante ordem estrita, se você estiver baixando 10 imagens simultaneamente e o pacote da Imagem 1 se perder na rede, o protocolo paralisa o fluxo inteiro (mesmo que os pacotes da Imagem 2 e 3 já tenham chegado) até retransmitir a Imagem 1.</p>
+<div class="alert alert-warning" style="margin-top:24px; display:flex; gap:16px; background-color:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.2); padding:16px; border-radius:8px; margin-bottom: 24px;">
+<span style="font-size:24px;">⚡</span>
+<div>
+<strong style="color:#f59e0b; display:block; margin-bottom:4px;">O Protocolo QUIC (Criado pelo Google)</strong>
+<span style="color:var(--text-2); font-size:0.95rem;">
             Para resolver isso, a indústria decidiu criar o <strong>HTTP/3</strong>, mas abandonou o TCP! O HTTP/3 roda em cima do <strong>QUIC</strong>, que por sua vez roda em cima do <strong>UDP</strong>. A genialidade é recriar o controle de pacotes perdidos na camada de aplicação (dentro do QUIC), mas permitindo <em>streams multiplexados independentes</em>. Assim, se a Imagem 1 atrasar, a Imagem 2 e 3 continuam rendenrizando livremente. Além disso, o QUIC funde o TLS Handshake com a conexão inicial, cravando a latência de handshake de 3 viagens para apenas 1 (0-RTT em reconexões)!
           </span>
-        </div>
-      </div>
-    </section>
-
-    <!-- SEÇÃO 6: WEBSOCKETS -->
-    <section id="websockets-http" class="section">
-      <div class="sec-hdr">
-        <div class="sec-num" style="color:#06b6d4">06</div>
-        <div class="sec-meta">
-          <div class="sec-acc" style="background:#06b6d4"></div>
-          <h2>WebSocket vs HTTP (Stateful vs Stateless)</h2>
-        </div>
-      </div>
-      
-      <p>Na camada L7, temos dois paradigmas brutais de como gerenciar as sessões sobre conexões TCP:</p>
-
-      <ul style="list-style-type: none; margin-left: 0; padding-left: 0; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;">
-        <li style="margin-bottom: 12px;"><strong style="color:var(--emr)">O Modelo Stateless (HTTP/REST):</strong> Toda requisição do cliente é isolada e tem um fim claro. O servidor processa a requisição, envia a resposta (Response) e a "transação lógica" morre. Se o servidor quiser avisar o cliente de algo no futuro, não consegue, pois o cliente é quem dita quando abrir conexões (Polling).</li>
-        <li style="margin-bottom: 12px;"><strong style="color:var(--arch)">O Modelo Stateful (WebSockets):</strong> Iniciado através de um HTTP Upgrade Request (<em>Protocol Switching</em>), a conexão TCP subjacente é mantida aberta persistentemente no servidor. A partir desse momento, estabelece-se um duto Bidirecional Full-Duplex. É crucial em mercados financeiros (Tickers de Bolsa), chats em tempo real e jogos, pois o Servidor pode "empurrar" (Push) mensagens ativamente para milhares de clientes sem que eles tenham que perguntar.</li>
-      </ul>
-      
-      <p style="color:var(--text-3); font-style: italic;">Nota de Arquitetura AWS: Manter milhões de WebSockets abertos (Idle TCP Connections) derruba firewalls tradicionais e load balancers devido ao esgotamento de portas efêmeras e File Descriptors. O <strong>API Gateway WebSocket API</strong> resolve esse pesadelo abstraindo a manutenção de conexões abertas por trás da cortina da AWS, disparando apenas invocações pontuais do AWS Lambda (Stateless) para você através de <code>ConnectionIds</code>.</p>
-    </section>
-
-  </main>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 6: WEBSOCKETS -->
+<section class="section" id="websockets-http">
+<div class="sec-hdr">
+<div class="sec-num" style="color:#06b6d4">06</div>
+<div class="sec-meta">
+<div class="sec-acc" style="background:#06b6d4"></div>
+<h2>WebSocket vs HTTP (Stateful vs Stateless)</h2>
+</div>
+</div>
+<p>Na camada L7, temos dois paradigmas brutais de como gerenciar as sessões sobre conexões TCP:</p>
+<ul style="list-style-type: none; margin-left: 0; padding-left: 0; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;">
+<li style="margin-bottom: 12px;"><strong style="color:var(--emr)">O Modelo Stateless (HTTP/REST):</strong> Toda requisição do cliente é isolada e tem um fim claro. O servidor processa a requisição, envia a resposta (Response) e a "transação lógica" morre. Se o servidor quiser avisar o cliente de algo no futuro, não consegue, pois o cliente é quem dita quando abrir conexões (Polling).</li>
+<li style="margin-bottom: 12px;"><strong style="color:var(--arch)">O Modelo Stateful (WebSockets):</strong> Iniciado através de um HTTP Upgrade Request (<em>Protocol Switching</em>), a conexão TCP subjacente é mantida aberta persistentemente no servidor. A partir desse momento, estabelece-se um duto Bidirecional Full-Duplex. É crucial em mercados financeiros (Tickers de Bolsa), chats em tempo real e jogos, pois o Servidor pode "empurrar" (Push) mensagens ativamente para milhares de clientes sem que eles tenham que perguntar.</li>
+</ul>
+<p style="color:var(--text-3); font-style: italic;">Nota de Arquitetura AWS: Manter milhões de WebSockets abertos (Idle TCP Connections) derruba firewalls tradicionais e load balancers devido ao esgotamento de portas efêmeras e File Descriptors. O <strong>API Gateway WebSocket API</strong> resolve esse pesadelo abstraindo a manutenção de conexões abertas por trás da cortina da AWS, disparando apenas invocações pontuais do AWS Lambda (Stateless) para você através de <code>ConnectionIds</code>.</p>
+</section>
+</main>
 </div>
 <script>
 function toggleNav() {
@@ -247,8 +218,7 @@ document.addEventListener('click', function(e) {
 });
 </script>
 <script src="../../js/progress.js"></script>
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+<script src="https://viewer.diagrams.net/js/viewer-static.min.js" type="text/javascript"></script>
 <script src="../../js/sidebar-loader.js"></script>
 <script src="../../js/a11y.js"></script>
 </body>
