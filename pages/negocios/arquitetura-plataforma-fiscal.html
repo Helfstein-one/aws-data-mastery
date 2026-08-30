@@ -373,44 +373,39 @@ df_pis_cofins = df_intermediation.groupBy("fiscal_month", "institution_cnpj") \
 <div class="drawio-label"><span class="dot" style="background:#ea580c"></span>FLUXO DE ESTADOS: AWS STEP FUNCTIONS DISTRIBUTED MAP (ASL STATE MACHINE)</div>
 <div class="mermaid" style="background:#080f1e; padding:24px; border-radius:8px; display:flex; justify-content:center; overflow-x:auto;">
 flowchart TD
-    %% Classes and Styles
-    classDef default fill:#1e293b,stroke:#0284c7,stroke-width:1.5px,color:#f8fafc,font-family:DM Sans;
-    classDef branch fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#f8fafc;
-    classDef alert fill:#450a0a,stroke:#ef4444,stroke-width:2px,color:#fca5a5;
-    classDef endok fill:#022c22,stroke:#10b981,stroke-width:2px,color:#6ee7b7;
-
-    Start([Início: Acionamento Step Functions]) --> Step1[Curadoria Silver Financial: AWS Glue]
+    Start(["Inicio: Acionamento"]) --> Step1["Carga Silver AWS Glue"]
+    Step1 -->|"Sucesso"| Step2["Quality Gates AWS Deequ"]
+    Step2 -->|"Valido"| DistMap{"AWS Step Functions Map"}
     
-    Step1 -->|Sucesso de Carga| Step2[Validação Data Quality: AWS Deequ]
-    Step1 -.->|Falha de Carga| Alert[Notificação de Falha: AWS SNS]
+    DistMap --> Branch1["Motor IOF"]
+    DistMap --> Branch2["Motor Come-Cotas"]
+    DistMap --> Branch3["Motor IRRF"]
+    DistMap --> Branch4["Motor IVA Dual"]
     
-    Step2 -->|Taxa Sucesso 99.9%| DistMap{Distributed Map: Execução Paralela}
-    Step2 -.->|Erro de Qualidade| Alert
-    
-    DistMap --> Branch1[Job 1: Motor IOF Regressivo]
-    DistMap --> Branch2[Job 2: Motor Come-Cotas]
-    DistMap --> Branch3[Job 3: Motor Retenção IRRF]
-    DistMap --> Branch4[Job 4: Motor IVA Dual IBS/CBS]
-    
-    Branch1 --> MergeAll[Conciliação Contábil & DTA]
+    Branch1 --> MergeAll["Conciliacao Contabil"]
     Branch2 --> MergeAll
     Branch3 --> MergeAll
     Branch4 --> MergeAll
     
-    Branch1 -.->|Erro Computação| Alert
-    Branch2 -.->|Erro Computação| Alert
-    Branch3 -.->|Erro Computação| Alert
-    Branch4 -.->|Erro Computação| Alert
+    MergeAll -->|"Aprovado"| Sped["Lotes SPED"]
+    Sped -->|"Enviado"| Success(["Fim: Homologado"])
     
-    MergeAll -->|Aprovado via Razão| Sped[Geração Regulatória: Lotes SPED]
-    MergeAll -.->|Divergência Contábil| Alert
+    Step1 -.->|"Falha"| Alert["Notificacao Erro SNS"]
+    Step2 -.->|"Falha"| Alert
+    Branch1 -.->|"Erro"| Alert
+    Branch2 -.->|"Erro"| Alert
+    Branch3 -.->|"Erro"| Alert
+    Branch4 -.->|"Erro"| Alert
+    MergeAll -.->|"Divergencia"| Alert
+    Sped -.->|"Rejeitado"| Alert
     
-    Sped -->|Transmitido| Success([Fim: Fechamento Homologado])
-    Sped -.->|Erro Schema XML| Alert
+    classDef step fill:#1e293b,stroke:#0284c7,stroke-width:2px,color:#f8fafc
+    classDef alert fill:#450a0a,stroke:#ef4444,stroke-width:2px,color:#fca5a5
+    classDef endok fill:#022c22,stroke:#10b981,stroke-width:2px,color:#6ee7b7
     
-    class Start,Success endok;
-    class Alert alert;
-    class Branch1,Branch2,Branch3,Branch4,DistMap,MergeAll branch;
+    class Start,Success endok
+    class Alert alert
+    class Step1,Step2,DistMap,Branch1,Branch2,Branch3,Branch4,MergeAll,Sped step
 </div>
 <div class="diagram-legend">
 <strong style="color: #38bdf8;">Explicação da Orquestração Step Functions:</strong>
